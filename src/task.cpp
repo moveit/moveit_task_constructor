@@ -22,6 +22,11 @@ void moveit::task_constructor::Task::addAfter( SubTaskPtr subtask ){
 }
 
 bool moveit::task_constructor::Task::plan(){
+	for( SubTaskPtr& subtask : subtasks_ ){
+		std::cout << "Computing subtask '" << subtask->getName() << "': ";
+		bool success= subtask->compute();
+		std::cout << (success ? "succeeded" : "failed") << std::endl;
+	}
 	return false;
 }
 
