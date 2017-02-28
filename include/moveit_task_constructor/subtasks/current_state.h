@@ -13,6 +13,9 @@ public:
 	virtual bool canCompute();
 
 	virtual bool compute();
+
+protected:
+	bool succeeded_;
 };
 
 }
