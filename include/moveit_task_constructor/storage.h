@@ -11,12 +11,19 @@ MOVEIT_CLASS_FORWARD(InterfaceState);
 
 struct SubTrajectory {
 	robot_trajectory::RobotTrajectoryPtr trajectory;
-	std::vector<InterfaceState*> next;
-	std::vector<InterfaceState*> prev;
+	std::vector<InterfaceState*> begin;
+	std::vector<InterfaceState*> end;
 };
 
 struct InterfaceState {
-	SubTrajectory* connection;
+	InterfaceState(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* previous, SubTrajectory* next)
+		: state(ps),
+		  previous_trajectory(previous),
+		  next_trajectory(next)
+	{}
+
+	SubTrajectory* previous_trajectory;
+	SubTrajectory* next_trajectory;
 
 	planning_scene::PlanningSceneConstPtr state;
 };

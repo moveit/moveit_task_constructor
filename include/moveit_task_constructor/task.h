@@ -6,11 +6,21 @@
 
 #include <vector>
 
+namespace moveit::core {
+	MOVEIT_CLASS_FORWARD(RobotModel);
+}
+
+namespace robot_model_loader {
+	MOVEIT_CLASS_FORWARD(RobotModelLoader);
+}
+
 namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
 
+
 MOVEIT_CLASS_FORWARD(Task);
+
 class Task {
 public:
 	Task();
@@ -21,7 +31,11 @@ public:
 	bool plan();
 
 protected:
+	void addSubTask( SubTaskPtr );
+
 	std::vector<SubTaskPtr> subtasks_;
+
+	robot_model_loader::RobotModelLoaderPtr rml_;
 };
 
 }

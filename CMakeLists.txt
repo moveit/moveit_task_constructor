@@ -2,9 +2,12 @@ cmake_minimum_required(VERSION 2.6.12)
 
 project(moveit_task_constructor)
 
-find_package(catkin REQUIRED)
-
-find_package(moveit_core REQUIRED)
+find_package(catkin REQUIRED COMPONENTS
+	roscpp
+	moveit_core
+	moveit_ros_planning
+	moveit_msgs
+)
 
 catkin_package(
 	INCLUDE_DIRS include
@@ -12,7 +15,7 @@ catkin_package(
 
 include_directories(
 	include
-	${moveit_core_INCLUDE_DIRS}
+	${catkin_INCLUDE_DIRS}
 )
 
 add_compile_options(-std=c++14)
@@ -21,6 +24,7 @@ add_library(${PROJECT_NAME}_subtasks
 	src/subtasks/move.cpp
 	src/subtasks/current_state.cpp
 )
+target_link_libraries(${PROJECT_NAME}_subtasks ${catkin_LIBRARIES})
 
 add_library(${PROJECT_NAME}
 	src/subtask.cpp

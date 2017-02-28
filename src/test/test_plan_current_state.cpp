@@ -1,3 +1,5 @@
+#include <ros/ros.h>
+
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/subtask.h>
 
@@ -5,7 +7,8 @@
 
 using namespace moveit::task_constructor;
 
-int main(){
+int main(int argc, char** argv){
+	ros::init(argc, argv, "test_plan_current_state");
 
 	Task t;
 
