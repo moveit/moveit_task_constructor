@@ -6,11 +6,11 @@
 using namespace moveit::task_constructor;
 
 int main(){
-/*
 	Task t;
 
-	t.addStart( std::make_shared<subtask::CurrentState>("current state") );
+	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
 
+/*
 	{
 		auto move= std::make_shared<subtask::Gripper>("open gripper");
 		move->setGroup("gripper");
@@ -52,8 +52,8 @@ int main(){
 		move->along("world", 0.0, 0.0, 1.0);
 		t.addAfter(move);
 	}
+*/
 
 	t.plan();
-*/
 	return 0;
 }
