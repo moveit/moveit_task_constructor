@@ -10,8 +10,11 @@
 #include <vector>
 #include <list>
 
-namespace moveit::task_constructor {
+namespace planning_scene {
+MOVEIT_CLASS_FORWARD(PlanningScene);
+}
 
+namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
 
@@ -27,7 +30,7 @@ public:
 	const std::list<InterfaceState>& getBegin();
 	const std::list<SubTrajectory>& getTrajectories();
 
-	void setRobotModel(robot_model::RobotModelConstPtr);
+	void setPlanningScene(planning_scene::PlanningSceneConstPtr);
 
 	void addPredecessor(SubTaskPtr);
 	void addSuccessor(SubTaskPtr);
@@ -35,13 +38,13 @@ public:
 protected:
 	void sendForward();
 	void sendBackward();
-	void sendBothWays(robot_trajectory::RobotTrajectoryPtr&, planning_scene::PlanningScenePtr&);
+	void sendBothWays(robot_trajectory::RobotTrajectoryPtr&, planning_scene::PlanningSceneConstPtr&);
 
 	void connectBegin(InterfaceState&, SubTrajectory*);
 	void connectEnd(InterfaceState&, SubTrajectory*);
 
-	InterfaceState* newBegin(planning_scene::PlanningScenePtr, SubTrajectory*);
-	InterfaceState* newEnd(planning_scene::PlanningScenePtr, SubTrajectory*);
+	InterfaceState* newBegin(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
+	InterfaceState* newEnd(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
 
 	const std::string name_;
 
@@ -54,7 +57,7 @@ protected:
 	std::list<InterfaceState> beginnings_;
 	std::list<InterfaceState> endings_;
 
-	robot_model::RobotModelConstPtr robot_model_;
+	planning_scene::PlanningSceneConstPtr scene_;
 };
 
 }

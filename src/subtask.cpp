@@ -33,13 +33,12 @@ moveit::task_constructor::SubTask::getTrajectories(){
 }
 
 void
-moveit::task_constructor::SubTask::setRobotModel(robot_model::RobotModelConstPtr model){
-	robot_model_= model;
+moveit::task_constructor::SubTask::setPlanningScene(planning_scene::PlanningSceneConstPtr scene){
+	scene_= scene;
 }
 
-
 void
-moveit::task_constructor::SubTask::sendBothWays(robot_trajectory::RobotTrajectoryPtr& traj, planning_scene::PlanningScenePtr& ps){
+moveit::task_constructor::SubTask::sendBothWays(robot_trajectory::RobotTrajectoryPtr& traj, planning_scene::PlanningSceneConstPtr& ps){
 	trajectories_.emplace_back();
 	SubTrajectory& subtraj= trajectories_.back();
 	subtraj.trajectory= traj;
@@ -54,13 +53,13 @@ moveit::task_constructor::SubTask::sendBothWays(robot_trajectory::RobotTrajector
 }
 
 moveit::task_constructor::InterfaceState*
-moveit::task_constructor::SubTask::newBegin(planning_scene::PlanningScenePtr ps, SubTrajectory* old_end){
+moveit::task_constructor::SubTask::newBegin(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
 	beginnings_.push_back( InterfaceState(ps, old_end, NULL));
 	return &beginnings_.back();
 }
 
 moveit::task_constructor::InterfaceState*
-moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningScenePtr ps, SubTrajectory* old_beginning){
+moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_beginning){
 	endings_.push_back( InterfaceState(ps, NULL, old_beginning));
 	return &endings_.back();
 }

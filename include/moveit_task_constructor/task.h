@@ -6,8 +6,8 @@
 
 #include <vector>
 
-namespace moveit::core {
-	MOVEIT_CLASS_FORWARD(RobotModel);
+namespace planning_scene {
+	MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 
 namespace robot_model_loader {
@@ -35,6 +35,7 @@ protected:
 
 	std::vector<SubTaskPtr> subtasks_;
 
+	planning_scene::PlanningScenePtr scene_;
 	robot_model_loader::RobotModelLoaderPtr rml_;
 };
 

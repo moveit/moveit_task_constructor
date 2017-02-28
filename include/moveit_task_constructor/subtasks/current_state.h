@@ -8,14 +8,14 @@ namespace moveit::task_constructor::subtasks {
 
 class CurrentState : public SubTask {
 public:
-	using SubTask::SubTask;
+	CurrentState(std::string name);
 
 	virtual bool canCompute();
 
 	virtual bool compute();
 
 protected:
-	bool succeeded_;
+	bool ran_;
 };
 
 }

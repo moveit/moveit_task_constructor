@@ -2,7 +2,17 @@
 
 #pragma once
 
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/macros/class_forward.h>
+
+#include <vector>
+
+namespace planning_scene {
+MOVEIT_CLASS_FORWARD(PlanningScene);
+}
+
+namespace robot_trajectory {
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
+}
 
 namespace moveit::task_constructor {
 
