@@ -61,5 +61,8 @@ int main(int argc, char** argv){
 */
 
 	t.plan();
+
+	t.printState();
+
 	return 0;
 }

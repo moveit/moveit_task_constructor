@@ -52,15 +52,25 @@ void moveit::task_constructor::Task::addAfter( SubTaskPtr subtask ){
 
 bool moveit::task_constructor::Task::plan(){
 	for( SubTaskPtr& subtask : subtasks_ ){
-		std::cout << "Computing subtask '" << subtask->getName() << "': ";
+		std::cout << "Computing subtask '" << subtask->getName() << "': " << std::endl;
 		bool success= subtask->compute();
 		std::cout << (success ? "succeeded" : "failed") << std::endl;
 	}
 	return false;
 }
 
-
 void moveit::task_constructor::Task::addSubTask( SubTaskPtr subtask ){
 	subtask->setPlanningScene( scene_ );
 	subtasks_.push_back( subtask );
+}
+
+void moveit::task_constructor::Task::printState(){
+	for( auto& st : subtasks_ ){
+		std::cout
+			<< st->getBegin().size() << " -> "
+			<< st->getTrajectories().size()
+			<< " <- " << st->getEnd().size()
+			<< " / " << st->getName()
+			<< std::endl;
+	}
 }

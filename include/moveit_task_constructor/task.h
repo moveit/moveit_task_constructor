@@ -30,6 +30,8 @@ public:
 
 	bool plan();
 
+	void printState();
+
 protected:
 	void addSubTask( SubTaskPtr );
 
