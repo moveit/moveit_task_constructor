@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_ros_planning
 	moveit_ros_planning_interface
 	moveit_msgs
+	eigen_conversions
 )
 
 catkin_package(
@@ -25,6 +26,7 @@ add_library(${PROJECT_NAME}_subtasks
 	src/subtasks/move.cpp
 	src/subtasks/current_state.cpp
 	src/subtasks/gripper.cpp
+	src/subtasks/generate_grasp_pose.cpp
 )
 target_link_libraries(${PROJECT_NAME}_subtasks ${catkin_LIBRARIES})
 
@@ -41,3 +43,6 @@ target_link_libraries(test_plan_current_state ${PROJECT_NAME}_subtasks ${PROJECT
 
 add_executable(test_plan_gripper src/test/test_plan_gripper.cpp)
 target_link_libraries(test_plan_gripper ${PROJECT_NAME}_subtasks ${PROJECT_NAME})
+
+add_executable(test_plan_generate_grasp_pose src/test/test_plan_generate_grasp_pose.cpp)
+target_link_libraries(test_plan_generate_grasp_pose ${PROJECT_NAME}_subtasks ${PROJECT_NAME})

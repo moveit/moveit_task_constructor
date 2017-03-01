@@ -40,7 +40,10 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto grasps= std::make_shared<GenerateGraspPose>("generate grasp pose");
+		auto gengrasp= std::make_shared<GenerateGraspPose>("generate grasp pose");
+		gengrasp->setEndEffector("s_model_tool0");
+		gengrasp->setGroup("arm");
+		gengrasp->setObject("object");
 	}
 
 	{
