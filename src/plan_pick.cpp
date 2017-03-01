@@ -1,23 +1,29 @@
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/subtask.h>
 
 #include <moveit_task_constructor/subtasks/current_state.h>
+#include <moveit_task_constructor/subtasks/gripper.h>
+
+#include <ros/ros.h>
 
 using namespace moveit::task_constructor;
 
-int main(){
+int main(int argc, char** argv){
+	ros::init(argc, argv, "plan_pick");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
+
 	Task t;
 
 	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
 
-/*
 	{
-		auto move= std::make_shared<subtask::Gripper>("open gripper");
+		auto move= std::make_shared<subtasks::Gripper>("open gripper");
 		move->setGroup("gripper");
 		move->setTo("open");
 		t.addAfter(move);
 	}
 
+/*
 	{
 		auto move= std::make_shared<subtask::Move>("move to pre-grasp");
 		move->setGroup("arm");
