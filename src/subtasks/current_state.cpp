@@ -15,10 +15,13 @@ bool
 moveit::task_constructor::subtasks::CurrentState::compute(){
 	ran_= true;
 
+	assert( scene_ );
+
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr traj;
+	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(traj);
 
-	sendBothWays(traj, scene_);
+	sendBothWays(trajectory, scene_);
 
 	return true;
 }

@@ -6,6 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	moveit_core
 	moveit_ros_planning
+	moveit_ros_planning_interface
 	moveit_msgs
 )
 
@@ -23,6 +24,7 @@ add_compile_options(-std=c++14)
 add_library(${PROJECT_NAME}_subtasks
 	src/subtasks/move.cpp
 	src/subtasks/current_state.cpp
+	src/subtasks/gripper.cpp
 )
 target_link_libraries(${PROJECT_NAME}_subtasks ${catkin_LIBRARIES})
 
@@ -31,8 +33,11 @@ add_library(${PROJECT_NAME}
 	src/task.cpp
 )
 
+add_executable(plan_pick src/plan_pick.cpp)
+target_link_libraries(plan_pick ${PROJECT_NAME}_subtasks ${PROJECT_NAME})
+
 add_executable(test_plan_current_state src/test/test_plan_current_state.cpp)
 target_link_libraries(test_plan_current_state ${PROJECT_NAME}_subtasks ${PROJECT_NAME})
 
-add_executable(plan_pick src/plan_pick.cpp)
-target_link_libraries(plan_pick ${PROJECT_NAME}_subtasks ${PROJECT_NAME})
+add_executable(test_plan_gripper src/test/test_plan_gripper.cpp)
+target_link_libraries(test_plan_gripper ${PROJECT_NAME}_subtasks ${PROJECT_NAME})

@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <list>
+#include <tuple>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
@@ -36,12 +37,15 @@ public:
 	void addSuccessor(SubTaskPtr);
 
 protected:
-	void sendForward();
-	void sendBackward();
-	void sendBothWays(robot_trajectory::RobotTrajectoryPtr&, planning_scene::PlanningSceneConstPtr&);
+	InterfaceState& fetchStateBeginning();
+	InterfaceState& fetchStateEnding();
+	std::pair<InterfaceState&, InterfaceState&> fetchStatePair();
 
-	void connectBegin(InterfaceState&, SubTrajectory*);
-	void connectEnd(InterfaceState&, SubTrajectory*);
+	SubTrajectory& addTrajectory(robot_trajectory::RobotTrajectoryPtr);
+
+	void sendForward(SubTrajectory&, planning_scene::PlanningSceneConstPtr);
+	void sendBackward(SubTrajectory&, planning_scene::PlanningSceneConstPtr);
+	void sendBothWays(SubTrajectory&, planning_scene::PlanningSceneConstPtr);
 
 	InterfaceState* newBegin(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
 	InterfaceState* newEnd(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
@@ -58,6 +62,9 @@ protected:
 	std::list<InterfaceState> endings_;
 
 	planning_scene::PlanningSceneConstPtr scene_;
+
+	std::list<InterfaceState>::iterator it_beginnings_;
+	std::list<InterfaceState>::iterator it_endings_;
 };
 
 }

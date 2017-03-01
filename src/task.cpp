@@ -35,8 +35,8 @@ moveit::task_constructor::Task::Task()
 		throw Exception("Task failed to aquire current PlanningScene");
 	}
 
-	planning_scene::PlanningScenePtr ps(new planning_scene::PlanningScene(rml_->getModel()));
-	ps->setPlanningSceneMsg(res.scene);
+	scene_.reset(new planning_scene::PlanningScene(rml_->getModel()));
+	scene_->setPlanningSceneMsg(res.scene);
 }
 
 void moveit::task_constructor::Task::addStart( SubTaskPtr subtask ){
