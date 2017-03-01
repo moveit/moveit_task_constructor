@@ -6,8 +6,7 @@
 #include <moveit_msgs/GetPlanningScene.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 
-moveit::task_constructor::Task::Task()
-{
+moveit::task_constructor::Task::Task(){
 	rml_.reset(new robot_model_loader::RobotModelLoader);
 	if( !rml_->getModel() )
 		throw Exception("Task failed to construct RobotModel");
@@ -38,6 +37,12 @@ moveit::task_constructor::Task::Task()
 	scene_.reset(new planning_scene::PlanningScene(rml_->getModel()));
 	scene_->setPlanningSceneMsg(res.scene);
 }
+
+moveit::task_constructor::Task::~Task(){
+	subtasks_.clear();
+	scene_.reset();
+}
+
 
 void moveit::task_constructor::Task::addStart( SubTaskPtr subtask ){
 	subtasks_.clear();
