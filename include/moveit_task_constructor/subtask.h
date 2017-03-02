@@ -41,6 +41,9 @@ protected:
 	InterfaceState& fetchStateEnding();
 	std::pair<InterfaceState&, InterfaceState&> fetchStatePair();
 
+	bool hasBeginning();
+	bool hasEnding();
+
 	SubTrajectory& addTrajectory(robot_trajectory::RobotTrajectoryPtr);
 
 	void sendForward(SubTrajectory&, planning_scene::PlanningSceneConstPtr);

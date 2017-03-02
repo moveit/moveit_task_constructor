@@ -27,7 +27,7 @@ moveit::task_constructor::subtasks::Gripper::setTo(std::string named_target){
 
 bool
 moveit::task_constructor::subtasks::Gripper::canCompute(){
-	return true;
+	return hasBeginning();
 }
 
 bool

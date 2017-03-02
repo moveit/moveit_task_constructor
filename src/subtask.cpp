@@ -42,7 +42,7 @@ moveit::task_constructor::SubTask::setPlanningScene(planning_scene::PlanningScen
 moveit::task_constructor::InterfaceState&
 moveit::task_constructor::SubTask::fetchStateBeginning(){
 	if(it_beginnings_ == beginnings_.end())
-		throw std::runtime_error("now new state for beginning available");
+		throw std::runtime_error("no new state for beginning available");
 
 	moveit::task_constructor::InterfaceState& state= *it_beginnings_;
 	++it_beginnings_;
@@ -106,4 +106,14 @@ moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningSceneConstPtr 
 		--it_endings_;
 
 	return &endings_.back();
+}
+
+bool
+moveit::task_constructor::SubTask::hasBeginning(){
+	return it_beginnings_ != beginnings_.end();
+}
+
+bool
+moveit::task_constructor::SubTask::hasEnding(){
+	return it_endings_ != endings_.end();
 }
