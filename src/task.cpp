@@ -43,7 +43,6 @@ moveit::task_constructor::Task::~Task(){
 	scene_.reset();
 }
 
-
 void moveit::task_constructor::Task::addStart( SubTaskPtr subtask ){
 	subtasks_.clear();
 	addSubTask( subtask );
@@ -56,10 +55,16 @@ void moveit::task_constructor::Task::addAfter( SubTaskPtr subtask ){
 }
 
 bool moveit::task_constructor::Task::plan(){
-	for( SubTaskPtr& subtask : subtasks_ ){
-		std::cout << "Computing subtask '" << subtask->getName() << "': " << std::endl;
-		bool success= subtask->compute();
-		std::cout << (success ? "succeeded" : "failed") << std::endl;
+	while(ros::ok()){
+		for( SubTaskPtr& subtask : subtasks_ ){
+			if( !subtask->canCompute() )
+				continue;
+			std::cout << "Computing subtask '" << subtask->getName() << "': " << std::endl;
+			bool success= subtask->compute();
+			std::cout << (success ? "succeeded" : "failed") << std::endl;
+		}
+		printState();
+		ros::Duration(0.5).sleep();
 	}
 	return false;
 }
