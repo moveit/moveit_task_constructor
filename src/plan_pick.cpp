@@ -2,6 +2,7 @@
 
 #include <moveit_task_constructor/subtasks/current_state.h>
 #include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
 
 #include <ros/ros.h>
 
@@ -38,14 +39,17 @@ int main(int argc, char** argv){
 		move->towards("object", 0.0, 0.0, 0.0);
 		t.addAfter(move);
 	}
+*/
 
 	{
-		auto gengrasp= std::make_shared<GenerateGraspPose>("generate grasp pose");
+		auto gengrasp= std::make_shared<subtasks::GenerateGraspPose>("generate grasp pose");
 		gengrasp->setEndEffector("s_model_tool0");
 		gengrasp->setGroup("arm");
 		gengrasp->setObject("object");
+		t.addAfter(gengrasp);
 	}
 
+/*
 	{
 		auto move= std::make_shared<subtask::Gripper>("grasp");
 		move->setGroup("gripper");
