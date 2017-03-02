@@ -45,6 +45,10 @@ protected:
 
 	double remaining_time_;
 
+	bool tried_current_state_as_seed_;
+
+	std::vector< std::vector<double> > previous_solutions_;
+
 	ros::Publisher pub;
 };
 

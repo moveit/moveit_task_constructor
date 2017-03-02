@@ -22,7 +22,7 @@ void spawnObject(){
 	o.primitive_poses[0].orientation.w= 1.0;
 	o.primitives.resize(1);
 	o.primitives[0].type= shape_msgs::SolidPrimitive::SPHERE;
-	o.primitives[0].dimensions.resize(1, 0.07);
+	o.primitives[0].dimensions.resize(1, 0.03);
 	psi.applyCollisionObject(o);
 }
 
