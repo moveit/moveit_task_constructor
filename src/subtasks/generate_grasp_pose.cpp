@@ -74,7 +74,12 @@ namespace {
 
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return scene->isStateColliding(*state, jmg->getName());
+		if( scene->isStateColliding(*state, jmg->getName()) ){
+			old_solutions->emplace_back();
+			state->copyJointGroupPositions(jmg, old_solutions->back());
+			return false;
+		}
+		return true;
 	}
 }
 
