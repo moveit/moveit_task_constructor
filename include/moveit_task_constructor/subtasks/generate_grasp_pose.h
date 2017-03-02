@@ -39,7 +39,8 @@ protected:
 
 	double timeout_;
 
-   /* temp values */
+	/* temp values */
+
 	double current_angle_;
 
 	double remaining_time_;

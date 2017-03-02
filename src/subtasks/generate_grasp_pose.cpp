@@ -11,9 +11,11 @@
 
 #include <Eigen/Geometry>
 
+#include <chrono>
+
 moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::string name)
 : moveit::task_constructor::SubTask::SubTask(name),
-  timeout_(0.2),
+  timeout_(0.1),
   current_angle_(0.0),
   remaining_time_(timeout_)
 {
@@ -73,7 +75,9 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
 		std::cout << "trying " << current_angle_ << std::endl;
 
+		auto now= std::chrono::steady_clock::now();
 		bool succeeded= grasp_state.setFromIK(jmg, pose, eef_, remaining_time_/*,validState*/);
+		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
 		moveit_msgs::DisplayRobotState drs;
 		robot_state::robotStateToRobotStateMsg(grasp_state, drs.state);
