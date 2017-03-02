@@ -20,6 +20,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::st
   timeout_(0.1),
   angle_delta_(0.1),
   current_angle_(0.0),
+  grasp_offset_(0.0),
   remaining_time_(timeout_),
   tried_current_state_as_seed_(false)
 {
@@ -41,6 +42,11 @@ moveit::task_constructor::subtasks::GenerateGraspPose::setEndEffector(std::strin
 void
 moveit::task_constructor::subtasks::GenerateGraspPose::setObject(std::string object){
 	object_= object;
+}
+
+void
+moveit::task_constructor::subtasks::GenerateGraspPose::setGraspOffset(double offset){
+	grasp_offset_= offset;
 }
 
 void
@@ -102,12 +108,12 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 			std::placeholders::_2,
 			std::placeholders::_3);
 
-	geometry_msgs::Pose pose;
-	const Eigen::Affine3d object_pose= scene_->getFrameTransform(object_);
-	if(object_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+	geometry_msgs::Pose object_pose, grasp_pose;
+	const Eigen::Affine3d object_pose_eigen= scene_->getFrameTransform(object_);
+	if(object_pose_eigen.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
 
-	tf::poseEigenToMsg(object_pose, pose);
+	tf::poseEigenToMsg(object_pose_eigen, object_pose);
 
 	while(current_angle_ < 2*M_PI){
 		if( remaining_time_ <= 0.0 ){
@@ -119,14 +125,18 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 			continue;
 		}
 
-		pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
+		grasp_pose= object_pose;
+
+		grasp_pose.position.x-= grasp_offset_*cos(current_angle_);
+		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
+		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
 
 		if(tried_current_state_as_seed_)
 			grasp_state.setToRandomPositions(jmg);
 		tried_current_state_as_seed_= true;
 
 		auto now= std::chrono::steady_clock::now();
-		bool succeeded= grasp_state.setFromIK(jmg, pose, eef_, 1, remaining_time_, is_valid);
+		bool succeeded= grasp_state.setFromIK(jmg, grasp_pose, eef_, 1, remaining_time_, is_valid);
 		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
 		if(succeeded){

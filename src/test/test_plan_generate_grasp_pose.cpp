@@ -43,6 +43,7 @@ int main(int argc, char** argv){
 	st->setObject("object");
 	st->setTimeout(0.5);
 	st->setAngleDelta(0.1);
+	st->setGraspOffset(0.03);
 
 	t.addStart(st);
 
