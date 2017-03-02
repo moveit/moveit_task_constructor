@@ -50,7 +50,5 @@ int main(int argc, char** argv){
 
 	t.printState();
 
-	ros::spin();
-
 	return 0;
 }
