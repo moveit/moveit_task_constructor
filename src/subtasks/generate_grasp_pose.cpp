@@ -18,6 +18,7 @@
 moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::string name)
 : moveit::task_constructor::SubTask::SubTask(name),
   timeout_(0.1),
+  angle_delta_(0.1),
   current_angle_(0.0),
   remaining_time_(timeout_),
   tried_current_state_as_seed_(false)
@@ -46,6 +47,11 @@ void
 moveit::task_constructor::subtasks::GenerateGraspPose::setTimeout(double timeout){
 	timeout_= timeout;
 	remaining_time_= timeout;
+}
+
+void
+moveit::task_constructor::subtasks::GenerateGraspPose::setAngleDelta(double delta){
+	angle_delta_= delta;
 }
 
 
@@ -100,7 +106,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 	while(current_angle_ < 2*M_PI){
 		if( remaining_time_ <= 0.0 ){
-			current_angle_+= 0.2;
+			current_angle_+= angle_delta_;
 			remaining_time_= timeout_;
 			tried_current_state_as_seed_= false;
 			previous_solutions_.clear();

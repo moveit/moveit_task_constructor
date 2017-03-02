@@ -41,6 +41,8 @@ int main(int argc, char** argv){
 	st->setEndEffector("s_model_tool0");
 	st->setGroup("arm");
 	st->setObject("object");
+	st->setTimeout(0.5);
+	st->setAngleDelta(0.1);
 
 	t.addStart(st);
 
