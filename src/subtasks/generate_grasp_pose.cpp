@@ -111,6 +111,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 	while(current_angle_ < 2*M_PI){
 		if( remaining_time_ <= 0.0 ){
+			std::cout << "computed " << current_angle_ << " with " << previous_solutions_.size() << " cached ik solutions" << std::endl;
 			current_angle_+= angle_delta_;
 			remaining_time_= timeout_;
 			tried_current_state_as_seed_= false;
@@ -119,7 +120,6 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		}
 
 		pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
-		std::cout << "trying " << current_angle_ << " with remaining time " << remaining_time_ << std::endl;
 
 		if(tried_current_state_as_seed_)
 			grasp_state.setToRandomPositions(jmg);
