@@ -40,6 +40,11 @@ moveit::task_constructor::subtasks::GenerateGraspPose::setEndEffector(std::strin
 }
 
 void
+moveit::task_constructor::subtasks::GenerateGraspPose::setGripperGraspPose(std::string pose_name){
+	gripper_grasp_pose_= pose_name;
+}
+
+void
 moveit::task_constructor::subtasks::GenerateGraspPose::setObject(std::string object){
 	object_= object;
 }
@@ -94,10 +99,19 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
 	robot_state::RobotState &grasp_state = grasp_scene->getCurrentStateNonConst();
 
+	const moveit::core::JointModelGroup* jmg= grasp_state.getJointModelGroup(group_);
+
 	// empty trajectory -> this subtask only produces states
 	const robot_trajectory::RobotTrajectoryPtr traj;
 
-	const moveit::core::JointModelGroup* jmg= grasp_state.getJointModelGroup(group_);
+	if(!gripper_grasp_pose_.empty()){
+		const std::vector<std::string> eefs= jmg->getAttachedEndEffectorNames();
+		if( eefs.size() == 0 )
+			throw std::runtime_error("asked to set gripper grasp pose of end effector, but no end effector could be found");
+
+		const moveit::core::JointModelGroup* gripper_jmg= grasp_state.getRobotModel()->getEndEffector(eefs[0]);
+		grasp_state.setToDefaultValues(gripper_jmg, gripper_grasp_pose_);
+	}
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(

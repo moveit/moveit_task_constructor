@@ -26,6 +26,8 @@ public:
 
 	void setEndEffector(std::string eef_link);
 
+	void setGripperGraspPose(std::string pose_name);
+
 	void setObject(std::string object);
 
 	void setGraspOffset(double grasp_offset);
@@ -40,6 +42,8 @@ protected:
 	std::string eef_;
 
 	double grasp_offset_;
+
+	std::string gripper_grasp_pose_;
 
 	std::string object_;
 
