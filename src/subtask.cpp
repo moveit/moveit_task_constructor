@@ -50,6 +50,17 @@ moveit::task_constructor::SubTask::fetchStateBeginning(){
 	return state;
 }
 
+moveit::task_constructor::InterfaceState&
+moveit::task_constructor::SubTask::fetchStateEnding(){
+	if(it_endings_ == endings_.end())
+		throw std::runtime_error("no new state for ending available");
+
+	moveit::task_constructor::InterfaceState& state= *it_endings_;
+	++it_endings_;
+
+	return state;
+}
+
 moveit::task_constructor::SubTrajectory&
 moveit::task_constructor::SubTask::addTrajectory(robot_trajectory::RobotTrajectoryPtr trajectory){
 	trajectories_.emplace_back(trajectory);
