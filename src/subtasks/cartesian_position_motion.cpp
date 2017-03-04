@@ -159,6 +159,6 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_publishTrajectory(
 			robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
 			dt.trajectory.resize(1);
 			trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
-			dt.model_id= "tams_ur5_setup";
+			dt.model_id= start.getRobotModel()->getName();
 			pub.publish(dt);
 }
