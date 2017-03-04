@@ -54,6 +54,7 @@ int main(int argc, char** argv){
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setGraspOffset(.03);
+		gengrasp->setAngleDelta(.2);
 		t.addAfter(gengrasp);
 	}
 
