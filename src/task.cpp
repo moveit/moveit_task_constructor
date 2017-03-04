@@ -66,8 +66,10 @@ bool moveit::task_constructor::Task::plan(){
 			computed= true;
 			std::cout << (success ? "succeeded" : "failed") << std::endl;
 		}
-		printState();
-		ros::Duration(0.5).sleep();
+		if(computed){
+			printState();
+			ros::Duration(0.5).sleep();
+		}
 	}
 	return false;
 }

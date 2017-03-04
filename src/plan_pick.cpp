@@ -77,7 +77,7 @@ int main(int argc, char** argv){
 
 	t.plan();
 
-	t.printState();
+	//t.printState();
 
 	return 0;
 }
