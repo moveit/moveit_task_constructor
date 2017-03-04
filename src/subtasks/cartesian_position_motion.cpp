@@ -48,13 +48,13 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::setMinMaxDistance(d
 
 void
 moveit::task_constructor::subtasks::CartesianPositionMotion::towards(geometry_msgs::PointStamped towards){
-	mode_= "towards";
+	mode_= moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS;
 	towards_= towards;
 }
 
 void
 moveit::task_constructor::subtasks::CartesianPositionMotion::along(geometry_msgs::Vector3Stamped along){
-	mode_= "along";
+	mode_= moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG;
 	along_= along;
 }
 
@@ -76,71 +76,89 @@ namespace {
 
 bool
 moveit::task_constructor::subtasks::CartesianPositionMotion::compute(){
-	if( mode_ == "towards" && hasEnding() ){
-		moveit::task_constructor::InterfaceState& ending= fetchStateEnding();
+	if( hasEnding() )
+		return _computeFromEnding();
+//	else if( hasBeginning() )
+//		return _computeFromBeginning();
+}
 
-		planning_scene::PlanningScenePtr result_scene = ending.state->diff();
-		robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
+bool
+moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(){
+	assert( hasEnding() );
 
-		const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
-		const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link_);
+	moveit::task_constructor::InterfaceState& ending= fetchStateEnding();
+	planning_scene::PlanningScenePtr result_scene = ending.state->diff();
+	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
-		auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
+	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
+	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link_);
 
-		const moveit::core::GroupStateValidityCallbackFn is_valid=
-			std::bind(
-				&isValid,
-				result_scene,
-				std::placeholders::_1,
-				std::placeholders::_2,
-				std::placeholders::_3);
+	const moveit::core::GroupStateValidityCallbackFn is_valid=
+		std::bind(
+			&isValid,
+			result_scene,
+			std::placeholders::_1,
+			std::placeholders::_2,
+			std::placeholders::_3);
 
+	Eigen::Vector3d direction;
+
+	switch(mode_){
+	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS):
+		{
 		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
-		// should compute the direction away from the object along the current gripper direction
-		const Eigen::Vector3d direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
-
-		std::vector<moveit::core::RobotStatePtr> trajectory_steps;
-		double achieved_fraction= robot_state.computeCartesianPath(
-			jmg,
-			trajectory_steps,
-			link_model,
-			direction,
-			true, /* global frame */
-			max_distance_, /* distance */
-			.005, /* cartesian step size */
-			1.5, /* jump threshold */
-			is_valid);
-		std::cout << "achieved " << achieved_fraction << " of cartesian motion" << std::endl;
-
-		//TODO set succeeded here
-		bool succeeded= achieved_fraction > 0.0;
-
-		for( std::vector<moveit::core::RobotStatePtr>::iterator i= trajectory_steps.begin(); i != trajectory_steps.end(); ++i){
-			traj->addPrefixWayPoint(*i, 0.0);
+		direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
 		}
-
-		if(succeeded){
-			moveit::core::RobotStatePtr result_state= trajectory_steps.back();
-
-			moveit_msgs::DisplayTrajectory dt;
-			robot_state::robotStateToRobotStateMsg(*result_state, dt.trajectory_start);
-			dt.trajectory.resize(1);
-			traj->getRobotTrajectoryMsg(dt.trajectory[0]);
-			dt.model_id= "tams_ur5_setup";
-			pub.publish(dt);
-
-			robot_state= *result_state;
-
-			moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
-			sendBackward(trajectory, result_scene);
-			return true;
-		}
-	}
-	else if( mode_ == "along" ){
-
-	}
-	else {
+		break;
+	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG):
+		break;
+	default:
 		throw std::runtime_error("position motion has neither a goal nor a direction");
 	}
+
+	auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
+	std::vector<moveit::core::RobotStatePtr> trajectory_steps;
+
+	double achieved_distance= robot_state.computeCartesianPath(
+		jmg,
+		trajectory_steps,
+		link_model,
+		direction,
+		true, /* global frame */
+		max_distance_, /* distance */
+		.005, /* cartesian step size */
+		1.5);//, /* jump threshold */
+		//is_valid);
+
+	std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+
+	bool succeeded= achieved_distance >= min_distance_;
+
+	if(succeeded){
+		for( auto& tp : trajectory_steps )
+			traj->addPrefixWayPoint(tp, 0.0);
+
+		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
+		robot_state= *result_state;
+
+		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
+		sendBackward(trajectory, result_scene);
+
+		_publishTrajectory(*traj, *result_state);
+
+		return true;
+	}
+
 	return false;
+}
+
+
+void
+moveit::task_constructor::subtasks::CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
+			moveit_msgs::DisplayTrajectory dt;
+			robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
+			dt.trajectory.resize(1);
+			trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
+			dt.model_id= "tams_ur5_setup";
+			pub.publish(dt);
 }

@@ -41,11 +41,18 @@ protected:
 	double min_distance_;
 	double max_distance_;
 
-	std::string mode_;
+	enum {
+		MODE_ALONG= 1,
+		MODE_TOWARDS= 2
+	} mode_;
+
 	geometry_msgs::PointStamped towards_;
 	geometry_msgs::Vector3Stamped along_;
 
 	ros::Publisher pub;
+
+	bool _computeFromEnding();
+	void _publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };
 
 }
