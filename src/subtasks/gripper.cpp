@@ -29,6 +29,11 @@ moveit::task_constructor::subtasks::Gripper::setTo(std::string named_target){
 	to_named_target_= named_target;
 }
 
+void
+moveit::task_constructor::subtasks::Gripper::graspObject(std::string object){
+	object_= object;
+}
+
 bool
 moveit::task_constructor::subtasks::Gripper::canCompute(){
 	return hasBeginning();
@@ -45,6 +50,9 @@ moveit::task_constructor::subtasks::Gripper::compute(){
 	::planning_interface::MotionPlanRequest req;
 	mgi_->constructMotionPlanRequest(req);
 
+	if( !object_.empty() ){
+		scene->getAllowedCollisionMatrixNonConst().setEntry(object_, mgi_->getLinkNames(), true);
+	}
 
 	::planning_interface::MotionPlanResponse res;
 	if(!planner_->generatePlan(scene, req, res))

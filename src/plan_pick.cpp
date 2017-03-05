@@ -58,15 +58,15 @@ int main(int argc, char** argv){
 		t.addAfter(gengrasp);
 	}
 
-/*
 	{
-		auto move= std::make_shared<subtask::Gripper>("grasp");
+		auto move= std::make_shared<subtasks::Gripper>("grasp");
 		move->setGroup("gripper");
 		move->setTo("closed");
 		move->graspObject("object");
 		t.addAfter(move);
 	}
 
+/*
 	{
 		auto move= std::make_shared<subtask::CartesianPositionMotion>("Lift Object");
 		move->setGroup("arm");
