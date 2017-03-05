@@ -130,7 +130,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 
 		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
 
-		succeeded= achieved_distance >= min_distance_ && achieved_distance <= max_distance_;
+		succeeded= achieved_distance >= min_distance_;
 	}
 	else if( mode_ == moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG ){
 		const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
