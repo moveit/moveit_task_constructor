@@ -66,15 +66,18 @@ int main(int argc, char** argv){
 		t.addAfter(move);
 	}
 
-/*
 	{
-		auto move= std::make_shared<subtask::CartesianPositionMotion>("Lift Object");
+		auto move= std::make_shared<subtasks::CartesianPositionMotion>("lift object");
 		move->setGroup("arm");
-		move->minMaxDistance(3.0, 5.0);
-		move->along("world", 0.0, 0.0, 1.0);
+		move->setLink("s_model_tool0");
+		move->setMinMaxDistance(0.03, 0.05);
+
+		geometry_msgs::Vector3Stamped direction;
+		direction.header.frame_id= "world";
+		direction.vector.z= 1.0;
+		move->along(direction);
 		t.addAfter(move);
 	}
-*/
 
 	t.plan();
 

@@ -51,6 +51,7 @@ protected:
 
 	ros::Publisher pub;
 
+	bool _computeFromBeginning();
 	bool _computeFromEnding();
 	void _publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };

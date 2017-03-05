@@ -60,7 +60,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::along(geometry_msgs
 
 bool
 moveit::task_constructor::subtasks::CartesianPositionMotion::canCompute(){
-	return hasEnding(); //hasBeginning() || hasEnding();
+	return hasBeginning() || hasEnding();
 }
 
 namespace {
@@ -78,8 +78,100 @@ bool
 moveit::task_constructor::subtasks::CartesianPositionMotion::compute(){
 	if( hasEnding() )
 		return _computeFromEnding();
-//	else if( hasBeginning() )
-//		return _computeFromBeginning();
+	else if( hasBeginning() )
+		return _computeFromBeginning();
+}
+
+bool
+moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginning(){
+	assert( hasBeginning() );
+
+	moveit::task_constructor::InterfaceState& beginning= fetchStateBeginning();
+	planning_scene::PlanningScenePtr result_scene = beginning.state->diff();
+	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
+
+	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
+	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link_);
+
+	const moveit::core::GroupStateValidityCallbackFn is_valid=
+		std::bind(
+			&isValid,
+			result_scene,
+			std::placeholders::_1,
+			std::placeholders::_2,
+			std::placeholders::_3);
+
+	std::vector<moveit::core::RobotStatePtr> trajectory_steps;
+	bool succeeded= false;
+
+	if( mode_ == moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS ){
+		const Eigen::Affine3d& frame= beginning.state->getFrameTransform(towards_.header.frame_id);
+
+		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
+
+		Eigen::Vector3d target_point;
+		tf::pointMsgToEigen(towards_.point, target_point);
+
+		// retain orientation of link
+		Eigen::Affine3d target= link_pose;
+		target.translation()= target_point;
+
+		double achieved_fraction= robot_state.computeCartesianPath(
+			jmg,
+			trajectory_steps,
+			link_model,
+			target,
+			true, /* global frame */
+			.005, /* cartesian step size */
+			1.5, /* jump threshold */
+			is_valid);
+
+		const double achieved_distance= achieved_fraction*(link_pose.translation()-target_point).norm();
+
+		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+
+		succeeded= achieved_distance >= min_distance_ && achieved_distance <= max_distance_;
+	}
+	else if( mode_ == moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG ){
+		const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
+		Eigen::Vector3d direction;
+		tf::vectorMsgToEigen(along_.vector, direction);
+		direction= frame.linear()*direction;
+
+		double achieved_distance= robot_state.computeCartesianPath(
+			jmg,
+			trajectory_steps,
+			link_model,
+			direction,
+			true, /* global frame */
+			max_distance_, /* distance */
+			.005, /* cartesian step size */
+			1.5, /* jump threshold */
+			is_valid);
+
+		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+
+		succeeded= achieved_distance >= min_distance_;
+	}
+	else
+		throw std::runtime_error("position motion has neither a goal nor a direction");
+
+
+	if(succeeded){
+		auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
+		for( auto& tp : trajectory_steps )
+			traj->addSuffixWayPoint(tp, 0.0);
+
+		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
+		robot_state= *result_state;
+
+		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
+		sendForward(trajectory, result_scene);
+
+		_publishTrajectory(*traj, *result_state);
+	}
+
+	return succeeded;
 }
 
 bool
@@ -106,11 +198,16 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 	switch(mode_){
 	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS):
 		{
-		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
-		direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
+			const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
+			direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
 		}
 		break;
 	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG):
+		{
+			const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
+			tf::vectorMsgToEigen(along_.vector, direction);
+			direction= frame.linear()*direction;
+		}
 		break;
 	default:
 		throw std::runtime_error("position motion has neither a goal nor a direction");
@@ -127,8 +224,8 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 		true, /* global frame */
 		max_distance_, /* distance */
 		.005, /* cartesian step size */
-		1.5);//, /* jump threshold */
-		//is_valid);
+		1.5, /* jump threshold */
+		is_valid);
 
 	std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
 
