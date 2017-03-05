@@ -2,8 +2,12 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
+#include <moveit/planning_pipeline/planning_pipeline.h>
 
 #include <moveit/move_group_interface/move_group_interface.h>
+
+#include <moveit_msgs/MotionPlanRequest.h>
+#include <moveit_msgs/MotionPlanResponse.h>
 
 moveit::task_constructor::subtasks::Gripper::Gripper(std::string name)
 : moveit::task_constructor::SubTask::SubTask(name)
@@ -34,33 +38,26 @@ bool
 moveit::task_constructor::subtasks::Gripper::compute(){
 	InterfaceState& start= fetchStateBeginning();
 
-	moveit_msgs::RobotState state;
-	moveit::core::robotStateToRobotStateMsg(start.state->getCurrentState(), state);
-	mgi_->setStartState(state);
+	planning_scene::PlanningScenePtr scene(start.state->diff());
 
 	mgi_->setNamedTarget(to_named_target_);
 
-	moveit::planning_interface::MoveGroupInterface::Plan plan;
+	::planning_interface::MotionPlanRequest req;
+	mgi_->constructMotionPlanRequest(req);
 
-	if(!mgi_->plan(plan))
+
+	::planning_interface::MotionPlanResponse res;
+	if(!planner_->generatePlan(scene, req, res))
 		return false;
 
-	// construct trajectory
-	auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(scene_->getRobotModel(), group_);
-	traj->setRobotTrajectoryMsg(start.state->getCurrentState(), plan.trajectory_);
+	// set end state
+	robot_state::RobotState end_state(res.trajectory_->getLastWayPoint());
+	scene->setCurrentState(end_state);
 
-   // construct end state
-	robot_state::RobotState end_state(start.state->getCurrentState());
-	end_state.setVariablePositions(
-		plan.trajectory_.joint_trajectory.joint_names,
-		plan.trajectory_.joint_trajectory.points.back().positions);
-	planning_scene::PlanningScenePtr end_scene(start.state->diff());
-	end_scene->setCurrentState(end_state);
-
-   // finish subtask
-	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(traj);
+	// finish subtask
+	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
 	trajectory.connectToBeginning(start);
-	sendForward(trajectory, end_scene);
+	sendForward(trajectory, scene);
 
 	return true;
 }
