@@ -14,6 +14,10 @@ namespace robot_model_loader {
 	MOVEIT_CLASS_FORWARD(RobotModelLoader);
 }
 
+namespace planning_pipeline {
+	MOVEIT_CLASS_FORWARD(PlanningPipeline);
+}
+
 namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
@@ -40,6 +44,8 @@ protected:
 
 	planning_scene::PlanningScenePtr scene_;
 	robot_model_loader::RobotModelLoaderPtr rml_;
+
+	planning_pipeline::PlanningPipelinePtr planner_;
 };
 
 }

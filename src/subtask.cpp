@@ -39,6 +39,11 @@ moveit::task_constructor::SubTask::setPlanningScene(planning_scene::PlanningScen
 	scene_= scene;
 }
 
+void
+moveit::task_constructor::SubTask::setPlanningPipeline(planning_pipeline::PlanningPipelinePtr planner){
+	planner_= planner;
+}
+
 moveit::task_constructor::InterfaceState&
 moveit::task_constructor::SubTask::fetchStateBeginning(){
 	if(it_beginnings_ == beginnings_.end())

@@ -15,6 +15,10 @@ namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 
+namespace planning_pipeline {
+MOVEIT_CLASS_FORWARD(PlanningPipeline);
+}
+
 namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
@@ -32,6 +36,7 @@ public:
 	const std::list<SubTrajectory>& getTrajectories();
 
 	void setPlanningScene(planning_scene::PlanningSceneConstPtr);
+	void setPlanningPipeline(planning_pipeline::PlanningPipelinePtr);
 
 	void addPredecessor(SubTaskPtr);
 	void addSuccessor(SubTaskPtr);
@@ -65,6 +70,7 @@ protected:
 	std::list<InterfaceState> endings_;
 
 	planning_scene::PlanningSceneConstPtr scene_;
+	planning_pipeline::PlanningPipelinePtr planner_;
 
 	std::list<InterfaceState>::iterator it_beginnings_;
 	std::list<InterfaceState>::iterator it_endings_;
