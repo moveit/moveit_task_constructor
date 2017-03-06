@@ -38,8 +38,8 @@ int main(int argc, char** argv){
 
 	auto st= std::make_shared<subtasks::GenerateGraspPose>("generate grasp candidates");
 
-	st->setEndEffector("s_model_tool0");
-	st->setGroup("arm");
+	st->setEndEffector("gripper");
+	//st->setGroup("arm");
 	st->setObject("object");
 	st->setTimeout(0.5);
 	st->setAngleDelta(0.1);
