@@ -89,7 +89,7 @@ moveit::task_constructor::subtasks::Gripper::compute(){
 
 	// finish subtask
 	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
-	trajectory.connectToBeginning(start);
+	trajectory.hasBeginning(start);
 	sendForward(trajectory, scene);
 
 	return true;

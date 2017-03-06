@@ -173,6 +173,9 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 		robot_state= *result_state;
 
 		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
+
+		trajectory.hasBeginning(beginning);
+
 		sendForward(trajectory, result_scene);
 
 		_publishTrajectory(*traj, *result_state);
@@ -246,6 +249,9 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 		robot_state= *result_state;
 
 		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
+
+		trajectory.hasEnding(ending);
+
 		sendBackward(trajectory, result_scene);
 
 		_publishTrajectory(*traj, *result_state);

@@ -40,13 +40,13 @@ struct SubTrajectory {
 		  end(NULL)
 	{}
 
-	void connectToBeginning(InterfaceState& state){
+	void hasBeginning(InterfaceState& state){
 		assert(begin == NULL);
 		begin= &state;
 		state.next_trajectory.push_back(this);
 	}
 
-	void connectToEnding(InterfaceState& state){
+	void hasEnding(InterfaceState& state){
 		assert(end == NULL);
 		end= &state;
 		state.previous_trajectory.push_back(this);

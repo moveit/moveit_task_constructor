@@ -73,8 +73,8 @@ moveit::task_constructor::subtasks::Move::compute(){
 
 	// finish subtask
 	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
-	trajectory.connectToBeginning(state_pair.first);
-	trajectory.connectToEnding(state_pair.second);
+	trajectory.hasBeginning(state_pair.first);
+	trajectory.hasEnding(state_pair.second);
 
 	return true;
 }
