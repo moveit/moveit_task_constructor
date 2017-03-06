@@ -79,6 +79,14 @@ moveit::task_constructor::subtasks::Gripper::compute(){
 	robot_state::RobotState end_state(res.trajectory_->getLastWayPoint());
 	scene->setCurrentState(end_state);
 
+	// attach object
+	if( !grasp_object_.empty() ){
+		moveit_msgs::AttachedCollisionObject obj;
+		obj.link_name= attach_link_;
+		obj.object.id= grasp_object_;
+		scene->processAttachedCollisionObjectMsg(obj);
+	}
+
 	// finish subtask
 	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
 	trajectory.connectToBeginning(start);
