@@ -71,7 +71,6 @@ bool moveit::task_constructor::Task::plan(){
 		}
 		if(computed){
 			printState();
-			ros::Duration(0.5).sleep();
 		}
 	}
 	return false;
