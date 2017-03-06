@@ -44,6 +44,7 @@ moveit::task_constructor::Task::Task(){
 moveit::task_constructor::Task::~Task(){
 	subtasks_.clear();
 	scene_.reset();
+	planner_.reset();
 }
 
 void moveit::task_constructor::Task::addStart( SubTaskPtr subtask ){
