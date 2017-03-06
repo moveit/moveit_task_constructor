@@ -44,6 +44,12 @@ struct SubTrajectory {
 		state.next_trajectory= this;
 	}
 
+	void connectToEnding(InterfaceState& state){
+		end.push_back(&state);
+		assert(state.previous_trajectory == NULL);
+		state.previous_trajectory= this;
+	}
+
 	robot_trajectory::RobotTrajectoryPtr trajectory;
 	std::vector<InterfaceState*> begin;
 	std::vector<InterfaceState*> end;
