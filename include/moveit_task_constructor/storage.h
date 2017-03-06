@@ -23,36 +23,38 @@ MOVEIT_CLASS_FORWARD(InterfaceState);
 struct InterfaceState {
 	InterfaceState(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* previous, SubTrajectory* next)
 		: state(ps),
-		  previous_trajectory(previous),
-		  next_trajectory(next)
+		  previous_trajectory(1, previous),
+		  next_trajectory(1, next)
 	{}
 
-	SubTrajectory* previous_trajectory;
-	SubTrajectory* next_trajectory;
+	std::vector<SubTrajectory*> previous_trajectory;
+	std::vector<SubTrajectory*> next_trajectory;
 
 	planning_scene::PlanningSceneConstPtr state;
 };
 
 struct SubTrajectory {
 	SubTrajectory(robot_trajectory::RobotTrajectoryPtr traj)
-		: trajectory(traj)
+		: trajectory(traj),
+		  begin(NULL),
+		  end(NULL)
 	{}
 
 	void connectToBeginning(InterfaceState& state){
-		begin.push_back(&state);
-		assert(state.next_trajectory == NULL);
-		state.next_trajectory= this;
+		assert(begin == NULL);
+		begin= &state;
+		state.next_trajectory.push_back(this);
 	}
 
 	void connectToEnding(InterfaceState& state){
-		end.push_back(&state);
-		assert(state.previous_trajectory == NULL);
-		state.previous_trajectory= this;
+		assert(end == NULL);
+		end= &state;
+		state.previous_trajectory.push_back(this);
 	}
 
 	robot_trajectory::RobotTrajectoryPtr trajectory;
-	std::vector<InterfaceState*> begin;
-	std::vector<InterfaceState*> end;
+	InterfaceState* begin;
+	InterfaceState* end;
 };
 
 }

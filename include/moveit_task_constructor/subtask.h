@@ -62,8 +62,8 @@ protected:
 	const std::string name_;
 
 	// maintain raw pointers to predecessors to avoid pointer circles
-	std::vector<SubTask*> predecessors_;
-	std::vector<SubTaskPtr> successors_;
+	SubTask* predecessor_;
+	SubTaskPtr successor_;
 
 	std::list<SubTrajectory> trajectories_;
 

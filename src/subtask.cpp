@@ -2,17 +2,18 @@
 
 moveit::task_constructor::SubTask::SubTask(std::string name)
 	: name_(name),
+	  predecessor_(NULL),
 	  it_beginnings_(beginnings_.begin()),
 	  it_endings_(endings_.begin()),
 	  it_pairs_(beginnings_.begin(), endings_.begin())
 {};
 
 void moveit::task_constructor::SubTask::addPredecessor(SubTaskPtr prev_task){
-	predecessors_.push_back( prev_task.get() );
+	predecessor_= prev_task.get();
 }
 
 void moveit::task_constructor::SubTask::addSuccessor(SubTaskPtr next_task){
-	successors_.push_back( next_task );
+	successor_= next_task;
 }
 
 const std::string&
@@ -83,26 +84,26 @@ moveit::task_constructor::SubTask::addTrajectory(robot_trajectory::RobotTrajecto
 
 void
 moveit::task_constructor::SubTask::sendForward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
-	std::cout << "sending state forward to " << successors_.size() << " successors" << std::endl;
-	traj.end.reserve(successors_.size());
-	for( SubTaskPtr succ : successors_ )
-		traj.end.push_back( succ->newBegin(ps, &traj) );
+	if( successor_ ){
+		std::cout << "sending state forward to successor" << std::endl;
+		traj.end= successor_->newBegin(ps, &traj);
+	}
 }
 
 void
 moveit::task_constructor::SubTask::sendBackward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
-	std::cout << "sending state backward to " << predecessors_.size() << " successors" << std::endl;
-	traj.begin.reserve(successors_.size());
-	for( SubTask* pred : predecessors_ )
-		traj.begin.push_back( pred->newEnd(ps, &traj) );
+	if( predecessor_ != NULL ){
+		std::cout << "sending state backward to predecessor" << std::endl;
+		traj.begin= predecessor_->newEnd(ps, &traj);
+	}
 }
 
 void
 moveit::task_constructor::SubTask::sendBothWays(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	std::cout << "sending state both ways" << std::endl;
-	if( predecessors_.size() > 0 )
+	if( predecessor_ != NULL )
 		sendBackward(traj, ps);
-	if( successors_.size() > 0 )
+	if( successor_ )
 		sendForward(traj, ps);
 }
 
