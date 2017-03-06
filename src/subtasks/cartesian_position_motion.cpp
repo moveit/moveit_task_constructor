@@ -13,7 +13,8 @@
 #include <Eigen/Geometry>
 
 moveit::task_constructor::subtasks::CartesianPositionMotion::CartesianPositionMotion(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name)
+: moveit::task_constructor::SubTask::SubTask(name),
+  step_size_(0.005)
 {
 	ros::NodeHandle nh;
 	pub= nh.advertise<moveit_msgs::DisplayTrajectory>("move_group/display_planned_path", 50);
@@ -56,6 +57,11 @@ void
 moveit::task_constructor::subtasks::CartesianPositionMotion::along(geometry_msgs::Vector3Stamped along){
 	mode_= moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG;
 	along_= along;
+}
+
+void
+moveit::task_constructor::subtasks::CartesianPositionMotion::setCartesianStepSize(double distance){
+	step_size_= distance;
 }
 
 bool
@@ -123,7 +129,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 			link_model,
 			target,
 			true, /* global frame */
-			.005, /* cartesian step size */
+			step_size_, /* cartesian step size */
 			1.5, /* jump threshold */
 			is_valid);
 
@@ -146,7 +152,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 			direction,
 			true, /* global frame */
 			max_distance_, /* distance */
-			.005, /* cartesian step size */
+			step_size_, /* cartesian step size */
 			1.5, /* jump threshold */
 			is_valid);
 
@@ -224,7 +230,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 		direction,
 		true, /* global frame */
 		max_distance_, /* distance */
-		.005, /* cartesian step size */
+		step_size_, /* cartesian step size */
 		1.5, /* jump threshold */
 		is_valid);
 

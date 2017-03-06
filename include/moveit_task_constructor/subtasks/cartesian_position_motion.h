@@ -33,6 +33,8 @@ public:
 	void towards(geometry_msgs::PointStamped goal);
 	void along(geometry_msgs::Vector3Stamped direction);
 
+	void setCartesianStepSize(double distance);
+
 protected:
 	std::string group_;
 
@@ -48,6 +50,8 @@ protected:
 
 	geometry_msgs::PointStamped towards_;
 	geometry_msgs::Vector3Stamped along_;
+
+	double step_size_;
 
 	ros::Publisher pub;
 

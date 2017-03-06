@@ -40,6 +40,7 @@ int main(int argc, char** argv){
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(.03, 0.1);
+		move->setCartesianStepSize(0.02);
 
 		geometry_msgs::PointStamped target;
 		target.header.frame_id= "object";
@@ -71,6 +72,7 @@ int main(int argc, char** argv){
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(0.03, 0.05);
+		move->setCartesianStepSize(0.01);
 
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id= "world";
