@@ -111,6 +111,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 
 		Eigen::Vector3d target_point;
 		tf::pointMsgToEigen(towards_.point, target_point);
+		target_point= frame*target_point;
 
 		// retain orientation of link
 		Eigen::Affine3d target= link_pose;
