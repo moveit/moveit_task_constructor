@@ -3,7 +3,8 @@
 moveit::task_constructor::SubTask::SubTask(std::string name)
 	: name_(name),
 	  it_beginnings_(beginnings_.begin()),
-	  it_endings_(endings_.begin())
+	  it_endings_(endings_.begin()),
+	  it_pairs_(beginnings_.begin(), endings_.begin())
 {};
 
 void moveit::task_constructor::SubTask::addPredecessor(SubTaskPtr prev_task){
@@ -66,6 +67,14 @@ moveit::task_constructor::SubTask::fetchStateEnding(){
 	return state;
 }
 
+std::pair<moveit::task_constructor::InterfaceState&, moveit::task_constructor::InterfaceState&>
+moveit::task_constructor::SubTask::fetchStatePair(){
+	// TODO: implement this properly
+	return std::pair<moveit::task_constructor::InterfaceState&, moveit::task_constructor::InterfaceState&>(
+		*it_pairs_.first,
+		*(it_pairs_.second++));
+}
+
 moveit::task_constructor::SubTrajectory&
 moveit::task_constructor::SubTask::addTrajectory(robot_trajectory::RobotTrajectoryPtr trajectory){
 	trajectories_.emplace_back(trajectory);
@@ -108,6 +117,10 @@ moveit::task_constructor::SubTask::newBegin(planning_scene::PlanningSceneConstPt
 	if( it_beginnings_ == beginnings_.end() )
 		--it_beginnings_;
 
+	// TODO: need to handle the pairs iterator
+	if( it_pairs_.first == beginnings_.end() )
+		--it_pairs_.first;
+
 	return &beginnings_.back();
 }
 
@@ -121,6 +134,10 @@ moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningSceneConstPtr 
 	if( it_endings_ == endings_.end() )
 		--it_endings_;
 
+	//TODO: need to handle the pairs iterator properly
+	if( it_pairs_.second == endings_.end() )
+		--it_pairs_.second;
+
 	return &endings_.back();
 }
 
@@ -132,4 +149,10 @@ moveit::task_constructor::SubTask::hasBeginning(){
 bool
 moveit::task_constructor::SubTask::hasEnding(){
 	return it_endings_ != endings_.end();
+}
+
+bool
+moveit::task_constructor::SubTask::hasStatePair(){
+	// TODO: implement this properly
+	return it_pairs_.first != beginnings_.end() && it_pairs_.second != endings_.end();
 }

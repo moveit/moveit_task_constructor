@@ -48,6 +48,7 @@ protected:
 
 	bool hasBeginning();
 	bool hasEnding();
+	bool hasStatePair();
 
 	SubTrajectory& addTrajectory(robot_trajectory::RobotTrajectoryPtr);
 
@@ -74,6 +75,8 @@ protected:
 
 	std::list<InterfaceState>::iterator it_beginnings_;
 	std::list<InterfaceState>::iterator it_endings_;
+
+	std::pair< std::list<InterfaceState>::iterator, std::list<InterfaceState>::iterator > it_pairs_;
 };
 
 }
