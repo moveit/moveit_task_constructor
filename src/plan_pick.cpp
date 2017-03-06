@@ -2,6 +2,7 @@
 
 #include <moveit_task_constructor/subtasks/current_state.h>
 #include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/subtasks/move.h>
 #include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
 #include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
 
@@ -25,15 +26,13 @@ int main(int argc, char** argv){
 		t.addAfter(move);
 	}
 
-/*
 	{
-		auto move= std::make_shared<subtask::Move>("move to pre-grasp");
+		auto move= std::make_shared<subtasks::Move>("move to pre-grasp");
 		move->setGroup("arm");
 		move->setPlannerId("RRTConnectkConfigDefault");
-		move->setPlanningTime(5.0);
+		move->setTimeout(8.0);
 		t.addAfter(move);
 	}
-*/
 
 	{
 		auto move= std::make_shared<subtasks::CartesianPositionMotion>("proceed to grasp pose");
