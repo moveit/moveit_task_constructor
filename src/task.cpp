@@ -65,7 +65,7 @@ bool moveit::task_constructor::Task::plan(){
 		for( SubTaskPtr& subtask : subtasks_ ){
 			if( !subtask->canCompute() )
 				continue;
-			std::cout << "Computing subtask '" << subtask->getName() << "': " << std::endl;
+			std::cout << "Computing subtask '" << subtask->getName() << "':" << std::endl;
 			bool success= subtask->compute();
 			computed= true;
 			std::cout << (success ? "succeeded" : "failed") << std::endl;
