@@ -96,21 +96,22 @@ namespace {
 
 bool
 moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
+	assert( scene_->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf" );
+
 	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
 	robot_state::RobotState &grasp_state = grasp_scene->getCurrentStateNonConst();
 
-	const moveit::core::JointModelGroup* jmg= grasp_state.getJointModelGroup(group_);
+	const moveit::core::JointModelGroup* jmg_eef= grasp_state.getRobotModel()->getEndEffector(eef_);
+
+	const moveit::core::JointModelGroup* jmg_active= group_.empty()
+		? grasp_state.getJointModelGroup(jmg_eef->getEndEffectorParentGroup().first)
+		: grasp_state.getJointModelGroup(group_);
 
 	// empty trajectory -> this subtask only produces states
 	const robot_trajectory::RobotTrajectoryPtr traj;
 
 	if(!gripper_grasp_pose_.empty()){
-		const std::vector<std::string> eefs= jmg->getAttachedEndEffectorNames();
-		if( eefs.size() == 0 )
-			throw std::runtime_error("asked to set gripper grasp pose of end effector, but no end effector could be found");
-
-		const moveit::core::JointModelGroup* gripper_jmg= grasp_state.getRobotModel()->getEndEffector(eefs[0]);
-		grasp_state.setToDefaultValues(gripper_jmg, gripper_grasp_pose_);
+		grasp_state.setToDefaultValues(jmg_eef, gripper_grasp_pose_);
 	}
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
@@ -131,7 +132,10 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 	while(current_angle_ < 2*M_PI){
 		if( remaining_time_ <= 0.0 ){
-			std::cout << "computed " << current_angle_ << " with " << previous_solutions_.size() << " cached ik solutions" << std::endl;
+			std::cout << "computed angle " << current_angle_
+			          << " with " << previous_solutions_.size()
+			          << " cached ik solutions"
+			          << " and " << remaining_time_ << "s left" << std::endl;
 			current_angle_+= angle_delta_;
 			remaining_time_= timeout_;
 			tried_current_state_as_seed_= false;
@@ -146,11 +150,11 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
 
 		if(tried_current_state_as_seed_)
-			grasp_state.setToRandomPositions(jmg);
+			grasp_state.setToRandomPositions(jmg_active);
 		tried_current_state_as_seed_= true;
 
 		auto now= std::chrono::steady_clock::now();
-		bool succeeded= grasp_state.setFromIK(jmg, grasp_pose, eef_, 1, remaining_time_, is_valid);
+		bool succeeded= grasp_state.setFromIK(jmg_active, grasp_pose, jmg_eef->getEndEffectorParentGroup().second, 1, remaining_time_, is_valid);
 		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
 		if(succeeded){
@@ -159,7 +163,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 			pub.publish(drs);
 
 			previous_solutions_.emplace_back();
-			grasp_state.copyJointGroupPositions(jmg, previous_solutions_.back());
+			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
 			moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
 			sendBothWays(trajectory, grasp_scene);
 			return true;

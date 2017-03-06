@@ -22,9 +22,9 @@ public:
 
 	virtual bool compute();
 
-	void setGroup(std::string group_name);
+	void setEndEffector(std::string eef);
 
-	void setEndEffector(std::string eef_link);
+	void setGroup(std::string group_name);
 
 	void setGripperGraspPose(std::string pose_name);
 
@@ -37,9 +37,9 @@ public:
 	void setAngleDelta(double delta);
 
 protected:
-	std::string group_;
-
 	std::string eef_;
+
+	std::string group_;
 
 	double grasp_offset_;
 

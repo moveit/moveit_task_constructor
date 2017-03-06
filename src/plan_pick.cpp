@@ -50,8 +50,8 @@ int main(int argc, char** argv){
 
 	{
 		auto gengrasp= std::make_shared<subtasks::GenerateGraspPose>("generate grasp pose");
-		gengrasp->setEndEffector("s_model_tool0");
-		gengrasp->setGroup("arm");
+		gengrasp->setEndEffector("gripper");
+		//gengrasp->setGroup("arm");
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setGraspOffset(.03);
