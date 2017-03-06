@@ -22,10 +22,13 @@ MOVEIT_CLASS_FORWARD(InterfaceState);
 
 struct InterfaceState {
 	InterfaceState(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* previous, SubTrajectory* next)
-		: state(ps),
-		  previous_trajectory(1, previous),
-		  next_trajectory(1, next)
-	{}
+		: state(ps)
+	{
+		if( previous )
+			previous_trajectory.push_back(previous);
+		if( next )
+			next_trajectory.push_back(next);
+	}
 
 	std::vector<SubTrajectory*> previous_trajectory;
 	std::vector<SubTrajectory*> next_trajectory;
