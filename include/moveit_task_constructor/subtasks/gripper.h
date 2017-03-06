@@ -18,22 +18,26 @@ public:
 
 	virtual bool compute();
 
-	void setGroup(std::string group);
+	void setEndEffector(std::string eef);
+
+	void setAttachLink(std::string link);
 
 	void setFrom(std::string named_target);
 	void setTo(std::string named_target);
 
-	void graspObject(std::string object);
+	void graspObject(std::string grasp_object);
 
 protected:
-	std::string group_;
+	std::string eef_;
 
 	std::string from_named_target_;
 	std::string to_named_target_;
 
-	std::string object_;
+	std::string grasp_object_;
 
 	moveit::planning_interface::MoveGroupInterfacePtr mgi_;
+
+	std::string attach_link_;
 };
 
 }

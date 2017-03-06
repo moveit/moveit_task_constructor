@@ -14,9 +14,13 @@ moveit::task_constructor::subtasks::Gripper::Gripper(std::string name)
 {}
 
 void
-moveit::task_constructor::subtasks::Gripper::setGroup(std::string group){
-	group_= group;
-	mgi_.reset(new moveit::planning_interface::MoveGroupInterface(group));
+moveit::task_constructor::subtasks::Gripper::setEndEffector(std::string eef){
+	eef_= eef;
+}
+
+void
+moveit::task_constructor::subtasks::Gripper::setAttachLink(std::string link){
+	attach_link_= link;
 }
 
 void
@@ -30,8 +34,8 @@ moveit::task_constructor::subtasks::Gripper::setTo(std::string named_target){
 }
 
 void
-moveit::task_constructor::subtasks::Gripper::graspObject(std::string object){
-	object_= object;
+moveit::task_constructor::subtasks::Gripper::graspObject(std::string grasp_object){
+	grasp_object_= grasp_object;
 }
 
 bool
@@ -41,6 +45,19 @@ moveit::task_constructor::subtasks::Gripper::canCompute(){
 
 bool
 moveit::task_constructor::subtasks::Gripper::compute(){
+	assert( scene_->getRobotModel() );
+
+	if(!mgi_){
+		assert( scene_->getRobotModel()->hasEndEffector(eef_) && "no end effector with that name defined in srdf" );
+		const moveit::core::JointModelGroup* jmg= scene_->getRobotModel()->getEndEffector(eef_);
+		const std::string group_name= jmg->getName();
+		mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
+
+		if( attach_link_.empty() ){
+			attach_link_= jmg->getEndEffectorParentGroup().second;
+		}
+	}
+
 	InterfaceState& start= fetchStateBeginning();
 
 	planning_scene::PlanningScenePtr scene(start.state->diff());
@@ -50,8 +67,8 @@ moveit::task_constructor::subtasks::Gripper::compute(){
 	::planning_interface::MotionPlanRequest req;
 	mgi_->constructMotionPlanRequest(req);
 
-	if( !object_.empty() ){
-		scene->getAllowedCollisionMatrixNonConst().setEntry(object_, mgi_->getLinkNames(), true);
+	if( !grasp_object_.empty() ){
+		scene->getAllowedCollisionMatrixNonConst().setEntry(grasp_object_, mgi_->getLinkNames(), true);
 	}
 
 	::planning_interface::MotionPlanResponse res;

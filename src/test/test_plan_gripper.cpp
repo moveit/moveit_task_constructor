@@ -17,19 +17,22 @@ int main(int argc, char** argv){
 	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
 	{
 		auto gripper= std::make_shared<subtasks::Gripper>("close gripper");
-		gripper->setGroup("gripper");
+		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
 		t.addAfter( gripper );
 	}
 	t.plan();
 
-
+	/*TODO currently not implemented in gripper*/
+	/*
 	{
 		auto gripper= std::make_shared<subtasks::Gripper>("close gripper");
-		gripper->setGroup("gripper");
+		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
 		t.addStart( gripper );
 	}
 	t.addAfter( std::make_shared<subtasks::CurrentState>("current state") );
+	t.plan();
+	*/
 	return 0;
 }

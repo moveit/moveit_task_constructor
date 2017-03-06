@@ -20,7 +20,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move= std::make_shared<subtasks::Gripper>("open gripper");
-		move->setGroup("gripper");
+		move->setEndEffector("gripper");
 		move->setTo("open");
 		t.addAfter(move);
 	}
@@ -61,7 +61,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move= std::make_shared<subtasks::Gripper>("grasp");
-		move->setGroup("gripper");
+		move->setEndEffector("gripper");
 		move->setTo("closed");
 		move->graspObject("object");
 		t.addAfter(move);
