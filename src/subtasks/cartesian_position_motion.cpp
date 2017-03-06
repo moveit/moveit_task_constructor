@@ -267,6 +267,7 @@ void
 moveit::task_constructor::subtasks::CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
 			moveit_msgs::DisplayTrajectory dt;
 			robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
+			dt.model_id= scene_->getRobotModel()->getName();
 			dt.trajectory.resize(1);
 			trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
 			dt.model_id= start.getRobotModel()->getName();
