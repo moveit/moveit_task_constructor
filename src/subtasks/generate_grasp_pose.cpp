@@ -21,6 +21,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::st
   angle_delta_(0.1),
   current_angle_(0.0),
   grasp_offset_(0.0),
+  ignore_collisions_(false),
   remaining_time_(timeout_),
   tried_current_state_as_seed_(false)
 {
@@ -32,6 +33,11 @@ moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::st
 void
 moveit::task_constructor::subtasks::GenerateGraspPose::setGroup(std::string group){
 	group_= group;
+}
+
+void
+moveit::task_constructor::subtasks::GenerateGraspPose::setLink(std::string ik_link){
+	ik_link_= ik_link;
 }
 
 void
@@ -68,20 +74,24 @@ moveit::task_constructor::subtasks::GenerateGraspPose::setAngleDelta(double delt
 
 bool
 moveit::task_constructor::subtasks::GenerateGraspPose::canCompute(){
-	return current_angle_ < 2*M_PI;
+	return current_angle_ > 0;
 }
 
 namespace {
 	bool isValid(planning_scene::PlanningSceneConstPtr scene,
-	        std::vector< std::vector<double> >* old_solutions,
-	        robot_state::RobotState* state,
-	        const robot_model::JointModelGroup* jmg,
-	        const double* joint_positions){
+	             bool ignore_collisions,
+	             std::vector< std::vector<double> >* old_solutions,
+	             robot_state::RobotState* state,
+	             const robot_model::JointModelGroup* jmg,
+	             const double* joint_positions){
 		for( std::vector<double> sol : *old_solutions ){
 			if( jmg->distance(joint_positions, sol.data()) < 0.1 ){
 				return false;
 			}
 		}
+
+		if(ignore_collisions)
+			return true;
 
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
@@ -107,6 +117,8 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		? grasp_state.getJointModelGroup(jmg_eef->getEndEffectorParentGroup().first)
 		: grasp_state.getJointModelGroup(group_);
 
+	const std::string ik_link= ik_link_.empty() ? jmg_eef->getEndEffectorParentGroup().second : ik_link_;
+
 	// empty trajectory -> this subtask only produces states
 	const robot_trajectory::RobotTrajectoryPtr traj;
 
@@ -118,6 +130,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		std::bind(
 			&isValid,
 			scene_,
+			ignore_collisions_,
 			&previous_solutions_,
 			std::placeholders::_1,
 			std::placeholders::_2,
@@ -154,7 +167,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		tried_current_state_as_seed_= true;
 
 		auto now= std::chrono::steady_clock::now();
-		bool succeeded= grasp_state.setFromIK(jmg_active, grasp_pose, jmg_eef->getEndEffectorParentGroup().second, 1, remaining_time_, is_valid);
+		bool succeeded= grasp_state.setFromIK(jmg_active, grasp_pose, ik_link, 1, remaining_time_, is_valid);
 		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
 		if(succeeded){

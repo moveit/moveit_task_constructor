@@ -26,6 +26,8 @@ public:
 
 	void setGroup(std::string group_name);
 
+	void setLink(std::string ik_link);
+
 	void setGripperGraspPose(std::string pose_name);
 
 	void setObject(std::string object);
@@ -36,12 +38,18 @@ public:
 
 	void setAngleDelta(double delta);
 
+	void ignoreCollisions(bool flag);
+
 protected:
 	std::string eef_;
 
 	std::string group_;
 
+	std::string ik_link_;
+
 	double grasp_offset_;
+
+	bool ignore_collisions_;
 
 	std::string gripper_grasp_pose_;
 
