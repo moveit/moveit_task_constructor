@@ -82,6 +82,8 @@ int main(int argc, char** argv){
 
 	t.plan();
 
+	t.publishPlans();
+
 	//t.printState();
 
 	return 0;

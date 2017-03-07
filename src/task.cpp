@@ -4,7 +4,11 @@
 #include <ros/ros.h>
 
 #include <moveit_msgs/GetPlanningScene.h>
+#include <moveit_msgs/DisplayTrajectory.h>
+
 #include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/robot_state/conversions.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
 moveit::task_constructor::Task::Task(){
@@ -13,6 +17,9 @@ moveit::task_constructor::Task::Task(){
 		throw Exception("Task failed to construct RobotModel");
 
 	ros::NodeHandle h;
+
+	pub = h.advertise<moveit_msgs::DisplayTrajectory>("task_plan", 30);
+
 	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 	client.waitForExistence();
 
@@ -92,4 +99,65 @@ void moveit::task_constructor::Task::printState(){
 			<< " / " << st->getName()
 			<< std::endl;
 	}
+}
+
+namespace {
+bool traverseFullTrajectories(
+	const moveit::task_constructor::SubTrajectory& start,
+	int nr_of_trajectories,
+	moveit::task_constructor::Task::SolutionCallback& cb,
+	std::vector<robot_trajectory::RobotTrajectoryPtr>& trace)
+{
+	if(start.trajectory)
+		trace.push_back(start.trajectory);
+
+	if(nr_of_trajectories == 1){
+		cb(trace);
+	}
+	else if( start.end ){
+		for( const moveit::task_constructor::SubTrajectory* successor : start.end->next_trajectory ){
+			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) )
+				return false;
+		}
+	}
+
+	if(start.trajectory)
+		trace.pop_back();
+
+	return true;
+}
+}
+
+bool moveit::task_constructor::Task::processSolutions(moveit::task_constructor::Task::SolutionCallback& processor ){
+	const size_t nr_of_trajectories= subtasks_.size();
+	std::vector<robot_trajectory::RobotTrajectoryPtr> trace;
+	trace.reserve(nr_of_trajectories);
+	for(const SubTrajectory& subtraj : subtasks_.front()->getTrajectories())
+		if( !traverseFullTrajectories(subtraj, subtasks_.size(), processor, trace) )
+			return false;
+	return true;
+}
+
+namespace {
+bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<robot_trajectory::RobotTrajectoryPtr>& solution){
+		for(auto& t : solution){
+			dt.trajectory.emplace_back();
+			t->getRobotTrajectoryMsg(dt.trajectory.back());
+		}
+		std::cout << "publishing solution" << std::endl;
+		pub.publish(dt);
+		ros::Duration(10.0).sleep();
+}
+}
+
+void moveit::task_constructor::Task::publishPlans(){
+	moveit_msgs::DisplayTrajectory dt;
+	robot_state::robotStateToRobotStateMsg(scene_->getCurrentState(), dt.trajectory_start);
+	dt.model_id= scene_->getRobotModel()->getName();
+
+	moveit::task_constructor::Task::SolutionCallback processor= std::bind(
+		&publishSolution, pub, dt, std::placeholders::_1);
+
+	processSolutions(processor);
+
 }

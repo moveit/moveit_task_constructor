@@ -4,6 +4,8 @@
 
 #include <moveit/macros/class_forward.h>
 
+#include <ros/ros.h>
+
 #include <vector>
 
 namespace planning_scene {
@@ -18,6 +20,10 @@ namespace planning_pipeline {
 	MOVEIT_CLASS_FORWARD(PlanningPipeline);
 }
 
+namespace robot_trajectory {
+	MOVEIT_CLASS_FORWARD(RobotTrajectory);
+}
+
 namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
@@ -27,6 +33,8 @@ MOVEIT_CLASS_FORWARD(Task);
 
 class Task {
 public:
+	typedef std::function<bool(std::vector<robot_trajectory::RobotTrajectoryPtr>&)> SolutionCallback;
+
 	Task();
 	~Task();
 
@@ -34,6 +42,10 @@ public:
 	void addAfter( SubTaskPtr );
 
 	bool plan();
+
+	bool processSolutions(SolutionCallback& processor);
+
+	void publishPlans();
 
 	void printState();
 
@@ -46,6 +58,8 @@ protected:
 	robot_model_loader::RobotModelLoaderPtr rml_;
 
 	planning_pipeline::PlanningPipelinePtr planner_;
+
+	ros::Publisher pub;
 };
 
 }
