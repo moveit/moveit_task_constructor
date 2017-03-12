@@ -108,16 +108,19 @@ bool traverseFullTrajectories(
 	moveit::task_constructor::Task::SolutionCallback& cb,
 	std::vector<robot_trajectory::RobotTrajectoryPtr>& trace)
 {
+	bool ret= true;
+
 	if(start.trajectory)
 		trace.push_back(start.trajectory);
 
 	if(nr_of_trajectories == 1){
-		cb(trace);
+		ret= cb(trace);
 	}
 	else if( start.end ){
 		for( const moveit::task_constructor::SubTrajectory* successor : start.end->next_trajectory ){
 			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) )
-				return false;
+				ret= false;
+				break;
 		}
 	}
 
@@ -147,6 +150,8 @@ bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, st
 		std::cout << "publishing solution" << std::endl;
 		pub.publish(dt);
 		ros::Duration(10.0).sleep();
+
+		return true;
 }
 }
 
