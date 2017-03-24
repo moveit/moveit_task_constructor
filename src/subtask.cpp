@@ -31,7 +31,7 @@ moveit::task_constructor::SubTask::getEnd(){
 	return endings_;
 }
 
-const std::list<moveit::task_constructor::SubTrajectory>&
+std::list<moveit::task_constructor::SubTrajectory>&
 moveit::task_constructor::SubTask::getTrajectories(){
 	return trajectories_;
 }

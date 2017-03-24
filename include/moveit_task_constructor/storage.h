@@ -40,7 +40,8 @@ struct SubTrajectory {
 	SubTrajectory(robot_trajectory::RobotTrajectoryPtr traj)
 		: trajectory(traj),
 		  begin(NULL),
-		  end(NULL)
+		  end(NULL),
+		  flag(false)
 	{}
 
 	void hasBeginning(InterfaceState& state){
@@ -58,6 +59,8 @@ struct SubTrajectory {
 	robot_trajectory::RobotTrajectoryPtr trajectory;
 	InterfaceState* begin;
 	InterfaceState* end;
+
+	bool flag;
 };
 
 }

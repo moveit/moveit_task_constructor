@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <moveit_task_constructor/storage.h>
+
 #include <moveit/macros/class_forward.h>
 
 #include <ros/ros.h>
@@ -33,7 +35,7 @@ MOVEIT_CLASS_FORWARD(Task);
 
 class Task {
 public:
-	typedef std::function<bool(std::vector<robot_trajectory::RobotTrajectoryPtr>&)> SolutionCallback;
+	typedef std::function<bool(std::vector<SubTrajectory*>&)> SolutionCallback;
 
 	Task();
 	~Task();

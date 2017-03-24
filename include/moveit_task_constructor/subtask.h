@@ -33,7 +33,7 @@ public:
 	const std::string& getName();
 	const std::list<InterfaceState>& getBegin();
 	const std::list<InterfaceState>& getEnd();
-	const std::list<SubTrajectory>& getTrajectories();
+	std::list<SubTrajectory>& getTrajectories();
 
 	void setPlanningScene(planning_scene::PlanningSceneConstPtr);
 	void setPlanningPipeline(planning_pipeline::PlanningPipelinePtr);

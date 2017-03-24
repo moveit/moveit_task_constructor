@@ -103,50 +103,62 @@ void moveit::task_constructor::Task::printState(){
 
 namespace {
 bool traverseFullTrajectories(
-	const moveit::task_constructor::SubTrajectory& start,
+	moveit::task_constructor::SubTrajectory& start,
 	int nr_of_trajectories,
 	moveit::task_constructor::Task::SolutionCallback& cb,
-	std::vector<robot_trajectory::RobotTrajectoryPtr>& trace)
+	std::vector<moveit::task_constructor::SubTrajectory*>& trace)
 {
 	bool ret= true;
 
-	if(start.trajectory)
-		trace.push_back(start.trajectory);
+	trace.push_back(&start);
 
 	if(nr_of_trajectories == 1){
 		ret= cb(trace);
 	}
 	else if( start.end ){
-		for( const moveit::task_constructor::SubTrajectory* successor : start.end->next_trajectory ){
-			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) )
+		for( moveit::task_constructor::SubTrajectory* successor : start.end->next_trajectory ){
+			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
 				ret= false;
 				break;
+			}
 		}
 	}
 
-	if(start.trajectory)
-		trace.pop_back();
+	trace.pop_back();
 
-	return true;
+	return ret;
 }
 }
 
 bool moveit::task_constructor::Task::processSolutions(moveit::task_constructor::Task::SolutionCallback& processor ){
 	const size_t nr_of_trajectories= subtasks_.size();
-	std::vector<robot_trajectory::RobotTrajectoryPtr> trace;
+	std::vector<moveit::task_constructor::SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
-	for(const SubTrajectory& subtraj : subtasks_.front()->getTrajectories())
+	for(SubTrajectory& subtraj : subtasks_.front()->getTrajectories())
 		if( !traverseFullTrajectories(subtraj, subtasks_.size(), processor, trace) )
 			return false;
 	return true;
 }
 
 namespace {
-bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<robot_trajectory::RobotTrajectoryPtr>& solution){
+bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<moveit::task_constructor::SubTrajectory*>& solution){
+		bool all_flagged= true;
 		for(auto& t : solution){
-			dt.trajectory.emplace_back();
-			t->getRobotTrajectoryMsg(dt.trajectory.back());
+			all_flagged= all_flagged && t->flag;
 		}
+
+		if( all_flagged ){
+			return true;
+		}
+
+		for(auto& t : solution){
+			if(t->trajectory){
+				dt.trajectory.emplace_back();
+				t->trajectory->getRobotTrajectoryMsg(dt.trajectory.back());
+			}
+			t->flag= true;
+		}
+
 		std::cout << "publishing solution" << std::endl;
 		pub.publish(dt);
 		ros::Duration(10.0).sleep();
