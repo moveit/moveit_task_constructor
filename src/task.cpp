@@ -162,7 +162,6 @@ bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, st
 
 		std::cout << "publishing solution" << std::endl;
 		pub.publish(dt);
-		ros::Duration(10.0).sleep();
 
 		return true;
 }
