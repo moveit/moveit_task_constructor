@@ -8,12 +8,35 @@
 
 #include <ros/ros.h>
 
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+
 using namespace moveit::task_constructor;
+
+void spawnObject(){
+	moveit::planning_interface::PlanningSceneInterface psi;
+
+	moveit_msgs::CollisionObject o;
+	o.id= "object";
+	o.header.frame_id= "table_top";
+	o.primitive_poses.resize(1);
+	o.primitive_poses[0].position.x= -0.2;
+	o.primitive_poses[0].position.y= 0.13;
+	o.primitive_poses[0].position.z= 0.12;
+	o.primitive_poses[0].orientation.w= 1.0;
+	o.primitives.resize(1);
+	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].dimensions.resize(2);
+	o.primitives[0].dimensions[0]= 0.23;
+	o.primitives[0].dimensions[1]= 0.03;
+	psi.applyCollisionObject(o);
+}
 
 int main(int argc, char** argv){
 	ros::init(argc, argv, "plan_pick");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
+
+	spawnObject();
 
 	Task t;
 
