@@ -79,6 +79,7 @@ bool moveit::task_constructor::Task::plan(){
 		}
 		if(computed){
 			printState();
+			publishPlans();
 		}
 	}
 	return false;
