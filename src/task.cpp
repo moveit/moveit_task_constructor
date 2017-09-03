@@ -39,7 +39,7 @@ moveit::task_constructor::Task::Task(){
 		| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
 
 	if(!client.call(req, res)){
-		throw Exception("Task failed to aquire current PlanningScene");
+		throw Exception("Task failed to acquire current PlanningScene");
 	}
 
 	scene_.reset(new planning_scene::PlanningScene(rml_->getModel()));
