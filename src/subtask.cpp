@@ -2,14 +2,13 @@
 
 moveit::task_constructor::SubTask::SubTask(std::string name)
 	: name_(name),
-	  predecessor_(NULL),
 	  it_beginnings_(beginnings_.begin()),
 	  it_endings_(endings_.begin()),
 	  it_pairs_(beginnings_.begin(), endings_.begin())
 {};
 
 void moveit::task_constructor::SubTask::addPredecessor(SubTaskPtr prev_task){
-	predecessor_= prev_task.get();
+	predecessor_= SubTaskWeakPtr(prev_task);
 }
 
 void moveit::task_constructor::SubTask::addSuccessor(SubTaskPtr next_task){
@@ -92,16 +91,16 @@ moveit::task_constructor::SubTask::sendForward(moveit::task_constructor::SubTraj
 
 void
 moveit::task_constructor::SubTask::sendBackward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
-	if( predecessor_ != NULL ){
+	if( !predecessor_.expired() ){
 		std::cout << "sending state backward to predecessor" << std::endl;
-		traj.begin= predecessor_->newEnd(ps, &traj);
+		traj.begin= predecessor_.lock()->newEnd(ps, &traj);
 	}
 }
 
 void
 moveit::task_constructor::SubTask::sendBothWays(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	std::cout << "sending state both ways" << std::endl;
-	if( predecessor_ != NULL )
+	if( !predecessor_.expired() )
 		sendBackward(traj, ps);
 	if( successor_ )
 		sendForward(traj, ps);

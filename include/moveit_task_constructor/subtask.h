@@ -22,6 +22,7 @@ MOVEIT_CLASS_FORWARD(PlanningPipeline);
 namespace moveit::task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
+typedef std::weak_ptr<SubTask> SubTaskWeakPtr;
 
 class SubTask {
 public:
@@ -61,8 +62,8 @@ protected:
 
 	const std::string name_;
 
-	// maintain raw pointers to predecessors to avoid pointer circles
-	SubTask* predecessor_;
+	// avoid shared pointers back
+	SubTaskWeakPtr predecessor_;
 	SubTaskPtr successor_;
 
 	std::list<SubTrajectory> trajectories_;
