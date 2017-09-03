@@ -11,7 +11,7 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_shared<subtasks::CurrentState>("current state") );
 
 	t.plan();
 

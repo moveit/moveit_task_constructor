@@ -42,13 +42,13 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_shared<subtasks::CurrentState>("current state") );
 
 	{
 		auto move= std::make_shared<subtasks::Gripper>("open gripper");
 		move->setEndEffector("left_gripper");
 		move->setTo("open");
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	{
@@ -57,7 +57,7 @@ int main(int argc, char** argv){
 		move->setLink("l_gripper_tool_frame");
 		move->setPlannerId("RRTConnectkConfigDefault");
 		move->setTimeout(8.0);
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	{
@@ -70,7 +70,7 @@ int main(int argc, char** argv){
 		geometry_msgs::PointStamped target;
 		target.header.frame_id= "object";
 		move->towards(target);
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	{
@@ -82,7 +82,7 @@ int main(int argc, char** argv){
 		gengrasp->setObject("object");
 		gengrasp->setGraspOffset(.00);
 		gengrasp->setAngleDelta(.2);
-		t.addAfter(gengrasp);
+		t.add(gengrasp);
 	}
 
 	{
@@ -90,7 +90,7 @@ int main(int argc, char** argv){
 		move->setEndEffector("left_gripper");
 		move->setTo("closed");
 		move->graspObject("object");
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	{
@@ -104,7 +104,7 @@ int main(int argc, char** argv){
 		direction.header.frame_id= "base_link";
 		direction.vector.z= 1.0;
 		move->along(direction);
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	t.plan();

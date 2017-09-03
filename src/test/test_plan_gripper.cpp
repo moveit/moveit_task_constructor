@@ -14,12 +14,12 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_shared<subtasks::CurrentState>("current state") );
 	{
 		auto gripper= std::make_shared<subtasks::Gripper>("close gripper");
 		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
-		t.addAfter( gripper );
+		t.add( gripper );
 	}
 	t.plan();
 
@@ -29,9 +29,9 @@ int main(int argc, char** argv){
 		auto gripper= std::make_shared<subtasks::Gripper>("close gripper");
 		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
-		t.addStart( gripper );
+		t.add( gripper );
 	}
-	t.addAfter( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_shared<subtasks::CurrentState>("current state") );
 	t.plan();
 	*/
 	return 0;

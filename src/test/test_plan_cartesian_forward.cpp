@@ -12,7 +12,7 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.addStart( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_shared<subtasks::CurrentState>("current state") );
 
 	{
 		auto move= std::make_shared<subtasks::CartesianPositionMotion>("lift object");
@@ -25,7 +25,7 @@ int main(int argc, char** argv){
 		direction.header.frame_id= "world";
 		direction.vector.x= 1.0;
 		move->along(direction);
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	{
@@ -40,7 +40,7 @@ int main(int argc, char** argv){
 		target.point.y= 0.7;
 		target.point.z= 1.5;
 		move->towards(target);
-		t.addAfter(move);
+		t.add(move);
 	}
 
 	t.plan();

@@ -40,8 +40,7 @@ public:
 	Task();
 	~Task();
 
-	void addStart( SubTaskPtr );
-	void addAfter( SubTaskPtr );
+	void add( SubTaskPtr );
 
 	bool plan();
 
@@ -51,9 +50,9 @@ public:
 
 	void printState();
 
-protected:
-	void addSubTask( SubTaskPtr );
+	void clear();
 
+protected:
 	std::vector<SubTaskPtr> subtasks_;
 
 	planning_scene::PlanningScenePtr scene_;

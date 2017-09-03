@@ -45,7 +45,7 @@ int main(int argc, char** argv){
 	st->setAngleDelta(0.1);
 	st->setGraspOffset(0.03);
 
-	t.addStart(st);
+	t.add(st);
 
 	t.plan();
 

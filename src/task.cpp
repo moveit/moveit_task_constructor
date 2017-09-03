@@ -54,15 +54,8 @@ moveit::task_constructor::Task::~Task(){
 	planner_.reset();
 }
 
-void moveit::task_constructor::Task::addStart( SubTaskPtr subtask ){
+void moveit::task_constructor::Task::clear(){
 	subtasks_.clear();
-	addSubTask( subtask );
-}
-
-void moveit::task_constructor::Task::addAfter( SubTaskPtr subtask ){
-	subtask->addPredecessor( subtasks_.back() );
-	subtasks_.back()->addSuccessor( subtask );
-	addSubTask( subtask );
 }
 
 bool moveit::task_constructor::Task::plan(){
@@ -85,9 +78,15 @@ bool moveit::task_constructor::Task::plan(){
 	return false;
 }
 
-void moveit::task_constructor::Task::addSubTask( SubTaskPtr subtask ){
+void moveit::task_constructor::Task::add( SubTaskPtr subtask ){
 	subtask->setPlanningScene( scene_ );
 	subtask->setPlanningPipeline( planner_ );
+
+	if( !subtasks_.empty() ){
+		subtask->addPredecessor( subtasks_.back() );
+		subtasks_.back()->addSuccessor( subtask );
+	}
+
 	subtasks_.push_back( subtask );
 }
 
