@@ -21,7 +21,7 @@ moveit::task_constructor::SubTask::getName(){
 }
 
 const std::list<moveit::task_constructor::InterfaceState>&
-moveit::task_constructor::SubTask::getBegin(){
+moveit::task_constructor::SubTask::getBeginning(){
 	return beginnings_;
 }
 
@@ -85,7 +85,7 @@ void
 moveit::task_constructor::SubTask::sendForward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	if( successor_ ){
 		std::cout << "sending state forward to successor" << std::endl;
-		traj.end= successor_->newBegin(ps, &traj);
+		traj.end= successor_->newBeginning(ps, &traj);
 	}
 }
 
@@ -107,7 +107,7 @@ moveit::task_constructor::SubTask::sendBothWays(moveit::task_constructor::SubTra
 }
 
 moveit::task_constructor::InterfaceState*
-moveit::task_constructor::SubTask::newBegin(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
+moveit::task_constructor::SubTask::newBeginning(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
 	assert( bool(ps) );
 
 	beginnings_.push_back( InterfaceState(ps, old_end, NULL) );

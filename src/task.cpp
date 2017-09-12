@@ -93,7 +93,7 @@ void moveit::task_constructor::Task::add( SubTaskPtr subtask ){
 void moveit::task_constructor::Task::printState(){
 	for( auto& st : subtasks_ ){
 		std::cout
-			<< st->getBegin().size() << " -> "
+			<< st->getBeginning().size() << " -> "
 			<< st->getTrajectories().size()
 			<< " <- " << st->getEnd().size()
 			<< " / " << st->getName()

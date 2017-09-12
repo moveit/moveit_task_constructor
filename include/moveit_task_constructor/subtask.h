@@ -32,7 +32,7 @@ public:
 	virtual bool compute() = 0;
 
 	const std::string& getName();
-	const std::list<InterfaceState>& getBegin();
+	const std::list<InterfaceState>& getBeginning();
 	const std::list<InterfaceState>& getEnd();
 	std::list<SubTrajectory>& getTrajectories();
 
@@ -57,7 +57,7 @@ protected:
 	void sendBackward(SubTrajectory&, planning_scene::PlanningSceneConstPtr);
 	void sendBothWays(SubTrajectory&, planning_scene::PlanningSceneConstPtr);
 
-	InterfaceState* newBegin(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
+	InterfaceState* newBeginning(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
 	InterfaceState* newEnd(planning_scene::PlanningSceneConstPtr, SubTrajectory*);
 
 	const std::string name_;
