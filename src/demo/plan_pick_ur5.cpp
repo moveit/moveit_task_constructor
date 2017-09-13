@@ -78,6 +78,7 @@ int main(int argc, char** argv){
 		gengrasp->setObject("object");
 		gengrasp->setGraspOffset(.03);
 		gengrasp->setAngleDelta(-.2);
+		gengrasp->setMaxIKSolutions(8);
 		t.add(gengrasp);
 	}
 
