@@ -74,7 +74,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::setAngleDelta(double delt
 
 bool
 moveit::task_constructor::subtasks::GenerateGraspPose::canCompute(){
-	return current_angle_ > 0;
+	return current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
 }
 
 namespace {
@@ -143,7 +143,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 	tf::poseEigenToMsg(object_pose_eigen, object_pose);
 
-	while(current_angle_ < 2*M_PI){
+	while( canCompute() ){
 		if( remaining_time_ <= 0.0 ){
 			std::cout << "computed angle " << current_angle_
 			          << " with " << previous_solutions_.size()
