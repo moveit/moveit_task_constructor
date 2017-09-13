@@ -38,6 +38,8 @@ public:
 
 	void setAngleDelta(double delta);
 
+	void setMaxIKSolutions(uint32_t n);
+
 	void ignoreCollisions(bool flag);
 
 protected:
@@ -48,6 +50,8 @@ protected:
 	std::string ik_link_;
 
 	double grasp_offset_;
+
+	uint32_t max_ik_solutions_;
 
 	bool ignore_collisions_;
 

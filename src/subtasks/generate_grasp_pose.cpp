@@ -19,6 +19,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::st
 : moveit::task_constructor::SubTask::SubTask(name),
   timeout_(0.1),
   angle_delta_(0.1),
+  max_ik_solutions_(0),
   current_angle_(0.0),
   grasp_offset_(0.0),
   ignore_collisions_(false),
@@ -71,6 +72,10 @@ moveit::task_constructor::subtasks::GenerateGraspPose::setAngleDelta(double delt
 	angle_delta_= delta;
 }
 
+void
+moveit::task_constructor::subtasks::GenerateGraspPose::setMaxIKSolutions(uint32_t n){
+	max_ik_solutions_= n;
+}
 
 bool
 moveit::task_constructor::subtasks::GenerateGraspPose::canCompute(){
@@ -144,7 +149,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 	tf::poseEigenToMsg(object_pose_eigen, object_pose);
 
 	while( canCompute() ){
-		if( remaining_time_ <= 0.0 ){
+		if( remaining_time_ <= 0.0 || (max_ik_solutions_ != 0 && previous_solutions_.size() >= max_ik_solutions_)){
 			std::cout << "computed angle " << current_angle_
 			          << " with " << previous_solutions_.size()
 			          << " cached ik solutions"
