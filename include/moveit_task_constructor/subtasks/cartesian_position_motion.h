@@ -9,11 +9,11 @@
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/PointStamped.h>
 
-namespace moveit::planning_interface {
+namespace moveit { namespace planning_interface {
 MOVEIT_CLASS_FORWARD(MoveGroupInterface);
-}
+} }
 
-namespace moveit::task_constructor::subtasks {
+namespace moveit { namespace task_constructor { namespace subtasks {
 
 class CartesianPositionMotion : public SubTask {
 public:
@@ -60,4 +60,4 @@ protected:
 	void _publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };
 
-}
+} } }

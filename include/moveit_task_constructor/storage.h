@@ -15,7 +15,7 @@ namespace robot_trajectory {
 MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
-namespace moveit::task_constructor {
+namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTrajectory);
 MOVEIT_CLASS_FORWARD(InterfaceState);
@@ -63,4 +63,4 @@ struct SubTrajectory {
 	bool flag;
 };
 
-}
+} }

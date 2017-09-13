@@ -26,7 +26,7 @@ namespace robot_trajectory {
 	MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
-namespace moveit::task_constructor {
+namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
 
@@ -63,4 +63,4 @@ protected:
 	ros::Publisher pub;
 };
 
-}
+} }

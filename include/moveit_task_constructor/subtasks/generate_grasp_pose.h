@@ -8,11 +8,11 @@
 
 #include <moveit/macros/class_forward.h>
 
-namespace moveit::planning_interface {
+namespace moveit { namespace planning_interface {
 MOVEIT_CLASS_FORWARD(MoveGroupInterface);
-}
+} }
 
-namespace moveit::task_constructor::subtasks {
+namespace moveit { namespace task_constructor { namespace subtasks {
 
 class GenerateGraspPose : public SubTask {
 public:
@@ -76,4 +76,4 @@ protected:
 	ros::Publisher pub;
 };
 
-}
+} } }

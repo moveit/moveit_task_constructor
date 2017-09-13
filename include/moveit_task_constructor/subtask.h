@@ -19,7 +19,7 @@ namespace planning_pipeline {
 MOVEIT_CLASS_FORWARD(PlanningPipeline);
 }
 
-namespace moveit::task_constructor {
+namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(SubTask);
 typedef std::weak_ptr<SubTask> SubTaskWeakPtr;
@@ -80,4 +80,4 @@ protected:
 	std::pair< std::list<InterfaceState>::iterator, std::list<InterfaceState>::iterator > it_pairs_;
 };
 
-}
+} }

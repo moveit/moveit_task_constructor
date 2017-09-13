@@ -4,7 +4,7 @@
 
 #include <moveit_task_constructor/subtask.h>
 
-namespace moveit::task_constructor::subtasks {
+namespace moveit { namespace task_constructor { namespace subtasks {
 
 class CurrentState : public SubTask {
 public:
@@ -18,4 +18,4 @@ protected:
 	bool ran_;
 };
 
-}
+} } }

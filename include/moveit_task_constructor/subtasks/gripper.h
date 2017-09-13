@@ -4,11 +4,11 @@
 
 #include <moveit_task_constructor/subtask.h>
 
-namespace moveit::planning_interface {
+namespace moveit { namespace planning_interface {
 MOVEIT_CLASS_FORWARD(MoveGroupInterface);
-}
+} }
 
-namespace moveit::task_constructor::subtasks {
+namespace moveit { namespace task_constructor { namespace subtasks {
 
 class Gripper : public SubTask {
 public:
@@ -40,4 +40,4 @@ protected:
 	std::string attach_link_;
 };
 
-}
+} } }
