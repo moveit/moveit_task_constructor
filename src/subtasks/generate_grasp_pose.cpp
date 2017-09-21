@@ -165,7 +165,7 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 		grasp_pose.position.x-= grasp_offset_*cos(current_angle_);
 		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
-		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
+		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.5*M_PI, current_angle_);
 
 		if(tried_current_state_as_seed_)
 			grasp_state.setToRandomPositions(jmg_active);
