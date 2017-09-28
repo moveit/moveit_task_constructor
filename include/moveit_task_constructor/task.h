@@ -59,8 +59,6 @@ protected:
 	robot_model_loader::RobotModelLoaderPtr rml_;
 
 	planning_pipeline::PlanningPipelinePtr planner_;
-
-	ros::Publisher pub;
 };
 
 } }

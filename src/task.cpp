@@ -18,8 +18,6 @@ moveit::task_constructor::Task::Task(){
 
 	ros::NodeHandle h;
 
-	pub = h.advertise<moveit_msgs::DisplayTrajectory>("task_plan", 30);
-
 	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 	client.waitForExistence();
 
@@ -72,7 +70,6 @@ bool moveit::task_constructor::Task::plan(){
 		}
 		if(computed){
 			printState();
-			publishPlans();
 		}
 	}
 	return false;
@@ -142,31 +139,25 @@ bool moveit::task_constructor::Task::processSolutions(moveit::task_constructor::
 
 namespace {
 bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<moveit::task_constructor::SubTrajectory*>& solution){
-		bool all_flagged= true;
-		for(auto& t : solution){
-			all_flagged= all_flagged && t->flag;
-		}
-
-		if( all_flagged ){
-			return true;
-		}
-
+		dt.trajectory.clear();
 		for(auto& t : solution){
 			if(t->trajectory){
 				dt.trajectory.emplace_back();
 				t->trajectory->getRobotTrajectoryMsg(dt.trajectory.back());
 			}
-			t->flag= true;
 		}
 
 		std::cout << "publishing solution" << std::endl;
 		pub.publish(dt);
-
+		std::cout << "Press <Enter> to continue ..." << std::endl;
+		getchar();
 		return true;
 }
 }
 
 void moveit::task_constructor::Task::publishPlans(){
+	ros::NodeHandle n;
+	ros::Publisher pub = n.advertise<moveit_msgs::DisplayTrajectory>("task_plan", 1, true);
 	moveit_msgs::DisplayTrajectory dt;
 	robot_state::robotStateToRobotStateMsg(scene_->getCurrentState(), dt.trajectory_start);
 	dt.model_id= scene_->getRobotModel()->getName();
@@ -175,5 +166,4 @@ void moveit::task_constructor::Task::publishPlans(){
 		&publishSolution, pub, dt, std::placeholders::_1);
 
 	processSolutions(processor);
-
 }
