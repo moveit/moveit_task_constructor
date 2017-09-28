@@ -76,7 +76,7 @@ namespace {
 	        const double* joint_positions){
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !scene->isStateColliding(*state, jmg->getName());
+		return !scene->isStateColliding(static_cast<const robot_state::RobotState&>(*state), jmg->getName());
 	}
 }
 
