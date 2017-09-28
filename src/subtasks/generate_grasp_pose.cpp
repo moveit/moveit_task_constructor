@@ -100,7 +100,7 @@ namespace {
 
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		if( scene->isStateColliding(static_cast<const robot_state::RobotState&>(*state), jmg->getName()) ){
+		if( scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) ){
 			old_solutions->emplace_back();
 			state->copyJointGroupPositions(jmg, old_solutions->back());
 			return false;
