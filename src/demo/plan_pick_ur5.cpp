@@ -1,4 +1,5 @@
 #include <moveit_task_constructor/task.h>
+#include <moveit_task_constructor/debug.h>
 
 #include <moveit_task_constructor/subtasks/current_state.h>
 #include <moveit_task_constructor/subtasks/gripper.h>
@@ -106,9 +107,7 @@ int main(int argc, char** argv){
 
 	t.plan();
 
-	t.publishPlans();
-
-	//t.printState();
+	publishAllPlans(t);
 
 	return 0;
 }

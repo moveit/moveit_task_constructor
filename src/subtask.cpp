@@ -1,88 +1,90 @@
 #include <moveit_task_constructor/subtask.h>
 
-moveit::task_constructor::SubTask::SubTask(std::string name)
+namespace moveit { namespace task_constructor {
+
+SubTask::SubTask(std::string name)
 	: name_(name),
 	  it_beginnings_(beginnings_.begin()),
 	  it_endings_(endings_.begin()),
 	  it_pairs_(beginnings_.begin(), endings_.begin())
-{};
+{}
 
-void moveit::task_constructor::SubTask::addPredecessor(SubTaskPtr prev_task){
+void SubTask::addPredecessor(SubTaskPtr prev_task){
 	predecessor_= SubTaskWeakPtr(prev_task);
 }
 
-void moveit::task_constructor::SubTask::addSuccessor(SubTaskPtr next_task){
+void SubTask::addSuccessor(SubTaskPtr next_task){
 	successor_= next_task;
 }
 
 const std::string&
-moveit::task_constructor::SubTask::getName(){
+SubTask::getName(){
 	return name_;
 }
 
-const std::list<moveit::task_constructor::InterfaceState>&
-moveit::task_constructor::SubTask::getBeginning(){
+const std::list<InterfaceState>&
+SubTask::getBeginning(){
 	return beginnings_;
 }
 
-const std::list<moveit::task_constructor::InterfaceState>&
-moveit::task_constructor::SubTask::getEnd(){
+const std::list<InterfaceState>&
+SubTask::getEnd(){
 	return endings_;
 }
 
-std::list<moveit::task_constructor::SubTrajectory>&
-moveit::task_constructor::SubTask::getTrajectories(){
+std::list<SubTrajectory>&
+SubTask::getTrajectories(){
 	return trajectories_;
 }
 
 void
-moveit::task_constructor::SubTask::setPlanningScene(planning_scene::PlanningSceneConstPtr scene){
+SubTask::setPlanningScene(planning_scene::PlanningSceneConstPtr scene){
 	scene_= scene;
 }
 
 void
-moveit::task_constructor::SubTask::setPlanningPipeline(planning_pipeline::PlanningPipelinePtr planner){
+SubTask::setPlanningPipeline(planning_pipeline::PlanningPipelinePtr planner){
 	planner_= planner;
 }
 
-moveit::task_constructor::InterfaceState&
-moveit::task_constructor::SubTask::fetchStateBeginning(){
+InterfaceState&
+SubTask::fetchStateBeginning(){
 	if(it_beginnings_ == beginnings_.end())
 		throw std::runtime_error("no new state for beginning available");
 
-	moveit::task_constructor::InterfaceState& state= *it_beginnings_;
+	InterfaceState& state= *it_beginnings_;
 	++it_beginnings_;
 
 	return state;
 }
 
-moveit::task_constructor::InterfaceState&
-moveit::task_constructor::SubTask::fetchStateEnding(){
+InterfaceState&
+SubTask::fetchStateEnding(){
 	if(it_endings_ == endings_.end())
 		throw std::runtime_error("no new state for ending available");
 
-	moveit::task_constructor::InterfaceState& state= *it_endings_;
+	InterfaceState& state= *it_endings_;
 	++it_endings_;
 
 	return state;
 }
 
-std::pair<moveit::task_constructor::InterfaceState&, moveit::task_constructor::InterfaceState&>
-moveit::task_constructor::SubTask::fetchStatePair(){
+std::pair<InterfaceState&, InterfaceState&>
+SubTask::fetchStatePair(){
 	// TODO: implement this properly
-	return std::pair<moveit::task_constructor::InterfaceState&, moveit::task_constructor::InterfaceState&>(
+	return std::pair<InterfaceState&, InterfaceState&>(
 		*it_pairs_.first,
 		*(it_pairs_.second++));
 }
 
-moveit::task_constructor::SubTrajectory&
-moveit::task_constructor::SubTask::addTrajectory(robot_trajectory::RobotTrajectoryPtr trajectory){
+SubTrajectory&
+SubTask::addTrajectory(robot_trajectory::RobotTrajectoryPtr trajectory){
 	trajectories_.emplace_back(trajectory);
 	return trajectories_.back();
 }
 
 void
-moveit::task_constructor::SubTask::sendForward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
+SubTask::sendForward(SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	if( successor_ ){
 		std::cout << "sending state forward to successor" << std::endl;
 		traj.end= successor_->newBeginning(ps, &traj);
@@ -90,7 +92,7 @@ moveit::task_constructor::SubTask::sendForward(moveit::task_constructor::SubTraj
 }
 
 void
-moveit::task_constructor::SubTask::sendBackward(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
+SubTask::sendBackward(SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	if( !predecessor_.expired() ){
 		std::cout << "sending state backward to predecessor" << std::endl;
 		traj.begin= predecessor_.lock()->newEnd(ps, &traj);
@@ -98,7 +100,7 @@ moveit::task_constructor::SubTask::sendBackward(moveit::task_constructor::SubTra
 }
 
 void
-moveit::task_constructor::SubTask::sendBothWays(moveit::task_constructor::SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
+SubTask::sendBothWays(SubTrajectory& traj, planning_scene::PlanningSceneConstPtr ps){
 	std::cout << "sending state both ways" << std::endl;
 	if( !predecessor_.expired() )
 		sendBackward(traj, ps);
@@ -106,8 +108,8 @@ moveit::task_constructor::SubTask::sendBothWays(moveit::task_constructor::SubTra
 		sendForward(traj, ps);
 }
 
-moveit::task_constructor::InterfaceState*
-moveit::task_constructor::SubTask::newBeginning(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
+InterfaceState*
+SubTask::newBeginning(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
 	assert( bool(ps) );
 
 	beginnings_.push_back( InterfaceState(ps, old_end, NULL) );
@@ -124,8 +126,8 @@ moveit::task_constructor::SubTask::newBeginning(planning_scene::PlanningSceneCon
 	return &beginnings_.back();
 }
 
-moveit::task_constructor::InterfaceState*
-moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_beginning){
+InterfaceState*
+SubTask::newEnd(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_beginning){
 	assert( bool(ps) );
 	endings_.push_back( InterfaceState(ps, NULL, old_beginning) );
 
@@ -142,17 +144,19 @@ moveit::task_constructor::SubTask::newEnd(planning_scene::PlanningSceneConstPtr 
 }
 
 bool
-moveit::task_constructor::SubTask::hasBeginning(){
+SubTask::hasBeginning(){
 	return it_beginnings_ != beginnings_.end();
 }
 
 bool
-moveit::task_constructor::SubTask::hasEnding(){
+SubTask::hasEnding(){
 	return it_endings_ != endings_.end();
 }
 
 bool
-moveit::task_constructor::SubTask::hasStatePair(){
+SubTask::hasStatePair(){
 	// TODO: implement this properly
 	return it_pairs_.first != beginnings_.end() && it_pairs_.second != endings_.end();
 }
+
+} }
