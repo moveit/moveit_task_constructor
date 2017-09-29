@@ -1,5 +1,6 @@
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/subtask.h>
+#include <moveit_task_constructor/debug.h>
 
 #include <ros/ros.h>
 
@@ -56,6 +57,7 @@ void Task::clear(){
 }
 
 bool Task::plan(){
+	NewSolutionPublisher debug(*this);
 
 	bool computed= true;
 	while(ros::ok() && computed){
@@ -69,6 +71,7 @@ bool Task::plan(){
 			std::cout << (success ? "succeeded" : "failed") << std::endl;
 		}
 		if(computed){
+			debug.publish();
 			printState();
 		}
 	}
@@ -106,7 +109,7 @@ namespace {
 bool traverseFullTrajectories(
 	SubTrajectory& start,
 	int nr_of_trajectories,
-	Task::SolutionCallback& cb,
+	const Task::SolutionCallback& cb,
 	std::vector<SubTrajectory*>& trace)
 {
 	bool ret= true;
@@ -131,7 +134,7 @@ bool traverseFullTrajectories(
 }
 }
 
-bool Task::processSolutions(Task::SolutionCallback& processor) const {
+bool Task::processSolutions(const Task::SolutionCallback& processor) const {
 	const size_t nr_of_trajectories= subtasks_.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);

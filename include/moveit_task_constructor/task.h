@@ -42,7 +42,7 @@ public:
 
 	bool plan();
 
-	bool processSolutions(SolutionCallback& processor) const;
+	bool processSolutions(const SolutionCallback &processor) const;
 
 	const moveit::core::RobotState &getCurrentRobotState() const;
 

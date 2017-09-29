@@ -39,4 +39,34 @@ void publishAllPlans(const Task &task, const std::string &topic, bool wait){
 	task.processSolutions(processor);
 }
 
+
+NewSolutionPublisher::NewSolutionPublisher(const Task &task, const std::string &topic)
+   : task(task)
+{
+	ros::NodeHandle n;
+	pub = n.advertise<moveit_msgs::DisplayTrajectory>(topic, 1, true);
+}
+
+void NewSolutionPublisher::publish()
+{
+	moveit_msgs::DisplayTrajectory dt;
+	robot_state::robotStateToRobotStateMsg(task.getCurrentRobotState(), dt.trajectory_start);
+	dt.model_id = task.getCurrentRobotState().getRobotModel()->getName();
+
+	auto processor = [this,&dt](std::vector<SubTrajectory*>& solution) -> bool {
+		bool all_published = true;
+		for(auto *t : solution){
+			auto result = published.insert(t);
+			// if t was not yet published, the insertion yields result.second == true
+			all_published &= !result.second;
+		}
+
+		if(all_published)
+			return true;
+
+		return publishSolution(pub, dt, solution, false);
+	};
+	task.processSolutions(processor);
+}
+
 } }
