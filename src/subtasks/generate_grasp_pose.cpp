@@ -107,6 +107,19 @@ namespace {
 		}
 		return true;
 	}
+
+   bool isGraspPoseColliding(planning_scene::PlanningSceneConstPtr scene,
+                             robot_state::RobotState& state,
+                             const robot_model::JointModelGroup* jmg,
+                             geometry_msgs::Pose pose,
+                             const std::string &ik_link)
+   {
+      Eigen::Affine3d transformed_pose;
+      tf::poseMsgToEigen(pose, transformed_pose);
+      // transformed_pose = planning_scene_->getFrameTransform(state, pose.header.frame_id) * transformed_pose;
+      state.updateStateWithLinkAt(ik_link, transformed_pose);
+      return scene->isStateColliding(static_cast<const robot_state::RobotState&>(state), jmg->getName());
+   }
 }
 
 bool
@@ -166,6 +179,11 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		grasp_pose.position.x-= grasp_offset_*cos(current_angle_);
 		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
 		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
+
+		if (isGraspPoseColliding(scene_, grasp_state, jmg_active, grasp_pose, ik_link)) {
+			ROS_INFO("grasp pose is in collision");
+			continue;
+		}
 
 		if(tried_current_state_as_seed_)
 			grasp_state.setToRandomPositions(jmg_active);
