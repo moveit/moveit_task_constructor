@@ -11,7 +11,9 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
-moveit::task_constructor::Task::Task(){
+namespace moveit { namespace task_constructor {
+
+Task::Task(){
 	rml_.reset(new robot_model_loader::RobotModelLoader);
 	if( !rml_->getModel() )
 		throw Exception("Task failed to construct RobotModel");
@@ -46,17 +48,17 @@ moveit::task_constructor::Task::Task(){
 	planner_.reset(new planning_pipeline::PlanningPipeline(rml_->getModel(), ros::NodeHandle("move_group")));
 }
 
-moveit::task_constructor::Task::~Task(){
+Task::~Task(){
 	subtasks_.clear();
 	scene_.reset();
 	planner_.reset();
 }
 
-void moveit::task_constructor::Task::clear(){
+void Task::clear(){
 	subtasks_.clear();
 }
 
-bool moveit::task_constructor::Task::plan(){
+bool Task::plan(){
 	bool computed= true;
 	while(ros::ok() && computed){
 		computed= false;
@@ -75,7 +77,7 @@ bool moveit::task_constructor::Task::plan(){
 	return false;
 }
 
-void moveit::task_constructor::Task::add( SubTaskPtr subtask ){
+void Task::add( SubTaskPtr subtask ){
 	subtask->setPlanningScene( scene_ );
 	subtask->setPlanningPipeline( planner_ );
 
@@ -87,7 +89,7 @@ void moveit::task_constructor::Task::add( SubTaskPtr subtask ){
 	subtasks_.push_back( subtask );
 }
 
-void moveit::task_constructor::Task::printState(){
+void Task::printState(){
 	for( auto& st : subtasks_ ){
 		std::cout
 			<< st->getBeginning().size() << " -> "
@@ -100,10 +102,10 @@ void moveit::task_constructor::Task::printState(){
 
 namespace {
 bool traverseFullTrajectories(
-	moveit::task_constructor::SubTrajectory& start,
+	SubTrajectory& start,
 	int nr_of_trajectories,
-	moveit::task_constructor::Task::SolutionCallback& cb,
-	std::vector<moveit::task_constructor::SubTrajectory*>& trace)
+	Task::SolutionCallback& cb,
+	std::vector<SubTrajectory*>& trace)
 {
 	bool ret= true;
 
@@ -113,7 +115,7 @@ bool traverseFullTrajectories(
 		ret= cb(trace);
 	}
 	else if( start.end ){
-		for( moveit::task_constructor::SubTrajectory* successor : start.end->next_trajectory ){
+		for( SubTrajectory* successor : start.end->next_trajectory ){
 			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
 				ret= false;
 				break;
@@ -127,9 +129,9 @@ bool traverseFullTrajectories(
 }
 }
 
-bool moveit::task_constructor::Task::processSolutions(moveit::task_constructor::Task::SolutionCallback& processor ){
+bool Task::processSolutions(Task::SolutionCallback& processor ){
 	const size_t nr_of_trajectories= subtasks_.size();
-	std::vector<moveit::task_constructor::SubTrajectory*> trace;
+	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
 	for(SubTrajectory& subtraj : subtasks_.front()->getTrajectories())
 		if( !traverseFullTrajectories(subtraj, subtasks_.size(), processor, trace) )
@@ -138,7 +140,7 @@ bool moveit::task_constructor::Task::processSolutions(moveit::task_constructor::
 }
 
 namespace {
-bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<moveit::task_constructor::SubTrajectory*>& solution){
+bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<SubTrajectory*>& solution){
 		dt.trajectory.clear();
 		for(auto& t : solution){
 			if(t->trajectory){
@@ -155,15 +157,17 @@ bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, st
 }
 }
 
-void moveit::task_constructor::Task::publishPlans(){
+void Task::publishPlans(){
 	ros::NodeHandle n;
 	ros::Publisher pub = n.advertise<moveit_msgs::DisplayTrajectory>("task_plan", 1, true);
 	moveit_msgs::DisplayTrajectory dt;
 	robot_state::robotStateToRobotStateMsg(scene_->getCurrentState(), dt.trajectory_start);
 	dt.model_id= scene_->getRobotModel()->getName();
 
-	moveit::task_constructor::Task::SolutionCallback processor= std::bind(
+	Task::SolutionCallback processor= std::bind(
 		&publishSolution, pub, dt, std::placeholders::_1);
 
 	processSolutions(processor);
 }
+
+} }
