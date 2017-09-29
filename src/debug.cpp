@@ -41,22 +41,22 @@ void publishAllPlans(const Task &task, const std::string &topic, bool wait){
 
 
 NewSolutionPublisher::NewSolutionPublisher(const Task &task, const std::string &topic)
-   : task(task)
+   : task_(task)
 {
 	ros::NodeHandle n;
-	pub = n.advertise<moveit_msgs::DisplayTrajectory>(topic, 1, true);
+	pub_ = n.advertise<moveit_msgs::DisplayTrajectory>(topic, 1, true);
 }
 
 void NewSolutionPublisher::publish()
 {
 	moveit_msgs::DisplayTrajectory dt;
-	robot_state::robotStateToRobotStateMsg(task.getCurrentRobotState(), dt.trajectory_start);
-	dt.model_id = task.getCurrentRobotState().getRobotModel()->getName();
+	robot_state::robotStateToRobotStateMsg(task_.getCurrentRobotState(), dt.trajectory_start);
+	dt.model_id = task_.getCurrentRobotState().getRobotModel()->getName();
 
 	Task::SolutionCallback processor = [this,&dt](std::vector<SubTrajectory*>& solution) {
 		bool all_published = true;
 		for(SubTrajectory*& t : solution){
-			auto result = published.insert(t);
+			auto result = published_.insert(t);
 			// if t was not yet published, the insertion yields result.second == true
 			all_published &= !result.second;
 		}
@@ -64,9 +64,9 @@ void NewSolutionPublisher::publish()
 		if(all_published)
 			return true;
 
-		return publishSolution(pub, dt, solution, false);
+		return publishSolution(pub_, dt, solution, false);
 	};
-	task.processSolutions(processor);
+	task_.processSolutions(processor);
 }
 
 } }

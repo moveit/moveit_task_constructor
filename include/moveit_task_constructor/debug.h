@@ -17,9 +17,9 @@ bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt,
 void publishAllPlans(const Task &task, const std::string &topic = "task_plan", bool wait = true);
 
 class NewSolutionPublisher {
-   std::set<SubTrajectory*> published;
-   const Task &task;
-   ros::Publisher pub;
+   std::set<SubTrajectory*> published_;
+   const Task& task_;
+   ros::Publisher pub_;
 
 public:
    NewSolutionPublisher(const Task &task, const std::string &topic = "task_plan");
