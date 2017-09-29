@@ -12,8 +12,10 @@
 
 #include <Eigen/Geometry>
 
-moveit::task_constructor::subtasks::CartesianPositionMotion::CartesianPositionMotion(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name),
+namespace moveit { namespace task_constructor { namespace subtasks {
+
+CartesianPositionMotion::CartesianPositionMotion(std::string name)
+: SubTask(name),
   step_size_(0.005)
 {
 	ros::NodeHandle nh;
@@ -21,51 +23,42 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::CartesianPositionMo
 	ros::Duration(1.0).sleep();
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setGroup(std::string group){
+void CartesianPositionMotion::setGroup(std::string group){
 	group_= group;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setLink(std::string link){
+void CartesianPositionMotion::setLink(std::string link){
 	link_= link;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setMinDistance(double distance){
+void CartesianPositionMotion::setMinDistance(double distance){
 	min_distance_= distance;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setMaxDistance(double distance){
+void CartesianPositionMotion::setMaxDistance(double distance){
 	max_distance_= distance;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setMinMaxDistance(double min_distance, double max_distance){
+void CartesianPositionMotion::setMinMaxDistance(double min_distance, double max_distance){
 	setMinDistance(min_distance);
 	setMaxDistance(max_distance);
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::towards(geometry_msgs::PointStamped towards){
-	mode_= moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS;
+void CartesianPositionMotion::towards(geometry_msgs::PointStamped towards){
+	mode_= CartesianPositionMotion::MODE_TOWARDS;
 	towards_= towards;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::along(geometry_msgs::Vector3Stamped along){
-	mode_= moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG;
+void CartesianPositionMotion::along(geometry_msgs::Vector3Stamped along){
+	mode_= CartesianPositionMotion::MODE_ALONG;
 	along_= along;
 }
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::setCartesianStepSize(double distance){
+void CartesianPositionMotion::setCartesianStepSize(double distance){
 	step_size_= distance;
 }
 
-bool
-moveit::task_constructor::subtasks::CartesianPositionMotion::canCompute(){
+bool CartesianPositionMotion::canCompute(){
 	return hasBeginning() || hasEnding();
 }
 
@@ -80,16 +73,14 @@ namespace {
 	}
 }
 
-bool
-moveit::task_constructor::subtasks::CartesianPositionMotion::compute(){
+bool CartesianPositionMotion::compute(){
 	if( hasEnding() )
 		return _computeFromEnding();
 	else if( hasBeginning() )
 		return _computeFromBeginning();
 }
 
-bool
-moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginning(){
+bool CartesianPositionMotion::_computeFromBeginning(){
 	assert( hasBeginning() );
 
 	moveit::task_constructor::InterfaceState& beginning= fetchStateBeginning();
@@ -110,7 +101,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 	std::vector<moveit::core::RobotStatePtr> trajectory_steps;
 	bool succeeded= false;
 
-	if( mode_ == moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS ){
+	if( mode_ == CartesianPositionMotion::MODE_TOWARDS ){
 		const Eigen::Affine3d& frame= beginning.state->getFrameTransform(towards_.header.frame_id);
 
 		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
@@ -139,7 +130,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 
 		succeeded= achieved_distance >= min_distance_;
 	}
-	else if( mode_ == moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG ){
+	else if( mode_ == CartesianPositionMotion::MODE_ALONG ){
 		const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
 		Eigen::Vector3d direction;
 		tf::vectorMsgToEigen(along_.vector, direction);
@@ -184,8 +175,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromBeginni
 	return succeeded;
 }
 
-bool
-moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(){
+bool CartesianPositionMotion::_computeFromEnding(){
 	assert( hasEnding() );
 
 	moveit::task_constructor::InterfaceState& ending= fetchStateEnding();
@@ -206,13 +196,13 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 	Eigen::Vector3d direction;
 
 	switch(mode_){
-	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS):
+	case(CartesianPositionMotion::MODE_TOWARDS):
 		{
 			const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
 			direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
 		}
 		break;
-	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG):
+	case(CartesianPositionMotion::MODE_ALONG):
 		{
 			const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
 			tf::vectorMsgToEigen(along_.vector, direction);
@@ -263,8 +253,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 }
 
 
-void
-moveit::task_constructor::subtasks::CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
+void CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
 			moveit_msgs::DisplayTrajectory dt;
 			robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
 			dt.model_id= scene_->getRobotModel()->getName();
@@ -273,3 +262,5 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_publishTrajectory(
 			dt.model_id= start.getRobotModel()->getName();
 			pub.publish(dt);
 }
+
+} } }

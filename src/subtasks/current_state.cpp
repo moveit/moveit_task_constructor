@@ -1,18 +1,18 @@
 #include <moveit_task_constructor/subtasks/current_state.h>
 
-moveit::task_constructor::subtasks::CurrentState::CurrentState(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name)
+namespace moveit { namespace task_constructor { namespace subtasks {
+
+CurrentState::CurrentState(std::string name)
+: SubTask(name)
 {
 	ran_= false;
 }
 
-bool
-moveit::task_constructor::subtasks::CurrentState::canCompute(){
+bool CurrentState::canCompute(){
 	return !ran_;
 }
 
-bool
-moveit::task_constructor::subtasks::CurrentState::compute(){
+bool CurrentState::compute(){
 	ran_= true;
 
 	assert( scene_ );
@@ -25,3 +25,5 @@ moveit::task_constructor::subtasks::CurrentState::compute(){
 
 	return true;
 }
+
+} } }

@@ -9,42 +9,37 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-moveit::task_constructor::subtasks::Gripper::Gripper(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name)
+namespace moveit { namespace task_constructor { namespace subtasks {
+
+Gripper::Gripper(std::string name)
+   : SubTask(name)
 {}
 
-void
-moveit::task_constructor::subtasks::Gripper::setEndEffector(std::string eef){
+void Gripper::setEndEffector(std::string eef){
 	eef_= eef;
 }
 
-void
-moveit::task_constructor::subtasks::Gripper::setAttachLink(std::string link){
+void Gripper::setAttachLink(std::string link){
 	attach_link_= link;
 }
 
-void
-moveit::task_constructor::subtasks::Gripper::setFrom(std::string named_target){
+void Gripper::setFrom(std::string named_target){
 	from_named_target_= named_target;
 }
 
-void
-moveit::task_constructor::subtasks::Gripper::setTo(std::string named_target){
+void Gripper::setTo(std::string named_target){
 	to_named_target_= named_target;
 }
 
-void
-moveit::task_constructor::subtasks::Gripper::graspObject(std::string grasp_object){
+void Gripper::graspObject(std::string grasp_object){
 	grasp_object_= grasp_object;
 }
 
-bool
-moveit::task_constructor::subtasks::Gripper::canCompute(){
+bool Gripper::canCompute(){
 	return hasBeginning();
 }
 
-bool
-moveit::task_constructor::subtasks::Gripper::compute(){
+bool Gripper::compute(){
 	assert( scene_->getRobotModel() );
 
 	if(!mgi_){
@@ -88,9 +83,11 @@ moveit::task_constructor::subtasks::Gripper::compute(){
 	}
 
 	// finish subtask
-	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
+	SubTrajectory& trajectory= addTrajectory(res.trajectory_);
 	trajectory.hasBeginning(start);
 	sendForward(trajectory, scene);
 
 	return true;
 }
+
+} } }
