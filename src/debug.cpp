@@ -10,7 +10,7 @@ namespace moveit { namespace task_constructor {
 bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt,
                      std::vector<SubTrajectory*>& solution, bool wait){
 		dt.trajectory.clear();
-		for(SubTrajectory*& t : solution){
+		for(const SubTrajectory* t : solution){
 			if(t->trajectory){
 				dt.trajectory.emplace_back();
 				t->trajectory->getRobotTrajectoryMsg(dt.trajectory.back());
@@ -55,7 +55,7 @@ void NewSolutionPublisher::publish()
 
 	Task::SolutionCallback processor = [this,&dt](std::vector<SubTrajectory*>& solution) {
 		bool all_published = true;
-		for(SubTrajectory*& t : solution){
+		for(const SubTrajectory* t : solution){
 			auto result = published.insert(t);
 			// if t was not yet published, the insertion yields result.second == true
 			all_published &= !result.second;
