@@ -4,11 +4,8 @@
 #include <ros/ros.h>
 
 #include <moveit_msgs/GetPlanningScene.h>
-#include <moveit_msgs/DisplayTrajectory.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
-#include <moveit/robot_trajectory/robot_trajectory.h>
-#include <moveit/robot_state/conversions.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
 namespace moveit { namespace task_constructor {
@@ -59,6 +56,7 @@ void Task::clear(){
 }
 
 bool Task::plan(){
+
 	bool computed= true;
 	while(ros::ok() && computed){
 		computed= false;
@@ -87,6 +85,10 @@ void Task::add( SubTaskPtr subtask ){
 	}
 
 	subtasks_.push_back( subtask );
+}
+
+const robot_state::RobotState& Task::getCurrentRobotState() const {
+	return scene_->getCurrentState();
 }
 
 void Task::printState(){
@@ -129,7 +131,7 @@ bool traverseFullTrajectories(
 }
 }
 
-bool Task::processSolutions(Task::SolutionCallback& processor ){
+bool Task::processSolutions(Task::SolutionCallback& processor) const {
 	const size_t nr_of_trajectories= subtasks_.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
@@ -137,37 +139,6 @@ bool Task::processSolutions(Task::SolutionCallback& processor ){
 		if( !traverseFullTrajectories(subtraj, subtasks_.size(), processor, trace) )
 			return false;
 	return true;
-}
-
-namespace {
-bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt, std::vector<SubTrajectory*>& solution){
-		dt.trajectory.clear();
-		for(auto& t : solution){
-			if(t->trajectory){
-				dt.trajectory.emplace_back();
-				t->trajectory->getRobotTrajectoryMsg(dt.trajectory.back());
-			}
-		}
-
-		std::cout << "publishing solution" << std::endl;
-		pub.publish(dt);
-		std::cout << "Press <Enter> to continue ..." << std::endl;
-		getchar();
-		return true;
-}
-}
-
-void Task::publishPlans(){
-	ros::NodeHandle n;
-	ros::Publisher pub = n.advertise<moveit_msgs::DisplayTrajectory>("task_plan", 1, true);
-	moveit_msgs::DisplayTrajectory dt;
-	robot_state::robotStateToRobotStateMsg(scene_->getCurrentState(), dt.trajectory_start);
-	dt.model_id= scene_->getRobotModel()->getName();
-
-	Task::SolutionCallback processor= std::bind(
-		&publishSolution, pub, dt, std::placeholders::_1);
-
-	processSolutions(processor);
 }
 
 } }

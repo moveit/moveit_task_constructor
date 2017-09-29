@@ -34,6 +34,7 @@ target_link_libraries(${PROJECT_NAME}_subtasks ${catkin_LIBRARIES})
 add_library(${PROJECT_NAME}
 	src/subtask.cpp
 	src/task.cpp
+	src/debug.cpp
 )
 
 add_subdirectory(src/demo)
