@@ -12,7 +12,7 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 Move::Move(std::string name)
-   : SubTask(name),
+   : Connecting(name),
      timeout_(5.0)
 {}
 
@@ -66,9 +66,7 @@ bool Move::compute(){
 		return false;
 
 	// finish subtask
-	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
-	trajectory.hasBeginning(state_pair.first);
-	trajectory.hasEnding(state_pair.second);
+	connect(res.trajectory_, state_pair);
 
 	return true;
 }

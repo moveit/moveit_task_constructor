@@ -15,7 +15,7 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 CartesianPositionMotion::CartesianPositionMotion(std::string name)
-: SubTask(name),
+: PropagatingAnyWay(name),
   step_size_(0.005)
 {
 	ros::NodeHandle nh;
@@ -163,12 +163,7 @@ bool CartesianPositionMotion::_computeFromBeginning(){
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;
 
-		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
-
-		trajectory.hasBeginning(beginning);
-
-		sendForward(trajectory, result_scene);
-
+		sendForward(traj, beginning, result_scene);
 		_publishTrajectory(*traj, *result_state);
 	}
 
@@ -238,12 +233,7 @@ bool CartesianPositionMotion::_computeFromEnding(){
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;
 
-		moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
-
-		trajectory.hasEnding(ending);
-
-		sendBackward(trajectory, result_scene);
-
+		sendBackward(traj, result_scene, ending);
 		_publishTrajectory(*traj, *result_state);
 
 		return true;

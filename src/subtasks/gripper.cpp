@@ -12,7 +12,7 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 Gripper::Gripper(std::string name)
-   : SubTask(name)
+   : PropagatingForward(name)
 {}
 
 void Gripper::setEndEffector(std::string eef){
@@ -24,6 +24,7 @@ void Gripper::setAttachLink(std::string link){
 }
 
 void Gripper::setFrom(std::string named_target){
+	// TODO: this direction isn't handled yet
 	from_named_target_= named_target;
 }
 
@@ -53,7 +54,7 @@ bool Gripper::compute(){
 		}
 	}
 
-	InterfaceState& start= fetchStateBeginning();
+	const InterfaceState& start= fetchStateBeginning();
 
 	planning_scene::PlanningScenePtr scene(start.state->diff());
 
@@ -83,9 +84,7 @@ bool Gripper::compute(){
 	}
 
 	// finish subtask
-	SubTrajectory& trajectory= addTrajectory(res.trajectory_);
-	trajectory.hasBeginning(start);
-	sendForward(trajectory, scene);
+	sendForward(res.trajectory_, start, scene);
 
 	return true;
 }

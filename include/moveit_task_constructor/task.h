@@ -33,7 +33,7 @@ MOVEIT_CLASS_FORWARD(Task)
 
 class Task {
 public:
-	typedef std::function<bool(std::vector<SubTrajectory*>&)> SolutionCallback;
+	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;
 
 	Task();
 	~Task();
@@ -42,6 +42,7 @@ public:
 
 	bool plan();
 
+	bool processSolutions(const SolutionCallback &processor);
 	bool processSolutions(const SolutionCallback &processor) const;
 
 	const moveit::core::RobotState &getCurrentRobotState() const;
@@ -50,7 +51,7 @@ public:
 
 	void clear();
 
-protected:
+	protected:
 	std::vector<SubTaskPtr> subtasks_;
 
 	planning_scene::PlanningScenePtr scene_;

@@ -15,7 +15,7 @@ MOVEIT_CLASS_FORWARD(MoveGroupInterface);
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
-class CartesianPositionMotion : public SubTask {
+class CartesianPositionMotion : public PropagatingAnyWay {
 public:
 	CartesianPositionMotion(std::string name);
 

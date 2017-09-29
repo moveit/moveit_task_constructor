@@ -6,7 +6,7 @@
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
-class CurrentState : public SubTask {
+class CurrentState : public Generator {
 public:
 	CurrentState(std::string name);
 

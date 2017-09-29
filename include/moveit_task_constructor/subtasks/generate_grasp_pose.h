@@ -14,7 +14,7 @@ MOVEIT_CLASS_FORWARD(MoveGroupInterface);
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
-class GenerateGraspPose : public SubTask {
+class GenerateGraspPose : public Generator {
 public:
 	GenerateGraspPose(std::string name);
 

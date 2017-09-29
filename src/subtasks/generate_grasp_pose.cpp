@@ -18,7 +18,7 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 GenerateGraspPose::GenerateGraspPose(std::string name)
-: SubTask(name),
+: Generator(name),
   timeout_(0.1),
   angle_delta_(0.1),
   max_ik_solutions_(0),
@@ -115,9 +115,6 @@ bool GenerateGraspPose::compute(){
 
 	const std::string ik_link= ik_link_.empty() ? jmg_eef->getEndEffectorParentGroup().second : ik_link_;
 
-	// empty trajectory -> this subtask only produces states
-	const robot_trajectory::RobotTrajectoryPtr traj;
-
 	if(!gripper_grasp_pose_.empty()){
 		grasp_state.setToDefaultValues(jmg_eef, gripper_grasp_pose_);
 	}
@@ -173,8 +170,7 @@ bool GenerateGraspPose::compute(){
 
 			previous_solutions_.emplace_back();
 			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
-			moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
-			sendBothWays(trajectory, grasp_scene);
+			spawn(grasp_scene);
 			return true;
 		}
 	}
