@@ -209,7 +209,7 @@ moveit::task_constructor::subtasks::CartesianPositionMotion::_computeFromEnding(
 	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_TOWARDS):
 		{
 			const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
-			direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
+			direction= link_pose.linear()*Eigen::Vector3d(0,0,-1);
 		}
 		break;
 	case(moveit::task_constructor::subtasks::CartesianPositionMotion::MODE_ALONG):
