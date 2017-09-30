@@ -8,56 +8,69 @@
 #include <cassert>
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene);
+MOVEIT_CLASS_FORWARD(PlanningScene)
 }
 
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory);
+MOVEIT_CLASS_FORWARD(RobotTrajectory)
 }
 
 namespace moveit { namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(SubTrajectory);
-MOVEIT_CLASS_FORWARD(InterfaceState);
+MOVEIT_CLASS_FORWARD(SubTrajectory)
+MOVEIT_CLASS_FORWARD(InterfaceState)
 
-struct InterfaceState {
+class InterfaceState {
+	friend class SubTrajectory;
+
+public:
+	typedef std::vector<SubTrajectory*> SubTrajectoryList;
+
 	InterfaceState(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* previous, SubTrajectory* next)
 		: state(ps)
 	{
 		if( previous )
-			previous_trajectory.push_back(previous);
+			previous_trajectories_.push_back(previous);
 		if( next )
-			next_trajectory.push_back(next);
+			next_trajectories_.push_back(next);
 	}
 
-	std::vector<SubTrajectory*> previous_trajectory;
-	std::vector<SubTrajectory*> next_trajectory;
+	inline const SubTrajectoryList& previousTrajectories() const { return previous_trajectories_; }
+	inline const SubTrajectoryList& nextTrajectories() const { return next_trajectories_; }
 
+public:
 	planning_scene::PlanningSceneConstPtr state;
+	double cost; // minimal costs
+
+private:
+	mutable SubTrajectoryList previous_trajectories_;
+	mutable SubTrajectoryList next_trajectories_;
 };
 
 struct SubTrajectory {
 	SubTrajectory(robot_trajectory::RobotTrajectoryPtr traj)
 		: trajectory(traj),
 		  begin(NULL),
-		  end(NULL)
+		  end(NULL),
+		  cost(0)
 	{}
 
-	void hasBeginning(InterfaceState& state){
+	void setBeginning(const InterfaceState& state){
 		assert(begin == NULL);
 		begin= &state;
-		state.next_trajectory.push_back(this);
+		state.next_trajectories_.push_back(this);
 	}
 
-	void hasEnding(InterfaceState& state){
+	void setEnding(const InterfaceState& state){
 		assert(end == NULL);
 		end= &state;
-		state.previous_trajectory.push_back(this);
+		state.previous_trajectories_.push_back(this);
 	}
 
 	robot_trajectory::RobotTrajectoryPtr trajectory;
-	InterfaceState* begin;
-	InterfaceState* end;
+	const InterfaceState* begin;
+	const InterfaceState* end;
+	double cost;
 };
 
 } }

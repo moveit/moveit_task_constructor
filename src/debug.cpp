@@ -8,7 +8,7 @@
 namespace moveit { namespace task_constructor {
 
 bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt,
-                     std::vector<SubTrajectory*>& solution, bool wait){
+                     const std::vector<SubTrajectory*>& solution, bool wait){
 		dt.trajectory.clear();
 		for(const SubTrajectory* t : solution){
 			if(t->trajectory){
@@ -26,14 +26,14 @@ bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt,
 		return true;
 }
 
-void publishAllPlans(const Task &task, const std::string &topic, bool wait){
+void publishAllPlans(const Task &task, const std::string &topic, bool wait) {
 	ros::NodeHandle n;
 	ros::Publisher pub = n.advertise<moveit_msgs::DisplayTrajectory>(topic, 1, true);
 	moveit_msgs::DisplayTrajectory dt;
 	robot_state::robotStateToRobotStateMsg(task.getCurrentRobotState(), dt.trajectory_start);
 	dt.model_id= task.getCurrentRobotState().getRobotModel()->getName();
 
-	Task::SolutionCallback processor= std::bind(
+	Task::SolutionCallback processor = std::bind(
 		&publishSolution, pub, dt, std::placeholders::_1, wait);
 
 	task.processSolutions(processor);
@@ -53,7 +53,7 @@ void NewSolutionPublisher::publish()
 	robot_state::robotStateToRobotStateMsg(task_.getCurrentRobotState(), dt.trajectory_start);
 	dt.model_id = task_.getCurrentRobotState().getRobotModel()->getName();
 
-	Task::SolutionCallback processor = [this,&dt](std::vector<SubTrajectory*>& solution) {
+	Task::SolutionCallback processor = [this,&dt](const std::vector<SubTrajectory*>& solution) {
 		bool all_published = true;
 		for(const SubTrajectory* t : solution){
 			auto result = published_.insert(t);

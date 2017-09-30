@@ -15,8 +15,10 @@
 #include <chrono>
 #include <functional>
 
-moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name),
+namespace moveit { namespace task_constructor { namespace subtasks {
+
+GenerateGraspPose::GenerateGraspPose(std::string name)
+: Generator(name),
   timeout_(0.1),
   angle_delta_(0.1),
   max_ik_solutions_(0),
@@ -31,54 +33,44 @@ moveit::task_constructor::subtasks::GenerateGraspPose::GenerateGraspPose(std::st
 	ros::Duration(1.0).sleep();
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setGroup(std::string group){
+void GenerateGraspPose::setGroup(std::string group){
 	group_= group;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setLink(std::string ik_link){
+void GenerateGraspPose::setLink(std::string ik_link){
 	ik_link_= ik_link;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setEndEffector(std::string eef){
+void GenerateGraspPose::setEndEffector(std::string eef){
 	eef_= eef;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setGripperGraspPose(std::string pose_name){
+void GenerateGraspPose::setGripperGraspPose(std::string pose_name){
 	gripper_grasp_pose_= pose_name;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setObject(std::string object){
+void GenerateGraspPose::setObject(std::string object){
 	object_= object;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setGraspOffset(double offset){
+void GenerateGraspPose::setGraspOffset(double offset){
 	grasp_offset_= offset;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setTimeout(double timeout){
+void GenerateGraspPose::setTimeout(double timeout){
 	timeout_= timeout;
 	remaining_time_= timeout;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setAngleDelta(double delta){
+void GenerateGraspPose::setAngleDelta(double delta){
 	angle_delta_= delta;
 }
 
-void
-moveit::task_constructor::subtasks::GenerateGraspPose::setMaxIKSolutions(uint32_t n){
+void GenerateGraspPose::setMaxIKSolutions(uint32_t n){
 	max_ik_solutions_= n;
 }
 
-bool
-moveit::task_constructor::subtasks::GenerateGraspPose::canCompute(){
+bool GenerateGraspPose::canCompute(){
 	return current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
 }
 
@@ -122,8 +114,7 @@ namespace {
    }
 }
 
-bool
-moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
+bool GenerateGraspPose::compute(){
 	assert( scene_->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf" );
 
 	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
@@ -136,9 +127,6 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 		: grasp_state.getJointModelGroup(group_);
 
 	const std::string ik_link= ik_link_.empty() ? jmg_eef->getEndEffectorParentGroup().second : ik_link_;
-
-	// empty trajectory -> this subtask only produces states
-	const robot_trajectory::RobotTrajectoryPtr traj;
 
 	if(!gripper_grasp_pose_.empty()){
 		grasp_state.setToDefaultValues(jmg_eef, gripper_grasp_pose_);
@@ -200,11 +188,12 @@ moveit::task_constructor::subtasks::GenerateGraspPose::compute(){
 
 			previous_solutions_.emplace_back();
 			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
-			moveit::task_constructor::SubTrajectory &trajectory = addTrajectory(traj);
-			sendBothWays(trajectory, grasp_scene);
+			spawn(grasp_scene);
 			return true;
 		}
 	}
 
 	return false;
 }
+
+} } }

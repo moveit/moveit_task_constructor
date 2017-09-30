@@ -1,5 +1,5 @@
+#include "subtask_p.h"
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/subtask.h>
 #include <moveit_task_constructor/debug.h>
 
 #include <ros/ros.h>
@@ -83,8 +83,8 @@ void Task::add( SubTaskPtr subtask ){
 	subtask->setPlanningPipeline( planner_ );
 
 	if( !subtasks_.empty() ){
-		subtask->addPredecessor( subtasks_.back() );
-		subtasks_.back()->addSuccessor( subtask );
+		subtask->impl_->addPredecessor( subtasks_.back() );
+		subtasks_.back()->impl_->addSuccessor( subtask );
 	}
 
 	subtasks_.push_back( subtask );
@@ -97,9 +97,9 @@ const robot_state::RobotState& Task::getCurrentRobotState() const {
 void Task::printState(){
 	for( auto& st : subtasks_ ){
 		std::cout
-			<< st->getBeginning().size() << " -> "
-			<< st->getTrajectories().size()
-			<< " <- " << st->getEnd().size()
+			<< st->impl_->getBeginning().size() << " -> "
+			<< st->impl_->getTrajectories().size()
+			<< " <- " << st->impl_->getEnd().size()
 			<< " / " << st->getName()
 			<< std::endl;
 	}
@@ -120,7 +120,7 @@ bool traverseFullTrajectories(
 		ret= cb(trace);
 	}
 	else if( start.end ){
-		for( SubTrajectory* successor : start.end->next_trajectory ){
+		for( SubTrajectory* successor : start.end->nextTrajectories() ){
 			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
 				ret= false;
 				break;
@@ -134,14 +134,18 @@ bool traverseFullTrajectories(
 }
 }
 
-bool Task::processSolutions(const Task::SolutionCallback& processor) const {
+bool Task::processSolutions(const Task::SolutionCallback& processor) {
 	const size_t nr_of_trajectories= subtasks_.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& subtraj : subtasks_.front()->getTrajectories())
-		if( !traverseFullTrajectories(subtraj, subtasks_.size(), processor, trace) )
+	for(SubTrajectory& st : subtasks_.front()->impl_->trajectories_)
+		if( !traverseFullTrajectories(st, subtasks_.size(), processor, trace) )
 			return false;
 	return true;
+}
+
+bool Task::processSolutions(const Task::SolutionCallback& processor) const {
+	return const_cast<Task*>(this)->processSolutions(processor);
 }
 
 } }

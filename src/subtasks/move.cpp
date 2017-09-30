@@ -9,51 +9,45 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-moveit::task_constructor::subtasks::Move::Move(std::string name)
-: moveit::task_constructor::SubTask::SubTask(name),
-  timeout_(5.0)
+namespace moveit { namespace task_constructor { namespace subtasks {
+
+Move::Move(std::string name)
+   : Connecting(name),
+     timeout_(5.0)
 {}
 
-void
-moveit::task_constructor::subtasks::Move::setGroup(std::string group){
+void Move::setGroup(std::string group){
 	group_= group;
 	mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_);
 }
 
-void
-moveit::task_constructor::subtasks::Move::setLink(std::string link){
+void Move::setLink(std::string link){
 	link_= link;
 }
 
-void
-moveit::task_constructor::subtasks::Move::setPlannerId(std::string planner){
+void Move::setPlannerId(std::string planner){
 	planner_id_= planner;
 }
 
-void
-moveit::task_constructor::subtasks::Move::setTimeout(double timeout){
+void Move::setTimeout(double timeout){
 	timeout_= timeout;
 }
 
 /* TODO: implement this in compute
-void
-moveit::task_constructor::subtasks::Move::setFrom(std::string named_target){
+void Move::setFrom(std::string named_target){
 	from_named_target_= named_target;
 }
 
-void
-moveit::task_constructor::subtasks::Move::setTo(std::string named_target){
+void Move::setTo(std::string named_target){
 	to_named_target_= named_target;
 }
 */
 
-bool
-moveit::task_constructor::subtasks::Move::canCompute(){
+bool Move::canCompute(){
 	return hasStatePair();
 }
 
-bool
-moveit::task_constructor::subtasks::Move::compute(){
+bool Move::compute(){
 	assert( scene_->getRobotModel() );
 
 	std::pair<InterfaceState&, InterfaceState&> state_pair= fetchStatePair();
@@ -72,9 +66,9 @@ moveit::task_constructor::subtasks::Move::compute(){
 		return false;
 
 	// finish subtask
-	moveit::task_constructor::SubTrajectory& trajectory= addTrajectory(res.trajectory_);
-	trajectory.hasBeginning(state_pair.first);
-	trajectory.hasEnding(state_pair.second);
+	connect(res.trajectory_, state_pair);
 
 	return true;
 }
+
+} } }
