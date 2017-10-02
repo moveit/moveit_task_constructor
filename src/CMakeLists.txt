@@ -9,6 +9,7 @@ add_library(${PROJECT_NAME}
 	container_p.h
 
 	${PROJECT_INCLUDE}/utils.h
+	${PROJECT_INCLUDE}/cost_queue.h
 	${PROJECT_INCLUDE}/storage.h
 	${PROJECT_INCLUDE}/stage.h
 	${PROJECT_INCLUDE}/container.h

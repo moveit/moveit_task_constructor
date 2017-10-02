@@ -11,6 +11,11 @@ if (CATKIN_ENABLE_TESTING)
 		${catkin_LIBRARIES}
 		gtest_main)
 
+	catkin_add_gtest(${PROJECT_NAME}-test-cost_queue test_cost_queue.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-cost_queue
+		${PROJECT_NAME}
+		gtest_main)
+
 	add_rostest_gtest(${PROJECT_NAME}-test-task_model test_task_model.launch test_task_model.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-task_model
 		motion_planning_tasks_rviz_plugin
