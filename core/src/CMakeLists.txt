@@ -1,6 +1,7 @@
 add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/container.h
 	${PROJECT_INCLUDE}/container_p.h
+	${PROJECT_INCLUDE}/cost_queue.h
 	${PROJECT_INCLUDE}/introspection.h
 	${PROJECT_INCLUDE}/marker_tools.h
 	${PROJECT_INCLUDE}/properties.h
