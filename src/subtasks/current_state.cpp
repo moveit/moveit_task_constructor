@@ -8,14 +8,13 @@ CurrentState::CurrentState(std::string name)
 	ran_= false;
 }
 
-bool CurrentState::canCompute(){
+bool CurrentState::canCompute() const{
 	return !ran_;
 }
 
 bool CurrentState::compute(){
 	ran_= true;
-	assert( scene_ );
-	spawn(scene_);
+	spawn(scene());
 
 	return true;
 }

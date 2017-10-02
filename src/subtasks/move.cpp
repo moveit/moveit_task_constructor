@@ -1,4 +1,5 @@
 #include <moveit_task_constructor/subtasks/move.h>
+#include <moveit_task_constructor/storage.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -43,14 +44,12 @@ void Move::setTo(std::string named_target){
 }
 */
 
-bool Move::canCompute(){
+bool Move::canCompute() const{
 	return hasStatePair();
 }
 
 bool Move::compute(){
-	assert( scene_->getRobotModel() );
-
-	std::pair<InterfaceState&, InterfaceState&> state_pair= fetchStatePair();
+	InterfaceStatePair state_pair= fetchStatePair();
 
 	mgi_->setJointValueTarget(state_pair.second.state->getCurrentState());
 	if( !planner_id_.empty() )
@@ -62,7 +61,7 @@ bool Move::compute(){
 
 	ros::Duration(4.0).sleep();
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(state_pair.first.state, req, res))
+	if(!planner()->generatePlan(state_pair.first.state, req, res))
 		return false;
 
 	// finish subtask

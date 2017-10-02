@@ -9,5 +9,5 @@
 
 	<build_depend>moveit_core</build_depend>
 	<run_depend>moveit_core</run_depend>
-
+	<test_depend>rosunit</test_depend>
 </package>

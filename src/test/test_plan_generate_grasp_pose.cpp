@@ -36,7 +36,7 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	auto st= std::make_shared<subtasks::GenerateGraspPose>("generate grasp candidates");
+	auto st= std::make_unique<subtasks::GenerateGraspPose>("generate grasp candidates");
 
 	st->setEndEffector("gripper");
 	//st->setGroup("arm");
@@ -45,7 +45,7 @@ int main(int argc, char** argv){
 	st->setAngleDelta(0.1);
 	st->setGraspOffset(0.03);
 
-	t.add(st);
+	t.add(std::move(st));
 
 	t.plan();
 

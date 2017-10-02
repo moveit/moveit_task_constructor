@@ -1,5 +1,7 @@
-#include "subtask_p.h"
+#include "container_p.h"
+
 #include <moveit_task_constructor/task.h>
+#include <moveit_task_constructor/container.h>
 #include <moveit_task_constructor/debug.h>
 
 #include <ros/ros.h>
@@ -11,98 +13,96 @@
 
 namespace moveit { namespace task_constructor {
 
-Task::Task(){
-	rml_.reset(new robot_model_loader::RobotModelLoader);
-	if( !rml_->getModel() )
-		throw Exception("Task failed to construct RobotModel");
+class TaskPrivate : public SerialContainerPrivate {
+	friend class Task;
+	robot_model_loader::RobotModelLoaderPtr rml_;
 
-	ros::NodeHandle h;
-
-	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-	client.waitForExistence();
-
-	moveit_msgs::GetPlanningScene::Request req;
-	moveit_msgs::GetPlanningScene::Response res;
-
-	req.components.components =
-		moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
-		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE
-		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
-		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
-		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
-		| moveit_msgs::PlanningSceneComponents::OCTOMAP
-		| moveit_msgs::PlanningSceneComponents::TRANSFORMS
-		| moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
-		| moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
-		| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
-
-	if(!client.call(req, res)){
-		throw Exception("Task failed to acquire current PlanningScene");
+public:
+	TaskPrivate(Task* me, const std::string &name)
+	   : SerialContainerPrivate(me, name)
+	{
+		initModel();
+		initScene();
+		initPlanner();
 	}
 
-	scene_.reset(new planning_scene::PlanningScene(rml_->getModel()));
-	scene_->setPlanningSceneMsg(res.scene);
+	void initModel () {
+		rml_.reset(new robot_model_loader::RobotModelLoader);
+		if( !rml_->getModel() )
+			throw Exception("Task failed to construct RobotModel");
+	}
+	void initScene() {
+		assert(rml_);
 
-	planner_.reset(new planning_pipeline::PlanningPipeline(rml_->getModel(), ros::NodeHandle("move_group")));
+		ros::NodeHandle h;
+		ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+		client.waitForExistence();
+
+		moveit_msgs::GetPlanningScene::Request req;
+		moveit_msgs::GetPlanningScene::Response res;
+
+		req.components.components =
+			moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
+			| moveit_msgs::PlanningSceneComponents::ROBOT_STATE
+			| moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
+			| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
+			| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
+			| moveit_msgs::PlanningSceneComponents::OCTOMAP
+			| moveit_msgs::PlanningSceneComponents::TRANSFORMS
+			| moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
+			| moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
+			| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+
+		if(!client.call(req, res)){
+			throw Exception("Task failed to acquire current PlanningScene");
+		}
+
+		scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
+		std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
+	}
+	void initPlanner() {
+		assert(rml_);
+		assert(scene_);
+		planner_ = std::make_shared<planning_pipeline::PlanningPipeline>(rml_->getModel(), ros::NodeHandle("move_group"));
+	}
+};
+
+
+PRIVATE_CLASS_IMPL(Task)
+Task::Task(const std::string &name)
+   : SerialContainer(new TaskPrivate(this, name))
+{
 }
 
-Task::~Task(){
-	subtasks_.clear();
-	scene_.reset();
-	planner_.reset();
-}
-
-void Task::clear(){
-	subtasks_.clear();
+void Task::add(std::unique_ptr<SubTask> &&stage) {
+	if (!stage)
+		throw std::runtime_error("Task::add() failed: invalid stage pointer");
+	if (!insert(std::move(stage)))
+		throw std::runtime_error(std::string("Task::add() failed for stage: ") + stage->getName());
 }
 
 bool Task::plan(){
 	NewSolutionPublisher debug(*this);
 
-	bool computed= true;
-	while(ros::ok() && computed){
-		computed= false;
-		for( SubTaskPtr& subtask : subtasks_ ){
-			if( !subtask->canCompute() )
-				continue;
-			std::cout << "Computing subtask '" << subtask->getName() << "':" << std::endl;
-			bool success= subtask->compute();
-			computed= true;
-			std::cout << (success ? "succeeded" : "failed") << std::endl;
-		}
-		if(computed){
+	while(ros::ok() && canCompute()) {
+		if (compute()) {
 			debug.publish();
 			printState();
-		}
+		} else
+			break;
 	}
 	return false;
 }
 
-void Task::add( SubTaskPtr subtask ){
-	subtask->setPlanningScene( scene_ );
-	subtask->setPlanningPipeline( planner_ );
-
-	if( !subtasks_.empty() ){
-		subtask->impl_->addPredecessor( subtasks_.back() );
-		subtasks_.back()->impl_->addSuccessor( subtask );
-	}
-
-	subtasks_.push_back( subtask );
-}
-
 const robot_state::RobotState& Task::getCurrentRobotState() const {
-	return scene_->getCurrentState();
+	return pimpl_func()->scene_->getCurrentState();
 }
 
 void Task::printState(){
-	for( auto& st : subtasks_ ){
-		std::cout
-			<< st->impl_->getBeginning().size() << " -> "
-			<< st->impl_->getTrajectories().size()
-			<< " <- " << st->impl_->getEnd().size()
-			<< " / " << st->getName()
-			<< std::endl;
-	}
+	ContainerBase::StageCallback processor = [](const SubTask& stage, int depth) -> bool {
+		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+	};
+	traverseStages(processor);
 }
 
 namespace {
@@ -120,7 +120,7 @@ bool traverseFullTrajectories(
 		ret= cb(trace);
 	}
 	else if( start.end ){
-		for( SubTrajectory* successor : start.end->nextTrajectories() ){
+		for( SubTrajectory* successor : start.end->outgoingTrajectories() ){
 			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
 				ret= false;
 				break;
@@ -135,11 +135,12 @@ bool traverseFullTrajectories(
 }
 
 bool Task::processSolutions(const Task::SolutionCallback& processor) {
-	const size_t nr_of_trajectories= subtasks_.size();
+	const TaskPrivate::array_type& children = pimpl_func()->children();
+	const size_t nr_of_trajectories = children.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& st : subtasks_.front()->impl_->trajectories_)
-		if( !traverseFullTrajectories(st, subtasks_.size(), processor, trace) )
+	for(SubTrajectory& st : children.front()->pimpl_func()->trajectories_)
+		if( !traverseFullTrajectories(st, nr_of_trajectories, processor, trace) )
 			return false;
 	return true;
 }
