@@ -40,20 +40,20 @@ protected:
 	void TearDown() {}
 
 	// accessors for private elements of SubTaskPrivate
-	const SubTaskPrivate* parent(const SubTaskPrivate* p) const { return p->parent_; }
-	const SubTaskPrivate* prev(const SubTaskPrivate* p) const { return p->predeccessor_; }
-	const SubTaskPrivate* next(const SubTaskPrivate* p) const { return p->successor_; }
+	inline const SubTaskPrivate* parent(const SubTaskPrivate* p) const { return p->parent_; }
+	inline const SubTaskPrivate* prev(const SubTaskPrivate* p) const { return p->prev(); }
+	inline const SubTaskPrivate* next(const SubTaskPrivate* p) const { return p->next(); }
 
 	void validateOrder(const SerialContainerPrivate* container, const std::initializer_list<SubTaskPrivate*> &expected) {
-		size_t num = container->children_.size();
+		size_t num = container->children().size();
 		ASSERT_TRUE(num == expected.size()) << "different list lengths";
 
 		// validate position()
-		EXPECT_EQ(container->children_.begin(), container->position(-(num+1)));
-		EXPECT_EQ(container->children_.end(), container->position(num));
+		EXPECT_EQ(container->children().begin(), container->position(-(num+1)));
+		EXPECT_EQ(container->children().end(), container->position(num));
 
 		// print order
-		for (auto it = container->children_.begin(), end = container->children_.end(); it != end; ++it)
+		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it)
 			PRINTF(" %p", (*it)->pimpl_func());
 		PRINTF(" *** parent: %p ***\n", container);
 
@@ -62,7 +62,7 @@ protected:
 		const SubTaskPrivate* successor = container;
 		size_t pos = 0;
 		auto exp_it = expected.begin();
-		for (auto it = container->children_.begin(), end = container->children_.end(); it != end; ++it, ++exp_it, ++pos) {
+		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it, ++exp_it, ++pos) {
 			SubTaskPrivate *child = (*it)->pimpl_func();
 			EXPECT_EQ(child, *exp_it) << "wrong order";
 			EXPECT_EQ(child->parent_, container) << "wrong parent";

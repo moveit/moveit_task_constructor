@@ -9,7 +9,7 @@ class ContainerBase : public SubTask
 {
 public:
 	PRIVATE_CLASS(ContainerBase)
-	typedef std::unique_ptr<SubTask> value_type;
+	typedef SubTask::pointer value_type;
 
 	typedef std::function<bool(const SubTask&, int depth)> StageCallback;
 	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;

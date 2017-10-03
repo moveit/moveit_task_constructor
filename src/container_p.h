@@ -9,25 +9,19 @@ class ContainerBasePrivate : public SubTaskPrivate
 {
 public:
 	typedef ContainerBase::value_type value_type;
-	typedef std::vector<value_type> array_type;
+	typedef SubTaskPrivate::array_type array_type;
 	typedef array_type::iterator iterator;
 	typedef array_type::const_iterator const_iterator;
 
-	array_type children_;
-
+	inline const array_type& children() const { return children_; }
 	const_iterator position(int before = -1) const;
 
 	bool canInsert(const SubTask& stage) const;
+	iterator insert(value_type &&subtask, const_iterator pos);
+	inline void clear() { children_.clear(); }
 
-	/* SerialContainer doesn't have own input_, output_ interfaces,
-	 * but share the interface pointer with their first resp. last child stage.
-	 * In this fashion, spawned states directly get propagated to the actual stage.
-	 * Consequently, when the container is empty, both interface pointers are invalid. */
-	void insertSerial(value_type&& child, const_iterator before);
-
-	void clear() {
-		children_.clear();
-	}
+	virtual const SubTaskPrivate* prev_(const SubTaskPrivate* child) const = 0;
+	virtual const SubTaskPrivate* next_(const SubTaskPrivate* child) const = 0;
 
 	bool traverseStages(const ContainerBase::StageCallback &processor, int depth) const;
 
@@ -35,9 +29,11 @@ protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name)
 	   : SubTaskPrivate(me, name)
 	{}
+	inline const ContainerBasePrivate* parent(const SubTaskPrivate *child) const { return child->parent_; }
+	inline iterator it(const SubTaskPrivate *child) const { return child->it_; }
 
 private:
-	iterator insert(value_type &&subtask, const_iterator pos);
+	array_type children_;
 };
 
 
@@ -51,6 +47,9 @@ public:
 	}
 
 	bool canInsert(const value_type& subtask, const_iterator before) const;
+
+	const SubTaskPrivate* prev_(const SubTaskPrivate* child) const override;
+	const SubTaskPrivate* next_(const SubTaskPrivate* child) const override;
 };
 
 

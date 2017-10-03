@@ -1,4 +1,5 @@
 #include "subtask_p.h"
+#include "container_p.h"
 #include <iostream>
 #include <iomanip>
 
@@ -90,6 +91,13 @@ void SubTaskPrivate::sendForward(SubTrajectory& trajectory, const planning_scene
 void SubTaskPrivate::sendBackward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
 	std::cout << "sending state to end" << std::endl;
 	prevOutput()->add(ps, NULL, &trajectory);
+}
+
+const SubTaskPrivate* SubTaskPrivate::prev() const {
+	return parent_ ? parent_->prev_(this) : nullptr;
+}
+const SubTaskPrivate* SubTaskPrivate::next() const {
+	return parent_ ? parent_->next_(this) : nullptr;
 }
 
 

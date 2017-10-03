@@ -34,17 +34,16 @@ class InterfaceState;
 typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
 
 
-class ContainerBasePrivate;
 class SubTaskPrivate;
 class SubTask {
 	friend std::ostream& operator<<(std::ostream &os, const SubTask& stage);
 	friend class SubTaskPrivate;
-	friend class ContainerBasePrivate;
 
 public:
 	inline const SubTaskPrivate* pimpl_func() const { return pimpl_; }
 	inline SubTaskPrivate* pimpl_func() { return pimpl_; }
 
+	typedef std::unique_ptr<SubTask> pointer;
 	enum InterfaceFlag {
 		READS_INPUT        = 0x01,
 		READS_OUTPUT       = 0x02,

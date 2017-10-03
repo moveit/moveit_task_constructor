@@ -7,16 +7,18 @@
 
 namespace moveit { namespace task_constructor {
 
+class ContainerBasePrivate;
 class SubTaskPrivate {
 	friend class SubTask;
 	friend class SubTaskTest; // allow unit tests
-	// ContainerBase will maintain the double-linked list of interfaces
-	friend class ContainerBasePrivate;
+	friend class ContainerBasePrivate; // allow to set parent_ and it_
 	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
 public:
+	typedef std::list<SubTask::pointer> array_type;
+
 	inline SubTaskPrivate(SubTask* me, const std::string& name)
-	   : me_(me), name_(name), parent_(nullptr), predeccessor_(nullptr), successor_(nullptr)
+	   : me_(me), name_(name), parent_(nullptr)
 	{}
 
 	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
@@ -36,14 +38,15 @@ public:
 	InterfacePtr output_;
 	std::list<SubTrajectory> trajectories_;
 
-	const InterfacePtr prevOutput() const { return predeccessor_ ? predeccessor_->output_ : InterfacePtr(); }
-	const InterfacePtr nextInput() const { return successor_ ? successor_->input_ : InterfacePtr(); }
+	const SubTaskPrivate* prev() const;
+	const SubTaskPrivate* next() const;
+	const InterfacePtr prevOutput() const { const SubTaskPrivate* other = prev(); return other ? other->output_ : InterfacePtr(); }
+	const InterfacePtr nextInput() const { const SubTaskPrivate* other = next(); return other ? other->input_ : InterfacePtr(); }
 
 private:
 	// items accessed by ContainerBasePrivate only to maintain hierarchy
-	SubTaskPrivate* parent_;
-	SubTaskPrivate* predeccessor_;
-	SubTaskPrivate* successor_;
+	ContainerBasePrivate* parent_;
+	array_type::iterator it_;
 };
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 

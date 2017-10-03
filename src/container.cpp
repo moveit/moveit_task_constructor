@@ -22,47 +22,7 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int before) 
 bool ContainerBasePrivate::canInsert(const SubTask &stage) const {
 	const SubTaskPrivate* impl = stage.pimpl_func();
 	return impl->parent_ == nullptr  // re-parenting is not supported
-	      && impl->predeccessor_ == nullptr
-	      && impl->successor_ == nullptr
 	      && impl->trajectories_.empty(); // existing trajectories would become invalid
-}
-
-// insert child into chain, before where
-void ContainerBasePrivate::insertSerial(ContainerBasePrivate::value_type &&child, ContainerBasePrivate::const_iterator before) {
-	SubTaskPrivate* child_impl = child->pimpl_func();
-	bool at_end = before == children_.cend();
-	bool at_begin = before == children_.cbegin();
-
-	// child should not be connected yet
-	assert(child_impl->parent_ == nullptr);
-	assert(child_impl->predeccessor_ == nullptr);
-	assert(child_impl->successor_ == nullptr);
-
-	child_impl->parent_ = this;
-	if (children_.empty()) {
-		child_impl->successor_ = this;
-		child_impl->predeccessor_ = this;
-	} else if (at_end) {
-		const_iterator prev = before; --prev;
-		SubTaskPrivate* prev_impl = prev->get()->pimpl_func();
-		child_impl->successor_ = this;
-		child_impl->predeccessor_ = prev_impl;
-		prev_impl->successor_ = child_impl;
-	} else if (at_begin) {
-		SubTaskPrivate* next_impl = before->get()->pimpl_func();
-		child_impl->predeccessor_ = this;
-		child_impl->successor_ = next_impl;
-		next_impl->predeccessor_ = child_impl;
-	} else {
-		const_iterator prev = before; --prev;
-		SubTaskPrivate* prev_impl = prev->get()->pimpl_func();
-		SubTaskPrivate* next_impl = before->get()->pimpl_func();
-		child_impl->successor_ = next_impl;
-		child_impl->predeccessor_ = prev_impl;
-		next_impl->predeccessor_ = child_impl;
-		prev_impl->successor_ = child_impl;
-	}
-	ContainerBasePrivate::insert(std::move(child), before);
 }
 
 bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &processor, int depth) const {
@@ -77,9 +37,12 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &pr
 }
 
 ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate::value_type &&subtask, ContainerBasePrivate::const_iterator pos) {
+	SubTaskPrivate *impl = subtask->pimpl_func();
+	impl->parent_ = this;
 	subtask->setPlanningScene(scene_);
 	subtask->setPlanningPipeline(planner_);
-	return children_.insert(pos, std::move(subtask));
+	impl->it_ = children_.insert(pos, std::move(subtask));
+	return impl->it_;
 }
 
 
@@ -106,6 +69,22 @@ bool SerialContainerPrivate::canInsert(const ContainerBasePrivate::value_type &s
 	return ContainerBasePrivate::canInsert(*subtask);
 }
 
+const SubTaskPrivate *SerialContainerPrivate::prev_(const SubTaskPrivate *child) const
+{
+	assert(parent(child) == this);
+	if (it(child) == children().begin()) return this;
+	iterator prev = it(child); --prev;
+	return (*prev)->pimpl_func();
+}
+
+const SubTaskPrivate *SerialContainerPrivate::next_(const SubTaskPrivate *child) const
+{
+	assert(parent(child) == this);
+	if (it(child) == --children().end()) return this;
+	iterator next = it(child); ++next;
+	return (*next)->pimpl_func();
+}
+
 
 PRIVATE_CLASS_IMPL(SerialContainer)
 SerialContainer::SerialContainer(SerialContainerPrivate *impl)
@@ -129,21 +108,21 @@ bool SerialContainer::insert(value_type&& subtask, int before)
 	if (!impl->canInsert(subtask, where))
 		return false;
 
-	impl->insertSerial(std::move(subtask), where);
+	impl->insert(std::move(subtask), where);
 	return true;
 }
 
 bool SerialContainer::canCompute() const
 {
 	IMPL(const SerialContainer);
-	return impl->children_.size() > 0;
+	return impl->children().size() > 0;
 }
 
 bool SerialContainer::compute()
 {
 	IMPL(SerialContainer);
 	bool computed = false;
-	for(const auto& stage : impl->children_){
+	for(const auto& stage : impl->children()){
 		if(!stage->canCompute())
 			continue;
 		std::cout << "Computing subtask '" << stage->getName() << "':" << std::endl;

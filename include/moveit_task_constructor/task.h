@@ -28,7 +28,7 @@ public:
 
 	Task(const std::string &name = std::string());
 
-	void add(std::unique_ptr<SubTask> &&stage);
+	void add(SubTask::pointer &&stage);
 	using SerialContainer::clear;
 
 	bool plan();

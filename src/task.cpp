@@ -74,7 +74,7 @@ Task::Task(const std::string &name)
 {
 }
 
-void Task::add(std::unique_ptr<SubTask> &&stage) {
+void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("Task::add() failed: invalid stage pointer");
 	if (!insert(std::move(stage)))
