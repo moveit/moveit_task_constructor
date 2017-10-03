@@ -4,9 +4,9 @@
 
 #include <moveit_task_constructor/subtask.h>
 
-namespace moveit { namespace planning_interface {
-MOVEIT_CLASS_FORWARD(MoveGroupInterface)
-} }
+namespace moveit {
+namespace planning_interface { MOVEIT_CLASS_FORWARD(MoveGroupInterface)}
+}
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
@@ -14,9 +14,8 @@ class Move : public Connecting {
 public:
 	Move(std::string name);
 
-	virtual bool canCompute();
-
-	virtual bool compute();
+	virtual bool canCompute() const override;
+	virtual bool compute() override;
 
 	void setGroup(std::string group);
 	void setLink(std::string link);

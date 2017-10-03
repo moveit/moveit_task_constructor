@@ -9,9 +9,10 @@
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/PointStamped.h>
 
-namespace moveit { namespace planning_interface {
-MOVEIT_CLASS_FORWARD(MoveGroupInterface);
-} }
+namespace moveit {
+namespace planning_interface { MOVEIT_CLASS_FORWARD(MoveGroupInterface) }
+namespace core { MOVEIT_CLASS_FORWARD(RobotState) }
+}
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
@@ -19,9 +20,8 @@ class CartesianPositionMotion : public PropagatingAnyWay {
 public:
 	CartesianPositionMotion(std::string name);
 
-	virtual bool canCompute();
-
-	virtual bool compute();
+	virtual bool canCompute() const override;
+	virtual bool compute() override;
 
 	void setGroup(std::string group);
 	void setLink(std::string link);

@@ -14,9 +14,8 @@ class Gripper : public PropagatingForward {
 public:
 	Gripper(std::string name);
 
-	virtual bool canCompute();
-
-	virtual bool compute();
+	virtual bool canCompute() const override;
+	virtual bool compute() override;
 
 	void setEndEffector(std::string eef);
 

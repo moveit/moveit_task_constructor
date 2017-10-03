@@ -1,5 +1,6 @@
 #include <moveit_task_constructor/debug.h>
 #include <moveit_task_constructor/task.h>
+#include <moveit_task_constructor/storage.h>
 
 #include <ros/ros.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>

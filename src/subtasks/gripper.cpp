@@ -1,4 +1,5 @@
 #include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/storage.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -36,16 +37,16 @@ void Gripper::graspObject(std::string grasp_object){
 	grasp_object_= grasp_object;
 }
 
-bool Gripper::canCompute(){
+bool Gripper::canCompute() const{
 	return hasBeginning();
 }
 
 bool Gripper::compute(){
-	assert( scene_->getRobotModel() );
+	assert(scene()->getRobotModel());
 
 	if(!mgi_){
-		assert( scene_->getRobotModel()->hasEndEffector(eef_) && "no end effector with that name defined in srdf" );
-		const moveit::core::JointModelGroup* jmg= scene_->getRobotModel()->getEndEffector(eef_);
+		assert(scene()->getRobotModel()->hasEndEffector(eef_) && "no end effector with that name defined in srdf");
+		const moveit::core::JointModelGroup* jmg= scene()->getRobotModel()->getEndEffector(eef_);
 		const std::string group_name= jmg->getName();
 		mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
 
@@ -68,7 +69,7 @@ bool Gripper::compute(){
 	}
 
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(scene, req, res))
+	if(!planner()->generatePlan(scene, req, res))
 		return false;
 
 	// set end state

@@ -1,4 +1,5 @@
 #include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
+#include <moveit_task_constructor/storage.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/DisplayTrajectory.h>
@@ -58,7 +59,7 @@ void CartesianPositionMotion::setCartesianStepSize(double distance){
 	step_size_= distance;
 }
 
-bool CartesianPositionMotion::canCompute(){
+bool CartesianPositionMotion::canCompute() const{
 	return hasBeginning() || hasEnding();
 }
 
@@ -83,7 +84,7 @@ bool CartesianPositionMotion::compute(){
 bool CartesianPositionMotion::_computeFromBeginning(){
 	assert( hasBeginning() );
 
-	moveit::task_constructor::InterfaceState& beginning= fetchStateBeginning();
+	const InterfaceState& beginning= fetchStateBeginning();
 	planning_scene::PlanningScenePtr result_scene = beginning.state->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
@@ -173,7 +174,7 @@ bool CartesianPositionMotion::_computeFromBeginning(){
 bool CartesianPositionMotion::_computeFromEnding(){
 	assert( hasEnding() );
 
-	moveit::task_constructor::InterfaceState& ending= fetchStateEnding();
+	const InterfaceState& ending= fetchStateEnding();
 	planning_scene::PlanningScenePtr result_scene = ending.state->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
@@ -244,13 +245,13 @@ bool CartesianPositionMotion::_computeFromEnding(){
 
 
 void CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
-			moveit_msgs::DisplayTrajectory dt;
-			robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
-			dt.model_id= scene_->getRobotModel()->getName();
-			dt.trajectory.resize(1);
-			trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
-			dt.model_id= start.getRobotModel()->getName();
-			pub.publish(dt);
+	moveit_msgs::DisplayTrajectory dt;
+	robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
+	dt.model_id= scene()->getRobotModel()->getName();
+	dt.trajectory.resize(1);
+	trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
+	dt.model_id= start.getRobotModel()->getName();
+	pub.publish(dt);
 }
 
 } } }

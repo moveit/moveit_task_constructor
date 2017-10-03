@@ -10,9 +10,8 @@ class CurrentState : public Generator {
 public:
 	CurrentState(std::string name);
 
-	virtual bool canCompute();
-
-	virtual bool compute();
+	virtual bool canCompute() const override;
+	virtual bool compute() override;
 
 protected:
 	bool ran_;

@@ -1,39 +1,87 @@
 #include "subtask_p.h"
-
-// get correctly casted private impl pointer
-#define I(Class) Class##Private * const impl = reinterpret_cast<Class##Private*>(impl_)
+#include "container_p.h"
+#include <iostream>
+#include <iomanip>
 
 namespace moveit { namespace task_constructor {
 
 SubTask::SubTask(SubTaskPrivate *impl)
-   : impl_(impl)
+   : pimpl_(impl)
 {
+}
+
+SubTask::InterfaceFlags SubTask::interfaceFlags() const
+{
+	SubTask::InterfaceFlags result = pimpl_->interfaceFlags();
+	result &= ~SubTask::InterfaceFlags(SubTask::OWN_IF_MASK);
+	result |= pimpl_->deducedInterfaceFlags();
+	return result;
 }
 
 SubTask::~SubTask()
 {
-	delete impl_;
+	delete pimpl_;
 }
 
 const std::string& SubTask::getName() const {
-	return impl_->name_;
+	return pimpl_->name_;
 }
 
-void SubTask::setPlanningScene(planning_scene::PlanningSceneConstPtr scene){
-	scene_= scene;
+std::ostream& operator<<(std::ostream &os, const SubTask& stage) {
+	os << *stage.pimpl_func();
+	return os;
 }
 
-void SubTask::setPlanningPipeline(planning_pipeline::PlanningPipelinePtr planner){
-	planner_= planner;
+template<SubTask::InterfaceFlag own, SubTask::InterfaceFlag other>
+const char* direction(const SubTaskPrivate& stage) {
+	SubTask::InterfaceFlags f = stage.deducedInterfaceFlags();
+	bool own_if = f & own;
+	bool other_if = f & other;
+	bool reverse = own & SubTask::INPUT_IF_MASK;
+	if (own_if && other_if) return "<>";
+	if (!own_if && !other_if) return "--";
+	if (other_if ^ reverse) return "->";
+	return "<-";
+};
+std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
+
+	// inputs
+	for (const InterfacePtr &i : {stage.prevOutput(), stage.input_}) {
+		os << std::setw(3);
+		if (i) os << i->size();
+		else os << "-";
+	}
+	// trajectories
+	os << std::setw(5) << direction<SubTask::READS_INPUT, SubTask::WRITES_PREV_OUTPUT>(stage)
+	   << std::setw(3) << stage.trajectories_.size()
+	   << std::setw(5) << direction<SubTask::READS_OUTPUT, SubTask::WRITES_NEXT_INPUT>(stage);
+	// outputs
+	for (const InterfacePtr &i : {stage.output_, stage.nextInput()}) {
+		os << std::setw(3);
+		if (i) os << i->size();
+		else os << "-";
+	}
+	// name
+	os << " / " << stage.name_;
+	return os;
 }
 
-
-void SubTaskPrivate::addPredecessor(SubTaskPtr prev_task){
-	predecessor_= SubTaskWeakPtr(prev_task);
+planning_scene::PlanningSceneConstPtr SubTask::scene() const
+{
+	return pimpl_->scene_;
 }
 
-void SubTaskPrivate::addSuccessor(SubTaskPtr next_task){
-	successor_= next_task;
+planning_pipeline::PlanningPipelinePtr SubTask::planner() const
+{
+	return pimpl_->planner_;
+}
+
+void SubTask::setPlanningScene(const planning_scene::PlanningSceneConstPtr &scene){
+	pimpl_->scene_= scene;
+}
+
+void SubTask::setPlanningPipeline(const planning_pipeline::PlanningPipelinePtr &planner){
+	pimpl_->planner_= planner;
 }
 
 SubTrajectory& SubTaskPrivate::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
@@ -41,34 +89,32 @@ SubTrajectory& SubTaskPrivate::addTrajectory(const robot_trajectory::RobotTrajec
 	return trajectories_.back();
 }
 
-void SubTaskPrivate::sendForward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps){
-	if( successor_ ){
-		std::cout << "sending state forward to successor" << std::endl;
-		traj.end= successor_->impl_->newBeginning(ps, &traj);
-	}
+// return the interface flags that can be deduced from the interface
+inline SubTask::InterfaceFlags SubTaskPrivate::deducedInterfaceFlags() const
+{
+	SubTask::InterfaceFlags f;
+	if (input_)  f |= SubTask::READS_INPUT;
+	if (output_) f |= SubTask::READS_OUTPUT;
+	if (prevOutput()) f |= SubTask::WRITES_PREV_OUTPUT;
+	if (nextInput())  f |= SubTask::WRITES_NEXT_INPUT;
+	return f;
 }
 
-void SubTaskPrivate::sendBackward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps){
-	if( !predecessor_.expired() ){
-		std::cout << "sending state backward to predecessor" << std::endl;
-		traj.begin= predecessor_.lock()->impl_->newEnd(ps, &traj);
-	}
+inline void SubTaskPrivate::sendForward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
+	std::cout << "sending state to start" << std::endl;
+	nextInput()->add(ps, &trajectory, NULL);
 }
 
-InterfaceState* SubTaskPrivate::newBeginning(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_end){
-	assert( bool(ps) );
-	beginnings_.push_back( InterfaceState(ps, old_end, NULL) );
-
-	me_->newBeginning(--beginnings_.end());
-	return &beginnings_.back();
+inline void SubTaskPrivate::sendBackward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
+	std::cout << "sending state to end" << std::endl;
+	prevOutput()->add(ps, NULL, &trajectory);
 }
 
-InterfaceState* SubTaskPrivate::newEnd(planning_scene::PlanningSceneConstPtr ps, SubTrajectory* old_beginning){
-	assert( bool(ps) );
-	endings_.push_back( InterfaceState(ps, NULL, old_beginning) );
-
-	me_->newEnd(--endings_.end());
-	return &endings_.back();
+const SubTaskPrivate* SubTaskPrivate::prev() const {
+	return parent_ ? parent_->prev_(this) : nullptr;
+}
+const SubTaskPrivate* SubTaskPrivate::next() const {
+	return parent_ ? parent_->next_(this) : nullptr;
 }
 
 
@@ -79,17 +125,17 @@ PropagatingAnyWay::PropagatingAnyWay(const std::string &name)
 PropagatingAnyWay::PropagatingAnyWay(PropagatingAnyWayPrivate *impl) : SubTask(impl) {}
 
 bool PropagatingAnyWay::hasBeginning() const{
-	I(PropagatingAnyWay);
-	return impl->it_beginnings_ != impl->beginnings_.end();
+	IMPL(const PropagatingAnyWay);
+	return impl->next_input_ != impl->input_->end();
 }
 
-InterfaceState& PropagatingAnyWay::fetchStateBeginning(){
-	I(PropagatingAnyWay);
-	if(impl->it_beginnings_ == impl->beginnings_.end())
+const InterfaceState& PropagatingAnyWay::fetchStateBeginning(){
+	IMPL(PropagatingAnyWay);
+	if (!hasBeginning())
 		throw std::runtime_error("no new state for beginning available");
 
-	InterfaceState& state= *impl->it_beginnings_;
-	++impl->it_beginnings_;
+	const InterfaceState& state= *impl->next_input_;
+	++impl->next_input_;
 
 	return state;
 }
@@ -98,52 +144,54 @@ void PropagatingAnyWay::sendForward(const robot_trajectory::RobotTrajectoryPtr& 
                                     const InterfaceState& from,
                                     const planning_scene::PlanningSceneConstPtr& to,
                                     double cost){
-	SubTrajectory &trajectory = impl_->addTrajectory(t, cost);
-	trajectory.setBeginning(from);
-	impl_->sendForward(trajectory, to);
+	IMPL(PropagatingAnyWay);
+	SubTrajectory &trajectory = impl->addTrajectory(t, cost);
+	trajectory.setStartState(from);
+	impl->sendForward(trajectory, to);
 }
 
-void PropagatingAnyWay::newBeginning(const InterfaceStateList::iterator &it)
+void PropagatingAnyWay::newInputState(const Interface::iterator &it)
 {
-	I(PropagatingAnyWay);
+	IMPL(PropagatingAnyWay);
 	// we just appended a state to the list, but the iterator doesn't see it anymore
 	// so let's point it at the new one
-	if( impl->it_beginnings_ == impl->beginnings_.end() )
-		--impl->it_beginnings_;
+	if( impl->next_input_ == impl->input_->end() )
+		--impl->next_input_;
 }
 
 bool PropagatingAnyWay::hasEnding() const{
-	I(PropagatingAnyWay);
-	return impl->it_endings_ != impl->endings_.end();
+	IMPL(const PropagatingAnyWay);
+	return impl->next_output_ != impl->output_->end();
 }
 
-InterfaceState& PropagatingAnyWay::fetchStateEnding(){
-	I(PropagatingAnyWay);
-	if(impl->it_endings_ == impl->endings_.end())
+const InterfaceState& PropagatingAnyWay::fetchStateEnding(){
+	IMPL(PropagatingAnyWay);
+	if(!hasEnding())
 		throw std::runtime_error("no new state for ending available");
 
-	InterfaceState& state= *impl->it_endings_;
-	++impl->it_endings_;
+	const InterfaceState& state= *impl->next_output_;
+	++impl->next_output_;
 
 	return state;
 }
 
 void PropagatingAnyWay::sendBackward(const robot_trajectory::RobotTrajectoryPtr& t,
-                                       const planning_scene::PlanningSceneConstPtr& from,
-                                       const InterfaceState& to,
-                                       double cost){
-   SubTrajectory& trajectory = impl_->addTrajectory(t, cost);
-   trajectory.setEnding(to);
-	impl_->sendBackward(trajectory, from);
+                                     const planning_scene::PlanningSceneConstPtr& from,
+                                     const InterfaceState& to,
+                                     double cost){
+	IMPL(PropagatingAnyWay);
+	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	trajectory.setEndState(to);
+	impl->sendBackward(trajectory, from);
 }
 
-void PropagatingAnyWay::newEnd(const InterfaceStateList::iterator &it)
+void PropagatingAnyWay::newOutputState(const Interface::iterator &it)
 {
-	I(PropagatingAnyWay);
+	IMPL(PropagatingAnyWay);
 	// we just appended a state to the list, but the iterator doesn't see it anymore
 	// so let's point it at the new one
-	if( impl->it_endings_ == impl->endings_.end() )
-		--impl->it_endings_;
+	if( impl->next_output_ == impl->output_->end() )
+		--impl->next_output_;
 }
 
 
@@ -158,18 +206,19 @@ PropagatingBackward::PropagatingBackward(const std::string &name)
 
 
 Generator::Generator(const std::string &name)
-   : SubTask(new SubTaskPrivate(this, name))
+   : SubTask(new GeneratorPrivate(this, name))
 {}
 
 void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost)
 {
+	IMPL(Generator);
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr dummy;
-	moveit::task_constructor::SubTrajectory& trajectory = impl_->addTrajectory(dummy, cost);
+	SubTrajectory& trajectory = impl->addTrajectory(dummy, cost);
 
 	std::cout << "spawning state" << std::endl;
-	impl_->sendBackward(trajectory, ps);
-	impl_->sendForward(trajectory, ps);
+	impl->sendBackward(trajectory, ps);
+	impl->sendForward(trajectory, ps);
 }
 
 
@@ -178,41 +227,42 @@ Connecting::Connecting(const std::string &name)
 {
 }
 
-void Connecting::newBeginning(const InterfaceStateList::iterator& it)
+void Connecting::newInputState(const Interface::iterator& it)
 {
-	I(Connecting);
+	IMPL(Connecting);
 	// TODO: need to handle the pairs iterator
-	if( impl->it_pairs_.first == impl->beginnings_.end() )
+	if( impl->it_pairs_.first == impl->input_->end() )
 		--impl->it_pairs_.first;
 }
 
-void Connecting::newEnd(const InterfaceStateList::iterator& it)
+void Connecting::newOutputState(const Interface::iterator& it)
 {
-	I(Connecting);
+	IMPL(Connecting);
 	// TODO: need to handle the pairs iterator properly
-	if( impl->it_pairs_.second == impl->endings_.end() )
+	if( impl->it_pairs_.second == impl->output_->end() )
 		--impl->it_pairs_.second;
 }
 
 bool Connecting::hasStatePair() const{
-	I(Connecting);
+	IMPL(const Connecting);
 	// TODO: implement this properly
-	return impl->it_pairs_.first != impl->beginnings_.end() &&
-	       impl->it_pairs_.second != impl->endings_.end();
+	return impl->it_pairs_.first != impl->input_->end() &&
+	       impl->it_pairs_.second != impl->output_->end();
 }
 
-std::pair<InterfaceState&, InterfaceState&> Connecting::fetchStatePair(){
-	I(Connecting);
+InterfaceStatePair Connecting::fetchStatePair(){
+	IMPL(Connecting);
 	// TODO: implement this properly
-	return std::pair<InterfaceState&, InterfaceState&>
+	return std::pair<const InterfaceState&, const InterfaceState&>
 	      (*impl->it_pairs_.first, *(impl->it_pairs_.second++));
 }
 
 void Connecting::connect(const robot_trajectory::RobotTrajectoryPtr& t, const InterfaceStatePair& state_pair, double cost)
 {
-	moveit::task_constructor::SubTrajectory& trajectory = impl_->addTrajectory(t, cost);
-	trajectory.setBeginning(state_pair.first);
-	trajectory.setEnding(state_pair.second);
+	IMPL(Connecting);
+	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	trajectory.setStartState(state_pair.first);
+	trajectory.setEndState(state_pair.second);
 }
 
 

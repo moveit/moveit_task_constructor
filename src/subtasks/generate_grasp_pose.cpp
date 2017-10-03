@@ -70,7 +70,7 @@ void GenerateGraspPose::setMaxIKSolutions(uint32_t n){
 	max_ik_solutions_= n;
 }
 
-bool GenerateGraspPose::canCompute(){
+bool GenerateGraspPose::canCompute() const{
 	return current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
 }
 
@@ -108,16 +108,16 @@ namespace {
    {
       Eigen::Affine3d transformed_pose;
       tf::poseMsgToEigen(pose, transformed_pose);
-      // transformed_pose = planning_scene_->getFrameTransform(state, pose.header.frame_id) * transformed_pose;
+      // transformed_pose = planning_scene()->getFrameTransform(state, pose.header.frame_id) * transformed_pose;
       state.updateStateWithLinkAt(ik_link, transformed_pose);
       return scene->isStateColliding(static_cast<const robot_state::RobotState&>(state), jmg->getName());
    }
 }
 
 bool GenerateGraspPose::compute(){
-	assert( scene_->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf" );
+	assert(scene()->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf");
 
-	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
+	planning_scene::PlanningScenePtr grasp_scene = scene()->diff();
 	robot_state::RobotState &grasp_state = grasp_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg_eef= grasp_state.getRobotModel()->getEndEffector(eef_);
@@ -135,7 +135,7 @@ bool GenerateGraspPose::compute(){
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(
 			&isValid,
-			scene_,
+			scene(),
 			ignore_collisions_,
 			&previous_solutions_,
 			std::placeholders::_1,
@@ -143,7 +143,7 @@ bool GenerateGraspPose::compute(){
 			std::placeholders::_3);
 
 	geometry_msgs::Pose object_pose, grasp_pose;
-	const Eigen::Affine3d object_pose_eigen= scene_->getFrameTransform(object_);
+	const Eigen::Affine3d object_pose_eigen= scene()->getFrameTransform(object_);
 	if(object_pose_eigen.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
 
@@ -168,7 +168,7 @@ bool GenerateGraspPose::compute(){
 		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
 		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.5*M_PI, current_angle_);
 
-		if (isGraspPoseColliding(scene_, grasp_state, jmg_active, grasp_pose, ik_link)) {
+		if (isGraspPoseColliding(scene(), grasp_state, jmg_active, grasp_pose, ik_link)) {
 			ROS_INFO("grasp pose is in collision");
 			continue;
 		}
