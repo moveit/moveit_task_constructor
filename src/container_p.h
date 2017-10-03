@@ -46,6 +46,7 @@ public:
 		output_.reset(new Interface(Interface::NotifyFunction()));
 	}
 
+	SubTask::InterfaceFlags interfaceFlags() const override;
 	bool canInsert(const value_type& subtask, const_iterator before) const;
 
 	const SubTaskPrivate* prev_(const SubTaskPrivate* child) const override;

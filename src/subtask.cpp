@@ -13,8 +13,8 @@ SubTask::SubTask(SubTaskPrivate *impl)
 SubTask::InterfaceFlags SubTask::interfaceFlags() const
 {
 	SubTask::InterfaceFlags result = pimpl_->interfaceFlags();
-	result &= ~SubTask::InterfaceFlags(SubTask::READS_MASK);
-	result |= pimpl_->SubTaskPrivate::interfaceFlags();
+	result &= ~SubTask::InterfaceFlags(SubTask::OWN_IF_MASK);
+	result |= pimpl_->deducedInterfaceFlags();
 	return result;
 }
 
@@ -31,7 +31,20 @@ std::ostream& operator<<(std::ostream &os, const SubTask& stage) {
 	os << *stage.pimpl_func();
 	return os;
 }
+
+template<SubTask::InterfaceFlag own, SubTask::InterfaceFlag other>
+const char* direction(const SubTaskPrivate& stage) {
+	SubTask::InterfaceFlags f = stage.deducedInterfaceFlags();
+	bool own_if = f & own;
+	bool other_if = f & other;
+	bool reverse = own & SubTask::INPUT_IF_MASK;
+	if (own_if && other_if) return "<>";
+	if (!own_if && !other_if) return "--";
+	if (other_if ^ reverse) return "->";
+	return "<-";
+};
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
+
 	// inputs
 	for (const InterfacePtr &i : {stage.prevOutput(), stage.input_}) {
 		os << std::setw(3);
@@ -39,7 +52,9 @@ std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
 		else os << "-";
 	}
 	// trajectories
-	os << " -> " << std::setw(3) << stage.trajectories_.size() << " <- ";
+	os << std::setw(5) << direction<SubTask::READS_INPUT, SubTask::WRITES_PREV_OUTPUT>(stage)
+	   << std::setw(3) << stage.trajectories_.size()
+	   << std::setw(5) << direction<SubTask::READS_OUTPUT, SubTask::WRITES_NEXT_INPUT>(stage);
 	// outputs
 	for (const InterfacePtr &i : {stage.output_, stage.nextInput()}) {
 		os << std::setw(3);
@@ -74,21 +89,23 @@ SubTrajectory& SubTaskPrivate::addTrajectory(const robot_trajectory::RobotTrajec
 	return trajectories_.back();
 }
 
-SubTask::InterfaceFlags SubTaskPrivate::interfaceFlags() const
+// return the interface flags that can be deduced from the interface
+inline SubTask::InterfaceFlags SubTaskPrivate::deducedInterfaceFlags() const
 {
-	// the base class provides the read flags
 	SubTask::InterfaceFlags f;
 	if (input_)  f |= SubTask::READS_INPUT;
 	if (output_) f |= SubTask::READS_OUTPUT;
+	if (prevOutput()) f |= SubTask::WRITES_PREV_OUTPUT;
+	if (nextInput())  f |= SubTask::WRITES_NEXT_INPUT;
 	return f;
 }
 
-void SubTaskPrivate::sendForward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
+inline void SubTaskPrivate::sendForward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
 	std::cout << "sending state to start" << std::endl;
 	nextInput()->add(ps, &trajectory, NULL);
 }
 
-void SubTaskPrivate::sendBackward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
+inline void SubTaskPrivate::sendBackward(SubTrajectory& trajectory, const planning_scene::PlanningSceneConstPtr& ps){
 	std::cout << "sending state to end" << std::endl;
 	prevOutput()->add(ps, NULL, &trajectory);
 }

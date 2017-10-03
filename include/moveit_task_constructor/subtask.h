@@ -45,10 +45,14 @@ public:
 	enum InterfaceFlag {
 		READS_INPUT        = 0x01,
 		READS_OUTPUT       = 0x02,
-		READS_MASK         = READS_INPUT | READS_OUTPUT,
 		WRITES_NEXT_INPUT  = 0x04,
 		WRITES_PREV_OUTPUT = 0x08,
 		WRITES_UNKNOWN     = 0x10,
+
+		OWN_IF_MASK        = READS_INPUT | READS_OUTPUT,
+		EXT_IF_MASK        = WRITES_NEXT_INPUT | WRITES_PREV_OUTPUT,
+		INPUT_IF_MASK      = READS_INPUT | WRITES_PREV_OUTPUT | WRITES_UNKNOWN,
+		OUTPUT_IF_MASK     = READS_OUTPUT | WRITES_NEXT_INPUT | WRITES_UNKNOWN,
 	};
 	typedef Flags<InterfaceFlag> InterfaceFlags;
 	InterfaceFlags interfaceFlags() const;

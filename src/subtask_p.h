@@ -23,7 +23,8 @@ public:
 
 	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
 
-	virtual SubTask::InterfaceFlags interfaceFlags() const;
+	SubTask::InterfaceFlags deducedInterfaceFlags() const;
+	virtual SubTask::InterfaceFlags interfaceFlags() const = 0;
 	void sendForward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
 	void sendBackward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
 

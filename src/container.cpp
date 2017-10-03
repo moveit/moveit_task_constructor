@@ -65,6 +65,15 @@ bool ContainerBase::traverseStages(const ContainerBase::StageCallback &processor
 }
 
 
+SubTask::InterfaceFlags SerialContainerPrivate::interfaceFlags() const
+{
+	SubTask::InterfaceFlags f;
+	if (!children().size()) return f;
+	f |= children().front()->pimpl_func()->deducedInterfaceFlags() & SubTask::INPUT_IF_MASK;
+	f |= children().back()->pimpl_func()->deducedInterfaceFlags() & SubTask::OUTPUT_IF_MASK;
+	return f;
+}
+
 bool SerialContainerPrivate::canInsert(const ContainerBasePrivate::value_type &subtask, ContainerBasePrivate::const_iterator before) const {
 	return ContainerBasePrivate::canInsert(*subtask);
 }
