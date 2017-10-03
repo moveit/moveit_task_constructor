@@ -101,7 +101,6 @@ const SubTaskPrivate* SubTaskPrivate::next() const {
 }
 
 
-PRIVATE_CLASS_IMPL(PropagatingAnyWay)
 PropagatingAnyWay::PropagatingAnyWay(const std::string &name)
    : SubTask(new PropagatingAnyWayPrivate(this, name))
 {}
@@ -179,19 +178,16 @@ void PropagatingAnyWay::newOutputState(const Interface::iterator &it)
 }
 
 
-PRIVATE_CLASS_IMPL(PropagatingForward)
 PropagatingForward::PropagatingForward(const std::string& name)
    : PropagatingAnyWay(new PropagatingForwardPrivate(this, name))
 {}
 
 
-PRIVATE_CLASS_IMPL(PropagatingBackward)
 PropagatingBackward::PropagatingBackward(const std::string &name)
    : PropagatingAnyWay(new PropagatingBackwardPrivate(this, name))
 {}
 
 
-PRIVATE_CLASS_IMPL(Generator)
 Generator::Generator(const std::string &name)
    : SubTask(new GeneratorPrivate(this, name))
 {}
@@ -209,7 +205,6 @@ void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double co
 }
 
 
-PRIVATE_CLASS_IMPL(Connecting)
 Connecting::Connecting(const std::string &name)
    : SubTask(new ConnectingPrivate(this, name))
 {

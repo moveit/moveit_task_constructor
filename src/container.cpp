@@ -31,12 +31,13 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &pr
 			continue;
 		ContainerBase *container = dynamic_cast<ContainerBase*>(stage.get());
 		if (container)
-			container->pimpl_func()->traverseStages(processor, depth+1);
+			static_cast<ContainerBasePrivate*>(container->pimpl_func())->traverseStages(processor, depth+1);
 	}
 	return true;
 }
 
-ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate::value_type &&subtask, ContainerBasePrivate::const_iterator pos) {
+ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate::value_type &&subtask,
+                                                            ContainerBasePrivate::const_iterator pos) {
 	SubTaskPrivate *impl = subtask->pimpl_func();
 	impl->parent_ = this;
 	subtask->setPlanningScene(scene_);
@@ -46,7 +47,6 @@ ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate
 }
 
 
-PRIVATE_CLASS_IMPL(ContainerBase)
 ContainerBase::ContainerBase(ContainerBasePrivate *impl)
    : SubTask(impl)
 {
@@ -86,7 +86,6 @@ const SubTaskPrivate *SerialContainerPrivate::next_(const SubTaskPrivate *child)
 }
 
 
-PRIVATE_CLASS_IMPL(SerialContainer)
 SerialContainer::SerialContainer(SerialContainerPrivate *impl)
    : ContainerBase(impl)
 {}

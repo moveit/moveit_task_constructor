@@ -68,7 +68,6 @@ public:
 };
 
 
-PRIVATE_CLASS_IMPL(Task)
 Task::Task(const std::string &name)
    : SerialContainer(new TaskPrivate(this, name))
 {
@@ -135,7 +134,8 @@ bool traverseFullTrajectories(
 }
 
 bool Task::processSolutions(const Task::SolutionCallback& processor) {
-	const TaskPrivate::array_type& children = pimpl_func()->children();
+	IMPL(Task);
+	const TaskPrivate::array_type& children = impl->children();
 	const size_t nr_of_trajectories = children.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);

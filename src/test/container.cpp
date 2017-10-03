@@ -90,7 +90,7 @@ TEST_F(SubTaskTest, interfaceFlags) {
 
 TEST_F(SubTaskTest, serialContainer) {
 	SerialContainer c("serial");
-	SerialContainerPrivate *cp = c.pimpl_func();
+	SerialContainerPrivate *cp = static_cast<SerialContainerPrivate*>(c.pimpl_func());
 
 	EXPECT_TRUE(bool(cp->input_));
 	EXPECT_TRUE(bool(cp->output_));
@@ -100,7 +100,7 @@ TEST_F(SubTaskTest, serialContainer) {
 
 	/*****  inserting first stage  *****/
 	auto g = std::make_unique<TestGenerator>();
-	GeneratorPrivate *gp = g->pimpl_func();
+	GeneratorPrivate *gp = static_cast<GeneratorPrivate*>(g->pimpl_func());
 	ASSERT_TRUE(c.insert(std::move(g)));
 	EXPECT_FALSE(g); // ownership transferred to container
 	VALIDATE(gp);
@@ -114,14 +114,14 @@ TEST_F(SubTaskTest, serialContainer) {
 
 	/*****  inserting second stage  *****/
 	auto f = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp = f->pimpl_func();
+	PropagatingForwardPrivate *fp = static_cast<PropagatingForwardPrivate*>(f->pimpl_func());
 	ASSERT_TRUE(c.insert(std::move(f)));
 	EXPECT_FALSE(f); // ownership transferred to container
 	VALIDATE(gp, fp);
 
 	/*****  inserting third stage  *****/
 	auto f2 = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp2 = f2->pimpl_func();
+	PropagatingForwardPrivate *fp2 = static_cast<PropagatingForwardPrivate*>(f2->pimpl_func());
 #if 0
 	EXPECT_FALSE(c.insert(std::move(f2), 0)); // should fail at first position
 	EXPECT_TRUE(bool(f)); // ownership not transferred to container

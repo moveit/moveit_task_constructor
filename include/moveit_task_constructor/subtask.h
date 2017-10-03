@@ -9,9 +9,7 @@
 #include <list>
 
 #define PRIVATE_CLASS(Class) \
-	friend class Class##Private; \
-	Class##Private* pimpl_func(); \
-	const Class##Private* pimpl_func() const;
+	friend class Class##Private;
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)

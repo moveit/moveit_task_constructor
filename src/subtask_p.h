@@ -143,10 +143,5 @@ private:
 } }
 
 
-// implement pimpl_func()
-#define PRIVATE_CLASS_IMPL(Class) \
-	inline Class##Private* Class::pimpl_func() { return static_cast<Class##Private*>(pimpl_); } \
-	inline const Class##Private* Class::pimpl_func() const { return static_cast<const Class##Private*>(pimpl_); } \
-
 // get correctly casted private impl pointer
-#define IMPL(Class) Class##Private * const impl = pimpl_func()
+#define IMPL(Class) Class##Private * const impl = static_cast<Class##Private*>(pimpl_func());
