@@ -47,12 +47,11 @@ public:
 		READS_OUTPUT       = 0x02,
 		WRITES_NEXT_INPUT  = 0x04,
 		WRITES_PREV_OUTPUT = 0x08,
-		WRITES_UNKNOWN     = 0x10,
 
 		OWN_IF_MASK        = READS_INPUT | READS_OUTPUT,
 		EXT_IF_MASK        = WRITES_NEXT_INPUT | WRITES_PREV_OUTPUT,
-		INPUT_IF_MASK      = READS_INPUT | WRITES_PREV_OUTPUT | WRITES_UNKNOWN,
-		OUTPUT_IF_MASK     = READS_OUTPUT | WRITES_NEXT_INPUT | WRITES_UNKNOWN,
+		INPUT_IF_MASK      = READS_INPUT | WRITES_PREV_OUTPUT,
+		OUTPUT_IF_MASK     = READS_OUTPUT | WRITES_NEXT_INPUT,
 	};
 	typedef Flags<InterfaceFlag> InterfaceFlags;
 	InterfaceFlags interfaceFlags() const;
@@ -91,23 +90,21 @@ public:
 	PRIVATE_CLASS(PropagatingAnyWay)
 	PropagatingAnyWay(const std::string& name);
 
-	bool hasBeginning() const;
-	const InterfaceState &fetchStateBeginning();
-	void sendForward(const robot_trajectory::RobotTrajectoryPtr& trajectory,
-	                 const InterfaceState& from,
-	                 const planning_scene::PlanningSceneConstPtr& to,
-	                 double cost = 0);
+	enum Direction { FORWARD = 0x01, BACKWARD = 0x02, ANYWAY = FORWARD | BACKWARD};
+	void restrictDirection(Direction dir);
 
-	bool hasEnding() const;
-	const InterfaceState &fetchStateEnding();
-	void sendBackward(const robot_trajectory::RobotTrajectoryPtr& trajectory,
-	                  const planning_scene::PlanningSceneConstPtr& from,
-	                  const InterfaceState& to,
-	                  double cost = 0);
+	virtual bool computeForward(const InterfaceState& from, planning_scene::PlanningScenePtr& to,
+	                            robot_trajectory::RobotTrajectoryPtr& trajectory, double& cost);
+	virtual bool computeBackward(planning_scene::PlanningScenePtr& from, const InterfaceState& to,
+	                             robot_trajectory::RobotTrajectoryPtr& trajectory, double& cost);
+
+	bool canCompute() const override;
+	bool compute() override;
 
 protected:
 	// constructor for use in derived classes
 	PropagatingAnyWay(PropagatingAnyWayPrivate* impl);
+	void initInterface();
 
 	// get informed when new beginnings and endings become available
 	void newInputState(const std::list<InterfaceState>::iterator& it);
@@ -122,10 +119,8 @@ public:
 	PropagatingForward(const std::string& name);
 
 private:
-	// restrict access to backward methods
-	using PropagatingAnyWay::hasEnding;
-	using PropagatingAnyWay::fetchStateEnding;
-	using PropagatingAnyWay::sendBackward;
+	// restrict access to backward method to provide compile-time check
+	using PropagatingAnyWay::computeBackward;
 };
 
 
@@ -136,10 +131,8 @@ public:
 	PropagatingBackward(const std::string& name);
 
 private:
-	// restrict access to forward methods
-	using PropagatingAnyWay::hasBeginning;
-	using PropagatingAnyWay::fetchStateBeginning;
-	using PropagatingAnyWay::sendForward;
+	// restrict access to forward method to provide compile-time check
+	using PropagatingAnyWay::computeForward;
 };
 
 
@@ -149,7 +142,7 @@ public:
 	PRIVATE_CLASS(Generator)
 	Generator(const std::string& name);
 
-	void spawn(const planning_scene::PlanningSceneConstPtr &ps, double cost = 0);
+	bool spawn(const planning_scene::PlanningSceneConstPtr &ps, double cost = 0);
 };
 
 
@@ -159,9 +152,11 @@ public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);
 
+	// methods for manual use
 	bool hasStatePair() const;
 	InterfaceStatePair fetchStatePair();
-	void connect(const robot_trajectory::RobotTrajectoryPtr&, const InterfaceStatePair&, double cost = 0);
+	void connect(const robot_trajectory::RobotTrajectoryPtr&,
+	             const InterfaceStatePair&, double cost = 0);
 
 protected:
 	virtual void newInputState(const std::list<InterfaceState>::iterator& it);

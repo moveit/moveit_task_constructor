@@ -10,23 +10,18 @@ namespace moveit { namespace task_constructor {
 class ContainerBasePrivate;
 class SubTaskPrivate {
 	friend class SubTask;
-	friend class SubTaskTest; // allow unit tests
+	friend class BaseTest; // allow access for unit tests
 	friend class ContainerBasePrivate; // allow to set parent_ and it_
 	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
 public:
 	typedef std::list<SubTask::pointer> array_type;
 
-	inline SubTaskPrivate(SubTask* me, const std::string& name)
-	   : me_(me), name_(name), parent_(nullptr)
-	{}
+	SubTaskPrivate(SubTask* me, const std::string& name);
 
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
-
-	SubTask::InterfaceFlags deducedInterfaceFlags() const;
-	virtual SubTask::InterfaceFlags interfaceFlags() const = 0;
-	void sendForward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
-	void sendBackward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
+	SubTask::InterfaceFlags deducedFlags() const;
+	virtual SubTask::InterfaceFlags announcedFlags() const = 0;
+	std::list<SubTrajectory>& trajectories() { return trajectories_; }
 
 public:
 	SubTask* const me_; // associated/owning SubTask instance
@@ -37,17 +32,24 @@ public:
 
 	InterfacePtr input_;
 	InterfacePtr output_;
-	std::list<SubTrajectory> trajectories_;
 
-	const SubTaskPrivate* prev() const;
-	const SubTaskPrivate* next() const;
-	const InterfacePtr prevOutput() const { const SubTaskPrivate* other = prev(); return other ? other->output_ : InterfacePtr(); }
-	const InterfacePtr nextInput() const { const SubTaskPrivate* other = next(); return other ? other->input_ : InterfacePtr(); }
+	inline const Interface* prevOutput() const { return prev_output_; }
+	inline const Interface* nextInput() const { return next_input_; }
+	inline bool isConnected() const { return prev_output_ || next_input_; }
+
+protected:
+	std::list<SubTrajectory> trajectories_;
+	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+	bool sendForward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
+	bool sendBackward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
 
 private:
-	// items accessed by ContainerBasePrivate only to maintain hierarchy
-	ContainerBasePrivate* parent_;
-	array_type::iterator it_;
+	// !! items accessed only by ContainerBasePrivate to maintain hierarchy !!
+	ContainerBasePrivate* parent_; // owning parent
+	array_type::iterator it_; // iterator into parent's children_ list referring to this
+	// caching the pointers to the output_ / input_ interface of previous / next stage
+	mutable Interface *prev_output_; // interface to be used for sendBackward()
+	mutable Interface *next_input_;  // interface to be use for sendForward()
 };
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
@@ -56,68 +58,61 @@ class PropagatingAnyWayPrivate : public SubTaskPrivate {
 	friend class PropagatingAnyWay;
 
 public:
-	inline PropagatingAnyWayPrivate(PropagatingAnyWay *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{
-		input_.reset(new Interface([me](const Interface::iterator& it) { me->newInputState(it); }));
-		output_.reset(new Interface(std::bind(&PropagatingAnyWay::newOutputState, me, std::placeholders::_1)));
-		next_input_ = input_->begin();
-		next_output_ = output_->end();
-	}
+	PropagatingAnyWay::Direction dir;
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::WRITES_NEXT_INPUT,
-		                               SubTask::READS_OUTPUT, SubTask::WRITES_PREV_OUTPUT,
-		                               SubTask::WRITES_UNKNOWN});
-	}
+	inline PropagatingAnyWayPrivate(PropagatingAnyWay *me, PropagatingAnyWay::Direction dir,
+	                                const std::string &name);
+	SubTask::InterfaceFlags announcedFlags() const override;
+
+	bool hasStartState() const;
+	const InterfaceState &fetchStartState();
+	bool sendForward(const robot_trajectory::RobotTrajectoryPtr& trajectory,
+	                 const InterfaceState& from,
+	                 const planning_scene::PlanningSceneConstPtr& to,
+	                 double cost = 0);
+
+	bool hasEndState() const;
+	const InterfaceState &fetchEndState();
+	bool sendBackward(const robot_trajectory::RobotTrajectoryPtr& trajectory,
+	                  const planning_scene::PlanningSceneConstPtr& from,
+	                  const InterfaceState& to,
+	                  double cost = 0);
 
 protected:
-	Interface::const_iterator next_input_;
-	Interface::const_iterator next_output_;
+	Interface::const_iterator next_input_state_;
+	Interface::const_iterator next_output_state_;
 };
 
 
 class PropagatingForwardPrivate : public PropagatingAnyWayPrivate {
 public:
-	inline PropagatingForwardPrivate(PropagatingForward *me, const std::string &name)
-	   : PropagatingAnyWayPrivate(me, name)
-	{
-		// indicate, that we don't accept new states from output interface
-		output_.reset();
-		next_output_ = Interface::iterator();
-	}
+	inline PropagatingForwardPrivate(PropagatingForward *me, const std::string &name);
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::WRITES_NEXT_INPUT});
-	}
+private:
+	// restrict access to backward methods to provide compile-time check
+	using PropagatingAnyWayPrivate::hasEndState;
+	using PropagatingAnyWayPrivate::fetchEndState;
+	using PropagatingAnyWayPrivate::sendBackward;
 };
 
 
 class PropagatingBackwardPrivate : public PropagatingAnyWayPrivate {
 public:
-	inline PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name)
-	   : PropagatingAnyWayPrivate(me, name)
-	{
-		// indicate, that we don't accept new states from input interface
-		input_.reset();
-		next_input_ = Interface::iterator();
-	}
+	inline PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name);
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_OUTPUT, SubTask::WRITES_PREV_OUTPUT});
-	}
+private:
+	// restrict access to forward method to provide compile-time check
+	using PropagatingAnyWayPrivate::hasStartState;
+	using PropagatingAnyWayPrivate::fetchStartState;
+	using PropagatingAnyWayPrivate::sendForward;
 };
 
 
 class GeneratorPrivate : public SubTaskPrivate {
 public:
-	inline GeneratorPrivate(Generator *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{}
-
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::WRITES_NEXT_INPUT, SubTask::WRITES_PREV_OUTPUT});
-	}
+	inline GeneratorPrivate(Generator *me, const std::string &name);
+	SubTask::InterfaceFlags announcedFlags() const override;
+	bool spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost);
 };
 
 
@@ -125,17 +120,10 @@ class ConnectingPrivate : public SubTaskPrivate {
 	friend class Connecting;
 
 public:
-	inline ConnectingPrivate(Connecting *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{
-		input_.reset(new Interface(std::bind(&Connecting::newInputState, me, std::placeholders::_1)));
-		output_.reset(new Interface(std::bind(&Connecting::newOutputState, me, std::placeholders::_1)));
-		it_pairs_ = std::make_pair(input_->begin(), output_->begin());
-	}
-
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::READS_OUTPUT});
-	}
+	inline ConnectingPrivate(Connecting *me, const std::string &name);
+	SubTask::InterfaceFlags announcedFlags() const override;
+	void connect(const robot_trajectory::RobotTrajectoryPtr& t,
+	             const InterfaceStatePair& state_pair, double cost);
 
 private:
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;

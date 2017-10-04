@@ -75,9 +75,9 @@ Task::Task(const std::string &name)
 
 void Task::add(pointer &&stage) {
 	if (!stage)
-		throw std::runtime_error("Task::add() failed: invalid stage pointer");
+		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 	if (!insert(std::move(stage)))
-		throw std::runtime_error(std::string("Task::add() failed for stage: ") + stage->getName());
+		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->getName());
 }
 
 bool Task::plan(){
@@ -139,7 +139,7 @@ bool Task::processSolutions(const Task::SolutionCallback& processor) {
 	const size_t nr_of_trajectories = children.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& st : children.front()->pimpl_func()->trajectories_)
+	for(SubTrajectory& st : children.front()->pimpl_func()->trajectories())
 		if( !traverseFullTrajectories(st, nr_of_trajectories, processor, trace) )
 			return false;
 	return true;

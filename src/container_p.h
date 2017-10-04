@@ -7,6 +7,7 @@ namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate : public SubTaskPrivate
 {
+	friend class BaseTest; // allow access for unit tests
 public:
 	typedef ContainerBase::value_type value_type;
 	typedef SubTaskPrivate::array_type array_type;
@@ -17,11 +18,8 @@ public:
 	const_iterator position(int before = -1) const;
 
 	bool canInsert(const SubTask& stage) const;
-	iterator insert(value_type &&subtask, const_iterator pos);
+	virtual iterator insert(value_type &&subtask, const_iterator pos);
 	inline void clear() { children_.clear(); }
-
-	virtual const SubTaskPrivate* prev_(const SubTaskPrivate* child) const = 0;
-	virtual const SubTaskPrivate* next_(const SubTaskPrivate* child) const = 0;
 
 	bool traverseStages(const ContainerBase::StageCallback &processor, int depth) const;
 
@@ -31,6 +29,13 @@ protected:
 	{}
 	inline const ContainerBasePrivate* parent(const SubTaskPrivate *child) const { return child->parent_; }
 	inline iterator it(const SubTaskPrivate *child) const { return child->it_; }
+
+	inline void setPrevOutput(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
+		child->prev_output_ = interface.get();
+	}
+	inline void setNextInput(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
+		child->next_input_ = interface.get();
+	}
 
 private:
 	array_type children_;
@@ -46,11 +51,15 @@ public:
 		output_.reset(new Interface(Interface::NotifyFunction()));
 	}
 
-	SubTask::InterfaceFlags interfaceFlags() const override;
-	bool canInsert(const value_type& subtask, const_iterator before) const;
+	SubTask::InterfaceFlags announcedFlags() const override;
+	bool canInsert(const SubTask& stage, const_iterator before) const;
+	virtual iterator insert(value_type &&stage, const_iterator before) override;
 
-	const SubTaskPrivate* prev_(const SubTaskPrivate* child) const override;
-	const SubTaskPrivate* next_(const SubTaskPrivate* child) const override;
+	inline const SubTaskPrivate *prev(const_iterator it) const;
+	inline const SubTaskPrivate *next(const_iterator it) const;
+
+	const SubTaskPrivate *prev(const SubTaskPrivate *child) const;
+	const SubTaskPrivate *next(const SubTaskPrivate *child) const;
 };
 
 

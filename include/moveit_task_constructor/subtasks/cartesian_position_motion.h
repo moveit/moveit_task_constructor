@@ -20,8 +20,10 @@ class CartesianPositionMotion : public PropagatingAnyWay {
 public:
 	CartesianPositionMotion(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	virtual bool computeForward(const InterfaceState &from, planning_scene::PlanningScenePtr &to,
+	                            robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost) override;
+	virtual bool computeBackward(planning_scene::PlanningScenePtr &from, const InterfaceState &to,
+	                             robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost) override;
 
 	void setGroup(std::string group);
 	void setLink(std::string link);
@@ -55,8 +57,6 @@ protected:
 
 	ros::Publisher pub;
 
-	bool _computeFromBeginning();
-	bool _computeFromEnding();
 	void _publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };
 

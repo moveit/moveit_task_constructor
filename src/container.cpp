@@ -19,7 +19,7 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int before) 
 	return position;
 }
 
-bool ContainerBasePrivate::canInsert(const SubTask &stage) const {
+inline bool ContainerBasePrivate::canInsert(const SubTask &stage) const {
 	const SubTaskPrivate* impl = stage.pimpl_func();
 	return impl->parent_ == nullptr  // re-parenting is not supported
 	      && impl->trajectories_.empty(); // existing trajectories would become invalid
@@ -65,33 +65,108 @@ bool ContainerBase::traverseStages(const ContainerBase::StageCallback &processor
 }
 
 
-SubTask::InterfaceFlags SerialContainerPrivate::interfaceFlags() const
-{
+SubTask::InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	SubTask::InterfaceFlags f;
-	if (!children().size()) return f;
-	f |= children().front()->pimpl_func()->deducedInterfaceFlags() & SubTask::INPUT_IF_MASK;
-	f |= children().back()->pimpl_func()->deducedInterfaceFlags() & SubTask::OUTPUT_IF_MASK;
+	if (children().empty()) return f;
+	f |= children().front()->pimpl_func()->announcedFlags() & SubTask::INPUT_IF_MASK;
+	f |= children().back()->pimpl_func()->announcedFlags() & SubTask::OUTPUT_IF_MASK;
 	return f;
 }
 
-bool SerialContainerPrivate::canInsert(const ContainerBasePrivate::value_type &subtask, ContainerBasePrivate::const_iterator before) const {
-	return ContainerBasePrivate::canInsert(*subtask);
+inline bool isConnectable(int prev_flags, int next_flags) {
+	return ((prev_flags & SubTask::WRITES_NEXT_INPUT) && (next_flags & SubTask::READS_INPUT)) ||
+	       ((prev_flags & SubTask::READS_OUTPUT) && (next_flags & SubTask::WRITES_PREV_OUTPUT));
+}
+inline bool bothWrite(SubTask::InterfaceFlags prev_flags, SubTask::InterfaceFlags next_flags) {
+	return (prev_flags.testFlag(SubTask::WRITES_NEXT_INPUT) && !next_flags.testFlag(SubTask::READS_INPUT)) &&
+	       (next_flags.testFlag(SubTask::WRITES_PREV_OUTPUT) && !prev_flags.testFlag(SubTask::READS_OUTPUT));
 }
 
-const SubTaskPrivate *SerialContainerPrivate::prev_(const SubTaskPrivate *child) const
-{
-	assert(parent(child) == this);
-	if (it(child) == children().begin()) return this;
-	iterator prev = it(child); --prev;
-	return (*prev)->pimpl_func();
+inline bool SerialContainerPrivate::canInsert(const SubTask &stage, ContainerBasePrivate::const_iterator before) const {
+	if (!ContainerBasePrivate::canInsert(stage))
+		return false;
+
+	// check connectedness
+	bool at_end = (before == children().end());
+	const SubTaskPrivate* next = (at_end) ? this : (*before)->pimpl_func();
+	SubTask::InterfaceFlags cur_flags = stage.pimpl_func()->announcedFlags();
+	SubTask::InterfaceFlags next_flags = next->deducedFlags();
+	SubTask::InterfaceFlags prev_flags = prev(before)->deducedFlags();
+
+	// Do a simple check here only. A full connectivity check requires the full pipeline to be setup
+	// Thus, here we reject when trying to connect to writers with each other
+	if (bothWrite(prev_flags, cur_flags) || bothWrite(cur_flags, next_flags))
+		return false;
+
+	return true;
 }
 
-const SubTaskPrivate *SerialContainerPrivate::next_(const SubTaskPrivate *child) const
+ContainerBasePrivate::iterator SerialContainerPrivate::insert(value_type &&stage, const_iterator before)
 {
+	assert(canInsert(*stage, before));
+	bool at_begin = (before == children().begin());
+	bool at_end = (before == children().end());
+
+	SubTaskPrivate *cur = stage->pimpl_func();
+	/* set pointer cache (prev_ouput_ and next_input_) of prev, current, and next stage */
+	if (children().empty()) { // first child inserted
+		setPrevOutput(cur, this->input_);
+		setNextInput(cur, this->output_);
+	} else if (at_begin) {
+		SubTaskPrivate *next = (*before)->pimpl_func();
+		setPrevOutput(cur, this->input_);
+		setNextInput(cur, next->input_);
+		setPrevOutput(next, cur->output_);
+	} else if (at_end) {
+		const SubTaskPrivate *prev = this->prev(before);
+		setNextInput(prev, cur->input_);
+		setPrevOutput(cur, prev->output_);
+		setNextInput(cur, this->output_);
+	} else {
+		const SubTaskPrivate *prev = this->prev(before);
+		SubTaskPrivate *next = (*before)->pimpl_func();
+		setNextInput(prev, cur->input_);
+		setPrevOutput(cur, prev->output_);
+		setNextInput(cur, next->input_);
+		setPrevOutput(next, cur->output_);
+	}
+
+	iterator it = ContainerBasePrivate::insert(std::move(stage), before);
+}
+
+inline const SubTaskPrivate* SerialContainerPrivate::prev(const_iterator it) const
+{
+#ifndef NDEBUG
+	if (it != children().end()) {
+		SubTaskPrivate* child = (*it)->pimpl_func();
+		assert(parent(child) == this);
+		assert(this->it(child) == it);
+	}
+#endif
+	if (it == children().begin()) return this;
+	return (*--it)->pimpl_func();
+}
+
+inline const SubTaskPrivate* SerialContainerPrivate::next(const_iterator it) const
+{
+#ifndef NDEBUG
+	assert(it != children().end());
+	SubTaskPrivate* child = (*it)->pimpl_func();
 	assert(parent(child) == this);
-	if (it(child) == --children().end()) return this;
-	iterator next = it(child); ++next;
-	return (*next)->pimpl_func();
+	assert(this->it(child) == it);
+#endif
+	if (it == --children().end()) return this;
+	return (*++it)->pimpl_func();
+}
+
+const SubTaskPrivate *SerialContainerPrivate::prev(const SubTaskPrivate *child) const
+{
+	return prev(it(child));
+}
+
+const SubTaskPrivate *SerialContainerPrivate::next(const SubTaskPrivate *child) const
+{
+	return next(it(child));
 }
 
 
@@ -105,7 +180,7 @@ SerialContainer::SerialContainer(const std::string &name)
 bool SerialContainer::canInsert(const value_type& subtask, int before) const
 {
 	IMPL(const SerialContainer);
-	return impl->canInsert(subtask, impl->position(before));
+	return impl->canInsert(*subtask, impl->position(before));
 }
 
 bool SerialContainer::insert(value_type&& subtask, int before)
@@ -113,7 +188,7 @@ bool SerialContainer::insert(value_type&& subtask, int before)
 	IMPL(SerialContainer);
 
 	ContainerBasePrivate::const_iterator where = impl->position(before);
-	if (!impl->canInsert(subtask, where))
+	if (!impl->canInsert(*subtask, where))
 		return false;
 
 	impl->insert(std::move(subtask), where);
