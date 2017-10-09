@@ -18,6 +18,10 @@ public:
 	virtual bool insert(value_type&& stage, int before = -1) = 0;
 	virtual void clear();
 
+	bool init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	bool canCompute() const;
+	bool compute();
+
 	bool traverseStages(const StageCallback &processor) const;
 
 protected:
@@ -33,9 +37,6 @@ public:
 
 	bool canInsert(const value_type& stage, int before = -1) const override;
 	bool insert(value_type&& stage, int before = -1) override;
-
-	bool canCompute() const override;
-	bool compute() override;
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);

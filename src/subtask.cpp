@@ -11,17 +11,13 @@ SubTask::SubTask(SubTaskPrivate *impl)
 {
 }
 
-SubTask::InterfaceFlags SubTask::interfaceFlags() const
-{
-	SubTask::InterfaceFlags result = pimpl_->announcedFlags();
-	result &= ~SubTask::InterfaceFlags(SubTask::OWN_IF_MASK);
-	result |= pimpl_->deducedFlags();
-	return result;
-}
-
 SubTask::~SubTask()
 {
 	delete pimpl_;
+}
+
+bool SubTask::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
 }
 
 const std::string& SubTask::getName() const {
@@ -33,12 +29,12 @@ std::ostream& operator<<(std::ostream &os, const SubTask& stage) {
 	return os;
 }
 
-template<SubTask::InterfaceFlag own, SubTask::InterfaceFlag other>
+template<SubTaskPrivate::InterfaceFlag own, SubTaskPrivate::InterfaceFlag other>
 const char* direction(const SubTaskPrivate& stage) {
-	SubTask::InterfaceFlags f = stage.deducedFlags();
+	SubTaskPrivate::InterfaceFlags f = stage.deducedFlags();
 	bool own_if = f & own;
 	bool other_if = f & other;
-	bool reverse = own & SubTask::INPUT_IF_MASK;
+	bool reverse = own & SubTaskPrivate::INPUT_IF_MASK;
 	if (own_if && other_if) return "<>";
 	if (!own_if && !other_if) return "--";
 	if (other_if ^ reverse) return "->";
@@ -46,18 +42,18 @@ const char* direction(const SubTaskPrivate& stage) {
 };
 
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
-	// inputs
-	for (const Interface* i : {stage.prev_output_, stage.input_.get()}) {
+	// starts
+	for (const Interface* i : {stage.prev_ends_, stage.starts_.get()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<SubTask::READS_INPUT, SubTask::WRITES_PREV_OUTPUT>(stage)
+	os << std::setw(5) << direction<SubTaskPrivate::READS_START, SubTaskPrivate::WRITES_PREV_END>(stage)
 	   << std::setw(3) << stage.trajectories_.size()
-	   << std::setw(5) << direction<SubTask::READS_OUTPUT, SubTask::WRITES_NEXT_INPUT>(stage);
-	// outputs
-	for (const Interface* i : {stage.output_.get(), stage.next_input_}) {
+	   << std::setw(5) << direction<SubTaskPrivate::READS_END, SubTaskPrivate::WRITES_NEXT_START>(stage);
+	// ends
+	for (const Interface* i : {stage.ends_.get(), stage.next_starts_}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
@@ -67,164 +63,162 @@ std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
 	return os;
 }
 
-planning_scene::PlanningSceneConstPtr SubTask::scene() const
-{
-	return pimpl_->scene_;
-}
 
-planning_pipeline::PlanningPipelinePtr SubTask::planner() const
-{
-	return pimpl_->planner_;
-}
-
-void SubTask::setPlanningScene(const planning_scene::PlanningSceneConstPtr &scene){
-	pimpl_->scene_= scene;
-}
-
-void SubTask::setPlanningPipeline(const planning_pipeline::PlanningPipelinePtr &planner){
-	pimpl_->planner_= planner;
-}
-
-
-SubTaskPrivate::SubTaskPrivate(SubTask *me, const std::__cxx11::string &name)
-   : me_(me), name_(name), parent_(nullptr), prev_output_(nullptr), next_input_(nullptr)
+SubTaskPrivate::SubTaskPrivate(SubTask *me, const std::string &name)
+   : me_(me), name_(name), parent_(nullptr), prev_ends_(nullptr), next_starts_(nullptr)
 {}
 
 SubTrajectory& SubTaskPrivate::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
 	trajectories_.emplace_back(trajectory);
-	return trajectories_.back();
+	SubTrajectory& back = trajectories_.back();
+	return back;
+}
+
+SubTaskPrivate::InterfaceFlags SubTaskPrivate::interfaceFlags() const
+{
+	InterfaceFlags result = announcedFlags();
+	result &= ~InterfaceFlags(OWN_IF_MASK);
+	result |= deducedFlags();
+	return result;
 }
 
 // return the interface flags that can be deduced from the interface
-inline SubTask::InterfaceFlags SubTaskPrivate::deducedFlags() const
+inline SubTaskPrivate::InterfaceFlags SubTaskPrivate::deducedFlags() const
 {
-	SubTask::InterfaceFlags f;
-	if (input_)  f |= SubTask::READS_INPUT;
-	if (output_) f |= SubTask::READS_OUTPUT;
-	if (prevOutput()) f |= SubTask::WRITES_PREV_OUTPUT;
-	if (nextInput())  f |= SubTask::WRITES_NEXT_INPUT;
+	InterfaceFlags f;
+	if (starts_)  f |= READS_START;
+	if (ends_) f |= READS_END;
+	if (prevEnds()) f |= WRITES_PREV_END;
+	if (nextStarts())  f |= WRITES_NEXT_START;
 	return f;
 }
 
-inline bool SubTaskPrivate::sendForward(SubTrajectory &trajectory, const planning_scene::PlanningSceneConstPtr &ps){
-	std::cout << "sending state to start" << std::endl;
-	if (next_input_) {
-		next_input_->add(ps, &trajectory, NULL);
-		return true;
-	}
-	return false;
-}
 
-inline bool SubTaskPrivate::sendBackward(SubTrajectory &trajectory, const planning_scene::PlanningSceneConstPtr &ps){
-	std::cout << "sending state to end" << std::endl;
-	if (prev_output_) {
-		prev_output_->add(ps, NULL, &trajectory);
-		return true;
-	}
-	return false;
-}
-
-
-PropagatingAnyWayPrivate::PropagatingAnyWayPrivate(PropagatingAnyWay *me, PropagatingAnyWay::Direction dir, const std::__cxx11::string &name)
+PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
    : SubTaskPrivate(me, name), dir(dir)
 {
 }
 
-SubTask::InterfaceFlags PropagatingAnyWayPrivate::announcedFlags() const {
-	SubTask::InterfaceFlags f;
-	if (dir & PropagatingAnyWay::FORWARD)
-		f |= SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::WRITES_NEXT_INPUT});
-	if (dir & PropagatingAnyWay::BACKWARD)
-		f |= SubTask::InterfaceFlags({SubTask::READS_OUTPUT, SubTask::WRITES_PREV_OUTPUT});
+SubTaskPrivate::InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
+	InterfaceFlags f;
+	if (dir & PropagatingEitherWay::FORWARD)
+		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
+	if (dir & PropagatingEitherWay::BACKWARD)
+		f |= InterfaceFlags({READS_END, WRITES_PREV_END});
 	return f;
 }
 
-inline bool PropagatingAnyWayPrivate::hasStartState() const{
-	return next_input_state_ != input_->end();
+inline bool PropagatingEitherWayPrivate::hasStartState() const{
+	return next_start_state_ != starts_->end();
 }
 
-const InterfaceState& PropagatingAnyWayPrivate::fetchStartState(){
+const InterfaceState& PropagatingEitherWayPrivate::fetchStartState(){
 	if (!hasStartState())
 		throw std::runtime_error("no new state for beginning available");
 
-	const InterfaceState& state= *next_input_state_;
-	++next_input_state_;
+	const InterfaceState& state= *next_start_state_;
+	++next_start_state_;
 
 	return state;
 }
 
-bool PropagatingAnyWayPrivate::sendForward(const robot_trajectory::RobotTrajectoryPtr& t,
-                                           const InterfaceState& from,
-                                           const planning_scene::PlanningSceneConstPtr& to,
-                                           double cost){
-	SubTrajectory &trajectory = addTrajectory(t, cost);
-	trajectory.setStartState(from);
-	return SubTaskPrivate::sendForward(trajectory, to);
+inline bool PropagatingEitherWayPrivate::hasEndState() const{
+	return next_end_state_ != ends_->end();
 }
 
-
-inline bool PropagatingAnyWayPrivate::hasEndState() const{
-	return next_output_state_ != output_->end();
-}
-
-const InterfaceState& PropagatingAnyWayPrivate::fetchEndState(){
+const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 	if(!hasEndState())
 		throw std::runtime_error("no new state for ending available");
 
-	const InterfaceState& state= *next_output_state_;
-	++next_output_state_;
+	const InterfaceState& state= *next_end_state_;
+	++next_end_state_;
 
 	return state;
 }
 
-bool PropagatingAnyWayPrivate::sendBackward(const robot_trajectory::RobotTrajectoryPtr& t,
-                                            const planning_scene::PlanningSceneConstPtr& from,
-                                            const InterfaceState& to,
-                                            double cost){
-	SubTrajectory& trajectory = addTrajectory(t, cost);
-	trajectory.setEndState(to);
-	return SubTaskPrivate::sendBackward(trajectory, from);
+bool PropagatingEitherWayPrivate::canCompute() const
+{
+	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState())
+		return true;
+	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState())
+		return true;
+	return false;
+}
+
+bool PropagatingEitherWayPrivate::compute()
+{
+	PropagatingEitherWay* me = static_cast<PropagatingEitherWay*>(me_);
+
+	bool result = false;
+	planning_scene::PlanningScenePtr ps;
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	double cost;
+	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
+		if (me->computeForward(fetchStartState()))
+			result |= true;
+	}
+	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
+		if (me->computeBackward(fetchEndState()))
+			result |= true;
+	}
+	return result;
+}
+
+void PropagatingEitherWayPrivate::newStartState(const Interface::iterator &it)
+{
+	// we just appended a state to the list, but the iterator doesn't see it anymore
+	// so let's point it at the new one
+	if(next_start_state_ == starts_->end())
+		--next_start_state_;
+}
+
+void PropagatingEitherWayPrivate::newEndState(const Interface::iterator &it)
+{
+	// we just appended a state to the list, but the iterator doesn't see it anymore
+	// so let's point it at the new one
+	if(next_end_state_ == ends_->end())
+		--next_end_state_;
 }
 
 
-PropagatingAnyWay::PropagatingAnyWay(const std::string &name)
-   : PropagatingAnyWay(new PropagatingAnyWayPrivate(this, ANYWAY, name))
+PropagatingEitherWay::PropagatingEitherWay(const std::string &name)
+   : PropagatingEitherWay(new PropagatingEitherWayPrivate(this, ANYWAY, name))
 {
 }
 
-PropagatingAnyWay::PropagatingAnyWay(PropagatingAnyWayPrivate *impl)
+PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
    : SubTask(impl)
 {
 	initInterface();
 }
 
-void PropagatingAnyWay::initInterface()
+void PropagatingEitherWay::initInterface()
 {
-	IMPL(PropagatingAnyWay)
-	if (impl->dir & PropagatingAnyWay::FORWARD) {
-		if (!impl->input_) { // keep existing interface if possible
-			impl->input_.reset(new Interface([this](const Interface::iterator& it) { newInputState(it); }));
-			impl->next_input_state_ = impl->input_->begin();
+	IMPL(PropagatingEitherWay)
+	if (impl->dir & PropagatingEitherWay::FORWARD) {
+		if (!impl->starts_) { // keep existing interface if possible
+			impl->starts_.reset(new Interface([impl](const Interface::iterator& it) { impl->newStartState(it); }));
+			impl->next_start_state_ = impl->starts_->begin();
 		}
 	} else {
-		impl->input_.reset();
-		impl->next_input_state_ = Interface::iterator();
+		impl->starts_.reset();
+		impl->next_start_state_ = Interface::iterator();
 	}
 
-	if (impl->dir & PropagatingAnyWay::BACKWARD) {
-		if (!impl->output_) { // keep existing interface if possible
-			impl->output_.reset(new Interface([this](const Interface::iterator& it) { newOutputState(it); }));
-			impl->next_output_state_ = impl->output_->end();
+	if (impl->dir & PropagatingEitherWay::BACKWARD) {
+		if (!impl->ends_) { // keep existing interface if possible
+			impl->ends_.reset(new Interface([impl](const Interface::iterator& it) { impl->newEndState(it); }));
+			impl->next_end_state_ = impl->ends_->end();
 		}
 	} else {
-		impl->output_.reset();
-		impl->next_output_state_ = Interface::iterator();
+		impl->ends_.reset();
+		impl->next_end_state_ = Interface::iterator();
 	}
 }
 
-void PropagatingAnyWay::restrictDirection(PropagatingAnyWay::Direction dir)
+void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir)
 {
-	IMPL(PropagatingAnyWay);
+	IMPL(PropagatingEitherWay);
 	if (impl->dir == dir) return;
 	if (impl->isConnected())
 		throw std::runtime_error("Cannot change direction after being connected");
@@ -232,117 +226,81 @@ void PropagatingAnyWay::restrictDirection(PropagatingAnyWay::Direction dir)
 	initInterface();
 }
 
-bool PropagatingAnyWay::computeForward(const InterfaceState &from, planning_scene::PlanningScenePtr &to,
-                                       robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost)
-{
-	// default implementation is void, needs override by user
-	return false;
+void PropagatingEitherWay::sendForward(const InterfaceState& from,
+                                    const planning_scene::PlanningSceneConstPtr& to,
+                                    const robot_trajectory::RobotTrajectoryPtr& t,
+                                    double cost){
+	IMPL(PropagatingEitherWay)
+	std::cout << "sending state forward" << std::endl;
+	SubTrajectory &trajectory = impl->addTrajectory(t, cost);
+	trajectory.setStartState(from);
+	impl->nextStarts()->add(to, &trajectory, NULL);
 }
 
-bool PropagatingAnyWay::computeBackward(planning_scene::PlanningScenePtr &from, const InterfaceState &to,
-                                        robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost)
-{
-	// default implementation is void, needs override by user
-	return false;
-}
-
-bool PropagatingAnyWay::canCompute() const
-{
-	IMPL(const PropagatingAnyWay);
-	if ((impl->dir & PropagatingAnyWay::FORWARD) && impl->hasStartState())
-		return true;
-	if ((impl->dir & PropagatingAnyWay::BACKWARD) && impl->hasEndState())
-		return true;
-	return false;
-}
-
-bool PropagatingAnyWay::compute()
-{
-	IMPL(PropagatingAnyWay);
-	bool result = false;
-	planning_scene::PlanningScenePtr ps;
-	robot_trajectory::RobotTrajectoryPtr trajectory;
-	double cost;
-	if ((impl->dir & PropagatingAnyWay::FORWARD) && impl->hasStartState()) {
-		const InterfaceState& from = impl->fetchStartState();
-		if (computeForward(from, ps, trajectory, cost) && ps
-		    && impl->sendForward(trajectory, from, ps, cost))
-			result |= true;
-	}
-	if ((impl->dir & PropagatingAnyWay::BACKWARD) && impl->hasEndState()) {
-		const InterfaceState& to = impl->fetchEndState();
-		if (computeBackward(ps, to, trajectory, cost) && ps
-		    && impl->sendBackward(trajectory, ps, to, cost))
-			result |= true;
-	}
-	return result;
-}
-
-void PropagatingAnyWay::newInputState(const Interface::iterator &it)
-{
-	IMPL(PropagatingAnyWay);
-	// we just appended a state to the list, but the iterator doesn't see it anymore
-	// so let's point it at the new one
-	if(impl->next_input_state_ == impl->input_->end())
-		--impl->next_input_state_;
-}
-
-void PropagatingAnyWay::newOutputState(const Interface::iterator &it)
-{
-	IMPL(PropagatingAnyWay);
-	// we just appended a state to the list, but the iterator doesn't see it anymore
-	// so let's point it at the new one
-	if( impl->next_output_state_ == impl->output_->end() )
-		--impl->next_output_state_;
+void PropagatingEitherWay::sendBackward(const planning_scene::PlanningSceneConstPtr& from,
+                                     const InterfaceState& to,
+                                     const robot_trajectory::RobotTrajectoryPtr& t,
+                                     double cost){
+	IMPL(PropagatingEitherWay)
+	std::cout << "sending state backward" << std::endl;
+	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	trajectory.setEndState(to);
+	impl->prevEnds()->add(from, NULL, &trajectory);
 }
 
 
-PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward *me, const std::__cxx11::string &name)
-   : PropagatingAnyWayPrivate(me, PropagatingAnyWay::FORWARD, name)
+PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward *me, const std::string &name)
+   : PropagatingEitherWayPrivate(me, PropagatingEitherWay::FORWARD, name)
 {
-	// indicate, that we don't accept new states from output interface
-	output_.reset();
-	next_output_state_ = Interface::iterator();
+	// indicate, that we don't accept new states from ends_ interface
+	ends_.reset();
+	next_end_state_ = Interface::iterator();
 }
 
 
 PropagatingForward::PropagatingForward(const std::string& name)
-   : PropagatingAnyWay(new PropagatingForwardPrivate(this, name))
+   : PropagatingEitherWay(new PropagatingForwardPrivate(this, name))
 {}
 
-
-PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward *me, const std::__cxx11::string &name)
-   : PropagatingAnyWayPrivate(me, PropagatingAnyWay::BACKWARD, name)
+bool PropagatingForward::computeBackward(const InterfaceState &to)
 {
-	// indicate, that we don't accept new states from input interface
-	input_.reset();
-	next_input_state_ = Interface::iterator();
+	assert(false); // This should never be called
+}
+
+
+PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name)
+   : PropagatingEitherWayPrivate(me, PropagatingEitherWay::BACKWARD, name)
+{
+	// indicate, that we don't accept new states from starts_ interface
+	starts_.reset();
+	next_start_state_ = Interface::iterator();
 }
 
 
 PropagatingBackward::PropagatingBackward(const std::string &name)
-   : PropagatingAnyWay(new PropagatingBackwardPrivate(this, name))
+   : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name))
 {}
 
+bool PropagatingBackward::computeForward(const InterfaceState &from)
+{
+	assert(false); // This should never be called
+}
 
-GeneratorPrivate::GeneratorPrivate(Generator *me, const std::__cxx11::string &name)
+
+GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
    : SubTaskPrivate(me, name)
 {}
 
-SubTask::InterfaceFlags GeneratorPrivate::announcedFlags() const {
-	return SubTask::InterfaceFlags({SubTask::WRITES_NEXT_INPUT,SubTask::WRITES_PREV_OUTPUT});
+SubTaskPrivate::InterfaceFlags GeneratorPrivate::announcedFlags() const {
+	return InterfaceFlags({WRITES_NEXT_START,WRITES_PREV_END});
 }
 
-inline bool GeneratorPrivate::spawn(const planning_scene::PlanningSceneConstPtr &ps, double cost)
-{
-	// empty trajectory ref -> this node only produces states
-	robot_trajectory::RobotTrajectoryPtr dummy;
-	SubTrajectory& trajectory = addTrajectory(dummy, cost);
+bool GeneratorPrivate::canCompute() const {
+	return static_cast<Generator*>(me_)->canCompute();
+}
 
-	std::cout << "spawning state" << std::endl;
-	bool result = sendBackward(trajectory, ps);
-	result |= sendForward(trajectory, ps);
-	return result;
+bool GeneratorPrivate::compute() {
+	return static_cast<Generator*>(me_)->compute();
 }
 
 
@@ -350,30 +308,55 @@ Generator::Generator(const std::string &name)
    : SubTask(new GeneratorPrivate(this, name))
 {}
 
-bool Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost)
+void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost)
 {
+	std::cout << "spawning state forwards and backwards" << std::endl;
 	IMPL(Generator)
-	return impl->spawn(ps, cost);
+	// empty trajectory ref -> this node only produces states
+	robot_trajectory::RobotTrajectoryPtr dummy;
+	SubTrajectory& trajectory = impl->addTrajectory(dummy, cost);
+	impl->prevEnds()->add(ps, NULL, &trajectory);
+	impl->nextStarts()->add(ps, &trajectory, NULL);
 }
 
 
-ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::__cxx11::string &name)
+ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
    : SubTaskPrivate(me, name)
 {
-	input_.reset(new Interface(std::bind(&Connecting::newInputState, me, std::placeholders::_1)));
-	output_.reset(new Interface(std::bind(&Connecting::newOutputState, me, std::placeholders::_1)));
-	it_pairs_ = std::make_pair(input_->begin(), output_->begin());
+	starts_.reset(new Interface([this](const Interface::iterator& it) { this->newStartState(it); }));
+	ends_.reset(new Interface([this](const Interface::iterator& it) { this->newEndState(it); }));
+	it_pairs_ = std::make_pair(starts_->begin(), ends_->begin());
 }
 
-SubTask::InterfaceFlags ConnectingPrivate::announcedFlags() const {
-	return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::READS_OUTPUT});
+SubTaskPrivate::InterfaceFlags ConnectingPrivate::announcedFlags() const {
+	return InterfaceFlags({READS_START, READS_END});
 }
 
-inline void ConnectingPrivate::connect(const robot_trajectory::RobotTrajectoryPtr &t, const InterfaceStatePair &state_pair, double cost)
+void ConnectingPrivate::newStartState(const Interface::iterator& it)
 {
-	SubTrajectory& trajectory = addTrajectory(t, cost);
-	trajectory.setStartState(state_pair.first);
-	trajectory.setEndState(state_pair.second);
+	// TODO: need to handle the pairs iterator
+	if(it_pairs_.first == starts_->end())
+		--it_pairs_.first;
+}
+
+void ConnectingPrivate::newEndState(const Interface::iterator& it)
+{
+	// TODO: need to handle the pairs iterator properly
+	if(it_pairs_.second == ends_->end())
+		--it_pairs_.second;
+}
+
+bool ConnectingPrivate::canCompute() const{
+	// TODO: implement this properly
+	return it_pairs_.first != starts_->end() &&
+	       it_pairs_.second != ends_->end();
+}
+
+bool ConnectingPrivate::compute() {
+	// TODO: implement this properly
+	const InterfaceState& from = *it_pairs_.first;
+	const InterfaceState& to = *(it_pairs_.second++);
+	return static_cast<Connecting*>(me_)->compute(from, to);
 }
 
 
@@ -382,40 +365,12 @@ Connecting::Connecting(const std::string &name)
 {
 }
 
-void Connecting::newInputState(const Interface::iterator& it)
-{
-	IMPL(Connecting);
-	// TODO: need to handle the pairs iterator
-	if( impl->it_pairs_.first == impl->input_->end() )
-		--impl->it_pairs_.first;
-}
-
-void Connecting::newOutputState(const Interface::iterator& it)
-{
-	IMPL(Connecting);
-	// TODO: need to handle the pairs iterator properly
-	if( impl->it_pairs_.second == impl->output_->end() )
-		--impl->it_pairs_.second;
-}
-
-bool Connecting::hasStatePair() const{
-	IMPL(const Connecting);
-	// TODO: implement this properly
-	return impl->it_pairs_.first != impl->input_->end() &&
-	       impl->it_pairs_.second != impl->output_->end();
-}
-
-InterfaceStatePair Connecting::fetchStatePair(){
-	IMPL(Connecting);
-	// TODO: implement this properly
-	return std::pair<const InterfaceState&, const InterfaceState&>
-	      (*impl->it_pairs_.first, *(impl->it_pairs_.second++));
-}
-
-void Connecting::connect(const robot_trajectory::RobotTrajectoryPtr& t, const InterfaceStatePair& state_pair, double cost)
-{
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
+                         const robot_trajectory::RobotTrajectoryPtr& t, double cost) {
 	IMPL(Connecting)
-	impl->connect(t, state_pair, cost);
+	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	trajectory.setStartState(from);
+	trajectory.setEndState(to);
 }
 
 } }

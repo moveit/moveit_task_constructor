@@ -1,4 +1,5 @@
 // copyright Michael 'v4hn' Goerner @ 2017
+// copyright Robert Haschke @ 2017
 
 #pragma once
 
@@ -6,11 +7,8 @@
 
 #include <moveit/macros/class_forward.h>
 
-#include <ros/ros.h>
-
-#include <vector>
-
 namespace moveit { namespace core {
+	MOVEIT_CLASS_FORWARD(RobotModel)
 	MOVEIT_CLASS_FORWARD(RobotState)
 }}
 
@@ -24,9 +22,11 @@ class TaskPrivate;
 class Task : protected SerialContainer {
 	PRIVATE_CLASS(Task)
 public:
-	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;
-
 	Task(const std::string &name = std::string());
+	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
+	                                                            const std::string &ns = "move_group",
+	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
+	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
 	void add(SubTask::pointer &&stage);
 	using SerialContainer::clear;
@@ -35,6 +35,8 @@ public:
 	void printState();
 
 	const moveit::core::RobotState &getCurrentRobotState() const;
+
+	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;
 	bool processSolutions(const SolutionCallback &processor);
 	bool processSolutions(const SolutionCallback &processor) const;
 };

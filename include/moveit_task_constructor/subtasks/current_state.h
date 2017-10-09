@@ -10,10 +10,12 @@ class CurrentState : public Generator {
 public:
 	CurrentState(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	bool init(const planning_scene::PlanningSceneConstPtr& scene) override;
+	bool canCompute() const override;
+	bool compute() override;
 
 protected:
+	planning_scene::PlanningSceneConstPtr scene_;
 	bool ran_;
 };
 

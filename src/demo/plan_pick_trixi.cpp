@@ -55,7 +55,6 @@ int main(int argc, char** argv){
 	{
 		auto move= std::make_unique<subtasks::Move>("move to pre-grasp");
 		move->setGroup("left_arm");
-		move->setLink("l_gripper_tool_frame");
 		move->setPlannerId("RRTConnectkConfigDefault");
 		move->setTimeout(8.0);
 		t.add(std::move(move));

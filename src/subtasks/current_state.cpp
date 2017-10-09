@@ -8,13 +8,19 @@ CurrentState::CurrentState(std::string name)
 	ran_= false;
 }
 
+bool CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	scene_ = scene;
+	ran_= false;
+}
+
 bool CurrentState::canCompute() const{
 	return !ran_;
 }
 
 bool CurrentState::compute(){
 	ran_= true;
-	spawn(scene());
+	spawn(scene_);
 
 	return true;
 }

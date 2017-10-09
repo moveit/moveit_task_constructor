@@ -29,8 +29,7 @@ public:
 class TestPropagatingForward : public PropagatingForward {
 public:
 	TestPropagatingForward() : PropagatingForward("forwarder") {}
-	bool canCompute() const override { return true; }
-	bool compute() override { return false; }
+	bool computeForward(const InterfaceState &from) override { return false; }
 };
 
 
@@ -79,7 +78,9 @@ protected:
 
 TEST_F(BaseTest, interfaceFlags) {
 	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
-	EXPECT_EQ(g->interfaceFlags(), SubTask::InterfaceFlags({SubTask::WRITES_NEXT_INPUT, SubTask::WRITES_PREV_OUTPUT}));
+	EXPECT_EQ(g->pimpl_func()->interfaceFlags(),
+	          SubTaskPrivate::InterfaceFlags({SubTaskPrivate::WRITES_NEXT_START,
+	                                          SubTaskPrivate::WRITES_PREV_END}));
 }
 
 #define VALIDATE(...) \
@@ -90,8 +91,8 @@ TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
 	SerialContainerPrivate *cp = static_cast<SerialContainerPrivate*>(c.pimpl_func());
 
-	EXPECT_TRUE(bool(cp->input_));
-	EXPECT_TRUE(bool(cp->output_));
+	EXPECT_TRUE(bool(cp->starts_));
+	EXPECT_TRUE(bool(cp->ends_));
 	EXPECT_EQ(parent(cp), nullptr);
 	EXPECT_EQ(parent(cp), nullptr);
 	VALIDATE();

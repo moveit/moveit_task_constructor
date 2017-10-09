@@ -7,14 +7,16 @@ namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate : public SubTaskPrivate
 {
+	friend class ContainerBase;
 	friend class BaseTest; // allow access for unit tests
+
 public:
 	typedef ContainerBase::value_type value_type;
-	typedef SubTaskPrivate::array_type array_type;
-	typedef array_type::iterator iterator;
-	typedef array_type::const_iterator const_iterator;
+	typedef SubTaskPrivate::container_type container_type;
+	typedef container_type::iterator iterator;
+	typedef container_type::const_iterator const_iterator;
 
-	inline const array_type& children() const { return children_; }
+	inline const container_type& children() const { return children_; }
 	const_iterator position(int before = -1) const;
 
 	bool canInsert(const SubTask& stage) const;
@@ -30,15 +32,15 @@ protected:
 	inline const ContainerBasePrivate* parent(const SubTaskPrivate *child) const { return child->parent_; }
 	inline iterator it(const SubTaskPrivate *child) const { return child->it_; }
 
-	inline void setPrevOutput(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
-		child->prev_output_ = interface.get();
+	inline void setPrevEnds(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
+		child->prev_ends_ = interface.get();
 	}
-	inline void setNextInput(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
-		child->next_input_ = interface.get();
+	inline void setNextStarts(const SubTaskPrivate* child, const InterfacePtr& interface = InterfacePtr()) {
+		child->next_starts_ = interface.get();
 	}
 
 private:
-	array_type children_;
+	container_type children_;
 };
 
 
@@ -47,13 +49,16 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name)
 	   : ContainerBasePrivate(me, name)
 	{
-		input_.reset(new Interface(Interface::NotifyFunction()));
-		output_.reset(new Interface(Interface::NotifyFunction()));
+		starts_.reset(new Interface(Interface::NotifyFunction()));
+		ends_.reset(new Interface(Interface::NotifyFunction()));
 	}
 
-	SubTask::InterfaceFlags announcedFlags() const override;
+	InterfaceFlags announcedFlags() const override;
 	bool canInsert(const SubTask& stage, const_iterator before) const;
 	virtual iterator insert(value_type &&stage, const_iterator before) override;
+
+	bool canCompute() const override;
+	bool compute() override;
 
 	inline const SubTaskPrivate *prev(const_iterator it) const;
 	inline const SubTaskPrivate *next(const_iterator it) const;

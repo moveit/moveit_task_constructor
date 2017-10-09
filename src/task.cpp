@@ -16,14 +16,13 @@ namespace moveit { namespace task_constructor {
 class TaskPrivate : public SerialContainerPrivate {
 	friend class Task;
 	robot_model_loader::RobotModelLoaderPtr rml_;
+	planning_scene::PlanningSceneConstPtr scene_;
 
 public:
 	TaskPrivate(Task* me, const std::string &name)
 	   : SerialContainerPrivate(me, name)
 	{
 		initModel();
-		initScene();
-		initPlanner();
 	}
 
 	void initModel () {
@@ -60,17 +59,33 @@ public:
 		scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
 		std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
 	}
-	void initPlanner() {
-		assert(rml_);
-		assert(scene_);
-		planner_ = std::make_shared<planning_pipeline::PlanningPipeline>(rml_->getModel(), ros::NodeHandle("move_group"));
-	}
 };
 
 
 Task::Task(const std::string &name)
    : SerialContainer(new TaskPrivate(this, name))
 {
+}
+
+planning_pipeline::PlanningPipelinePtr
+Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
+                    const std::string& planning_plugin_param_name,
+                    const std::string& adapter_plugins_param_name) {
+	typedef std::tuple<std::string, std::string, std::string, std::string> PlannerID;
+	static std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> > planner_cache;
+
+	PlannerID id (model->getName(), ns, planning_plugin_param_name, adapter_plugins_param_name);
+	auto it = planner_cache.find(id);
+
+	planning_pipeline::PlanningPipelinePtr planner;
+	if (it != planner_cache.cend())
+		planner = it->second.lock();
+	if (!planner) {
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>
+		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
+		planner_cache[id] = planner;
+	}
+	return planner;
 }
 
 void Task::add(pointer &&stage) {
@@ -81,8 +96,11 @@ void Task::add(pointer &&stage) {
 }
 
 bool Task::plan(){
+	IMPL(Task);
 	NewSolutionPublisher debug(*this);
 
+	impl->initScene();
+	this->init(impl->scene_);
 	while(ros::ok() && canCompute()) {
 		if (compute()) {
 			debug.publish();
@@ -94,7 +112,8 @@ bool Task::plan(){
 }
 
 const robot_state::RobotState& Task::getCurrentRobotState() const {
-	return pimpl_func()->scene_->getCurrentState();
+	IMPL(const Task)
+	return impl->scene_->getCurrentState();
 }
 
 void Task::printState(){
@@ -135,7 +154,7 @@ bool traverseFullTrajectories(
 
 bool Task::processSolutions(const Task::SolutionCallback& processor) {
 	IMPL(Task);
-	const TaskPrivate::array_type& children = impl->children();
+	const TaskPrivate::container_type& children = impl->children();
 	const size_t nr_of_trajectories = children.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);

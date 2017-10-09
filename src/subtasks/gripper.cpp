@@ -1,5 +1,6 @@
 #include <moveit_task_constructor/subtasks/gripper.h>
 #include <moveit_task_constructor/storage.h>
+#include <moveit_task_constructor/task.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -13,8 +14,13 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 Gripper::Gripper(std::string name)
-   : PropagatingAnyWay(name)
+   : PropagatingEitherWay(name)
 {}
+
+bool Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	planner_ = Task::createPlanner(scene->getRobotModel());
+}
 
 void Gripper::setEndEffector(std::string eef){
 	eef_= eef;
@@ -64,7 +70,7 @@ bool Gripper::compute(const InterfaceState &state, planning_scene::PlanningScene
 	}
 
 	::planning_interface::MotionPlanResponse res;
-	if(!planner()->generatePlan(scene, req, res))
+	if(!planner_->generatePlan(scene, req, res))
 		return false;
 
 	trajectory = res.trajectory_;
@@ -83,14 +89,27 @@ bool Gripper::compute(const InterfaceState &state, planning_scene::PlanningScene
 	return true;
 }
 
-bool Gripper::computeForward(const InterfaceState &from, planning_scene::PlanningScenePtr &to,
-                             robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost){
-	return compute(from, to, trajectory, cost, FORWARD);
+bool Gripper::computeForward(const InterfaceState &from){
+	planning_scene::PlanningScenePtr to;
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	double cost = 0;
+
+	if (!compute(from, to, trajectory, cost, FORWARD))
+		return false;
+	sendForward(from, to, trajectory, cost);
+	return true;
 }
-bool Gripper::computeBackward(planning_scene::PlanningScenePtr &from, const InterfaceState &to,
-                              robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost)
+
+bool Gripper::computeBackward(const InterfaceState &to)
 {
-	return compute(to, from, trajectory, cost, BACKWARD);
+	planning_scene::PlanningScenePtr from;
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	double cost = 0;
+
+	if (!compute(to, from, trajectory, cost, BACKWARD))
+		return false;
+	sendBackward(from, to, trajectory, cost);
+	return true;
 }
 
 } } }
