@@ -18,8 +18,9 @@ class GenerateGraspPose : public Generator {
 public:
 	GenerateGraspPose(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	bool init(const planning_scene::PlanningSceneConstPtr& scene) override;
+	bool canCompute() const override;
+	bool compute() override;
 
 	void setEndEffector(std::string eef);
 
@@ -42,6 +43,8 @@ public:
 	void ignoreCollisions(bool flag);
 
 protected:
+	planning_scene::PlanningSceneConstPtr scene_;
+
 	std::string eef_;
 
 	std::string group_;

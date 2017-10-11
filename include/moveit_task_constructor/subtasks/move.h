@@ -14,29 +14,19 @@ class Move : public Connecting {
 public:
 	Move(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	bool init(const planning_scene::PlanningSceneConstPtr &scene);
+	bool compute(const InterfaceState &from, const InterfaceState &to);
 
 	void setGroup(std::string group);
-	void setLink(std::string link);
-
 	void setPlannerId(std::string planner);
 	void setTimeout(double timeout);
 
-	void setFrom(std::string named_target);
-	void setTo(std::string named_target);
-
 protected:
 	std::string group_;
-	std::string link_;
-
+	std::string planner_id_;
 	double timeout_;
 
-	std::string planner_id_;
-
-	std::string from_named_target_;
-	std::string to_named_target_;
-
+	planning_pipeline::PlanningPipelinePtr planner_;
 	moveit::planning_interface::MoveGroupInterfacePtr mgi_;
 };
 

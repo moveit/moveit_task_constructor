@@ -10,15 +10,15 @@ MOVEIT_CLASS_FORWARD(MoveGroupInterface)
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
-class Gripper : public PropagatingForward {
+class Gripper : public PropagatingEitherWay {
 public:
 	Gripper(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	bool init(const planning_scene::PlanningSceneConstPtr &scene);
+	bool computeForward(const InterfaceState& from) override;
+	bool computeBackward(const InterfaceState& to) override;
 
 	void setEndEffector(std::string eef);
-
 	void setAttachLink(std::string link);
 
 	void setFrom(std::string named_target);
@@ -27,16 +27,17 @@ public:
 	void graspObject(std::string grasp_object);
 
 protected:
+	bool compute(const InterfaceState &state, planning_scene::PlanningScenePtr &scene,
+	             robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost, Direction dir);
+
+protected:
 	std::string eef_;
-
-	std::string from_named_target_;
-	std::string to_named_target_;
-
+	std::string named_target_;
 	std::string grasp_object_;
-
-	moveit::planning_interface::MoveGroupInterfacePtr mgi_;
-
 	std::string attach_link_;
+
+	planning_pipeline::PlanningPipelinePtr planner_;
+	moveit::planning_interface::MoveGroupInterfacePtr mgi_;
 };
 
 } } }

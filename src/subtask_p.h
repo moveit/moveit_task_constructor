@@ -10,114 +10,111 @@ namespace moveit { namespace task_constructor {
 class ContainerBasePrivate;
 class SubTaskPrivate {
 	friend class SubTask;
-	friend class SubTaskTest; // allow unit tests
+	friend class BaseTest; // allow access for unit tests
 	friend class ContainerBasePrivate; // allow to set parent_ and it_
 	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
 public:
-	typedef std::list<SubTask::pointer> array_type;
+	typedef std::list<SubTask::pointer> container_type;
 
-	inline SubTaskPrivate(SubTask* me, const std::string& name)
-	   : me_(me), name_(name), parent_(nullptr)
-	{}
+	SubTaskPrivate(SubTask* me, const std::string& name);
 
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+	enum InterfaceFlag {
+		READS_START        = 0x01,
+		READS_END          = 0x02,
+		WRITES_NEXT_START  = 0x04,
+		WRITES_PREV_END    = 0x08,
 
-	SubTask::InterfaceFlags deducedInterfaceFlags() const;
-	virtual SubTask::InterfaceFlags interfaceFlags() const = 0;
-	void sendForward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
-	void sendBackward(SubTrajectory& traj, const planning_scene::PlanningSceneConstPtr& ps);
+		OWN_IF_MASK        = READS_START | READS_END,
+		EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
+		INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
+		OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
+	};
+	typedef Flags<InterfaceFlag> InterfaceFlags;
+
+	InterfaceFlags interfaceFlags() const;
+	InterfaceFlags deducedFlags() const;
+	virtual InterfaceFlags announcedFlags() const = 0;
+	std::list<SubTrajectory>& trajectories() { return trajectories_; }
+
+	virtual bool canCompute() const = 0;
+	virtual bool compute() = 0;
 
 public:
 	SubTask* const me_; // associated/owning SubTask instance
 	const std::string name_;
 
-	planning_scene::PlanningSceneConstPtr scene_;
-	planning_pipeline::PlanningPipelinePtr planner_;
+	InterfacePtr starts_;
+	InterfacePtr ends_;
 
-	InterfacePtr input_;
-	InterfacePtr output_;
+	inline ContainerBasePrivate* parent() const { return parent_; }
+	inline bool isConnected() const { return prev_ends_ || next_starts_; }
+	inline Interface* prevEnds() const { return prev_ends_; }
+	inline Interface* nextStarts() const { return next_starts_; }
+	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+
+protected:
 	std::list<SubTrajectory> trajectories_;
 
-	const SubTaskPrivate* prev() const;
-	const SubTaskPrivate* next() const;
-	const InterfacePtr prevOutput() const { const SubTaskPrivate* other = prev(); return other ? other->output_ : InterfacePtr(); }
-	const InterfacePtr nextInput() const { const SubTaskPrivate* other = next(); return other ? other->input_ : InterfacePtr(); }
-
 private:
-	// items accessed by ContainerBasePrivate only to maintain hierarchy
-	ContainerBasePrivate* parent_;
-	array_type::iterator it_;
+	// !! items accessed only by ContainerBasePrivate to maintain hierarchy !!
+	ContainerBasePrivate* parent_; // owning parent
+	container_type::iterator it_; // iterator into parent's children_ list referring to this
+	// caching the pointers to the ends_ / starts_ interface of previous / next stage
+	mutable Interface *prev_ends_; // interface to be used for sendBackward()
+	mutable Interface *next_starts_;  // interface to be use for sendForward()
 };
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
 
-class PropagatingAnyWayPrivate : public SubTaskPrivate {
-	friend class PropagatingAnyWay;
+class PropagatingEitherWayPrivate : public SubTaskPrivate {
+	friend class PropagatingEitherWay;
 
 public:
-	inline PropagatingAnyWayPrivate(PropagatingAnyWay *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{
-		input_.reset(new Interface([me](const Interface::iterator& it) { me->newInputState(it); }));
-		output_.reset(new Interface(std::bind(&PropagatingAnyWay::newOutputState, me, std::placeholders::_1)));
-		next_input_ = input_->begin();
-		next_output_ = output_->end();
-	}
+	PropagatingEitherWay::Direction dir;
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::WRITES_NEXT_INPUT,
-		                               SubTask::READS_OUTPUT, SubTask::WRITES_PREV_OUTPUT,
-		                               SubTask::WRITES_UNKNOWN});
-	}
+	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir,
+	                                const std::string &name);
+	InterfaceFlags announcedFlags() const override;
+
+	bool canCompute() const override;
+	bool compute() override;
+
+	bool hasStartState() const;
+	const InterfaceState &fetchStartState();
+
+	bool hasEndState() const;
+	const InterfaceState &fetchEndState();
 
 protected:
-	Interface::const_iterator next_input_;
-	Interface::const_iterator next_output_;
+	// get informed when new start or end state becomes available
+	void newStartState(const std::list<InterfaceState>::iterator& it);
+	void newEndState(const std::list<InterfaceState>::iterator& it);
+
+	Interface::const_iterator next_start_state_;
+	Interface::const_iterator next_end_state_;
 };
 
 
-class PropagatingForwardPrivate : public PropagatingAnyWayPrivate {
+class PropagatingForwardPrivate : public PropagatingEitherWayPrivate {
 public:
-	inline PropagatingForwardPrivate(PropagatingForward *me, const std::string &name)
-	   : PropagatingAnyWayPrivate(me, name)
-	{
-		// indicate, that we don't accept new states from output interface
-		output_.reset();
-		next_output_ = Interface::iterator();
-	}
-
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::WRITES_NEXT_INPUT});
-	}
+	inline PropagatingForwardPrivate(PropagatingForward *me, const std::string &name);
 };
 
 
-class PropagatingBackwardPrivate : public PropagatingAnyWayPrivate {
+class PropagatingBackwardPrivate : public PropagatingEitherWayPrivate {
 public:
-	inline PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name)
-	   : PropagatingAnyWayPrivate(me, name)
-	{
-		// indicate, that we don't accept new states from input interface
-		input_.reset();
-		next_input_ = Interface::iterator();
-	}
-
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_OUTPUT, SubTask::WRITES_PREV_OUTPUT});
-	}
+	inline PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name);
 };
 
 
 class GeneratorPrivate : public SubTaskPrivate {
 public:
-	inline GeneratorPrivate(Generator *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{}
+	inline GeneratorPrivate(Generator *me, const std::string &name);
+	InterfaceFlags announcedFlags() const override;
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::WRITES_NEXT_INPUT, SubTask::WRITES_PREV_OUTPUT});
-	}
+	bool canCompute() const override;
+	bool compute() override;
 };
 
 
@@ -125,19 +122,20 @@ class ConnectingPrivate : public SubTaskPrivate {
 	friend class Connecting;
 
 public:
-	inline ConnectingPrivate(Connecting *me, const std::string &name)
-	   : SubTaskPrivate(me, name)
-	{
-		input_.reset(new Interface(std::bind(&Connecting::newInputState, me, std::placeholders::_1)));
-		output_.reset(new Interface(std::bind(&Connecting::newOutputState, me, std::placeholders::_1)));
-		it_pairs_ = std::make_pair(input_->begin(), output_->begin());
-	}
+	inline ConnectingPrivate(Connecting *me, const std::string &name);
+	InterfaceFlags announcedFlags() const override;
 
-	SubTask::InterfaceFlags interfaceFlags() const override {
-		return SubTask::InterfaceFlags({SubTask::READS_INPUT, SubTask::READS_OUTPUT});
-	}
+	bool canCompute() const override;
+	bool compute() override;
+
+	void connect(const robot_trajectory::RobotTrajectoryPtr& t,
+	             const InterfaceStatePair& state_pair, double cost);
 
 private:
+	// get informed when new start or end state becomes available
+	void newStartState(const std::list<InterfaceState>::iterator& it);
+	void newEndState(const std::list<InterfaceState>::iterator& it);
+
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };
 

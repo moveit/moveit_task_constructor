@@ -16,12 +16,12 @@ namespace core { MOVEIT_CLASS_FORWARD(RobotState) }
 
 namespace moveit { namespace task_constructor { namespace subtasks {
 
-class CartesianPositionMotion : public PropagatingAnyWay {
+class CartesianPositionMotion : public PropagatingEitherWay {
 public:
 	CartesianPositionMotion(std::string name);
 
-	virtual bool canCompute() const override;
-	virtual bool compute() override;
+	virtual bool computeForward(const InterfaceState &from) override;
+	virtual bool computeBackward(const InterfaceState &to) override;
 
 	void setGroup(std::string group);
 	void setLink(std::string link);
@@ -55,9 +55,7 @@ protected:
 
 	ros::Publisher pub;
 
-	bool _computeFromBeginning();
-	bool _computeFromEnding();
-	void _publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
+	void _publishTrajectory(const planning_scene::PlanningSceneConstPtr &scene, const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };
 
 } } }

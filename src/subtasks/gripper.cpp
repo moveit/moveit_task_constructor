@@ -1,5 +1,6 @@
 #include <moveit_task_constructor/subtasks/gripper.h>
 #include <moveit_task_constructor/storage.h>
+#include <moveit_task_constructor/task.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -13,8 +14,13 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 Gripper::Gripper(std::string name)
-   : PropagatingForward(name)
+   : PropagatingEitherWay(name)
 {}
+
+bool Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	planner_ = Task::createPlanner(scene->getRobotModel());
+}
 
 void Gripper::setEndEffector(std::string eef){
 	eef_= eef;
@@ -25,28 +31,27 @@ void Gripper::setAttachLink(std::string link){
 }
 
 void Gripper::setFrom(std::string named_target){
-	// TODO: this direction isn't handled yet
-	from_named_target_= named_target;
+	restrictDirection(BACKWARD);
+	named_target_= named_target;
 }
 
 void Gripper::setTo(std::string named_target){
-	to_named_target_= named_target;
+	restrictDirection(FORWARD);
+	named_target_= named_target;
 }
 
 void Gripper::graspObject(std::string grasp_object){
 	grasp_object_= grasp_object;
 }
 
-bool Gripper::canCompute() const{
-	return hasBeginning();
-}
-
-bool Gripper::compute(){
-	assert(scene()->getRobotModel());
+bool Gripper::compute(const InterfaceState &state, planning_scene::PlanningScenePtr &scene,
+                      robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost, Direction dir){
+	scene = state.state->diff();
+	assert(scene->getRobotModel());
 
 	if(!mgi_){
-		assert(scene()->getRobotModel()->hasEndEffector(eef_) && "no end effector with that name defined in srdf");
-		const moveit::core::JointModelGroup* jmg= scene()->getRobotModel()->getEndEffector(eef_);
+		assert(scene->getRobotModel()->hasEndEffector(eef_) && "no end effector with that name defined in srdf");
+		const moveit::core::JointModelGroup* jmg= scene->getRobotModel()->getEndEffector(eef_);
 		const std::string group_name= jmg->getName();
 		mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_name);
 
@@ -55,11 +60,7 @@ bool Gripper::compute(){
 		}
 	}
 
-	const InterfaceState& start= fetchStateBeginning();
-
-	planning_scene::PlanningScenePtr scene(start.state->diff());
-
-	mgi_->setNamedTarget(to_named_target_);
+	mgi_->setNamedTarget(named_target_);
 
 	::planning_interface::MotionPlanRequest req;
 	mgi_->constructMotionPlanRequest(req);
@@ -69,12 +70,13 @@ bool Gripper::compute(){
 	}
 
 	::planning_interface::MotionPlanResponse res;
-	if(!planner()->generatePlan(scene, req, res))
+	if(!planner_->generatePlan(scene, req, res))
 		return false;
 
-	// set end state
-	robot_state::RobotState end_state(res.trajectory_->getLastWayPoint());
-	scene->setCurrentState(end_state);
+	trajectory = res.trajectory_;
+	if (dir == BACKWARD) trajectory->reverse();
+
+	scene->setCurrentState(trajectory->getLastWayPoint());
 
 	// attach object
 	if( !grasp_object_.empty() ){
@@ -84,9 +86,29 @@ bool Gripper::compute(){
 		scene->processAttachedCollisionObjectMsg(obj);
 	}
 
-	// finish subtask
-	sendForward(res.trajectory_, start, scene);
+	return true;
+}
 
+bool Gripper::computeForward(const InterfaceState &from){
+	planning_scene::PlanningScenePtr to;
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	double cost = 0;
+
+	if (!compute(from, to, trajectory, cost, FORWARD))
+		return false;
+	sendForward(from, to, trajectory, cost);
+	return true;
+}
+
+bool Gripper::computeBackward(const InterfaceState &to)
+{
+	planning_scene::PlanningScenePtr from;
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	double cost = 0;
+
+	if (!compute(to, from, trajectory, cost, BACKWARD))
+		return false;
+	sendBackward(from, to, trajectory, cost);
 	return true;
 }
 

@@ -1,5 +1,6 @@
 #include <moveit_task_constructor/subtasks/move.h>
 #include <moveit_task_constructor/storage.h>
+#include <moveit_task_constructor/task.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -17,13 +18,14 @@ Move::Move(std::string name)
      timeout_(5.0)
 {}
 
+bool Move::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	planner_ = Task::createPlanner(scene->getRobotModel());
+}
+
 void Move::setGroup(std::string group){
 	group_= group;
 	mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_);
-}
-
-void Move::setLink(std::string link){
-	link_= link;
 }
 
 void Move::setPlannerId(std::string planner){
@@ -34,24 +36,8 @@ void Move::setTimeout(double timeout){
 	timeout_= timeout;
 }
 
-/* TODO: implement this in compute
-void Move::setFrom(std::string named_target){
-	from_named_target_= named_target;
-}
-
-void Move::setTo(std::string named_target){
-	to_named_target_= named_target;
-}
-*/
-
-bool Move::canCompute() const{
-	return hasStatePair();
-}
-
-bool Move::compute(){
-	InterfaceStatePair state_pair= fetchStatePair();
-
-	mgi_->setJointValueTarget(state_pair.second.state->getCurrentState());
+bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
+	mgi_->setJointValueTarget(to.state->getCurrentState());
 	if( !planner_id_.empty() )
 		mgi_->setPlannerId(planner_id_);
 	mgi_->setPlanningTime(timeout_);
@@ -61,11 +47,11 @@ bool Move::compute(){
 
 	ros::Duration(4.0).sleep();
 	::planning_interface::MotionPlanResponse res;
-	if(!planner()->generatePlan(state_pair.first.state, req, res))
+	if(!planner_->generatePlan(from.state, req, res))
 		return false;
 
 	// finish subtask
-	connect(res.trajectory_, state_pair);
+	connect(from, to, res.trajectory_);
 
 	return true;
 }

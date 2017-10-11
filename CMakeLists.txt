@@ -30,6 +30,7 @@ add_library(${PROJECT_NAME}
 	src/debug.cpp
 
 	src/subtask_p.h
+	src/container_p.h
 	include/${PROJECT_NAME}/utils.h
 	include/${PROJECT_NAME}/storage.h
 	include/${PROJECT_NAME}/subtask.h

@@ -33,6 +33,11 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 	ros::Duration(1.0).sleep();
 }
 
+bool GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	scene_ = scene;
+}
+
 void GenerateGraspPose::setGroup(std::string group){
 	group_= group;
 }
@@ -115,9 +120,9 @@ namespace {
 }
 
 bool GenerateGraspPose::compute(){
-	assert(scene()->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf");
+	assert(scene_->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf");
 
-	planning_scene::PlanningScenePtr grasp_scene = scene()->diff();
+	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
 	robot_state::RobotState &grasp_state = grasp_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg_eef= grasp_state.getRobotModel()->getEndEffector(eef_);
@@ -135,7 +140,7 @@ bool GenerateGraspPose::compute(){
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(
 			&isValid,
-			scene(),
+			scene_,
 			ignore_collisions_,
 			&previous_solutions_,
 			std::placeholders::_1,
@@ -143,7 +148,7 @@ bool GenerateGraspPose::compute(){
 			std::placeholders::_3);
 
 	geometry_msgs::Pose object_pose, grasp_pose;
-	const Eigen::Affine3d object_pose_eigen= scene()->getFrameTransform(object_);
+	const Eigen::Affine3d object_pose_eigen= scene_->getFrameTransform(object_);
 	if(object_pose_eigen.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
 
@@ -168,7 +173,7 @@ bool GenerateGraspPose::compute(){
 		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
 		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.5*M_PI, current_angle_);
 
-		if (isGraspPoseColliding(scene(), grasp_state, jmg_active, grasp_pose, ik_link)) {
+		if (isGraspPoseColliding(scene_, grasp_state, jmg_active, grasp_pose, ik_link)) {
 			ROS_INFO("grasp pose is in collision");
 			continue;
 		}

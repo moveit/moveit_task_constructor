@@ -16,7 +16,7 @@
 namespace moveit { namespace task_constructor { namespace subtasks {
 
 CartesianPositionMotion::CartesianPositionMotion(std::string name)
-: PropagatingAnyWay(name),
+: PropagatingEitherWay(name),
   step_size_(0.005)
 {
 	ros::NodeHandle nh;
@@ -59,10 +59,6 @@ void CartesianPositionMotion::setCartesianStepSize(double distance){
 	step_size_= distance;
 }
 
-bool CartesianPositionMotion::canCompute() const{
-	return hasBeginning() || hasEnding();
-}
-
 namespace {
 	bool isValid(planning_scene::PlanningSceneConstPtr scene,
 	        robot_state::RobotState* state,
@@ -74,18 +70,8 @@ namespace {
 	}
 }
 
-bool CartesianPositionMotion::compute(){
-	if( hasEnding() )
-		return _computeFromEnding();
-	else if( hasBeginning() )
-		return _computeFromBeginning();
-}
-
-bool CartesianPositionMotion::_computeFromBeginning(){
-	assert( hasBeginning() );
-
-	const InterfaceState& beginning= fetchStateBeginning();
-	planning_scene::PlanningScenePtr result_scene = beginning.state->diff();
+bool CartesianPositionMotion::computeForward(const InterfaceState &from){
+	planning_scene::PlanningScenePtr result_scene = from.state->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
@@ -103,7 +89,7 @@ bool CartesianPositionMotion::_computeFromBeginning(){
 	bool succeeded= false;
 
 	if( mode_ == CartesianPositionMotion::MODE_TOWARDS ){
-		const Eigen::Affine3d& frame= beginning.state->getFrameTransform(towards_.header.frame_id);
+		const Eigen::Affine3d& frame= from.state->getFrameTransform(towards_.header.frame_id);
 
 		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
 
@@ -157,25 +143,22 @@ bool CartesianPositionMotion::_computeFromBeginning(){
 
 
 	if(succeeded){
-		auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
+		robot_trajectory::RobotTrajectoryPtr traj
+		      = std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addSuffixWayPoint(tp, 0.0);
+		sendForward(from, result_scene, traj);
 
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;
-
-		sendForward(traj, beginning, result_scene);
-		_publishTrajectory(*traj, *result_state);
+		_publishTrajectory(result_scene, *traj, *result_state);
 	}
 
 	return succeeded;
 }
 
-bool CartesianPositionMotion::_computeFromEnding(){
-	assert( hasEnding() );
-
-	const InterfaceState& ending= fetchStateEnding();
-	planning_scene::PlanningScenePtr result_scene = ending.state->diff();
+bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
+	planning_scene::PlanningScenePtr result_scene = to.state->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
@@ -209,7 +192,6 @@ bool CartesianPositionMotion::_computeFromEnding(){
 		throw std::runtime_error("position motion has neither a goal nor a direction");
 	}
 
-	auto traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 	std::vector<moveit::core::RobotStatePtr> trajectory_steps;
 
 	double achieved_distance= robot_state.computeCartesianPath(
@@ -228,26 +210,27 @@ bool CartesianPositionMotion::_computeFromEnding(){
 	bool succeeded= achieved_distance >= min_distance_;
 
 	if(succeeded){
+		robot_trajectory::RobotTrajectoryPtr traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addPrefixWayPoint(tp, 0.0);
+		sendBackward(result_scene, to, traj);
 
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;
 
-		sendBackward(traj, result_scene, ending);
-		_publishTrajectory(*traj, *result_state);
-
-		return true;
+		_publishTrajectory(result_scene, *traj, *result_state);
 	}
 
-	return false;
+	return succeeded;
 }
 
 
-void CartesianPositionMotion::_publishTrajectory(const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start){
+void CartesianPositionMotion::_publishTrajectory(const planning_scene::PlanningSceneConstPtr& scene,
+                                                 const robot_trajectory::RobotTrajectory& trajectory,
+                                                 const moveit::core::RobotState& start){
 	moveit_msgs::DisplayTrajectory dt;
 	robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
-	dt.model_id= scene()->getRobotModel()->getName();
+	dt.model_id= scene->getRobotModel()->getName();
 	dt.trajectory.resize(1);
 	trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
 	dt.model_id= start.getRobotModel()->getName();
