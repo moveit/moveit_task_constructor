@@ -30,8 +30,6 @@ MOVEIT_CLASS_FORWARD(SubTask)
  *  A start or goal state for planning is essentially defined by the state of a planning scene.
  */
 class InterfaceState {
-	friend class SubTrajectory;
-
 public:
 	typedef std::deque<SubTrajectory*> SubTrajectoryList;
 
@@ -42,12 +40,15 @@ public:
 	inline const SubTrajectoryList& incomingTrajectories() const { return incoming_trajectories_; }
 	inline const SubTrajectoryList& outgoingTrajectories() const { return outgoing_trajectories_; }
 
+	inline void addIncoming(SubTrajectory* t) { incoming_trajectories_.push_back(t); }
+	inline void addOutgoing(SubTrajectory* t) { outgoing_trajectories_.push_back(t); }
+
 public:
 	planning_scene::PlanningSceneConstPtr state;
 
 private:
-	mutable SubTrajectoryList incoming_trajectories_;
-	mutable SubTrajectoryList outgoing_trajectories_;
+	SubTrajectoryList incoming_trajectories_;
+	SubTrajectoryList outgoing_trajectories_;
 };
 
 
@@ -105,13 +106,13 @@ struct SubTrajectory {
 	inline void setStartState(const InterfaceState& state){
 		assert(begin == NULL);
 		begin= &state;
-		state.outgoing_trajectories_.push_back(this);
+		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
 		assert(end == NULL);
 		end= &state;
-		state.incoming_trajectories_.push_back(this);
+		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
 	// TODO: trajectories could have a name, e.g. a generator could name its solutions

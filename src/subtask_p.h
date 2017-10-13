@@ -15,8 +15,6 @@ namespace moveit { namespace task_constructor {
 class ContainerBasePrivate;
 class SubTaskPrivate {
 	friend class SubTask;
-	friend class BaseTest; // allow access for unit tests
-	friend class ContainerBasePrivate; // allow to set parent_ and it_
 	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 
 public:
@@ -45,29 +43,39 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
-public:
+	inline ContainerBasePrivate* parent() const { return parent_; }
+	inline container_type::iterator it() const { return it_; }
+	inline Interface* starts() const { return starts_.get(); }
+	inline Interface* ends() const { return ends_.get(); }
+	inline Interface* prevEnds() const { return prev_ends_; }
+	inline Interface* nextStarts() const { return next_starts_; }
+	inline const std::list<SubTrajectory> trajectories() const { return trajectories_; }
+
+	inline bool isConnected() const { return prev_ends_ || next_starts_; }
+	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+
+	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {
+		parent_ = parent;
+		it_ = it;
+	}
+	inline void setPrevEnds(Interface * prev_ends) { prev_ends_ = prev_ends; }
+	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
+
+protected:
 	SubTask* const me_; // associated/owning SubTask instance
 	const std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
-
-	inline ContainerBasePrivate* parent() const { return parent_; }
-	inline bool isConnected() const { return prev_ends_ || next_starts_; }
-	inline Interface* prevEnds() const { return prev_ends_; }
-	inline Interface* nextStarts() const { return next_starts_; }
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
-
-protected:
 	std::list<SubTrajectory> trajectories_;
 
 private:
-	// !! items accessed only by ContainerBasePrivate to maintain hierarchy !!
+	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
 	ContainerBasePrivate* parent_; // owning parent
 	container_type::iterator it_; // iterator into parent's children_ list referring to this
-	// caching the pointers to the ends_ / starts_ interface of previous / next stage
-	mutable Interface *prev_ends_; // interface to be used for sendBackward()
-	mutable Interface *next_starts_;  // interface to be use for sendForward()
+
+	Interface *prev_ends_;    // interface to be used for sendBackward()
+	Interface *next_starts_;  // interface to be used for sendForward()
 };
 std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
 

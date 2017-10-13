@@ -21,8 +21,8 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int before) 
 
 inline bool ContainerBasePrivate::canInsert(const SubTask &stage) const {
 	const SubTaskPrivate* impl = stage.pimpl();
-	return impl->parent_ == nullptr  // re-parenting is not supported
-	      && impl->trajectories_.empty(); // existing trajectories would become invalid
+	return impl->parent() == nullptr  // re-parenting is not supported
+	      && impl->trajectories().empty(); // existing trajectories would become invalid
 }
 
 bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &processor, int depth) const {
@@ -39,9 +39,9 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &pr
 ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate::value_type &&subtask,
                                                             ContainerBasePrivate::const_iterator pos) {
 	SubTaskPrivate *impl = subtask->pimpl();
-	impl->parent_ = this;
-	impl->it_ = children_.insert(pos, std::move(subtask));
-	return impl->it_;
+	ContainerBasePrivate::iterator it = children_.insert(pos, std::move(subtask));
+	impl->setHierarchy(this, it);
+	return it;
 }
 
 
@@ -53,8 +53,7 @@ PIMPL_FUNCTIONS(ContainerBase)
 
 void ContainerBase::clear()
 {
-	auto impl = pimpl();
-	impl->clear();
+	pimpl()->children_.clear();
 }
 
 bool ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -66,21 +65,25 @@ bool ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 bool ContainerBase::traverseStages(const ContainerBase::StageCallback &processor) const
 {
-	auto impl = pimpl();
-	return impl->traverseStages(processor, 0);
+	pimpl()->traverseStages(processor, 0);
 }
 
 bool ContainerBase::canCompute() const
 {
-	auto impl = pimpl();
-	return impl->canCompute();
+	pimpl()->canCompute();
 }
 
 bool ContainerBase::compute() {
-	auto impl = pimpl();
-	return impl->compute();
+	pimpl()->compute();
 }
 
+
+SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
+   : ContainerBasePrivate(me, name)
+{
+	starts_.reset(new Interface(Interface::NotifyFunction()));
+	ends_.reset(new Interface(Interface::NotifyFunction()));
+}
 
 SubTaskPrivate::InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	InterfaceFlags f;
@@ -90,31 +93,9 @@ SubTaskPrivate::InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	return f;
 }
 
-inline bool isConnectable(int prev_flags, int next_flags) {
-	return ((prev_flags & SubTaskPrivate::WRITES_NEXT_START) && (next_flags & SubTaskPrivate::READS_START)) ||
-	       ((prev_flags & SubTaskPrivate::READS_END) && (next_flags & SubTaskPrivate::WRITES_PREV_END));
-}
-inline bool bothWrite(SubTaskPrivate::InterfaceFlags prev_flags, SubTaskPrivate::InterfaceFlags next_flags) {
-	return (prev_flags.testFlag(SubTaskPrivate::WRITES_NEXT_START) && !next_flags.testFlag(SubTaskPrivate::READS_START)) &&
-	       (next_flags.testFlag(SubTaskPrivate::WRITES_PREV_END) && !prev_flags.testFlag(SubTaskPrivate::READS_END));
-}
-
 inline bool SerialContainerPrivate::canInsert(const SubTask &stage, ContainerBasePrivate::const_iterator before) const {
 	if (!ContainerBasePrivate::canInsert(stage))
 		return false;
-
-	// check connectedness
-	bool at_end = (before == children().end());
-	const SubTaskPrivate* next = (at_end) ? this : (*before)->pimpl();
-	InterfaceFlags cur_flags = stage.pimpl()->announcedFlags();
-	InterfaceFlags next_flags = next->deducedFlags();
-	InterfaceFlags prev_flags = prev(before)->deducedFlags();
-
-	// Do a simple check here only. A full connectivity check requires the full pipeline to be setup
-	// Thus, here we reject when trying to connect to writers with each other
-	if (bothWrite(prev_flags, cur_flags) || bothWrite(cur_flags, next_flags))
-		return false;
-
 	return true;
 }
 
@@ -127,65 +108,41 @@ ContainerBasePrivate::iterator SerialContainerPrivate::insert(value_type &&stage
 	SubTaskPrivate *cur = stage->pimpl();
 	/* set pointer cache (prev_ends_ and next_starts_) of prev, current, and next stage */
 	if (children().empty()) { // first child inserted
-		setPrevEnds(cur, this->starts_);
-		setNextStarts(cur, this->ends_);
+		cur->setPrevEnds(this->starts());
+		cur->setNextStarts(this->ends());
 	} else if (at_begin) {
 		SubTaskPrivate *next = (*before)->pimpl();
-		setPrevEnds(cur, this->starts_);
-		setNextStarts(cur, next->starts_);
-		setPrevEnds(next, cur->ends_);
+		cur->setPrevEnds(this->starts());
+		cur->setNextStarts(next->starts());
+		next->setPrevEnds(cur->ends());
 	} else if (at_end) {
-		const SubTaskPrivate *prev = this->prev(before);
-		setNextStarts(prev, cur->starts_);
-		setPrevEnds(cur, prev->ends_);
-		setNextStarts(cur, this->ends_);
+		SubTaskPrivate *prev = (*this->prev(before))->pimpl();
+		prev->setNextStarts(cur->starts());
+		cur->setPrevEnds(prev->ends());
+		cur->setNextStarts(this->ends());
 	} else {
-		const SubTaskPrivate *prev = this->prev(before);
+		SubTaskPrivate *prev = (*this->prev(before))->pimpl();
 		SubTaskPrivate *next = (*before)->pimpl();
-		setNextStarts(prev, cur->starts_);
-		setPrevEnds(cur, prev->ends_);
-		setNextStarts(cur, next->starts_);
-		setPrevEnds(next, cur->ends_);
+		prev->setNextStarts(cur->starts());
+		cur->setPrevEnds(prev->ends());
+		cur->setNextStarts(next->starts());
+		next->setPrevEnds(cur->ends());
 	}
 
 	iterator it = ContainerBasePrivate::insert(std::move(stage), before);
 }
 
-inline const SubTaskPrivate* SerialContainerPrivate::prev(const_iterator it) const
+inline ContainerBasePrivate::const_iterator SerialContainerPrivate::prev(const_iterator it) const
 {
-#ifndef NDEBUG
-	if (it != children().end()) {
-		SubTaskPrivate* child = (*it)->pimpl();
-		assert(parent(child) == this);
-		assert(this->it(child) == it);
-	}
-#endif
-	if (it == children().begin()) return this;
-	return (*--it)->pimpl();
+	assert(it != children().cbegin());
+	return --it;
 }
 
-inline const SubTaskPrivate* SerialContainerPrivate::next(const_iterator it) const
+inline ContainerBasePrivate::const_iterator SerialContainerPrivate::next(const_iterator it) const
 {
-#ifndef NDEBUG
-	assert(it != children().end());
-	SubTaskPrivate* child = (*it)->pimpl();
-	assert(parent(child) == this);
-	assert(this->it(child) == it);
-#endif
-	if (it == --children().end()) return this;
-	return (*++it)->pimpl();
+	assert(it != children().cend());
+	return ++it;
 }
-
-const SubTaskPrivate *SerialContainerPrivate::prev(const SubTaskPrivate *child) const
-{
-	return prev(it(child));
-}
-
-const SubTaskPrivate *SerialContainerPrivate::next(const SubTaskPrivate *child) const
-{
-	return next(it(child));
-}
-
 
 SerialContainer::SerialContainer(SerialContainerPrivate *impl)
    : ContainerBase(impl)
