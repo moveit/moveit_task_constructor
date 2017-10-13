@@ -4,6 +4,12 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 
+namespace moveit { namespace task_constructor {
+PIMPL_FUNCTIONS(Generator)
+PIMPL_FUNCTIONS(PropagatingForward)
+PIMPL_FUNCTIONS(SerialContainer)
+}}
+
 namespace testing { namespace internal {
 enum GTestColor {
 	COLOR_DEFAULT,
@@ -51,7 +57,7 @@ protected:
 
 		// print order
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it)
-			PRINTF(" %p", (*it)->pimpl_func());
+			PRINTF(" %p", (*it)->pimpl());
 		PRINTF(" *** parent: %p ***\n", container);
 
 		// validate order
@@ -60,7 +66,7 @@ protected:
 		size_t pos = 0;
 		auto exp_it = expected.begin();
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it, ++exp_it, ++pos) {
-			SubTaskPrivate *child = (*it)->pimpl_func();
+			SubTaskPrivate *child = (*it)->pimpl();
 			EXPECT_EQ(child, *exp_it) << "wrong order";
 			EXPECT_EQ(child->parent_, container) << "wrong parent";
 			EXPECT_EQ(it, container->position(pos)) << "bad forward position resolution";
@@ -78,7 +84,7 @@ protected:
 
 TEST_F(BaseTest, interfaceFlags) {
 	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
-	EXPECT_EQ(g->pimpl_func()->interfaceFlags(),
+	EXPECT_EQ(g->pimpl()->interfaceFlags(),
 	          SubTaskPrivate::InterfaceFlags({SubTaskPrivate::WRITES_NEXT_START,
 	                                          SubTaskPrivate::WRITES_PREV_END}));
 }
@@ -89,7 +95,7 @@ TEST_F(BaseTest, interfaceFlags) {
 
 TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
-	SerialContainerPrivate *cp = static_cast<SerialContainerPrivate*>(c.pimpl_func());
+	SerialContainerPrivate *cp = static_cast<SerialContainerPrivate*>(c.pimpl());
 
 	EXPECT_TRUE(bool(cp->starts_));
 	EXPECT_TRUE(bool(cp->ends_));
@@ -99,7 +105,7 @@ TEST_F(BaseTest, serialContainer) {
 
 	/*****  inserting first stage  *****/
 	auto g = std::make_unique<TestGenerator>();
-	GeneratorPrivate *gp = static_cast<GeneratorPrivate*>(g->pimpl_func());
+	GeneratorPrivate *gp = static_cast<GeneratorPrivate*>(g->pimpl());
 	ASSERT_TRUE(c.insert(std::move(g)));
 	EXPECT_FALSE(g); // ownership transferred to container
 	VALIDATE(gp);
@@ -110,14 +116,14 @@ TEST_F(BaseTest, serialContainer) {
 
 	/*****  inserting second stage  *****/
 	auto f = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp = static_cast<PropagatingForwardPrivate*>(f->pimpl_func());
+	PropagatingForwardPrivate *fp = static_cast<PropagatingForwardPrivate*>(f->pimpl());
 	ASSERT_TRUE(c.insert(std::move(f)));
 	EXPECT_FALSE(f); // ownership transferred to container
 	VALIDATE(gp, fp);
 
 	/*****  inserting third stage  *****/
 	auto f2 = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp2 = static_cast<PropagatingForwardPrivate*>(f2->pimpl_func());
+	PropagatingForwardPrivate *fp2 = static_cast<PropagatingForwardPrivate*>(f2->pimpl());
 	EXPECT_FALSE(c.insert(std::move(f2), 0)); // should fail at first position
 
 	// insert @2nd position

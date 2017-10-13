@@ -5,6 +5,11 @@
 #include <moveit_task_constructor/subtask.h>
 #include <moveit_task_constructor/storage.h>
 
+// define pimpl() functions accessing correctly casted pimpl_ pointer
+#define PIMPL_FUNCTIONS(Class) \
+	const Class##Private* Class::pimpl() const { return static_cast<const Class##Private*>(pimpl_); } \
+	Class##Private* Class::pimpl() { return static_cast<Class##Private*>(pimpl_); } \
+
 namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate;
@@ -139,8 +144,6 @@ private:
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };
 
+PIMPL_FUNCTIONS(SubTask)
+
 } }
-
-
-// get correctly casted private impl pointer
-#define IMPL(Class) Class##Private * const impl = static_cast<Class##Private*>(pimpl_func());

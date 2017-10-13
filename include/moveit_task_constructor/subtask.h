@@ -9,7 +9,9 @@
 #include <list>
 
 #define PRIVATE_CLASS(Class) \
-	friend class Class##Private;
+	friend class Class##Private; \
+	inline const Class##Private* pimpl() const; \
+	inline Class##Private* pimpl();
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -35,12 +37,9 @@ typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePa
 class SubTaskPrivate;
 class SubTask {
 	friend std::ostream& operator<<(std::ostream &os, const SubTask& stage);
-	friend class SubTaskPrivate;
 
 public:
-	inline const SubTaskPrivate* pimpl_func() const { return pimpl_; }
-	inline SubTaskPrivate* pimpl_func() { return pimpl_; }
-
+	PRIVATE_CLASS(SubTask)
 	typedef std::unique_ptr<SubTask> pointer;
 
 	~SubTask();

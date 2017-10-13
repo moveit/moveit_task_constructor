@@ -66,6 +66,7 @@ Task::Task(const std::string &name)
    : SerialContainer(new TaskPrivate(this, name))
 {
 }
+PIMPL_FUNCTIONS(Task)
 
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
@@ -96,7 +97,7 @@ void Task::add(pointer &&stage) {
 }
 
 bool Task::plan(){
-	IMPL(Task);
+	auto impl = pimpl();
 	NewSolutionPublisher debug(*this);
 
 	impl->initScene();
@@ -112,7 +113,7 @@ bool Task::plan(){
 }
 
 const robot_state::RobotState& Task::getCurrentRobotState() const {
-	IMPL(const Task)
+	auto impl = pimpl();
 	return impl->scene_->getCurrentState();
 }
 
@@ -153,12 +154,12 @@ bool traverseFullTrajectories(
 }
 
 bool Task::processSolutions(const Task::SolutionCallback& processor) {
-	IMPL(Task);
+	auto impl = pimpl();
 	const TaskPrivate::container_type& children = impl->children();
 	const size_t nr_of_trajectories = children.size();
 	std::vector<SubTrajectory*> trace;
 	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& st : children.front()->pimpl_func()->trajectories())
+	for(SubTrajectory& st : children.front()->pimpl()->trajectories())
 		if( !traverseFullTrajectories(st, nr_of_trajectories, processor, trace) )
 			return false;
 	return true;

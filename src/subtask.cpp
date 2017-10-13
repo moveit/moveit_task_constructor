@@ -25,7 +25,7 @@ const std::string& SubTask::getName() const {
 }
 
 std::ostream& operator<<(std::ostream &os, const SubTask& stage) {
-	os << *stage.pimpl_func();
+	os << *stage.pimpl();
 	return os;
 }
 
@@ -192,9 +192,11 @@ PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
 	initInterface();
 }
 
+PIMPL_FUNCTIONS(PropagatingEitherWay)
+
 void PropagatingEitherWay::initInterface()
 {
-	IMPL(PropagatingEitherWay)
+	auto impl = pimpl();
 	if (impl->dir & PropagatingEitherWay::FORWARD) {
 		if (!impl->starts_) { // keep existing interface if possible
 			impl->starts_.reset(new Interface([impl](const Interface::iterator& it) { impl->newStartState(it); }));
@@ -218,7 +220,7 @@ void PropagatingEitherWay::initInterface()
 
 void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir)
 {
-	IMPL(PropagatingEitherWay);
+	auto impl = pimpl();
 	if (impl->dir == dir) return;
 	if (impl->isConnected())
 		throw std::runtime_error("Cannot change direction after being connected");
@@ -227,10 +229,10 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
-                                    const planning_scene::PlanningSceneConstPtr& to,
-                                    const robot_trajectory::RobotTrajectoryPtr& t,
-                                    double cost){
-	IMPL(PropagatingEitherWay)
+                                       const planning_scene::PlanningSceneConstPtr& to,
+                                       const robot_trajectory::RobotTrajectoryPtr& t,
+                                       double cost){
+	auto impl = pimpl();
 	std::cout << "sending state forward" << std::endl;
 	SubTrajectory &trajectory = impl->addTrajectory(t, cost);
 	trajectory.setStartState(from);
@@ -238,10 +240,10 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
 }
 
 void PropagatingEitherWay::sendBackward(const planning_scene::PlanningSceneConstPtr& from,
-                                     const InterfaceState& to,
-                                     const robot_trajectory::RobotTrajectoryPtr& t,
-                                     double cost){
-	IMPL(PropagatingEitherWay)
+                                        const InterfaceState& to,
+                                        const robot_trajectory::RobotTrajectoryPtr& t,
+                                        double cost){
+	auto impl = pimpl();
 	std::cout << "sending state backward" << std::endl;
 	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
 	trajectory.setEndState(to);
@@ -261,6 +263,7 @@ PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward *me, con
 PropagatingForward::PropagatingForward(const std::string& name)
    : PropagatingEitherWay(new PropagatingForwardPrivate(this, name))
 {}
+PIMPL_FUNCTIONS(PropagatingForward)
 
 bool PropagatingForward::computeBackward(const InterfaceState &to)
 {
@@ -280,6 +283,7 @@ PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward *me, 
 PropagatingBackward::PropagatingBackward(const std::string &name)
    : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name))
 {}
+PIMPL_FUNCTIONS(PropagatingBackward)
 
 bool PropagatingBackward::computeForward(const InterfaceState &from)
 {
@@ -307,11 +311,12 @@ bool GeneratorPrivate::compute() {
 Generator::Generator(const std::string &name)
    : SubTask(new GeneratorPrivate(this, name))
 {}
+PIMPL_FUNCTIONS(Generator)
 
 void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost)
 {
 	std::cout << "spawning state forwards and backwards" << std::endl;
-	IMPL(Generator)
+	auto impl = pimpl();
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr dummy;
 	SubTrajectory& trajectory = impl->addTrajectory(dummy, cost);
@@ -364,10 +369,11 @@ Connecting::Connecting(const std::string &name)
    : SubTask(new ConnectingPrivate(this, name))
 {
 }
+PIMPL_FUNCTIONS(Connecting)
 
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
                          const robot_trajectory::RobotTrajectoryPtr& t, double cost) {
-	IMPL(Connecting)
+	auto impl = pimpl();
 	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
