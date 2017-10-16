@@ -1,5 +1,6 @@
 add_library(${PROJECT_NAME}_stages
 	current_state.cpp
+	fix_collision_objects.cpp
 	modify_planning_scene.cpp
 	move.cpp
 	gripper.cpp
@@ -7,6 +8,7 @@ add_library(${PROJECT_NAME}_stages
 	cartesian_position_motion.cpp
 
 	${PROJECT_INCLUDE}/stages/current_state.h
+	${PROJECT_INCLUDE}/stages/fix_collision_objects.h
 	${PROJECT_INCLUDE}/stages/modify_planning_scene.h
 	${PROJECT_INCLUDE}/stages/move.h
 	${PROJECT_INCLUDE}/stages/gripper.h

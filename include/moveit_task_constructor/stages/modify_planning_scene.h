@@ -49,7 +49,6 @@ protected:
 	void attachObjects(planning_scene::PlanningScene &scene, const std::pair<std::string, std::pair<Names, bool> >& pair, bool invert);
 	void setCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
 	planning_scene::PlanningScenePtr apply(const planning_scene::PlanningSceneConstPtr &scene, bool invert) const;
-
 };
 
 
