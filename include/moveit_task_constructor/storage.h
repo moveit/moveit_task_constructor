@@ -22,7 +22,7 @@ namespace moveit { namespace task_constructor {
 MOVEIT_CLASS_FORWARD(SubTrajectory)
 MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
 
 
 /** InterfaceState describes a potential start or goal state for a planning stage.

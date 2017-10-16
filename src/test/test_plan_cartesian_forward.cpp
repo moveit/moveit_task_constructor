@@ -2,8 +2,8 @@
 
 #include <moveit_task_constructor/task.h>
 
-#include <moveit_task_constructor/subtasks/current_state.h>
-#include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
+#include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/stages/cartesian_position_motion.h>
 
 using namespace moveit::task_constructor;
 
@@ -12,10 +12,10 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add( std::make_unique<subtasks::CurrentState>("current state") );
+	t.add( std::make_unique<stages::CurrentState>("current state") );
 
 	{
-		auto move= std::make_unique<subtasks::CartesianPositionMotion>("lift object");
+		auto move= std::make_unique<stages::CartesianPositionMotion>("lift object");
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(0.05, 0.2);
@@ -29,7 +29,7 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move= std::make_unique<subtasks::CartesianPositionMotion>("lift object");
+		auto move= std::make_unique<stages::CartesianPositionMotion>("lift object");
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinDistance(0.01);

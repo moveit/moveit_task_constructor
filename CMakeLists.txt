@@ -24,21 +24,21 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_library(${PROJECT_NAME}
 	src/storage.cpp
-	src/subtask.cpp
+	src/stage.cpp
 	src/container.cpp
 	src/task.cpp
 	src/debug.cpp
 
-	src/subtask_p.h
+	src/stage_p.h
 	src/container_p.h
 	include/${PROJECT_NAME}/utils.h
 	include/${PROJECT_NAME}/storage.h
-	include/${PROJECT_NAME}/subtask.h
+	include/${PROJECT_NAME}/stage.h
 	include/${PROJECT_NAME}/container.h
 	include/${PROJECT_NAME}/task.h
 	include/${PROJECT_NAME}/debug.h
 )
 
-add_subdirectory(src/subtasks)
+add_subdirectory(src/stages)
 add_subdirectory(src/demo)
 add_subdirectory(src/test)

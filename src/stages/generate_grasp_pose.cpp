@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
+#include <moveit_task_constructor/stages/generate_grasp_pose.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/DisplayRobotState.h>
@@ -15,7 +15,7 @@
 #include <chrono>
 #include <functional>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 GenerateGraspPose::GenerateGraspPose(std::string name)
 : Generator(name),

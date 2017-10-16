@@ -1,4 +1,4 @@
-#include "subtask_p.h"
+#include "stage_p.h"
 #include "container_p.h"
 #include <iostream>
 #include <iomanip>
@@ -6,42 +6,42 @@
 
 namespace moveit { namespace task_constructor {
 
-SubTask::SubTask(SubTaskPrivate *impl)
+Stage::Stage(StagePrivate *impl)
    : pimpl_(impl)
 {
 }
 
-SubTask::~SubTask()
+Stage::~Stage()
 {
 	delete pimpl_;
 }
 
-bool SubTask::init(const planning_scene::PlanningSceneConstPtr &scene)
+bool Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 }
 
-const std::string& SubTask::getName() const {
+const std::string& Stage::getName() const {
 	return pimpl_->name_;
 }
 
-std::ostream& operator<<(std::ostream &os, const SubTask& stage) {
+std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	os << *stage.pimpl();
 	return os;
 }
 
-template<SubTaskPrivate::InterfaceFlag own, SubTaskPrivate::InterfaceFlag other>
-const char* direction(const SubTaskPrivate& stage) {
-	SubTaskPrivate::InterfaceFlags f = stage.deducedFlags();
+template<StagePrivate::InterfaceFlag own, StagePrivate::InterfaceFlag other>
+const char* direction(const StagePrivate& stage) {
+	StagePrivate::InterfaceFlags f = stage.deducedFlags();
 	bool own_if = f & own;
 	bool other_if = f & other;
-	bool reverse = own & SubTaskPrivate::INPUT_IF_MASK;
+	bool reverse = own & StagePrivate::INPUT_IF_MASK;
 	if (own_if && other_if) return "<>";
 	if (!own_if && !other_if) return "--";
 	if (other_if ^ reverse) return "->";
 	return "<-";
 };
 
-std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
+std::ostream& operator<<(std::ostream &os, const StagePrivate& stage) {
 	// starts
 	for (const Interface* i : {stage.prev_ends_, stage.starts_.get()}) {
 		os << std::setw(3);
@@ -49,9 +49,9 @@ std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
 		else os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<SubTaskPrivate::READS_START, SubTaskPrivate::WRITES_PREV_END>(stage)
+	os << std::setw(5) << direction<StagePrivate::READS_START, StagePrivate::WRITES_PREV_END>(stage)
 	   << std::setw(3) << stage.trajectories_.size()
-	   << std::setw(5) << direction<SubTaskPrivate::READS_END, SubTaskPrivate::WRITES_NEXT_START>(stage);
+	   << std::setw(5) << direction<StagePrivate::READS_END, StagePrivate::WRITES_NEXT_START>(stage);
 	// ends
 	for (const Interface* i : {stage.ends_.get(), stage.next_starts_}) {
 		os << std::setw(3);
@@ -64,17 +64,17 @@ std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage) {
 }
 
 
-SubTaskPrivate::SubTaskPrivate(SubTask *me, const std::string &name)
+StagePrivate::StagePrivate(Stage *me, const std::string &name)
    : me_(me), name_(name), parent_(nullptr), prev_ends_(nullptr), next_starts_(nullptr)
 {}
 
-SubTrajectory& SubTaskPrivate::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
+SubTrajectory& StagePrivate::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
 	trajectories_.emplace_back(trajectory);
 	SubTrajectory& back = trajectories_.back();
 	return back;
 }
 
-SubTaskPrivate::InterfaceFlags SubTaskPrivate::interfaceFlags() const
+StagePrivate::InterfaceFlags StagePrivate::interfaceFlags() const
 {
 	InterfaceFlags result = announcedFlags();
 	result &= ~InterfaceFlags(OWN_IF_MASK);
@@ -83,7 +83,7 @@ SubTaskPrivate::InterfaceFlags SubTaskPrivate::interfaceFlags() const
 }
 
 // return the interface flags that can be deduced from the interface
-inline SubTaskPrivate::InterfaceFlags SubTaskPrivate::deducedFlags() const
+inline StagePrivate::InterfaceFlags StagePrivate::deducedFlags() const
 {
 	InterfaceFlags f;
 	if (starts_)  f |= READS_START;
@@ -95,11 +95,11 @@ inline SubTaskPrivate::InterfaceFlags SubTaskPrivate::deducedFlags() const
 
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
-   : SubTaskPrivate(me, name), dir(dir)
+   : StagePrivate(me, name), dir(dir)
 {
 }
 
-SubTaskPrivate::InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
+StagePrivate::InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
 	InterfaceFlags f;
 	if (dir & PropagatingEitherWay::FORWARD)
 		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
@@ -187,7 +187,7 @@ PropagatingEitherWay::PropagatingEitherWay(const std::string &name)
 }
 
 PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
-   : SubTask(impl)
+   : Stage(impl)
 {
 	initInterface();
 }
@@ -292,10 +292,10 @@ bool PropagatingBackward::computeForward(const InterfaceState &from)
 
 
 GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
-   : SubTaskPrivate(me, name)
+   : StagePrivate(me, name)
 {}
 
-SubTaskPrivate::InterfaceFlags GeneratorPrivate::announcedFlags() const {
+StagePrivate::InterfaceFlags GeneratorPrivate::announcedFlags() const {
 	return InterfaceFlags({WRITES_NEXT_START,WRITES_PREV_END});
 }
 
@@ -309,7 +309,7 @@ bool GeneratorPrivate::compute() {
 
 
 Generator::Generator(const std::string &name)
-   : SubTask(new GeneratorPrivate(this, name))
+   : Stage(new GeneratorPrivate(this, name))
 {}
 PIMPL_FUNCTIONS(Generator)
 
@@ -326,14 +326,14 @@ void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double co
 
 
 ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
-   : SubTaskPrivate(me, name)
+   : StagePrivate(me, name)
 {
 	starts_.reset(new Interface([this](const Interface::iterator& it) { this->newStartState(it); }));
 	ends_.reset(new Interface([this](const Interface::iterator& it) { this->newEndState(it); }));
 	it_pairs_ = std::make_pair(starts_->begin(), ends_->begin());
 }
 
-SubTaskPrivate::InterfaceFlags ConnectingPrivate::announcedFlags() const {
+StagePrivate::InterfaceFlags ConnectingPrivate::announcedFlags() const {
 	return InterfaceFlags({READS_START, READS_END});
 }
 
@@ -366,7 +366,7 @@ bool ConnectingPrivate::compute() {
 
 
 Connecting::Connecting(const std::string &name)
-   : SubTask(new ConnectingPrivate(this, name))
+   : Stage(new ConnectingPrivate(this, name))
 {
 }
 PIMPL_FUNCTIONS(Connecting)

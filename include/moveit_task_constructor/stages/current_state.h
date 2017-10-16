@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include <moveit_task_constructor/subtask.h>
+#include <moveit_task_constructor/stage.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 class CurrentState : public Generator {
 public:

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <moveit_task_constructor/subtask.h>
+#include <moveit_task_constructor/stage.h>
 #include <moveit_task_constructor/storage.h>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
@@ -13,14 +13,14 @@
 namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate;
-class SubTaskPrivate {
-	friend class SubTask;
-	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
+class StagePrivate {
+	friend class Stage;
+	friend std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 public:
-	typedef std::list<SubTask::pointer> container_type;
+	typedef std::list<Stage::pointer> container_type;
 
-	SubTaskPrivate(SubTask* me, const std::string& name);
+	StagePrivate(Stage* me, const std::string& name);
 
 	enum InterfaceFlag {
 		READS_START        = 0x01,
@@ -62,7 +62,7 @@ public:
 	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
 
 protected:
-	SubTask* const me_; // associated/owning SubTask instance
+	Stage* const me_; // associated/owning Stage instance
 	const std::string name_;
 
 	InterfacePtr starts_;
@@ -77,10 +77,10 @@ private:
 	Interface *prev_ends_;    // interface to be used for sendBackward()
 	Interface *next_starts_;  // interface to be used for sendForward()
 };
-std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
+std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 
-class PropagatingEitherWayPrivate : public SubTaskPrivate {
+class PropagatingEitherWayPrivate : public StagePrivate {
 	friend class PropagatingEitherWay;
 
 public:
@@ -121,7 +121,7 @@ public:
 };
 
 
-class GeneratorPrivate : public SubTaskPrivate {
+class GeneratorPrivate : public StagePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
 	InterfaceFlags announcedFlags() const override;
@@ -131,7 +131,7 @@ public:
 };
 
 
-class ConnectingPrivate : public SubTaskPrivate {
+class ConnectingPrivate : public StagePrivate {
 	friend class Connecting;
 
 public:
@@ -152,6 +152,6 @@ private:
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };
 
-PIMPL_FUNCTIONS(SubTask)
+PIMPL_FUNCTIONS(Stage)
 
 } }

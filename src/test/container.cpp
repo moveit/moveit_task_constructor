@@ -1,5 +1,5 @@
 #include <container_p.h>
-#include <subtask_p.h>
+#include <stage_p.h>
 
 #include <gtest/gtest.h>
 #include <initializer_list>
@@ -44,7 +44,7 @@ protected:
 	void SetUp() {}
 	void TearDown() {}
 
-	void validateOrder(const SerialContainerPrivate* container, const std::initializer_list<SubTaskPrivate*> &expected) {
+	void validateOrder(const SerialContainerPrivate* container, const std::initializer_list<StagePrivate*> &expected) {
 		size_t num = container->children().size();
 		ASSERT_TRUE(num == expected.size()) << "different list lengths";
 
@@ -61,7 +61,7 @@ protected:
 		size_t pos = 0;
 		auto exp_it = expected.begin();
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it, ++exp_it, ++pos) {
-			SubTaskPrivate *child = (*it)->pimpl();
+			StagePrivate *child = (*it)->pimpl();
 			EXPECT_EQ(child, *exp_it) << "wrong order";
 			EXPECT_EQ(child->parent(), container) << "wrong parent";
 			EXPECT_EQ(it, container->position(pos)) << "bad forward position resolution";
@@ -73,8 +73,8 @@ protected:
 TEST_F(BaseTest, interfaceFlags) {
 	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
 	EXPECT_EQ(g->pimpl()->interfaceFlags(),
-	          SubTaskPrivate::InterfaceFlags({SubTaskPrivate::WRITES_NEXT_START,
-	                                          SubTaskPrivate::WRITES_PREV_END}));
+	          StagePrivate::InterfaceFlags({StagePrivate::WRITES_NEXT_START,
+	                                          StagePrivate::WRITES_PREV_END}));
 }
 
 #define VALIDATE(...) \

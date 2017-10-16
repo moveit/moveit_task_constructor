@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/move.h>
+#include <moveit_task_constructor/stages/move.h>
 #include <moveit_task_constructor/storage.h>
 #include <moveit_task_constructor/task.h>
 
@@ -11,7 +11,7 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 Move::Move(std::string name)
    : Connecting(name),
@@ -50,7 +50,7 @@ bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
 	if(!planner_->generatePlan(from.state, req, res))
 		return false;
 
-	// finish subtask
+	// finish stage
 	connect(from, to, res.trajectory_);
 
 	return true;

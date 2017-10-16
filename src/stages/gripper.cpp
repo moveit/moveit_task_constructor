@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/stages/gripper.h>
 #include <moveit_task_constructor/storage.h>
 #include <moveit_task_constructor/task.h>
 
@@ -11,7 +11,7 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 Gripper::Gripper(std::string name)
    : PropagatingEitherWay(name)

@@ -1,17 +1,17 @@
 #pragma once
 
-#include "subtask.h"
+#include "stage.h"
 
 namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate;
-class ContainerBase : public SubTask
+class ContainerBase : public Stage
 {
 public:
 	PRIVATE_CLASS(ContainerBase)
-	typedef SubTask::pointer value_type;
+	typedef Stage::pointer value_type;
 
-	typedef std::function<bool(const SubTask&, int depth)> StageCallback;
+	typedef std::function<bool(const Stage&, int depth)> StageCallback;
 	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;
 
 	virtual bool canInsert(const value_type& stage, int before = -1) const = 0;

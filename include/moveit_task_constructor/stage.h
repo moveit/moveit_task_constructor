@@ -28,39 +28,39 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(SubTrajectory)
 class InterfaceState;
 typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
 
 
-class SubTaskPrivate;
-class SubTask {
-	friend std::ostream& operator<<(std::ostream &os, const SubTask& stage);
+class StagePrivate;
+class Stage {
+	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
 
 public:
-	PRIVATE_CLASS(SubTask)
-	typedef std::unique_ptr<SubTask> pointer;
+	PRIVATE_CLASS(Stage)
+	typedef std::unique_ptr<Stage> pointer;
 
-	~SubTask();
+	~Stage();
 
 	/// initialize stage once before planning
 	virtual bool init(const planning_scene::PlanningSceneConstPtr& scene);
 	const std::string& getName() const;
 
 protected:
-	/// SubTask can only be instantiated through derived classes
-	SubTask(SubTaskPrivate *impl);
+	/// Stage can only be instantiated through derived classes
+	Stage(StagePrivate *impl);
 
 protected:
-	// TODO: use unique_ptr<SubTaskPrivate> and get rid of destructor
-	SubTaskPrivate* const pimpl_; // constness guarantees one initial write
+	// TODO: use unique_ptr<StagePrivate> and get rid of destructor
+	StagePrivate* const pimpl_; // constness guarantees one initial write
 };
-std::ostream& operator<<(std::ostream &os, const SubTask& stage);
+std::ostream& operator<<(std::ostream &os, const Stage& stage);
 
 
 class PropagatingEitherWayPrivate;
-class PropagatingEitherWay : public SubTask {
+class PropagatingEitherWay : public Stage {
 public:
 	PRIVATE_CLASS(PropagatingEitherWay)
 	PropagatingEitherWay(const std::string& name);
@@ -114,7 +114,7 @@ private:
 
 
 class GeneratorPrivate;
-class Generator : public SubTask {
+class Generator : public Stage {
 public:
 	PRIVATE_CLASS(Generator)
 	Generator(const std::string& name);
@@ -126,7 +126,7 @@ public:
 
 
 class ConnectingPrivate;
-class Connecting : public SubTask {
+class Connecting : public Stage {
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);

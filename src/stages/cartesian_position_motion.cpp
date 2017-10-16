@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
+#include <moveit_task_constructor/stages/cartesian_position_motion.h>
 #include <moveit_task_constructor/storage.h>
 
 #include <ros/ros.h>
@@ -13,7 +13,7 @@
 
 #include <Eigen/Geometry>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 CartesianPositionMotion::CartesianPositionMotion(std::string name)
 : PropagatingEitherWay(name),
