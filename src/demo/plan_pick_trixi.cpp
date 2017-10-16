@@ -6,6 +6,7 @@
 #include <moveit_task_constructor/stages/move.h>
 #include <moveit_task_constructor/stages/generate_grasp_pose.h>
 #include <moveit_task_constructor/stages/cartesian_position_motion.h>
+#include <moveit_task_constructor/stages/modify_planning_scene.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -44,6 +45,20 @@ int main(int argc, char** argv){
 	Task t;
 
 	t.add( std::make_unique<stages::CurrentState>("current state") );
+
+	{
+		auto move= std::make_unique<stages::ModifyPlanningScene>("attach objects");
+		move->attachObjects("object", "la_tool_mount");
+		t.add(std::move(move));
+	}
+
+	//disable collision with a object on table (just for test function)
+	{
+		auto move= std::make_unique<stages::ModifyPlanningScene>("disable collision");
+		move->enableCollisions("object", "la_tool_mount", true);
+		move->enableCollisions("object", false);
+		t.add(std::move(move));
+	}
 
 	{
 		auto move= std::make_unique<stages::Gripper>("open gripper");
