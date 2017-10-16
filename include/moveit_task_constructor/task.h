@@ -36,9 +36,10 @@ public:
 
 	const moveit::core::RobotState &getCurrentRobotState() const;
 
-	typedef std::function<bool(const std::vector<SubTrajectory*>&)> SolutionCallback;
+#if 0
 	bool processSolutions(const SolutionCallback &processor);
 	bool processSolutions(const SolutionCallback &processor) const;
+#endif
 };
 
 } }

@@ -9,12 +9,12 @@
 namespace moveit { namespace task_constructor {
 
 bool publishSolution(ros::Publisher& pub, moveit_msgs::DisplayTrajectory& dt,
-                     const std::vector<SubTrajectory*>& solution, bool wait){
+                     const std::vector<const SubTrajectory*>& solution, bool wait){
 		dt.trajectory.clear();
 		for(const SubTrajectory* t : solution){
-			if(t->trajectory){
+			if(t->trajectory()){
 				dt.trajectory.emplace_back();
-				t->trajectory->getRobotTrajectoryMsg(dt.trajectory.back());
+				t->trajectory()->getRobotTrajectoryMsg(dt.trajectory.back());
 			}
 		}
 
@@ -34,10 +34,12 @@ void publishAllPlans(const Task &task, const std::string &topic, bool wait) {
 	robot_state::robotStateToRobotStateMsg(task.getCurrentRobotState(), dt.trajectory_start);
 	dt.model_id= task.getCurrentRobotState().getRobotModel()->getName();
 
+#if 0
 	Task::SolutionCallback processor = std::bind(
 		&publishSolution, pub, dt, std::placeholders::_1, wait);
 
 	task.processSolutions(processor);
+#endif
 }
 
 
@@ -54,6 +56,7 @@ void NewSolutionPublisher::publish()
 	robot_state::robotStateToRobotStateMsg(task_.getCurrentRobotState(), dt.trajectory_start);
 	dt.model_id = task_.getCurrentRobotState().getRobotModel()->getName();
 
+#if 0
 	Task::SolutionCallback processor = [this,&dt](const std::vector<SubTrajectory*>& solution) {
 		bool all_published = true;
 		for(const SubTrajectory* t : solution){
@@ -68,6 +71,7 @@ void NewSolutionPublisher::publish()
 		return publishSolution(pub_, dt, solution, false);
 	};
 	task_.processSolutions(processor);
+#endif
 }
 
 } }

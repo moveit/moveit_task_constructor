@@ -37,6 +37,7 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 bool GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	scene_ = scene;
+	return true;
 }
 
 void GenerateGraspPose::setGroup(std::string group){

@@ -6,73 +6,14 @@
 
 namespace moveit { namespace task_constructor {
 
-Stage::Stage(StagePrivate *impl)
-   : pimpl_(impl)
-{
-}
-
-Stage::~Stage()
-{
-	delete pimpl_;
-}
-
-bool Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
-{
-}
-
-const std::string& Stage::getName() const {
-	return pimpl_->name_;
-}
-
-std::ostream& operator<<(std::ostream &os, const Stage& stage) {
-	os << *stage.pimpl();
-	return os;
-}
-
-template<InterfaceFlag own, InterfaceFlag other>
-const char* direction(const StagePrivate& stage) {
-	InterfaceFlags f = stage.deducedFlags();
-	bool own_if = f & own;
-	bool other_if = f & other;
-	bool reverse = own & INPUT_IF_MASK;
-	if (own_if && other_if) return "<>";
-	if (!own_if && !other_if) return "--";
-	if (other_if ^ reverse) return "->";
-	return "<-";
-};
-
-std::ostream& operator<<(std::ostream &os, const StagePrivate& stage) {
-	// starts
-	for (const Interface* i : {stage.prev_ends_, stage.starts_.get()}) {
-		os << std::setw(3);
-		if (i) os << i->size();
-		else os << "-";
-	}
-	// trajectories
-	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(stage)
-	   << std::setw(3) << stage.trajectories_.size()
-	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(stage);
-	// ends
-	for (const Interface* i : {stage.ends_.get(), stage.next_starts_}) {
-		os << std::setw(3);
-		if (i) os << i->size();
-		else os << "-";
-	}
-	// name
-	os << " / " << stage.name_;
-	return os;
-}
+SubTrajectory::SubTrajectory(StagePrivate *creator, const robot_trajectory::RobotTrajectoryPtr &traj, double cost)
+   : SolutionBase(creator, cost), trajectory_(traj)
+{}
 
 
 StagePrivate::StagePrivate(Stage *me, const std::string &name)
    : me_(me), name_(name), parent_(nullptr), prev_ends_(nullptr), next_starts_(nullptr)
 {}
-
-SubTrajectory& StagePrivate::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
-	trajectories_.emplace_back(trajectory);
-	SubTrajectory& back = trajectories_.back();
-	return back;
-}
 
 InterfaceFlags StagePrivate::interfaceFlags() const
 {
@@ -94,8 +35,97 @@ inline InterfaceFlags StagePrivate::deducedFlags() const
 }
 
 
+Stage::Stage(StagePrivate *impl)
+   : pimpl_(impl)
+{
+	assert(impl);
+}
+
+Stage::~Stage()
+{
+	delete pimpl_;
+}
+
+
+inline bool implies(bool p, bool q) { return !p || q; }
+bool Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+#if 0
+	auto impl = pimpl();
+	InterfaceFlags f = impl->announcedFlags();
+	if (!implies(f & WRITES_NEXT_START, impl->nextStarts()))
+		throw std::runtime_error("missing next unit for sendForward()");
+
+	if (!implies(f & WRITES_PREV_END, impl->prevEnds()))
+		throw std::runtime_error("missing previous unit for sendBackward()");
+#endif
+	return true;
+}
+
+const std::string& Stage::name() const {
+	return pimpl_->name_;
+}
+
+template<InterfaceFlag own, InterfaceFlag other>
+const char* direction(const StagePrivate& stage) {
+	InterfaceFlags f = stage.deducedFlags();
+	bool own_if = f & own;
+	bool other_if = f & other;
+	bool reverse = own & INPUT_IF_MASK;
+	if (own_if && other_if) return "<>";
+	if (!own_if && !other_if) return "--";
+	if (other_if ^ reverse) return "->";
+	return "<-";
+}
+
+std::ostream& operator<<(std::ostream &os, const Stage& stage) {
+	auto impl = stage.pimpl();
+	// starts
+	for (const Interface* i : {impl->prevEnds(), impl->starts()}) {
+		os << std::setw(3);
+		if (i) os << i->size();
+		else os << "-";
+	}
+	// trajectories
+	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(*impl)
+	   << std::setw(3) << stage.numSolutions()
+	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(*impl);
+	// ends
+	for (const Interface* i : {impl->ends(), impl->nextStarts()}) {
+		os << std::setw(3);
+		if (i) os << i->size();
+		else os << "-";
+	}
+	// name
+	os << " / " << stage.name();
+	return os;
+}
+
+
+ComputeBase::ComputeBase(ComputeBasePrivate *impl)
+   : Stage(impl)
+{
+}
+PIMPL_FUNCTIONS(ComputeBase)
+
+SubTrajectory& ComputeBase::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
+	auto &trajs = pimpl()->trajectories_;
+	trajs.emplace_back(SubTrajectory(pimpl(), trajectory, cost));
+	return trajs.back();
+}
+
+size_t ComputeBase::numSolutions() const {
+	return pimpl()->trajectories_.size();
+}
+
+const std::list<SubTrajectory> &ComputeBase::trajectories() const
+{
+	return pimpl()->trajectories_;
+}
+
+
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
-   : StagePrivate(me, name), dir(dir)
+   : ComputeBasePrivate(me, name), dir(dir)
 {
 }
 
@@ -187,7 +217,7 @@ PropagatingEitherWay::PropagatingEitherWay(const std::string &name)
 }
 
 PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
-   : Stage(impl)
+   : ComputeBase(impl)
 {
 	initInterface();
 }
@@ -228,15 +258,30 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	initInterface();
 }
 
+bool PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	auto impl = pimpl();
+	if (!impl->nextStarts()) {
+		impl->starts_.reset();
+		impl->next_start_state_ = Interface::iterator();
+	}
+	if (!impl->prevEnds()) {
+		impl->ends_.reset();
+		impl->next_end_state_ = Interface::iterator();
+	}
+	return Stage::init(scene);
+}
+
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        InterfaceState&& to,
                                        const robot_trajectory::RobotTrajectoryPtr& t,
                                        double cost){
 	auto impl = pimpl();
 	std::cout << "sending state forward" << std::endl;
-	SubTrajectory &trajectory = impl->addTrajectory(t, cost);
+	SubTrajectory &trajectory = addTrajectory(t, cost);
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
+	impl->parent()->onNewSolution(trajectory);
 }
 
 void PropagatingEitherWay::sendBackward(InterfaceState&& from,
@@ -245,9 +290,10 @@ void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         double cost){
 	auto impl = pimpl();
 	std::cout << "sending state backward" << std::endl;
-	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	SubTrajectory& trajectory = addTrajectory(t, cost);
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
+	impl->parent()->onNewSolution(trajectory);
 }
 
 
@@ -292,7 +338,7 @@ bool PropagatingBackward::computeForward(const InterfaceState &from)
 
 
 GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
-   : StagePrivate(me, name)
+   : ComputeBasePrivate(me, name)
 {}
 
 InterfaceFlags GeneratorPrivate::announcedFlags() const {
@@ -309,7 +355,7 @@ bool GeneratorPrivate::compute() {
 
 
 Generator::Generator(const std::string &name)
-   : Stage(new GeneratorPrivate(this, name))
+   : ComputeBase(new GeneratorPrivate(this, name))
 {}
 PIMPL_FUNCTIONS(Generator)
 
@@ -319,14 +365,15 @@ void Generator::spawn(InterfaceState&& state, double cost)
 	auto impl = pimpl();
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr dummy;
-	SubTrajectory& trajectory = impl->addTrajectory(dummy, cost);
+	SubTrajectory& trajectory = addTrajectory(dummy, cost);
 	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
 	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
+	impl->parent()->onNewSolution(trajectory);
 }
 
 
 ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
-   : StagePrivate(me, name)
+   : ComputeBasePrivate(me, name)
 {
 	starts_.reset(new Interface([this](const Interface::iterator& it) { this->newStartState(it); }));
 	ends_.reset(new Interface([this](const Interface::iterator& it) { this->newEndState(it); }));
@@ -366,7 +413,7 @@ bool ConnectingPrivate::compute() {
 
 
 Connecting::Connecting(const std::string &name)
-   : Stage(new ConnectingPrivate(this, name))
+   : ComputeBase(new ConnectingPrivate(this, name))
 {
 }
 PIMPL_FUNCTIONS(Connecting)
@@ -374,9 +421,10 @@ PIMPL_FUNCTIONS(Connecting)
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
                          const robot_trajectory::RobotTrajectoryPtr& t, double cost) {
 	auto impl = pimpl();
-	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
+	SubTrajectory& trajectory = addTrajectory(t, cost);
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
+	impl->parent()->onNewSolution(trajectory);
 }
 
 } }

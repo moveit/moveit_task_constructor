@@ -11,7 +11,7 @@ Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
 {}
 
-Interface::iterator Interface::add(InterfaceState &&state, SubTrajectory* incoming, SubTrajectory* outgoing) {
+Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing) {
 	if (!state.incomingTrajectories().empty() || !state.outgoingTrajectories().empty())
 		throw std::runtime_error("expecting empty incoming/outgoing trajectories");
 	if (!state.scene())
@@ -26,6 +26,11 @@ Interface::iterator Interface::add(InterfaceState &&state, SubTrajectory* incomi
 	// ... before calling notify callback
 	if (notify_) notify_(back);
 	return back;
+}
+
+
+void SolutionBase::setCost(double cost) {
+	cost_ = cost;
 }
 
 } }

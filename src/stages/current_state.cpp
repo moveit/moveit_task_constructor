@@ -13,6 +13,7 @@ bool CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	scene_ = scene;
 	ran_= false;
+	return true;
 }
 
 bool CurrentState::canCompute() const{

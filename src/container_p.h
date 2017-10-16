@@ -3,6 +3,9 @@
 #include <moveit_task_constructor/container.h>
 #include "stage_p.h"
 
+#include <map>
+#include <climits>
+
 namespace moveit { namespace task_constructor {
 
 class ContainerBasePrivate : public StagePrivate
@@ -10,18 +13,27 @@ class ContainerBasePrivate : public StagePrivate
 	friend class ContainerBase;
 
 public:
-	typedef ContainerBase::value_type value_type;
 	typedef StagePrivate::container_type container_type;
 	typedef container_type::iterator iterator;
 	typedef container_type::const_iterator const_iterator;
 
 	inline const container_type& children() const { return children_; }
-	const_iterator position(int before = -1) const;
 
-	bool canInsert(const Stage& stage) const;
-	virtual iterator insert(value_type &&stage, const_iterator pos);
+	// Retrieve iterator into children_ pointing to indexed element.
+	// Negative index counts from end().
+	// Contrary to std::advance(), iterator limits are considered.
+	const_iterator position(int index) const;
 
-	bool traverseStages(const ContainerBase::StageCallback &processor, int depth) const;
+	// traversing all stages upto max_depth
+	bool traverseStages(const ContainerBase::StageCallback &processor,
+	                    unsigned int cur_depth, unsigned int max_depth) const;
+
+	// forward these methods to the public interface for containers
+	bool canCompute() const override;
+	bool compute() override;
+
+	// callback when a new trajectory or combined solution becomes available
+	virtual void onNewSolution(SolutionBase& t) = 0;
 
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name)
@@ -33,21 +45,51 @@ private:
 };
 
 
+class SerialSolution : public SolutionBase {
+public:
+	explicit SerialSolution(StagePrivate* creator, std::vector<const SolutionBase*>&& subsolutions, double cost)
+	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
+	{}
+
+private:
+	// series of sub solutions
+	std::vector<const SolutionBase*> subsolutions_;
+};
+
+
 class SerialContainerPrivate : public ContainerBasePrivate {
+	friend class SerialContainer;
+
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 	InterfaceFlags announcedFlags() const override;
-	inline bool canInsert(const Stage& stage, const_iterator before) const;
-	virtual iterator insert(value_type &&stage, const_iterator before) override;
-
-	bool canCompute() const override;
-	bool compute() override;
+	void onNewSolution(SolutionBase &t) override;
+	void storeNewSolution(SerialSolution &&s);
 
 private:
 	inline const_iterator prev(const_iterator it) const;
 	inline const_iterator next(const_iterator it) const;
-};
 
+	/* A container needs to decouple its interface from those of its children:
+	 * A solution of a container needs to connect start to end via a full path.
+	 * Start/end states of a single stage may only need to have a single outgoing/incoming trajectory.
+	 * Note, that there might be many solutions connecting the same start-end state pair. */
+
+	// map first child's start states to the corresponding states in this' starts_
+	std::map<Interface::iterator, Interface::iterator> internal_to_my_starts_;
+	// map last child's end states to the corresponding states in this' ends_
+	std::map<Interface::iterator, Interface::iterator> internal_to_my_ends_;
+
+	/* First/last childrens sendBackward()/sendForward() states are not directly propagated
+	 * to previous/next stage of this container, because we cannot provide a solution yet.
+	 * Only if we have full solution from start to end available, we can propagate the states */
+	// interface to receive first child's sendBackward() states
+	InterfacePtr pending_backward_;
+	// interface to receive last child's sendForward() states
+	InterfacePtr pending_forward_;
+
+	std::list<SerialSolution> solutions_;
+};
 
 } }

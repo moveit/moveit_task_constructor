@@ -20,6 +20,7 @@ Gripper::Gripper(std::string name)
 bool Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	planner_ = Task::createPlanner(scene->getRobotModel());
+	return true;
 }
 
 void Gripper::setEndEffector(std::string eef){

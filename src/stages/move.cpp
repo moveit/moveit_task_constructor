@@ -21,6 +21,7 @@ Move::Move(std::string name)
 bool Move::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	planner_ = Task::createPlanner(scene->getRobotModel());
+	return true;
 }
 
 void Move::setGroup(std::string group){

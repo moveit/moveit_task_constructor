@@ -93,7 +93,7 @@ void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 	if (!insert(std::move(stage)))
-		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->getName());
+		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
 bool Task::plan(){
@@ -101,7 +101,11 @@ bool Task::plan(){
 	NewSolutionPublisher debug(*this);
 
 	impl->initScene();
-	this->init(impl->scene_);
+	if (!this->init(impl->scene_)) {
+		ROS_ERROR("init failed");
+		return false;
+	}
+
 	while(ros::ok() && canCompute()) {
 		if (compute()) {
 			debug.publish();
@@ -109,7 +113,7 @@ bool Task::plan(){
 		} else
 			break;
 	}
-	return false;
+	return numSolutions() > 0;
 }
 
 const robot_state::RobotState& Task::getCurrentRobotState() const {
@@ -122,38 +126,10 @@ void Task::printState(){
 		std::cout << std::string(2*depth, ' ') << stage << std::endl;
 		return true;
 	};
-	traverseStages(processor);
+	traverseRecursively(processor);
 }
 
-namespace {
-bool traverseFullTrajectories(
-	SubTrajectory& start,
-	int nr_of_trajectories,
-	const Task::SolutionCallback& cb,
-	std::vector<SubTrajectory*>& trace)
-{
-	bool ret= true;
-
-	trace.push_back(&start);
-
-	if(nr_of_trajectories == 1){
-		ret= cb(trace);
-	}
-	else if( start.end ){
-		for( SubTrajectory* successor : start.end->outgoingTrajectories() ){
-			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
-				ret= false;
-				break;
-			}
-		}
-	}
-
-	trace.pop_back();
-
-	return ret;
-}
-}
-
+#if 0
 bool Task::processSolutions(const Task::SolutionCallback& processor) {
 	auto impl = pimpl();
 	const TaskPrivate::container_type& children = impl->children();
@@ -169,5 +145,6 @@ bool Task::processSolutions(const Task::SolutionCallback& processor) {
 bool Task::processSolutions(const Task::SolutionCallback& processor) const {
 	return const_cast<Task*>(this)->processSolutions(processor);
 }
+#endif
 
 } }

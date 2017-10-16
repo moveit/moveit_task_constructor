@@ -1,49 +1,54 @@
 #include "container_p.h"
 
+#include <ros/console.h>
+
 #include <memory>
 #include <iostream>
+#include <algorithm>
+#include <boost/range/adaptor/reversed.hpp>
 
 namespace moveit { namespace task_constructor {
 
-ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int before) const {
+ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) const {
 	const_iterator position = children_.begin();
-	if (before > 0) {
-		for (auto end = children_.end(); before > 0 && position != end; --before)
+	if (index > 0) {
+		for (auto end = children_.end(); index > 0 && position != end; --index)
 			++position;
-	} else if (++before <= 0) {
+	} else if (++index <= 0) {
 		container_type::const_reverse_iterator from_end = children_.rbegin();
-		for (auto end = children_.rend(); before < 0 && from_end != end; ++before)
+		for (auto end = children_.rend(); index < 0 && from_end != end; ++index)
 			++from_end;
 		position = from_end.base();
 	}
 	return position;
 }
 
-inline bool ContainerBasePrivate::canInsert(const Stage &stage) const {
-	const StagePrivate* impl = stage.pimpl();
-	return impl->parent() == nullptr  // re-parenting is not supported
-	      && impl->trajectories().empty(); // existing trajectories would become invalid
-}
+bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &processor,
+                                          unsigned int cur_depth, unsigned int max_depth) const {
+	if (cur_depth >= max_depth)
+		return true;
 
-bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &processor, int depth) const {
 	for (auto &stage : children_) {
-		if (!processor(*stage, depth))
+		if (!processor(*stage, cur_depth))
 			continue;
 		ContainerBasePrivate *container = dynamic_cast<ContainerBasePrivate*>(stage->pimpl());
 		if (container)
-			container->traverseStages(processor, depth+1);
+			container->traverseStages(processor, cur_depth+1, max_depth);
 	}
 	return true;
 }
 
-ContainerBasePrivate::iterator ContainerBasePrivate::insert(ContainerBasePrivate::value_type &&stage,
-                                                            ContainerBasePrivate::const_iterator pos) {
-	StagePrivate *impl = stage->pimpl();
-	ContainerBasePrivate::iterator it = children_.insert(pos, std::move(stage));
-	impl->setHierarchy(this, it);
-	return it;
+bool ContainerBasePrivate::canCompute() const
+{
+	// call the method of the public interface
+	return static_cast<ContainerBase*>(me_)->canCompute();
 }
 
+bool ContainerBasePrivate::compute()
+{
+	// call the method of the public interface
+	return static_cast<ContainerBase*>(me_)->compute();
+}
 
 ContainerBase::ContainerBase(ContainerBasePrivate *impl)
    : Stage(impl)
@@ -51,30 +56,39 @@ ContainerBase::ContainerBase(ContainerBasePrivate *impl)
 }
 PIMPL_FUNCTIONS(ContainerBase)
 
+size_t ContainerBase::numChildren() const
+{
+	return pimpl()->children().size();
+}
+
+bool ContainerBase::traverseChildren(const ContainerBase::StageCallback &processor) const
+{
+	return pimpl()->traverseStages(processor, 0, 1);
+}
+bool ContainerBase::traverseRecursively(const ContainerBase::StageCallback &processor) const
+{
+	if (!processor(*this, 0))
+		return false;
+	return pimpl()->traverseStages(processor, 1, UINT_MAX);
+}
+
+bool ContainerBase::insert(Stage::pointer &&stage, int before)
+{
+	StagePrivate *impl = stage->pimpl();
+	if (impl->parent() != nullptr || numSolutions() != 0) {
+		ROS_ERROR("cannot re-parent stage");
+		return false;
+	}
+
+	ContainerBasePrivate::const_iterator where = pimpl()->position(before);
+	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
+	impl->setHierarchy(pimpl(), it);
+	return true;
+}
+
 void ContainerBase::clear()
 {
 	pimpl()->children_.clear();
-}
-
-bool ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
-{
-	auto impl = pimpl();
-	for (auto& stage : impl->children_)
-		stage->init(scene);
-}
-
-bool ContainerBase::traverseStages(const ContainerBase::StageCallback &processor) const
-{
-	pimpl()->traverseStages(processor, 0);
-}
-
-bool ContainerBase::canCompute() const
-{
-	pimpl()->canCompute();
-}
-
-bool ContainerBase::compute() {
-	pimpl()->compute();
 }
 
 
@@ -93,13 +107,8 @@ InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	return f;
 }
 
-inline bool SerialContainerPrivate::canInsert(const Stage &stage, ContainerBasePrivate::const_iterator before) const {
-	if (!ContainerBasePrivate::canInsert(stage))
-		return false;
-	return true;
-}
-
-ContainerBasePrivate::iterator SerialContainerPrivate::insert(value_type &&stage, const_iterator before)
+#if 0
+bool SerialContainerPrivate::init()
 {
 	assert(canInsert(*stage, before));
 	bool at_begin = (before == children().begin());
@@ -128,9 +137,8 @@ ContainerBasePrivate::iterator SerialContainerPrivate::insert(value_type &&stage
 		cur->setNextStarts(next->starts());
 		next->setPrevEnds(cur->ends());
 	}
-
-	iterator it = ContainerBasePrivate::insert(std::move(stage), before);
 }
+#endif
 
 inline ContainerBasePrivate::const_iterator SerialContainerPrivate::prev(const_iterator it) const
 {
@@ -144,6 +152,82 @@ inline ContainerBasePrivate::const_iterator SerialContainerPrivate::next(const_i
 	return ++it;
 }
 
+
+struct SolutionCollector {
+	SolutionCollector(const Stage::pointer& stage) : stopping_stage(stage->pimpl()) {}
+
+	bool operator()(const SolutionBase& current, const std::vector<const SolutionBase*>& trace, double cost) {
+		if (current.creator() != stopping_stage)
+			return true; // not yet traversed to end
+
+		auto solution = trace;
+		if (!trace.empty()) {
+			// Only add current to non-empty trace (as last element).
+			// Empty trace indicates, that current connects to the start/end itself.
+			// In this case, we add current once in onNewSolution(), but not here!
+			solution.push_back(&current);
+			cost += current.cost();
+		}
+
+		solutions.emplace_back(std::make_pair(std::move(solution), cost));
+		return false; // we are done
+	}
+
+	std::list<std::pair<std::vector<const SolutionBase*>, double>> solutions;
+	const StagePrivate* const stopping_stage;
+};
+
+void SerialContainerPrivate::onNewSolution(SolutionBase &current)
+{
+	const StagePrivate *creator = current.creator();
+	std::cerr << "new solution:" << &current << " from " << creator << " " << creator->name() << std::endl;
+
+	// s.creator() should be one of our children
+	assert(std::find_if(children().begin(), children().end(),
+	                    [creator](const Stage::pointer& stage) { return stage->pimpl() == creator; } )
+	       != children().end());
+
+	SerialContainer *me = static_cast<SerialContainer*>(me_);
+
+	// TODO: can we get rid of this and use a temporary when calling traverse()?
+	std::vector<const SolutionBase*> trace; trace.reserve(children().size());
+
+	// find all incoming trajectories connected to s
+	SolutionCollector incoming(children().front());
+	me->traverse<BACKWARD>(current, std::ref(incoming), trace);
+	if (incoming.solutions.empty())
+		return; // no connection to front()
+
+assert(trace.empty());
+	// find all outgoing trajectories connected to s
+	SolutionCollector outgoing(children().back());
+	me->traverse<FORWARD>(current, std::ref(outgoing), trace);
+	if (outgoing.solutions.empty())
+		return; // no connection to back()
+
+	// add solutions for all combinations of incoming + s + outgoing
+	std::vector<const SolutionBase*> solution;
+	solution.reserve(children().size());
+	for (auto& in : incoming.solutions) {
+		for (auto& out : outgoing.solutions) {
+			assert(solution.empty());
+			// insert incoming solutions in reverse order
+			std::copy(in.first.rbegin(), in.first.rend(), solution.end());
+			// insert current solution
+			solution.push_back(&current);
+			// insert outgoing solutions in normal order
+			std::copy(out.first.begin(), out.first.end(), solution.end());
+
+			storeNewSolution(SerialSolution(this, std::move(solution), in.second + current.cost() + out.second));
+		}
+	}
+}
+
+void SerialContainerPrivate::storeNewSolution(SerialSolution&& s)
+{
+}
+
+
 SerialContainer::SerialContainer(SerialContainerPrivate *impl)
    : ContainerBase(impl)
 {}
@@ -152,41 +236,62 @@ SerialContainer::SerialContainer(const std::string &name)
 {}
 PIMPL_FUNCTIONS(SerialContainer)
 
-bool SerialContainer::canInsert(const value_type& stage, int before) const
+bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	auto impl = pimpl();
-	return impl->canInsert(*stage, impl->position(before));
+	// recursively init all children
+	for (auto& stage : impl->children()) {
+		// derived classes should call Stage::init internally , but we cannot be sure...
+		if (!stage->init(scene) ||!stage->Stage::init(scene))
+			return false;
+	}
+	return !impl->children().empty();
 }
 
-bool SerialContainer::insert(value_type&& stage, int before)
+bool SerialContainer::canCompute() const
 {
-	auto impl = pimpl();
-
-	ContainerBasePrivate::const_iterator where = impl->position(before);
-	if (!impl->canInsert(*stage, where))
-		return false;
-
-	impl->insert(std::move(stage), where);
-	return true;
+	return !pimpl()->children().empty();
 }
 
-bool SerialContainerPrivate::canCompute() const
-{
-	return children().size() > 0;
-}
-
-bool SerialContainerPrivate::compute()
+bool SerialContainer::compute()
 {
 	bool computed = false;
-	for(const auto& stage : children()) {
+	for(const auto& stage : pimpl()->children()) {
 		if(!stage->pimpl()->canCompute())
 			continue;
-		std::cout << "Computing stage '" << stage->getName() << "':" << std::endl;
+		std::cout << "Computing stage '" << stage->name() << "':" << std::endl;
 		bool success = stage->pimpl()->compute();
 		computed = true;
 		std::cout << (success ? "succeeded" : "failed") << std::endl;
 	}
 	return computed;
+}
+
+size_t SerialContainer::numSolutions() const
+{
+	return pimpl()->solutions_.size();
+}
+
+template <TraverseDirection dir>
+bool SerialContainer::traverse(const SolutionBase &start, const SolutionCallback &cb,
+                               std::vector<const SolutionBase *> &trace, double trace_cost)
+{
+	if (!cb(start, trace, trace_cost))
+		return false; // stopping criterium met?
+
+	bool result = false; // if no trajectory traversed, return false
+	for (SolutionBase* successor : trajectories<dir>(start)) {
+		trace.push_back(successor);
+		trace_cost += successor->cost();
+
+		result = traverse<dir>(*successor, cb, trace, trace_cost);
+
+		trace_cost -= successor->cost();
+		trace.pop_back();
+
+		if (!result) break;
+	}
+	return result;
 }
 
 } }

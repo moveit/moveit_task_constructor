@@ -25,6 +25,7 @@ enum InterfaceFlag {
 };
 typedef Flags<InterfaceFlag> InterfaceFlags;
 
+
 class ContainerBasePrivate;
 class StagePrivate {
 	friend class Stage;
@@ -37,21 +38,19 @@ public:
 	InterfaceFlags interfaceFlags() const;
 	InterfaceFlags deducedFlags() const;
 	virtual InterfaceFlags announcedFlags() const = 0;
-	std::list<SubTrajectory>& trajectories() { return trajectories_; }
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
+	inline const std::string& name() const { return name_; }
 	inline ContainerBasePrivate* parent() const { return parent_; }
 	inline container_type::iterator it() const { return it_; }
 	inline Interface* starts() const { return starts_.get(); }
 	inline Interface* ends() const { return ends_.get(); }
 	inline Interface* prevEnds() const { return prev_ends_; }
 	inline Interface* nextStarts() const { return next_starts_; }
-	inline const std::list<SubTrajectory> trajectories() const { return trajectories_; }
 
 	inline bool isConnected() const { return prev_ends_ || next_starts_; }
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
 
 	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {
 		parent_ = parent;
@@ -66,7 +65,6 @@ protected:
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
-	std::list<SubTrajectory> trajectories_;
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
@@ -79,7 +77,22 @@ private:
 std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 
-class PropagatingEitherWayPrivate : public StagePrivate {
+// ComputeBasePrivate is the base class for all computing stages, i.e. non-containers.
+// It adds the trajectories_ variable.
+class ComputeBasePrivate : public StagePrivate {
+	friend class ComputeBase;
+
+public:
+	ComputeBasePrivate(Stage* me, const std::string& name)
+	   : StagePrivate(me, name)
+	{}
+
+private:
+	std::list<SubTrajectory> trajectories_;
+};
+
+
+class PropagatingEitherWayPrivate : public ComputeBasePrivate {
 	friend class PropagatingEitherWay;
 
 public:
@@ -120,7 +133,7 @@ public:
 };
 
 
-class GeneratorPrivate : public StagePrivate {
+class GeneratorPrivate : public ComputeBasePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
 	InterfaceFlags announcedFlags() const override;
@@ -130,7 +143,7 @@ public:
 };
 
 
-class ConnectingPrivate : public StagePrivate {
+class ConnectingPrivate : public ComputeBasePrivate {
 	friend class Connecting;
 
 public:
