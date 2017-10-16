@@ -229,17 +229,17 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
-                                       const planning_scene::PlanningSceneConstPtr& to,
+                                       InterfaceState&& to,
                                        const robot_trajectory::RobotTrajectoryPtr& t,
                                        double cost){
 	auto impl = pimpl();
 	std::cout << "sending state forward" << std::endl;
 	SubTrajectory &trajectory = impl->addTrajectory(t, cost);
 	trajectory.setStartState(from);
-	impl->nextStarts()->add(to, &trajectory, NULL);
+	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
 }
 
-void PropagatingEitherWay::sendBackward(const planning_scene::PlanningSceneConstPtr& from,
+void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         const InterfaceState& to,
                                         const robot_trajectory::RobotTrajectoryPtr& t,
                                         double cost){
@@ -247,7 +247,7 @@ void PropagatingEitherWay::sendBackward(const planning_scene::PlanningSceneConst
 	std::cout << "sending state backward" << std::endl;
 	SubTrajectory& trajectory = impl->addTrajectory(t, cost);
 	trajectory.setEndState(to);
-	impl->prevEnds()->add(from, NULL, &trajectory);
+	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
 }
 
 
@@ -313,15 +313,15 @@ Generator::Generator(const std::string &name)
 {}
 PIMPL_FUNCTIONS(Generator)
 
-void Generator::spawn(const planning_scene::PlanningSceneConstPtr& ps, double cost)
+void Generator::spawn(InterfaceState&& state, double cost)
 {
 	std::cout << "spawning state forwards and backwards" << std::endl;
 	auto impl = pimpl();
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr dummy;
 	SubTrajectory& trajectory = impl->addTrajectory(dummy, cost);
-	impl->prevEnds()->add(ps, NULL, &trajectory);
-	impl->nextStarts()->add(ps, &trajectory, NULL);
+	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
+	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
 }
 
 

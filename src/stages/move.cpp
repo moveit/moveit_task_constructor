@@ -37,7 +37,7 @@ void Move::setTimeout(double timeout){
 }
 
 bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
-	mgi_->setJointValueTarget(to.state->getCurrentState());
+	mgi_->setJointValueTarget(to.scene()->getCurrentState());
 	if( !planner_id_.empty() )
 		mgi_->setPlannerId(planner_id_);
 	mgi_->setPlanningTime(timeout_);
@@ -47,7 +47,7 @@ bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
 
 	ros::Duration(4.0).sleep();
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(from.state, req, res))
+	if(!planner_->generatePlan(from.scene(), req, res))
 		return false;
 
 	// finish stage

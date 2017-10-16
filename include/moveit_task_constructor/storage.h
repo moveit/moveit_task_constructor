@@ -33,20 +33,19 @@ class InterfaceState {
 public:
 	typedef std::deque<SubTrajectory*> SubTrajectoryList;
 
-	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
-		: state(ps)
-	{}
+	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
+	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const SubTrajectoryList& incomingTrajectories() const { return incoming_trajectories_; }
 	inline const SubTrajectoryList& outgoingTrajectories() const { return outgoing_trajectories_; }
 
 	inline void addIncoming(SubTrajectory* t) { incoming_trajectories_.push_back(t); }
 	inline void addOutgoing(SubTrajectory* t) { outgoing_trajectories_.push_back(t); }
 
-public:
-	planning_scene::PlanningSceneConstPtr state;
-
 private:
+	planning_scene::PlanningSceneConstPtr scene_;
+	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
+	// TODO: add visualization_msgs::MarkerArray to allow for any complex visualization of the state
 	SubTrajectoryList incoming_trajectories_;
 	SubTrajectoryList outgoing_trajectories_;
 };
@@ -62,9 +61,10 @@ public:
 	typedef std::list<InterfaceState> container_type;
 	typedef std::function<void(const container_type::iterator&)> NotifyFunction;
 	Interface(const NotifyFunction &notify);
+
 	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	// and finally run the notify callback
-	container_type::iterator add(const planning_scene::PlanningSceneConstPtr& ps, SubTrajectory* incoming, SubTrajectory* outgoing);
+	container_type::iterator add(InterfaceState &&state, SubTrajectory* incoming, SubTrajectory* outgoing);
 
 	using container_type::value_type;
 	using container_type::reference;

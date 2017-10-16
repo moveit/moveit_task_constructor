@@ -71,7 +71,7 @@ namespace {
 }
 
 bool CartesianPositionMotion::computeForward(const InterfaceState &from){
-	planning_scene::PlanningScenePtr result_scene = from.state->diff();
+	planning_scene::PlanningScenePtr result_scene = from.scene()->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
@@ -89,7 +89,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 	bool succeeded= false;
 
 	if( mode_ == CartesianPositionMotion::MODE_TOWARDS ){
-		const Eigen::Affine3d& frame= from.state->getFrameTransform(towards_.header.frame_id);
+		const Eigen::Affine3d& frame= from.scene()->getFrameTransform(towards_.header.frame_id);
 
 		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
 
@@ -147,7 +147,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 		      = std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addSuffixWayPoint(tp, 0.0);
-		sendForward(from, result_scene, traj);
+		sendForward(from, InterfaceState(result_scene), traj);
 
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;
@@ -158,7 +158,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 }
 
 bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
-	planning_scene::PlanningScenePtr result_scene = to.state->diff();
+	planning_scene::PlanningScenePtr result_scene = to.scene()->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
 	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
@@ -213,7 +213,7 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 		robot_trajectory::RobotTrajectoryPtr traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addPrefixWayPoint(tp, 0.0);
-		sendBackward(result_scene, to, traj);
+		sendBackward(InterfaceState(result_scene), to, traj);
 
 		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
 		robot_state= *result_state;

@@ -1,4 +1,5 @@
 #include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/storage.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -20,7 +21,7 @@ bool CurrentState::canCompute() const{
 
 bool CurrentState::compute(){
 	ran_= true;
-	spawn(scene_);
+	spawn(InterfaceState(scene_));
 
 	return true;
 }

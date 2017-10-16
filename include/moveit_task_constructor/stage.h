@@ -72,10 +72,10 @@ public:
 	virtual bool computeBackward(const InterfaceState& to) = 0;
 
 	void sendForward(const InterfaceState& from,
-	                 const planning_scene::PlanningSceneConstPtr& to,
+	                 InterfaceState&& to,
 	                 const robot_trajectory::RobotTrajectoryPtr& trajectory,
 	                 double cost = 0);
-	void sendBackward(const planning_scene::PlanningSceneConstPtr& from,
+	void sendBackward(InterfaceState&& from,
 	                  const InterfaceState& to,
 	                  const robot_trajectory::RobotTrajectoryPtr& trajectory,
 	                  double cost = 0);
@@ -121,7 +121,7 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
-	void spawn(const planning_scene::PlanningSceneConstPtr &ps, double cost = 0);
+	void spawn(InterfaceState &&state, double cost = 0);
 };
 
 
