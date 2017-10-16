@@ -1,5 +1,5 @@
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
+#include <moveit_task_constructor/stages/generate_grasp_pose.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -36,7 +36,7 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	auto st= std::make_unique<subtasks::GenerateGraspPose>("generate grasp candidates");
+	auto st= std::make_unique<stages::GenerateGraspPose>("generate grasp candidates");
 
 	st->setEndEffector("gripper");
 	//st->setGroup("arm");

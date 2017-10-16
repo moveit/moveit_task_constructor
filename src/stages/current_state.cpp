@@ -1,6 +1,7 @@
-#include <moveit_task_constructor/subtasks/current_state.h>
+#include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/storage.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 CurrentState::CurrentState(std::string name)
 : Generator(name)
@@ -20,7 +21,7 @@ bool CurrentState::canCompute() const{
 
 bool CurrentState::compute(){
 	ran_= true;
-	spawn(scene_);
+	spawn(InterfaceState(scene_));
 
 	return true;
 }

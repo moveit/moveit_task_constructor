@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/move.h>
+#include <moveit_task_constructor/stages/move.h>
 #include <moveit_task_constructor/storage.h>
 #include <moveit_task_constructor/task.h>
 
@@ -11,7 +11,7 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 Move::Move(std::string name)
    : Connecting(name),
@@ -37,7 +37,7 @@ void Move::setTimeout(double timeout){
 }
 
 bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
-	mgi_->setJointValueTarget(to.state->getCurrentState());
+	mgi_->setJointValueTarget(to.scene()->getCurrentState());
 	if( !planner_id_.empty() )
 		mgi_->setPlannerId(planner_id_);
 	mgi_->setPlanningTime(timeout_);
@@ -47,10 +47,10 @@ bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
 
 	ros::Duration(4.0).sleep();
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(from.state, req, res))
+	if(!planner_->generatePlan(from.scene(), req, res))
 		return false;
 
-	// finish subtask
+	// finish stage
 	connect(from, to, res.trajectory_);
 
 	return true;

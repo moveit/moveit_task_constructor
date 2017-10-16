@@ -2,35 +2,37 @@
 
 #pragma once
 
-#include <moveit_task_constructor/subtask.h>
+#include <moveit_task_constructor/stage.h>
 #include <moveit_task_constructor/storage.h>
+
+// define pimpl() functions accessing correctly casted pimpl_ pointer
+#define PIMPL_FUNCTIONS(Class) \
+	const Class##Private* Class::pimpl() const { return static_cast<const Class##Private*>(pimpl_); } \
+	Class##Private* Class::pimpl() { return static_cast<Class##Private*>(pimpl_); } \
 
 namespace moveit { namespace task_constructor {
 
+enum InterfaceFlag {
+	READS_START        = 0x01,
+	READS_END          = 0x02,
+	WRITES_NEXT_START  = 0x04,
+	WRITES_PREV_END    = 0x08,
+
+	OWN_IF_MASK        = READS_START | READS_END,
+	EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
+	INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
+	OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
+};
+typedef Flags<InterfaceFlag> InterfaceFlags;
+
 class ContainerBasePrivate;
-class SubTaskPrivate {
-	friend class SubTask;
-	friend class BaseTest; // allow access for unit tests
-	friend class ContainerBasePrivate; // allow to set parent_ and it_
-	friend std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
+class StagePrivate {
+	friend class Stage;
+	friend std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 public:
-	typedef std::list<SubTask::pointer> container_type;
-
-	SubTaskPrivate(SubTask* me, const std::string& name);
-
-	enum InterfaceFlag {
-		READS_START        = 0x01,
-		READS_END          = 0x02,
-		WRITES_NEXT_START  = 0x04,
-		WRITES_PREV_END    = 0x08,
-
-		OWN_IF_MASK        = READS_START | READS_END,
-		EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
-		INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
-		OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
-	};
-	typedef Flags<InterfaceFlag> InterfaceFlags;
+	typedef std::list<Stage::pointer> container_type;
+	StagePrivate(Stage* me, const std::string& name);
 
 	InterfaceFlags interfaceFlags() const;
 	InterfaceFlags deducedFlags() const;
@@ -40,34 +42,44 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
-public:
-	SubTask* const me_; // associated/owning SubTask instance
+	inline ContainerBasePrivate* parent() const { return parent_; }
+	inline container_type::iterator it() const { return it_; }
+	inline Interface* starts() const { return starts_.get(); }
+	inline Interface* ends() const { return ends_.get(); }
+	inline Interface* prevEnds() const { return prev_ends_; }
+	inline Interface* nextStarts() const { return next_starts_; }
+	inline const std::list<SubTrajectory> trajectories() const { return trajectories_; }
+
+	inline bool isConnected() const { return prev_ends_ || next_starts_; }
+	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+
+	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {
+		parent_ = parent;
+		it_ = it;
+	}
+	inline void setPrevEnds(Interface * prev_ends) { prev_ends_ = prev_ends; }
+	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
+
+protected:
+	Stage* const me_; // associated/owning Stage instance
 	const std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
-
-	inline ContainerBasePrivate* parent() const { return parent_; }
-	inline bool isConnected() const { return prev_ends_ || next_starts_; }
-	inline Interface* prevEnds() const { return prev_ends_; }
-	inline Interface* nextStarts() const { return next_starts_; }
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
-
-protected:
 	std::list<SubTrajectory> trajectories_;
 
 private:
-	// !! items accessed only by ContainerBasePrivate to maintain hierarchy !!
+	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
 	ContainerBasePrivate* parent_; // owning parent
 	container_type::iterator it_; // iterator into parent's children_ list referring to this
-	// caching the pointers to the ends_ / starts_ interface of previous / next stage
-	mutable Interface *prev_ends_; // interface to be used for sendBackward()
-	mutable Interface *next_starts_;  // interface to be use for sendForward()
+
+	Interface *prev_ends_;    // interface to be used for sendBackward()
+	Interface *next_starts_;  // interface to be used for sendForward()
 };
-std::ostream& operator<<(std::ostream &os, const SubTaskPrivate& stage);
+std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 
-class PropagatingEitherWayPrivate : public SubTaskPrivate {
+class PropagatingEitherWayPrivate : public StagePrivate {
 	friend class PropagatingEitherWay;
 
 public:
@@ -108,7 +120,7 @@ public:
 };
 
 
-class GeneratorPrivate : public SubTaskPrivate {
+class GeneratorPrivate : public StagePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
 	InterfaceFlags announcedFlags() const override;
@@ -118,7 +130,7 @@ public:
 };
 
 
-class ConnectingPrivate : public SubTaskPrivate {
+class ConnectingPrivate : public StagePrivate {
 	friend class Connecting;
 
 public:
@@ -139,8 +151,6 @@ private:
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };
 
+PIMPL_FUNCTIONS(Stage)
+
 } }
-
-
-// get correctly casted private impl pointer
-#define IMPL(Class) Class##Private * const impl = static_cast<Class##Private*>(pimpl_func());

@@ -1,4 +1,5 @@
-#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
+#include <moveit_task_constructor/stages/generate_grasp_pose.h>
+#include <moveit_task_constructor/storage.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/DisplayRobotState.h>
@@ -15,7 +16,7 @@
 #include <chrono>
 #include <functional>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 GenerateGraspPose::GenerateGraspPose(std::string name)
 : Generator(name),
@@ -193,7 +194,7 @@ bool GenerateGraspPose::compute(){
 
 			previous_solutions_.emplace_back();
 			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
-			spawn(grasp_scene);
+			spawn(InterfaceState(grasp_scene));
 			return true;
 		}
 	}

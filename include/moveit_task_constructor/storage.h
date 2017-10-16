@@ -22,7 +22,7 @@ namespace moveit { namespace task_constructor {
 MOVEIT_CLASS_FORWARD(SubTrajectory)
 MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
 
 
 /** InterfaceState describes a potential start or goal state for a planning stage.
@@ -30,24 +30,24 @@ MOVEIT_CLASS_FORWARD(SubTask)
  *  A start or goal state for planning is essentially defined by the state of a planning scene.
  */
 class InterfaceState {
-	friend class SubTrajectory;
-
 public:
 	typedef std::deque<SubTrajectory*> SubTrajectoryList;
 
-	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
-		: state(ps)
-	{}
+	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
+	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const SubTrajectoryList& incomingTrajectories() const { return incoming_trajectories_; }
 	inline const SubTrajectoryList& outgoingTrajectories() const { return outgoing_trajectories_; }
 
-public:
-	planning_scene::PlanningSceneConstPtr state;
+	inline void addIncoming(SubTrajectory* t) { incoming_trajectories_.push_back(t); }
+	inline void addOutgoing(SubTrajectory* t) { outgoing_trajectories_.push_back(t); }
 
 private:
-	mutable SubTrajectoryList incoming_trajectories_;
-	mutable SubTrajectoryList outgoing_trajectories_;
+	planning_scene::PlanningSceneConstPtr scene_;
+	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
+	// TODO: add visualization_msgs::MarkerArray to allow for any complex visualization of the state
+	SubTrajectoryList incoming_trajectories_;
+	SubTrajectoryList outgoing_trajectories_;
 };
 
 
@@ -61,9 +61,10 @@ public:
 	typedef std::list<InterfaceState> container_type;
 	typedef std::function<void(const container_type::iterator&)> NotifyFunction;
 	Interface(const NotifyFunction &notify);
+
 	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	// and finally run the notify callback
-	container_type::iterator add(const planning_scene::PlanningSceneConstPtr& ps, SubTrajectory* incoming, SubTrajectory* outgoing);
+	container_type::iterator add(InterfaceState &&state, SubTrajectory* incoming, SubTrajectory* outgoing);
 
 	using container_type::value_type;
 	using container_type::reference;
@@ -105,13 +106,13 @@ struct SubTrajectory {
 	inline void setStartState(const InterfaceState& state){
 		assert(begin == NULL);
 		begin= &state;
-		state.outgoing_trajectories_.push_back(this);
+		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
 		assert(end == NULL);
 		end= &state;
-		state.incoming_trajectories_.push_back(this);
+		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
 	// TODO: trajectories could have a name, e.g. a generator could name its solutions

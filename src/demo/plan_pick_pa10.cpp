@@ -1,11 +1,11 @@
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/debug.h>
 
-#include <moveit_task_constructor/subtasks/current_state.h>
-#include <moveit_task_constructor/subtasks/gripper.h>
-#include <moveit_task_constructor/subtasks/move.h>
-#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
-#include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
+#include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/stages/gripper.h>
+#include <moveit_task_constructor/stages/move.h>
+#include <moveit_task_constructor/stages/generate_grasp_pose.h>
+#include <moveit_task_constructor/stages/cartesian_position_motion.h>
 
 #include <ros/ros.h>
 
@@ -41,17 +41,17 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add(std::make_unique<subtasks::CurrentState>("current state"));
+	t.add(std::make_unique<stages::CurrentState>("current state"));
 
 	{
-		auto move= std::make_unique<subtasks::Gripper>("open gripper");
+		auto move= std::make_unique<stages::Gripper>("open gripper");
 		move->setEndEffector("la_tool_mount");
 		move->setTo("open");
 		t.add(std::move(move));
 	}
 
 	{
-		auto move= std::make_unique<subtasks::Move>("move to pre-grasp");
+		auto move= std::make_unique<stages::Move>("move to pre-grasp");
 		move->setGroup("left_arm");
 		move->setPlannerId("RRTConnectkConfigDefault");
 		move->setTimeout(8.0);
@@ -59,7 +59,7 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move= std::make_unique<subtasks::CartesianPositionMotion>("proceed to grasp pose");
+		auto move= std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
 		move->setGroup("left_arm");
 		move->setLink("lh_tool_frame");
 		move->setMinMaxDistance(.05, 0.1);
@@ -72,7 +72,7 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto gengrasp= std::make_unique<subtasks::GenerateGraspPose>("generate grasp pose");
+		auto gengrasp= std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->setEndEffector("la_tool_mount");
 		gengrasp->setLink("lh_tool_frame");
 		gengrasp->setGroup("left_arm");
@@ -85,7 +85,7 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move= std::make_unique<subtasks::Gripper>("grasp");
+		auto move= std::make_unique<stages::Gripper>("grasp");
 		move->setEndEffector("la_tool_mount");
 		move->setTo("closed");
 		move->graspObject("object");
@@ -93,7 +93,7 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move= std::make_unique<subtasks::CartesianPositionMotion>("lift object");
+		auto move= std::make_unique<stages::CartesianPositionMotion>("lift object");
 		move->setGroup("left_arm");
 		move->setLink("lh_tool_frame");
 		move->setMinMaxDistance(0.03, 0.05);

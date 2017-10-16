@@ -14,7 +14,7 @@ namespace moveit { namespace core {
 
 namespace moveit { namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
@@ -28,7 +28,7 @@ public:
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
-	void add(SubTask::pointer &&stage);
+	void add(Stage::pointer &&stage);
 	using SerialContainer::clear;
 
 	bool plan();

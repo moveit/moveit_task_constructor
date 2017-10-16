@@ -9,7 +9,9 @@
 #include <list>
 
 #define PRIVATE_CLASS(Class) \
-	friend class Class##Private;
+	friend class Class##Private; \
+	inline const Class##Private* pimpl() const; \
+	inline Class##Private* pimpl();
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -26,42 +28,39 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(SubTrajectory)
 class InterfaceState;
 typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
 
 
-class SubTaskPrivate;
-class SubTask {
-	friend std::ostream& operator<<(std::ostream &os, const SubTask& stage);
-	friend class SubTaskPrivate;
+class StagePrivate;
+class Stage {
+	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
 
 public:
-	inline const SubTaskPrivate* pimpl_func() const { return pimpl_; }
-	inline SubTaskPrivate* pimpl_func() { return pimpl_; }
+	PRIVATE_CLASS(Stage)
+	typedef std::unique_ptr<Stage> pointer;
 
-	typedef std::unique_ptr<SubTask> pointer;
-
-	~SubTask();
+	~Stage();
 
 	/// initialize stage once before planning
 	virtual bool init(const planning_scene::PlanningSceneConstPtr& scene);
 	const std::string& getName() const;
 
 protected:
-	/// SubTask can only be instantiated through derived classes
-	SubTask(SubTaskPrivate *impl);
+	/// Stage can only be instantiated through derived classes
+	Stage(StagePrivate *impl);
 
 protected:
-	// TODO: use unique_ptr<SubTaskPrivate> and get rid of destructor
-	SubTaskPrivate* const pimpl_; // constness guarantees one initial write
+	// TODO: use unique_ptr<StagePrivate> and get rid of destructor
+	StagePrivate* const pimpl_; // constness guarantees one initial write
 };
-std::ostream& operator<<(std::ostream &os, const SubTask& stage);
+std::ostream& operator<<(std::ostream &os, const Stage& stage);
 
 
 class PropagatingEitherWayPrivate;
-class PropagatingEitherWay : public SubTask {
+class PropagatingEitherWay : public Stage {
 public:
 	PRIVATE_CLASS(PropagatingEitherWay)
 	PropagatingEitherWay(const std::string& name);
@@ -73,10 +72,10 @@ public:
 	virtual bool computeBackward(const InterfaceState& to) = 0;
 
 	void sendForward(const InterfaceState& from,
-	                 const planning_scene::PlanningSceneConstPtr& to,
+	                 InterfaceState&& to,
 	                 const robot_trajectory::RobotTrajectoryPtr& trajectory,
 	                 double cost = 0);
-	void sendBackward(const planning_scene::PlanningSceneConstPtr& from,
+	void sendBackward(InterfaceState&& from,
 	                  const InterfaceState& to,
 	                  const robot_trajectory::RobotTrajectoryPtr& trajectory,
 	                  double cost = 0);
@@ -115,19 +114,19 @@ private:
 
 
 class GeneratorPrivate;
-class Generator : public SubTask {
+class Generator : public Stage {
 public:
 	PRIVATE_CLASS(Generator)
 	Generator(const std::string& name);
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
-	void spawn(const planning_scene::PlanningSceneConstPtr &ps, double cost = 0);
+	void spawn(InterfaceState &&state, double cost = 0);
 };
 
 
 class ConnectingPrivate;
-class Connecting : public SubTask {
+class Connecting : public Stage {
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);

@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/stages/gripper.h>
 #include <moveit_task_constructor/storage.h>
 #include <moveit_task_constructor/task.h>
 
@@ -11,7 +11,7 @@
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MotionPlanResponse.h>
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 Gripper::Gripper(std::string name)
    : PropagatingEitherWay(name)
@@ -46,7 +46,7 @@ void Gripper::graspObject(std::string grasp_object){
 
 bool Gripper::compute(const InterfaceState &state, planning_scene::PlanningScenePtr &scene,
                       robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost, Direction dir){
-	scene = state.state->diff();
+	scene = state.scene()->diff();
 	assert(scene->getRobotModel());
 
 	if(!mgi_){
@@ -96,7 +96,7 @@ bool Gripper::computeForward(const InterfaceState &from){
 
 	if (!compute(from, to, trajectory, cost, FORWARD))
 		return false;
-	sendForward(from, to, trajectory, cost);
+	sendForward(from, InterfaceState(to), trajectory, cost);
 	return true;
 }
 
@@ -108,7 +108,7 @@ bool Gripper::computeBackward(const InterfaceState &to)
 
 	if (!compute(to, from, trajectory, cost, BACKWARD))
 		return false;
-	sendBackward(from, to, trajectory, cost);
+	sendBackward(InterfaceState(from), to, trajectory, cost);
 	return true;
 }
 

@@ -2,8 +2,8 @@
 
 #include <moveit_task_constructor/task.h>
 
-#include <moveit_task_constructor/subtasks/current_state.h>
-#include <moveit_task_constructor/subtasks/gripper.h>
+#include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/stages/gripper.h>
 
 using namespace moveit::task_constructor;
 
@@ -14,9 +14,9 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add( std::make_unique<subtasks::CurrentState>("current state") );
+	t.add( std::make_unique<stages::CurrentState>("current state") );
 	{
-		auto gripper= std::make_unique<subtasks::Gripper>("close gripper");
+		auto gripper= std::make_unique<stages::Gripper>("close gripper");
 		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
 		t.add(std::move( gripper ));
@@ -26,12 +26,12 @@ int main(int argc, char** argv){
 	/*TODO currently not implemented in gripper*/
 	/*
 	{
-		auto gripper= std::make_unique<subtasks::Gripper>("close gripper");
+		auto gripper= std::make_unique<stages::Gripper>("close gripper");
 		gripper->setEndEffector("gripper");
 		gripper->setTo("closed");
 		t.add(std::move( gripper ));
 	}
-	t.add( std::make_unique<subtasks::CurrentState>("current state") );
+	t.add( std::make_unique<stages::CurrentState>("current state") );
 	t.plan();
 	*/
 	return 0;

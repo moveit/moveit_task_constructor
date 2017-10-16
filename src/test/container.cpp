@@ -1,8 +1,14 @@
 #include <container_p.h>
-#include <subtask_p.h>
+#include <stage_p.h>
 
 #include <gtest/gtest.h>
 #include <initializer_list>
+
+namespace moveit { namespace task_constructor {
+PIMPL_FUNCTIONS(Generator)
+PIMPL_FUNCTIONS(PropagatingForward)
+PIMPL_FUNCTIONS(SerialContainer)
+}}
 
 namespace testing { namespace internal {
 enum GTestColor {
@@ -38,10 +44,7 @@ protected:
 	void SetUp() {}
 	void TearDown() {}
 
-	// accessors for private elements of SubTaskPrivate
-	inline const SubTaskPrivate* parent(const SubTaskPrivate* p) const { return p->parent_; }
-
-	void validateOrder(const SerialContainerPrivate* container, const std::initializer_list<SubTaskPrivate*> &expected) {
+	void validateOrder(const SerialContainerPrivate* container, const std::initializer_list<StagePrivate*> &expected) {
 		size_t num = container->children().size();
 		ASSERT_TRUE(num == expected.size()) << "different list lengths";
 
@@ -51,36 +54,26 @@ protected:
 
 		// print order
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it)
-			PRINTF(" %p", (*it)->pimpl_func());
+			PRINTF(" %p", (*it)->pimpl());
 		PRINTF(" *** parent: %p ***\n", container);
 
 		// validate order
-		const SubTaskPrivate* predeccessor = container;
-		const SubTaskPrivate* successor = container;
 		size_t pos = 0;
 		auto exp_it = expected.begin();
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it, ++exp_it, ++pos) {
-			SubTaskPrivate *child = (*it)->pimpl_func();
+			StagePrivate *child = (*it)->pimpl();
 			EXPECT_EQ(child, *exp_it) << "wrong order";
-			EXPECT_EQ(child->parent_, container) << "wrong parent";
+			EXPECT_EQ(child->parent(), container) << "wrong parent";
 			EXPECT_EQ(it, container->position(pos)) << "bad forward position resolution";
 			EXPECT_EQ(it, container->position(pos-num-1)) << "bad backward position resolution";
-			EXPECT_EQ(container->prev(child), predeccessor) << "wrong link to predeccessor for child " << child;
-			if (successor != container)
-				EXPECT_EQ(child, successor) << "wrong link to successor for child " << predeccessor;
-			// store predeccessor and successor for next round
-			predeccessor = child;
-			successor = container->next(child);
 		}
-		EXPECT_EQ(successor, container);
 	}
 };
 
 TEST_F(BaseTest, interfaceFlags) {
 	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
-	EXPECT_EQ(g->pimpl_func()->interfaceFlags(),
-	          SubTaskPrivate::InterfaceFlags({SubTaskPrivate::WRITES_NEXT_START,
-	                                          SubTaskPrivate::WRITES_PREV_END}));
+	EXPECT_EQ(g->pimpl()->interfaceFlags(),
+	          InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
 }
 
 #define VALIDATE(...) \
@@ -89,39 +82,30 @@ TEST_F(BaseTest, interfaceFlags) {
 
 TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
-	SerialContainerPrivate *cp = static_cast<SerialContainerPrivate*>(c.pimpl_func());
+	SerialContainerPrivate *cp = c.pimpl();
 
-	EXPECT_TRUE(bool(cp->starts_));
-	EXPECT_TRUE(bool(cp->ends_));
-	EXPECT_EQ(parent(cp), nullptr);
-	EXPECT_EQ(parent(cp), nullptr);
+	EXPECT_TRUE(bool(cp->starts()));
+	EXPECT_TRUE(bool(cp->ends()));
+	EXPECT_EQ(cp->parent(), nullptr);
 	VALIDATE();
 
 	/*****  inserting first stage  *****/
 	auto g = std::make_unique<TestGenerator>();
-	GeneratorPrivate *gp = static_cast<GeneratorPrivate*>(g->pimpl_func());
+	GeneratorPrivate *gp = g->pimpl();
 	ASSERT_TRUE(c.insert(std::move(g)));
 	EXPECT_FALSE(g); // ownership transferred to container
 	VALIDATE(gp);
 
-	// inserting another generator should fail
-	g = std::make_unique<TestGenerator>();
-	EXPECT_FALSE(c.insert(std::move(g)));
-
 	/*****  inserting second stage  *****/
 	auto f = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp = static_cast<PropagatingForwardPrivate*>(f->pimpl_func());
+	PropagatingForwardPrivate *fp = f->pimpl();
 	ASSERT_TRUE(c.insert(std::move(f)));
 	EXPECT_FALSE(f); // ownership transferred to container
 	VALIDATE(gp, fp);
 
 	/*****  inserting third stage  *****/
 	auto f2 = std::make_unique<TestPropagatingForward>();
-	PropagatingForwardPrivate *fp2 = static_cast<PropagatingForwardPrivate*>(f2->pimpl_func());
-	EXPECT_FALSE(c.insert(std::move(f2), 0)); // should fail at first position
-
-	// insert @2nd position
-	f2 = std::make_unique<TestPropagatingForward>();
+	PropagatingForwardPrivate *fp2 = f2->pimpl();
 	ASSERT_TRUE(c.insert(std::move(f2), 1));
 	EXPECT_FALSE(f2); // ownership transferred to container
 	VALIDATE(gp, fp2, fp);

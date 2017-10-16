@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <moveit_task_constructor/subtask.h>
+#include <moveit_task_constructor/stage.h>
 
 #include <ros/ros.h>
 
@@ -12,7 +12,7 @@ namespace moveit { namespace planning_interface {
 MOVEIT_CLASS_FORWARD(MoveGroupInterface);
 } }
 
-namespace moveit { namespace task_constructor { namespace subtasks {
+namespace moveit { namespace task_constructor { namespace stages {
 
 class GenerateGraspPose : public Generator {
 public:
