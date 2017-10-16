@@ -29,12 +29,12 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	return os;
 }
 
-template<StagePrivate::InterfaceFlag own, StagePrivate::InterfaceFlag other>
+template<InterfaceFlag own, InterfaceFlag other>
 const char* direction(const StagePrivate& stage) {
-	StagePrivate::InterfaceFlags f = stage.deducedFlags();
+	InterfaceFlags f = stage.deducedFlags();
 	bool own_if = f & own;
 	bool other_if = f & other;
-	bool reverse = own & StagePrivate::INPUT_IF_MASK;
+	bool reverse = own & INPUT_IF_MASK;
 	if (own_if && other_if) return "<>";
 	if (!own_if && !other_if) return "--";
 	if (other_if ^ reverse) return "->";
@@ -49,9 +49,9 @@ std::ostream& operator<<(std::ostream &os, const StagePrivate& stage) {
 		else os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<StagePrivate::READS_START, StagePrivate::WRITES_PREV_END>(stage)
+	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(stage)
 	   << std::setw(3) << stage.trajectories_.size()
-	   << std::setw(5) << direction<StagePrivate::READS_END, StagePrivate::WRITES_NEXT_START>(stage);
+	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(stage);
 	// ends
 	for (const Interface* i : {stage.ends_.get(), stage.next_starts_}) {
 		os << std::setw(3);
@@ -74,7 +74,7 @@ SubTrajectory& StagePrivate::addTrajectory(const robot_trajectory::RobotTrajecto
 	return back;
 }
 
-StagePrivate::InterfaceFlags StagePrivate::interfaceFlags() const
+InterfaceFlags StagePrivate::interfaceFlags() const
 {
 	InterfaceFlags result = announcedFlags();
 	result &= ~InterfaceFlags(OWN_IF_MASK);
@@ -83,7 +83,7 @@ StagePrivate::InterfaceFlags StagePrivate::interfaceFlags() const
 }
 
 // return the interface flags that can be deduced from the interface
-inline StagePrivate::InterfaceFlags StagePrivate::deducedFlags() const
+inline InterfaceFlags StagePrivate::deducedFlags() const
 {
 	InterfaceFlags f;
 	if (starts_)  f |= READS_START;
@@ -99,7 +99,7 @@ PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *m
 {
 }
 
-StagePrivate::InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
+InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
 	InterfaceFlags f;
 	if (dir & PropagatingEitherWay::FORWARD)
 		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
@@ -295,7 +295,7 @@ GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
    : StagePrivate(me, name)
 {}
 
-StagePrivate::InterfaceFlags GeneratorPrivate::announcedFlags() const {
+InterfaceFlags GeneratorPrivate::announcedFlags() const {
 	return InterfaceFlags({WRITES_NEXT_START,WRITES_PREV_END});
 }
 
@@ -333,7 +333,7 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 	it_pairs_ = std::make_pair(starts_->begin(), ends_->begin());
 }
 
-StagePrivate::InterfaceFlags ConnectingPrivate::announcedFlags() const {
+InterfaceFlags ConnectingPrivate::announcedFlags() const {
 	return InterfaceFlags({READS_START, READS_END});
 }
 

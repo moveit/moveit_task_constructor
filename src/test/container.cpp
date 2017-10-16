@@ -73,8 +73,7 @@ protected:
 TEST_F(BaseTest, interfaceFlags) {
 	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
 	EXPECT_EQ(g->pimpl()->interfaceFlags(),
-	          StagePrivate::InterfaceFlags({StagePrivate::WRITES_NEXT_START,
-	                                          StagePrivate::WRITES_PREV_END}));
+	          InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
 }
 
 #define VALIDATE(...) \

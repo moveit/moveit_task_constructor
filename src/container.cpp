@@ -85,7 +85,7 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 	ends_.reset(new Interface(Interface::NotifyFunction()));
 }
 
-StagePrivate::InterfaceFlags SerialContainerPrivate::announcedFlags() const {
+InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	InterfaceFlags f;
 	if (children().empty()) return f;
 	f |= children().front()->pimpl()->announcedFlags() & INPUT_IF_MASK;
