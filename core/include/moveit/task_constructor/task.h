@@ -76,6 +76,7 @@ public:
 	~Task();
 
 	std::string id() const;
+	const moveit::core::RobotModelPtr getRobotModel() const;
 
 	void add(Stage::pointer &&stage);
 	void clear() override;

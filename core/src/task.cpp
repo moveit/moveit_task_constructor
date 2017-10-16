@@ -68,6 +68,10 @@ void Task::initModel () {
 	if( !rml_->getModel() )
 		throw Exception("Task failed to construct RobotModel");
 }
+const moveit::core::RobotModelPtr Task::getRobotModel() const {
+	return rml_ ? rml_->getModel() : moveit::core::RobotModelPtr();
+}
+
 void Task::initScene() {
 	assert(rml_);
 
