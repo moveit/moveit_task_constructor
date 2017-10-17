@@ -120,6 +120,7 @@ const robot_state::RobotState& Task::getCurrentRobotState() const {
 void Task::printState(){
 	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
 		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+		return true;
 	};
 	traverseStages(processor);
 }
