@@ -119,10 +119,7 @@ bool Task::plan(){
 	setSolutionCallback(NewSolutionPublisher());
 
 	impl->initScene();
-	if (!this->init(impl->scene_)) {
-		ROS_ERROR("init failed");
-		return false;
-	}
+	init(impl->scene_);
 
 	while(ros::ok() && canCompute()) {
 	if (compute())

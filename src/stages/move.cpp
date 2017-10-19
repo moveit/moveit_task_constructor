@@ -18,10 +18,10 @@ Move::Move(std::string name)
      timeout_(5.0)
 {}
 
-bool Move::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Move::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	Connecting::init(scene);
 	planner_ = Task::createPlanner(scene->getRobotModel());
-	return true;
 }
 
 void Move::setGroup(std::string group){

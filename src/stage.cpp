@@ -11,6 +11,30 @@ SubTrajectory::SubTrajectory(StagePrivate *creator, const robot_trajectory::Robo
 {}
 
 
+void InitStageException::push_back(const Stage &stage, const std::string &msg)
+{
+	errors_.emplace_back(std::make_pair(&stage, msg));
+}
+
+void InitStageException::append(InitStageException &other)
+{
+	errors_.splice(errors_.end(), other.errors_);
+}
+
+const char *InitStageException::what() const noexcept
+{
+	static const char* msg = "Error initializing stage(s)";
+	return msg;
+}
+
+std::ostream& operator<<(std::ostream &os, const InitStageException& e) {
+	os << e.what() << std::endl;
+	for (const auto &pair : e.errors_)
+		os << pair.first->name() << ": " << pair.second << std::endl;
+	return os;
+}
+
+
 StagePrivate::StagePrivate(Stage *me, const std::string &name)
    : me_(me), name_(name), parent_(nullptr), prev_ends_(nullptr), next_starts_(nullptr)
 {}
@@ -35,14 +59,17 @@ inline InterfaceFlags StagePrivate::deducedFlags() const
 }
 
 inline bool implies(bool p, bool q) { return !p || q; }
-bool StagePrivate::validate() const {
+void StagePrivate::validate() const {
+	InitStageException errors;
+
 	InterfaceFlags f = announcedFlags();
 	if (!implies(f & WRITES_NEXT_START, nextStarts()))
-		return false;
+		errors.push_back(*me_, "sends forward, but next stage cannot receive");
 
 	if (!implies(f & WRITES_PREV_END, prevEnds()))
-		return false;
-	return true;
+		errors.push_back(*me_, "sends backward, but previous stage cannot receive");
+
+	if (errors) throw errors;
 }
 
 Stage::Stage(StagePrivate *impl)
@@ -64,14 +91,13 @@ Stage::operator const StagePrivate *() const {
 	return pimpl();
 }
 
-bool Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	auto impl = pimpl();
 	if (impl->starts_) impl->starts_->clear();
 	if (impl->ends_) impl->ends_->clear();
 	impl->prev_ends_ = nullptr;
 	impl->next_starts_ = nullptr;
-	return true;
 }
 
 const std::string& Stage::name() const {
@@ -134,9 +160,9 @@ const std::list<SubTrajectory> &ComputeBase::trajectories() const {
 	return pimpl()->trajectories_;
 }
 
-bool ComputeBase::init(const planning_scene::PlanningSceneConstPtr &scene) {
+void ComputeBase::init(const planning_scene::PlanningSceneConstPtr &scene) {
 	pimpl()->trajectories_.clear();
-	return Stage::init(scene);
+	Stage::init(scene);
 }
 
 
@@ -274,7 +300,7 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	initInterface();
 }
 
-bool PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
+void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	auto impl = pimpl();
 	if (!impl->nextStarts()) {
@@ -285,7 +311,7 @@ bool PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &sce
 		impl->ends_.reset();
 		impl->next_end_state_ = Interface::iterator();
 	}
-	return Stage::init(scene);
+	ComputeBase::init(scene);
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,

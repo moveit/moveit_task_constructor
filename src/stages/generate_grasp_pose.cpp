@@ -34,10 +34,10 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 	ros::Duration(1.0).sleep();
 }
 
-bool GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
+void GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	Generator::init(scene);
 	scene_ = scene;
-	return true;
 }
 
 void GenerateGraspPose::setGroup(std::string group){

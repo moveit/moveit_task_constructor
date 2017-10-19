@@ -14,7 +14,7 @@ class Move : public Connecting {
 public:
 	Move(std::string name);
 
-	bool init(const planning_scene::PlanningSceneConstPtr &scene);
+	void init(const planning_scene::PlanningSceneConstPtr &scene);
 	bool compute(const InterfaceState &from, const InterfaceState &to);
 
 	void setGroup(std::string group);

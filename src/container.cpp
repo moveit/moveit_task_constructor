@@ -233,8 +233,10 @@ void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
 	next->setPrevEnds(prev->ends());
 }
 
-bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
+void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	InitStageException errors;
+
 	auto impl = pimpl();
 	// clear queues
 	impl->internal_to_my_starts_.clear();
@@ -243,13 +245,20 @@ bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	// recursively init all children
 	for (auto& stage : impl->children()) {
-		if (!stage->Stage::init(scene) || !stage->init(scene))
-			return false;
+		try {
+			// should be alled by derived classes too, but you never know...
+			stage->Stage::init(scene);
+			stage->init(scene);
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
 	}
 
 	// we need to have some children to do the actual work
-	if (impl->children().empty())
-		return false;
+	if (impl->children().empty()) {
+		errors.push_back(*this, "no children");
+		throw errors;
+	}
 
 	// initialize starts_ and ends_ interfaces
 	auto cur = impl->children().begin();
@@ -288,11 +297,16 @@ bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 	}
 
 	// validate connectivity of chain
-	for (const Stage::pointer& stage : impl->children())
-		if (!stage->pimpl()->validate())
-			return false;
+	for (const Stage::pointer& stage : impl->children()) {
+		try {
+			stage->pimpl()->validate();
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
+	}
 
-	return true;
+	if (errors)
+		throw errors;
 }
 
 bool SerialContainer::canCompute() const

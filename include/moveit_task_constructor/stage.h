@@ -50,6 +50,32 @@ private:
 };
 
 
+/// exception thrown by Stage::init()
+/// It collects individual errors in stages throughout the pipeline to allow overall error reporting
+class InitStageException : public std::exception {
+	friend std::ostream& operator<<(std::ostream &os, const InitStageException& e);
+
+public:
+	explicit InitStageException() {}
+	explicit InitStageException(const Stage& stage, const std::string& msg) {
+		push_back(stage, msg);
+	}
+
+	/// push_back a single new error in stage
+	void push_back(const Stage& stage, const std::string& msg);
+	/// append all the errors from other (which is emptied)
+	void append(InitStageException &other);
+
+	/// check of existing errors
+	operator bool() const { return !errors_.empty(); }
+
+	virtual const char* what() const noexcept override;
+private:
+	std::list<std::pair<const Stage*, const std::string>> errors_;
+};
+std::ostream& operator<<(std::ostream &os, const InitStageException& e);
+
+
 class StagePrivate;
 class Stage {
 	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
@@ -64,7 +90,7 @@ public:
 	operator const StagePrivate*() const;
 
 	/// initialize stage once before planning
-	virtual bool init(const planning_scene::PlanningSceneConstPtr& scene);
+	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
 	const std::string& name() const;
 	virtual size_t numSolutions() const = 0;
@@ -83,7 +109,7 @@ class ComputeBasePrivate;
 class ComputeBase : public Stage {
 public:
 	PRIVATE_CLASS(ComputeBase)
-	bool init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 	virtual size_t numSolutions() const override;
 
 protected:
@@ -105,7 +131,7 @@ public:
 	enum Direction { FORWARD = 0x01, BACKWARD = 0x02, ANYWAY = FORWARD | BACKWARD};
 	void restrictDirection(Direction dir);
 
-	virtual bool init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	virtual void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 	virtual bool computeForward(const InterfaceState& from) = 0;
 	virtual bool computeBackward(const InterfaceState& to) = 0;
 
