@@ -41,18 +41,9 @@ StagePrivate::StagePrivate(Stage *me, const std::string &name)
 
 InterfaceFlags StagePrivate::interfaceFlags() const
 {
-	InterfaceFlags result = announcedFlags();
-	result &= ~InterfaceFlags(OWN_IF_MASK);
-	result |= deducedFlags();
-	return result;
-}
-
-// return the interface flags that can be deduced from the interface
-inline InterfaceFlags StagePrivate::deducedFlags() const
-{
 	InterfaceFlags f;
-	if (starts_)  f |= READS_START;
-	if (ends_) f |= READS_END;
+	if (starts())  f |= READS_START;
+	if (ends()) f |= READS_END;
 	if (prevEnds()) f |= WRITES_PREV_END;
 	if (nextStarts())  f |= WRITES_NEXT_START;
 	return f;
@@ -62,7 +53,7 @@ inline bool implies(bool p, bool q) { return !p || q; }
 void StagePrivate::validate() const {
 	InitStageException errors;
 
-	InterfaceFlags f = announcedFlags();
+	InterfaceFlags f = interfaceFlags();
 	if (!implies(f & WRITES_NEXT_START, nextStarts()))
 		errors.push_back(*me_, "sends forward, but next stage cannot receive");
 
@@ -91,7 +82,7 @@ Stage::operator const StagePrivate *() const {
 	return pimpl();
 }
 
-void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Stage::reset()
 {
 	auto impl = pimpl();
 	if (impl->starts_) impl->starts_->clear();
@@ -100,13 +91,17 @@ void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 	impl->next_starts_ = nullptr;
 }
 
+void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+}
+
 const std::string& Stage::name() const {
 	return pimpl_->name_;
 }
 
 template<InterfaceFlag own, InterfaceFlag other>
 const char* direction(const StagePrivate& stage) {
-	InterfaceFlags f = stage.deducedFlags();
+	InterfaceFlags f = stage.interfaceFlags();
 	bool own_if = f & own;
 	bool other_if = f & other;
 	bool reverse = own & INPUT_IF_MASK;
@@ -160,24 +155,15 @@ const std::list<SubTrajectory> &ComputeBase::trajectories() const {
 	return pimpl()->trajectories_;
 }
 
-void ComputeBase::init(const planning_scene::PlanningSceneConstPtr &scene) {
+void ComputeBase::reset() {
 	pimpl()->trajectories_.clear();
-	Stage::init(scene);
+	Stage::reset();
 }
 
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
    : ComputeBasePrivate(me, name), dir(dir)
 {
-}
-
-InterfaceFlags PropagatingEitherWayPrivate::announcedFlags() const {
-	InterfaceFlags f;
-	if (dir & PropagatingEitherWay::FORWARD)
-		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
-	if (dir & PropagatingEitherWay::BACKWARD)
-		f |= InterfaceFlags({READS_END, WRITES_PREV_END});
-	return f;
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const{
@@ -302,7 +288,11 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 
 void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	ComputeBase::init(scene);
+
 	auto impl = pimpl();
+
+	// after being connected, restrict actual interface directions
 	if (!impl->nextStarts()) {
 		impl->starts_.reset();
 		impl->next_start_state_ = Interface::iterator();
@@ -311,7 +301,8 @@ void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &sce
 		impl->ends_.reset();
 		impl->next_end_state_ = Interface::iterator();
 	}
-	ComputeBase::init(scene);
+	if (!impl->isConnected())
+		throw InitStageException(*this, "can neither send forwards nor backwards");
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
@@ -383,10 +374,6 @@ GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
    : ComputeBasePrivate(me, name)
 {}
 
-InterfaceFlags GeneratorPrivate::announcedFlags() const {
-	return InterfaceFlags({WRITES_NEXT_START,WRITES_PREV_END});
-}
-
 bool GeneratorPrivate::canCompute() const {
 	return static_cast<Generator*>(me_)->canCompute();
 }
@@ -423,10 +410,6 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 	starts_.reset(new Interface([this](const Interface::iterator& it) { this->newStartState(it); }));
 	ends_.reset(new Interface([this](const Interface::iterator& it) { this->newEndState(it); }));
 	it_pairs_ = std::make_pair(starts_->begin(), ends_->begin());
-}
-
-InterfaceFlags ConnectingPrivate::announcedFlags() const {
-	return InterfaceFlags({READS_START, READS_END});
 }
 
 void ConnectingPrivate::newStartState(const Interface::iterator& it)

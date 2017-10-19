@@ -100,14 +100,6 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
 }
 
-InterfaceFlags SerialContainerPrivate::announcedFlags() const {
-	InterfaceFlags f;
-	if (children().empty()) return f;
-	f |= children().front()->pimpl()->announcedFlags() & INPUT_IF_MASK;
-	f |= children().back()->pimpl()->announcedFlags() & OUTPUT_IF_MASK;
-	return f;
-}
-
 inline ContainerBasePrivate::const_iterator SerialContainerPrivate::prev(const_iterator it) const
 {
 	assert(it != children().cbegin());
@@ -226,7 +218,21 @@ SerialContainer::SerialContainer(SerialContainerPrivate *impl)
 SerialContainer::SerialContainer(const std::string &name)
    : SerialContainer(new SerialContainerPrivate(this, name))
 {}
+
 PIMPL_FUNCTIONS(SerialContainer)
+
+void SerialContainer::reset()
+{
+	auto impl = pimpl();
+	// clear queues
+	impl->internal_to_my_starts_.clear();
+	impl->internal_to_my_ends_.clear();
+	impl->solutions_.clear();
+
+	// recursively reset children
+	for (auto& child: impl->children())
+		child->reset();
+}
 
 void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
 	prev->setNextStarts(next->starts());
@@ -236,23 +242,7 @@ void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
 void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	InitStageException errors;
-
 	auto impl = pimpl();
-	// clear queues
-	impl->internal_to_my_starts_.clear();
-	impl->internal_to_my_ends_.clear();
-	impl->solutions_.clear();
-
-	// recursively init all children
-	for (auto& stage : impl->children()) {
-		try {
-			// should be alled by derived classes too, but you never know...
-			stage->Stage::init(scene);
-			stage->init(scene);
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
-	}
 
 	// we need to have some children to do the actual work
 	if (impl->children().empty()) {
@@ -271,7 +261,8 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		}));
 
 	auto last = --impl->children().end();
-	if ((*cur)->pimpl()->ends())
+	child_impl = **last;
+	if (child_impl->ends())
 		impl->ends_.reset(new Interface([impl, child_impl](const Interface::iterator& internal){
 			// new state in our ends_ interface is copied to last child, remembering the link
 			auto it = child_impl->ends()->clone(*internal);
@@ -296,15 +287,25 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		impl->connect(**prev, **cur);
 	}
 
-	// validate connectivity of chain
-	for (const Stage::pointer& stage : impl->children()) {
+	// recursively init all children
+	for (auto& child : impl->children()) {
 		try {
-			stage->pimpl()->validate();
+			child->init(scene);
 		} catch (InitStageException &e) {
 			errors.append(e);
 		}
 	}
 
+	// validate connectivity of chain
+	for (auto& child : impl->children()) {
+		try {
+			child->pimpl()->validate();
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
+	}
+
+	std::cerr << errors;
 	if (errors)
 		throw errors;
 }

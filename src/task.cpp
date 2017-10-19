@@ -118,6 +118,7 @@ bool Task::plan(){
 	auto impl = pimpl();
 	setSolutionCallback(NewSolutionPublisher());
 
+	reset();
 	impl->initScene();
 	init(impl->scene_);
 

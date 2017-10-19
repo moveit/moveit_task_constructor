@@ -89,6 +89,8 @@ public:
 	operator StagePrivate*();
 	operator const StagePrivate*() const;
 
+	/// reset stage, clearing all solutions, interfaces, etc.
+	virtual void reset();
 	/// initialize stage once before planning
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
@@ -109,7 +111,7 @@ class ComputeBasePrivate;
 class ComputeBase : public Stage {
 public:
 	PRIVATE_CLASS(ComputeBase)
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void reset() override;
 	virtual size_t numSolutions() const override;
 
 protected:

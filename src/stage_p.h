@@ -36,8 +36,6 @@ public:
 	StagePrivate(Stage* me, const std::string& name);
 
 	InterfaceFlags interfaceFlags() const;
-	InterfaceFlags deducedFlags() const;
-	virtual InterfaceFlags announcedFlags() const = 0;
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
@@ -108,8 +106,7 @@ public:
 	PropagatingEitherWay::Direction dir;
 
 	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir,
-	                                const std::string &name);
-	InterfaceFlags announcedFlags() const override;
+	                                   const std::string &name);
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -145,7 +142,6 @@ public:
 class GeneratorPrivate : public ComputeBasePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
-	InterfaceFlags announcedFlags() const override;
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -157,7 +153,6 @@ class ConnectingPrivate : public ComputeBasePrivate {
 
 public:
 	inline ConnectingPrivate(Connecting *me, const std::string &name);
-	InterfaceFlags announcedFlags() const override;
 
 	bool canCompute() const override;
 	bool compute() override;

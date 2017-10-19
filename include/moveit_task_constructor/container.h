@@ -37,6 +37,7 @@ public:
 	PRIVATE_CLASS(SerialContainer)
 	SerialContainer(const std::string& name);
 
+	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 	bool canCompute() const override;
 	bool compute() override;

@@ -64,7 +64,6 @@ class SerialContainerPrivate : public ContainerBasePrivate {
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
-	InterfaceFlags announcedFlags() const override;
 	void onNewSolution(SolutionBase &s) override;
 	void storeNewSolution(std::vector<const SolutionBase *> &&s, double cost);
 	const std::list<SerialSolution>& solutions() const { return solutions_; }
