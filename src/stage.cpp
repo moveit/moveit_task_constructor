@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream &os, const InitStageException& e) {
 
 
 StagePrivate::StagePrivate(Stage *me, const std::string &name)
-   : me_(me), name_(name), parent_(nullptr), prev_ends_(nullptr), next_starts_(nullptr)
+   : me_(me), name_(name), parent_(nullptr)
 {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const
@@ -54,10 +54,10 @@ void StagePrivate::validate() const {
 	InitStageException errors;
 
 	InterfaceFlags f = interfaceFlags();
-	if (!implies(f & WRITES_NEXT_START, nextStarts()))
+	if (!implies(f & WRITES_NEXT_START, bool(nextStarts())))
 		errors.push_back(*me_, "sends forward, but next stage cannot receive");
 
-	if (!implies(f & WRITES_PREV_END, prevEnds()))
+	if (!implies(f & WRITES_PREV_END, bool(prevEnds())))
 		errors.push_back(*me_, "sends backward, but previous stage cannot receive");
 
 	if (errors) throw errors;
@@ -87,8 +87,8 @@ void Stage::reset()
 	auto impl = pimpl();
 	if (impl->starts_) impl->starts_->clear();
 	if (impl->ends_) impl->ends_->clear();
-	impl->prev_ends_ = nullptr;
-	impl->next_starts_ = nullptr;
+	impl->prev_ends_.reset();
+	impl->next_starts_.reset();
 }
 
 void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -114,7 +114,7 @@ const char* direction(const StagePrivate& stage) {
 std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	auto impl = stage.pimpl();
 	// starts
-	for (const Interface* i : {impl->prevEnds(), impl->starts()}) {
+	for (const InterfacePtr& i : {impl->prevEnds(), impl->starts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
@@ -124,7 +124,7 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	   << std::setw(3) << stage.numSolutions()
 	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(*impl);
 	// ends
-	for (const Interface* i : {impl->ends(), impl->nextStarts()}) {
+	for (const InterfacePtr& i : {impl->ends(), impl->nextStarts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";

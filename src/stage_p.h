@@ -43,12 +43,12 @@ public:
 	inline const std::string& name() const { return name_; }
 	inline ContainerBasePrivate* parent() const { return parent_; }
 	inline container_type::iterator it() const { return it_; }
-	inline Interface* starts() const { return starts_.get(); }
-	inline Interface* ends() const { return ends_.get(); }
-	inline Interface* prevEnds() const { return prev_ends_; }
-	inline Interface* nextStarts() const { return next_starts_; }
+	inline const InterfacePtr& starts() const { return starts_; }
+	inline const InterfacePtr& ends() const { return ends_; }
+	inline InterfacePtr prevEnds() const { return prev_ends_.lock(); }
+	inline InterfacePtr nextStarts() const { return next_starts_.lock(); }
 
-	inline bool isConnected() const { return prev_ends_ || next_starts_; }
+	inline bool isConnected() const { return prevEnds() || nextStarts(); }
 	/// validate that sendForward() and sendBackward() will succeed
 	/// should be only called by containers' init() method
 	void validate() const;
@@ -57,8 +57,8 @@ public:
 		parent_ = parent;
 		it_ = it;
 	}
-	inline void setPrevEnds(Interface * prev_ends) { prev_ends_ = prev_ends; }
-	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
+	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
+	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
 
 	virtual void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const = 0;
 
@@ -74,8 +74,8 @@ private:
 	ContainerBasePrivate* parent_; // owning parent
 	container_type::iterator it_; // iterator into parent's children_ list referring to this
 
-	Interface *prev_ends_;    // interface to be used for sendBackward()
-	Interface *next_starts_;  // interface to be used for sendForward()
+	InterfaceWeakPtr prev_ends_;    // interface to be used for sendBackward()
+	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 };
 std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 

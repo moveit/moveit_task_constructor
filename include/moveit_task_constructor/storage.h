@@ -23,6 +23,7 @@ namespace moveit { namespace task_constructor {
 class SolutionBase;
 MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
+typedef std::weak_ptr<Interface> InterfaceWeakPtr;
 MOVEIT_CLASS_FORWARD(Stage)
 
 

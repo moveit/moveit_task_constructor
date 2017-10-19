@@ -271,10 +271,10 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	/*** connect children ***/
 	// first stage sends backward to pending_backward_
-	(*cur)->pimpl()->setPrevEnds(impl->pending_backward_.get());
+	(*cur)->pimpl()->setPrevEnds(impl->pending_backward_);
 
 	// last stage sends forward to pending_forward_
-	(*last)->pimpl()->setNextStarts(impl->pending_forward_.get());
+	(*last)->pimpl()->setNextStarts(impl->pending_forward_);
 
 	auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage
 	if (prev != last) {// we have more than one children
