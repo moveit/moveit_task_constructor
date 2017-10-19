@@ -31,15 +31,25 @@ public:
 	void add(Stage::pointer &&stage);
 	using SerialContainer::clear;
 
+	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
+	/// set function called for every newly found solution
+	SolutionCallback setSolutionCallback(const SolutionCallback &cb);
+
 	bool plan();
 	void printState();
 
-	const moveit::core::RobotState &getCurrentRobotState() const;
+	/// function type used for processing solutions
+	/// For each solution, composed from several SubTrajectories,
+	/// the vector of SubTrajectories as well as the associated costs are provided.
+	/// Return true, if traversal should continue, otherwise false.
+	typedef std::function<bool(const std::vector<const SubTrajectory*>& solution,
+	                           double accumulated_cost)> SolutionProcessor;
+	/// process all solutions
+	void processSolutions(const SolutionProcessor &processor);
+	void processSolutions(const SolutionProcessor &processor) const;
 
-#if 0
-	bool processSolutions(const SolutionCallback &processor);
-	bool processSolutions(const SolutionCallback &processor) const;
-#endif
+	static std::vector<const SubTrajectory*>&
+	flatten(const SolutionBase &s, std::vector<const SubTrajectory*>& result);
 };
 
 } }

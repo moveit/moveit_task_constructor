@@ -31,6 +31,7 @@ MOVEIT_CLASS_FORWARD(Stage)
  *  A start or goal state for planning is essentially defined by the state of a planning scene.
  */
 class InterfaceState {
+	friend class SolutionBase; // addIncoming() / addOutgoing() should be called only by SolutionBase
 public:
 	// TODO turn this into priority queue
 	typedef std::deque<SolutionBase*> Solutions;
@@ -41,6 +42,8 @@ public:
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
 	inline const Solutions& outgoingTrajectories() const { return outgoing_trajectories_; }
 
+private:
+	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
 	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
 

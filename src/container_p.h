@@ -50,6 +50,7 @@ public:
 	explicit SerialSolution(StagePrivate* creator, std::vector<const SolutionBase*>&& subsolutions, double cost)
 	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
 	{}
+	void appendTo(std::vector<const SubTrajectory*>& solution) const;
 
 private:
 	// series of sub solutions
@@ -64,8 +65,14 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 	InterfaceFlags announcedFlags() const override;
-	void onNewSolution(SolutionBase &t) override;
-	void storeNewSolution(SerialSolution &&s);
+	void onNewSolution(SolutionBase &s) override;
+	void storeNewSolution(std::vector<const SolutionBase *> &&s, double cost);
+	const std::list<SerialSolution>& solutions() const { return solutions_; }
+
+	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const override {
+		assert(s.creator() == this);
+		static_cast<const SerialSolution&>(s).appendTo(solution);
+	}
 
 private:
 	inline const_iterator prev(const_iterator it) const;
@@ -77,9 +84,9 @@ private:
 	 * Note, that there might be many solutions connecting the same start-end state pair. */
 
 	// map first child's start states to the corresponding states in this' starts_
-	std::map<Interface::iterator, Interface::iterator> internal_to_my_starts_;
+	std::map<const InterfaceState*, InterfaceState*> internal_to_my_starts_;
 	// map last child's end states to the corresponding states in this' ends_
-	std::map<Interface::iterator, Interface::iterator> internal_to_my_ends_;
+	std::map<const InterfaceState*, InterfaceState*> internal_to_my_ends_;
 
 	/* First/last childrens sendBackward()/sendForward() states are not directly propagated
 	 * to previous/next stage of this container, because we cannot provide a solution yet.

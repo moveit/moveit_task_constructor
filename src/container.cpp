@@ -158,18 +158,9 @@ struct SolutionCollector {
 
 	bool operator()(const SolutionBase& current, const std::vector<const SolutionBase*>& trace, double cost) {
 		if (current.creator() != stopping_stage)
-			return true; // not yet traversed to end
+			return true; // not yet traversed to stopping_stage
 
-		auto solution = trace;
-		if (!trace.empty()) {
-			// Only add current to non-empty trace (as last element).
-			// Empty trace indicates, that current connects to the start/end itself.
-			// In this case, we add current once in onNewSolution(), but not here!
-			solution.push_back(&current);
-			cost += current.cost();
-		}
-
-		solutions.emplace_back(std::make_pair(std::move(solution), cost));
+		solutions.emplace_back(std::make_pair(trace, cost));
 		return false; // we are done
 	}
 
@@ -180,7 +171,6 @@ struct SolutionCollector {
 void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 {
 	const StagePrivate *creator = current.creator();
-	std::cerr << "new solution:" << &current << " from " << creator << " " << creator->name() << std::endl;
 
 	// s.creator() should be one of our children
 	assert(std::find_if(children().begin(), children().end(),
@@ -198,12 +188,14 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 	if (incoming.solutions.empty())
 		return; // no connection to front()
 
-assert(trace.empty());
+
 	// find all outgoing trajectories connected to s
 	SolutionCollector outgoing(children().back());
 	me->traverse<FORWARD>(current, std::ref(outgoing), trace);
 	if (outgoing.solutions.empty())
 		return; // no connection to back()
+
+	std::cerr << "new solution for: " << name() << std::endl;
 
 	// add solutions for all combinations of incoming + s + outgoing
 	std::vector<const SolutionBase*> solution;
@@ -212,19 +204,51 @@ assert(trace.empty());
 		for (auto& out : outgoing.solutions) {
 			assert(solution.empty());
 			// insert incoming solutions in reverse order
-			std::copy(in.first.rbegin(), in.first.rend(), solution.end());
+			solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
 			// insert current solution
 			solution.push_back(&current);
 			// insert outgoing solutions in normal order
-			std::copy(out.first.begin(), out.first.end(), solution.end());
+			solution.insert(solution.end(), out.first.begin(), out.first.end());
 
-			storeNewSolution(SerialSolution(this, std::move(solution), in.second + current.cost() + out.second));
+			// TODO: store/announce solutions sorted by cost
+			storeNewSolution(std::move(solution), in.second + current.cost() + out.second);
 		}
 	}
 }
 
-void SerialContainerPrivate::storeNewSolution(SerialSolution&& s)
+void SerialContainerPrivate::storeNewSolution(std::vector<const SolutionBase*> &&s, double cost)
 {
+	assert(!s.empty());
+	const InterfaceState *internal_from = s.front()->start();
+	const InterfaceState *internal_to = s.back()->end();
+
+	// create new solution directly in solutions_ and get a reference to it
+	solutions_.emplace_back(SerialSolution(this, std::move(s), cost));
+	SerialSolution& solution = solutions_.back();
+
+	// add solution to existing or new start state
+	auto it = internal_to_my_starts_.find(internal_from);
+	if (it != internal_to_my_starts_.end()) {
+		// connect solution to existing start state
+		solution.setStartState(*it->second);
+	} else {
+		// spawn a new state in previous stage
+		prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+	}
+
+	// add solution to existing or new end state
+	it = internal_to_my_ends_.find(internal_to);
+	if (it != internal_to_my_ends_.end()) {
+		// connect solution to existing start state
+		solution.setEndState(*it->second);
+	} else {
+		// spawn a new state in next stage
+		nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+	}
+
+	// inform parent about new solution
+	if (parent())
+		parent()->onNewSolution(solutions_.back());
 }
 
 
@@ -277,7 +301,8 @@ bool SerialContainer::traverse(const SolutionBase &start, const SolutionCallback
                                std::vector<const SolutionBase *> &trace, double trace_cost)
 {
 	if (!cb(start, trace, trace_cost))
-		return false; // stopping criterium met?
+		// stopping criterium met: stop traversal along dir
+		return true; // but continue traversal of further trajectories
 
 	bool result = false; // if no trajectory traversed, return false
 	for (SolutionBase* successor : trajectories<dir>(start)) {
@@ -292,6 +317,13 @@ bool SerialContainer::traverse(const SolutionBase &start, const SolutionCallback
 		if (!result) break;
 	}
 	return result;
+}
+
+void SerialSolution::appendTo(std::vector<const SubTrajectory *> &solution) const
+{
+	solution.reserve(solution.size() + subsolutions_.size());
+	for (const SolutionBase* s : subsolutions_)
+		s->creator()->append(*s, solution);
 }
 
 } }

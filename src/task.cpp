@@ -15,8 +15,10 @@ namespace moveit { namespace task_constructor {
 
 class TaskPrivate : public SerialContainerPrivate {
 	friend class Task;
+
 	robot_model_loader::RobotModelLoaderPtr rml_;
-	planning_scene::PlanningSceneConstPtr scene_;
+	planning_scene::PlanningSceneConstPtr scene_; // initial scene
+	Task::SolutionCallback cb_; // function called for each new solution
 
 public:
 	TaskPrivate(Task* me, const std::string &name)
@@ -59,7 +61,15 @@ public:
 		scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
 		std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
 	}
+
+	void onNewSolution(SolutionBase &s) override;
 };
+
+void TaskPrivate::onNewSolution(SolutionBase &s)
+{
+	SerialContainerPrivate::onNewSolution(s);
+	if (cb_) cb_(s);
+}
 
 
 Task::Task(const std::string &name)
@@ -96,9 +106,17 @@ void Task::add(pointer &&stage) {
 		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
+Task::SolutionCallback Task::setSolutionCallback(const Task::SolutionCallback &cb)
+{
+	auto impl = pimpl();
+	SolutionCallback old = impl->cb_;
+	impl->cb_ = cb;
+	return old;
+}
+
 bool Task::plan(){
 	auto impl = pimpl();
-	NewSolutionPublisher debug(*this);
+	setSolutionCallback(NewSolutionPublisher());
 
 	impl->initScene();
 	if (!this->init(impl->scene_)) {
@@ -107,18 +125,12 @@ bool Task::plan(){
 	}
 
 	while(ros::ok() && canCompute()) {
-		if (compute()) {
-			debug.publish();
+	if (compute())
 			printState();
-		} else
+		else
 			break;
 	}
 	return numSolutions() > 0;
-}
-
-const robot_state::RobotState& Task::getCurrentRobotState() const {
-	auto impl = pimpl();
-	return impl->scene_->getCurrentState();
 }
 
 void Task::printState(){
@@ -129,22 +141,24 @@ void Task::printState(){
 	traverseRecursively(processor);
 }
 
-#if 0
-bool Task::processSolutions(const Task::SolutionCallback& processor) {
-	auto impl = pimpl();
-	const TaskPrivate::container_type& children = impl->children();
-	const size_t nr_of_trajectories = children.size();
-	std::vector<SubTrajectory*> trace;
-	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& st : children.front()->pimpl()->trajectories())
-		if( !traverseFullTrajectories(st, nr_of_trajectories, processor, trace) )
-			return false;
-	return true;
+void Task::processSolutions(const Task::SolutionProcessor& processor) {
+	std::vector<const SubTrajectory*> solution;
+	for(const SolutionBase& s : pimpl()->solutions()) {
+		solution.clear();
+		flatten(s, solution);
+		if (!processor(solution, s.cost()))
+			break;
+	}
 }
 
-bool Task::processSolutions(const Task::SolutionCallback& processor) const {
-	return const_cast<Task*>(this)->processSolutions(processor);
+void Task::processSolutions(const Task::SolutionProcessor& processor) const {
+	const_cast<Task*>(this)->processSolutions(processor);
 }
-#endif
+
+std::vector<const SubTrajectory *>& Task::flatten(const SolutionBase &s, std::vector<const SubTrajectory *> &result)
+{
+	s.creator()->append(s, result);
+	return result;
+}
 
 } }

@@ -59,6 +59,8 @@ public:
 	inline void setPrevEnds(Interface * prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
 
+	virtual void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const = 0;
+
 protected:
 	Stage* const me_; // associated/owning Stage instance
 	const std::string name_;
@@ -86,6 +88,10 @@ public:
 	ComputeBasePrivate(Stage* me, const std::string& name)
 	   : StagePrivate(me, name)
 	{}
+	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const override {
+		assert(s.creator() == this);
+		solution.push_back(static_cast<const SubTrajectory*>(&s));
+	}
 
 private:
 	std::list<SubTrajectory> trajectories_;
