@@ -7,6 +7,11 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
 {
 }
 
+InterfaceState::InterfaceState(const InterfaceState &existing)
+   : scene_(existing.scene())
+{
+}
+
 Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
 {}
@@ -24,6 +29,14 @@ Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incomin
 	if (incoming) incoming->setEndState(*back);
 	if (outgoing) outgoing->setStartState(*back);
 	// ... before calling notify callback
+	if (notify_) notify_(back);
+	return back;
+}
+
+Interface::iterator Interface::clone(const InterfaceState &state)
+{
+	emplace_back(InterfaceState(state));
+	iterator back = --end();
 	if (notify_) notify_(back);
 	return back;
 }

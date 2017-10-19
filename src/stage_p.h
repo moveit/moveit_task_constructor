@@ -51,7 +51,8 @@ public:
 	inline Interface* nextStarts() const { return next_starts_; }
 
 	inline bool isConnected() const { return prev_ends_ || next_starts_; }
-	// validate that sendForward() and sendBackward() will succeed
+	/// validate that sendForward() and sendBackward() will succeed
+	/// should be only called by containers' init() method
 	bool validate() const;
 
 	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {

@@ -95,9 +95,7 @@ void ContainerBase::clear()
 SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
    : ContainerBasePrivate(me, name)
 {
-	// TODO rhaschke: define notify functions
-	starts_.reset(new Interface(Interface::NotifyFunction()));
-	ends_.reset(new Interface(Interface::NotifyFunction()));
+	// these lists don't need a notify function, connections are handled by onNewSolution()
 	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
 	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
 }
@@ -253,13 +251,29 @@ bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 	if (impl->children().empty())
 		return false;
 
+	// initialize starts_ and ends_ interfaces
+	auto cur = impl->children().begin();
+	StagePrivate* child_impl = **cur;
+	if (child_impl->starts())
+		impl->starts_.reset(new Interface([impl, child_impl](const Interface::iterator& internal){
+			// new state in our starts_ interface is copied to first child, remembering the link
+			auto it = child_impl->starts()->clone(*internal);
+			impl->internal_to_my_starts_.insert(std::make_pair(&*it, &*internal));
+		}));
+
+	auto last = --impl->children().end();
+	if ((*cur)->pimpl()->ends())
+		impl->ends_.reset(new Interface([impl, child_impl](const Interface::iterator& internal){
+			// new state in our ends_ interface is copied to last child, remembering the link
+			auto it = child_impl->ends()->clone(*internal);
+			impl->internal_to_my_ends_.insert(std::make_pair(&*it, &*internal));
+		}));
+
 	/*** connect children ***/
 	// first stage sends backward to pending_backward_
-	auto cur = impl->children().begin();
 	(*cur)->pimpl()->setPrevEnds(impl->pending_backward_.get());
 
 	// last stage sends forward to pending_forward_
-	auto last = --impl->children().end();
 	(*last)->pimpl()->setNextStarts(impl->pending_forward_.get());
 
 	auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage

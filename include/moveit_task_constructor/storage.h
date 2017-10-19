@@ -36,7 +36,11 @@ public:
 	// TODO turn this into priority queue
 	typedef std::deque<SolutionBase*> Solutions;
 
+	/// create an InterfaceState from a planning scene
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
+
+	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
+	InterfaceState(const InterfaceState& existing);
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
@@ -70,6 +74,9 @@ public:
 	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	// and finally run the notify callback
 	container_type::iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
+
+	// clone an existing InterfaceState, but without its incoming/outgoing connections
+	container_type::iterator clone(const InterfaceState &state);
 
 	using container_type::value_type;
 	using container_type::reference;
@@ -127,16 +134,15 @@ protected:
 	   : creator_(creator), cost_(cost)
 	{}
 
-public: // TODO: make private
-	// begin and end InterfaceState for this solution/trajectory
-	const InterfaceState* start_ = nullptr;
-	const InterfaceState* end_ = nullptr;
-
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
 	StagePrivate *creator_;
 	// associated cost
 	double cost_;
+
+	// begin and end InterfaceState of this solution/trajectory
+	const InterfaceState* start_ = nullptr;
+	const InterfaceState* end_ = nullptr;
 };
 
 

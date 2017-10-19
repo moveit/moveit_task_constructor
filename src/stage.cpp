@@ -378,6 +378,9 @@ PIMPL_FUNCTIONS(Generator)
 void Generator::spawn(InterfaceState&& state, double cost)
 {
 	std::cout << "spawning state forwards and backwards" << std::endl;
+	assert(state.incomingTrajectories().empty() &&
+	       state.outgoingTrajectories().empty());
+
 	auto impl = pimpl();
 	// empty trajectory ref -> this node only produces states
 	robot_trajectory::RobotTrajectoryPtr dummy;
