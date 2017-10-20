@@ -77,6 +77,7 @@ public:
 private:
 	inline const_iterator prev(const_iterator it) const;
 	inline const_iterator next(const_iterator it) const;
+	void connect(StagePrivate *prev, StagePrivate *next);
 
 	/* A container needs to decouple its interface from those of its children:
 	 * A solution of a container needs to connect start to end via a full path.

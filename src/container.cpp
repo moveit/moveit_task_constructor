@@ -95,8 +95,11 @@ void ContainerBase::clear()
 SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
    : ContainerBasePrivate(me, name)
 {
+	// TODO rhaschke: define notify functions
 	starts_.reset(new Interface(Interface::NotifyFunction()));
 	ends_.reset(new Interface(Interface::NotifyFunction()));
+	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
+	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
 }
 
 InterfaceFlags SerialContainerPrivate::announcedFlags() const {
@@ -106,39 +109,6 @@ InterfaceFlags SerialContainerPrivate::announcedFlags() const {
 	f |= children().back()->pimpl()->announcedFlags() & OUTPUT_IF_MASK;
 	return f;
 }
-
-#if 0
-bool SerialContainerPrivate::init()
-{
-	assert(canInsert(*stage, before));
-	bool at_begin = (before == children().begin());
-	bool at_end = (before == children().end());
-
-	StagePrivate *cur = stage->pimpl();
-	/* set pointer cache (prev_ends_ and next_starts_) of prev, current, and next stage */
-	if (children().empty()) { // first child inserted
-		cur->setPrevEnds(this->starts());
-		cur->setNextStarts(this->ends());
-	} else if (at_begin) {
-		StagePrivate *next = (*before)->pimpl();
-		cur->setPrevEnds(this->starts());
-		cur->setNextStarts(next->starts());
-		next->setPrevEnds(cur->ends());
-	} else if (at_end) {
-		StagePrivate *prev = (*this->prev(before))->pimpl();
-		prev->setNextStarts(cur->starts());
-		cur->setPrevEnds(prev->ends());
-		cur->setNextStarts(this->ends());
-	} else {
-		StagePrivate *prev = (*this->prev(before))->pimpl();
-		StagePrivate *next = (*before)->pimpl();
-		prev->setNextStarts(cur->starts());
-		cur->setPrevEnds(prev->ends());
-		cur->setNextStarts(next->starts());
-		next->setPrevEnds(cur->ends());
-	}
-}
-#endif
 
 inline ContainerBasePrivate::const_iterator SerialContainerPrivate::prev(const_iterator it) const
 {
@@ -260,16 +230,55 @@ SerialContainer::SerialContainer(const std::string &name)
 {}
 PIMPL_FUNCTIONS(SerialContainer)
 
+void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
+	prev->setNextStarts(next->starts());
+	next->setPrevEnds(prev->ends());
+}
+
 bool SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	auto impl = pimpl();
+	// clear queues
+	impl->internal_to_my_starts_.clear();
+	impl->internal_to_my_ends_.clear();
+	impl->solutions_.clear();
+
 	// recursively init all children
 	for (auto& stage : impl->children()) {
-		// derived classes should call Stage::init internally , but we cannot be sure...
-		if (!stage->init(scene) ||!stage->Stage::init(scene))
+		if (!stage->Stage::init(scene) || !stage->init(scene))
 			return false;
 	}
-	return !impl->children().empty();
+
+	// we need to have some children to do the actual work
+	if (impl->children().empty())
+		return false;
+
+	/*** connect children ***/
+	// first stage sends backward to pending_backward_
+	auto cur = impl->children().begin();
+	(*cur)->pimpl()->setPrevEnds(impl->pending_backward_.get());
+
+	// last stage sends forward to pending_forward_
+	auto last = --impl->children().end();
+	(*last)->pimpl()->setNextStarts(impl->pending_forward_.get());
+
+	auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage
+	if (prev != last) {// we have more than one children
+		auto next = cur; ++next; // next points to 3rd stage (or end)
+		for (; cur != last; ++prev, ++cur, ++next) {
+			impl->connect(**prev, **cur);
+			impl->connect(**cur, **next);
+		}
+		// finally connect last == cur and prev stage
+		impl->connect(**prev, **cur);
+	}
+
+	// validate connectivity of chain
+	for (const Stage::pointer& stage : impl->children())
+		if (!stage->pimpl()->validate())
+			return false;
+
+	return true;
 }
 
 bool SerialContainer::canCompute() const

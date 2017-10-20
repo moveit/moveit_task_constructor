@@ -59,6 +59,10 @@ public:
 	typedef std::unique_ptr<Stage> pointer;
 	~Stage();
 
+	/// auto-convert Stage to StagePrivate* when needed
+	operator StagePrivate*();
+	operator const StagePrivate*() const;
+
 	/// initialize stage once before planning
 	virtual bool init(const planning_scene::PlanningSceneConstPtr& scene);
 
@@ -79,6 +83,7 @@ class ComputeBasePrivate;
 class ComputeBase : public Stage {
 public:
 	PRIVATE_CLASS(ComputeBase)
+	bool init(const planning_scene::PlanningSceneConstPtr &scene) override;
 	virtual size_t numSolutions() const override;
 
 protected:

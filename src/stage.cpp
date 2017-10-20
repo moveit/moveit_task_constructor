@@ -34,6 +34,16 @@ inline InterfaceFlags StagePrivate::deducedFlags() const
 	return f;
 }
 
+inline bool implies(bool p, bool q) { return !p || q; }
+bool StagePrivate::validate() const {
+	InterfaceFlags f = announcedFlags();
+	if (!implies(f & WRITES_NEXT_START, nextStarts()))
+		return false;
+
+	if (!implies(f & WRITES_PREV_END, prevEnds()))
+		return false;
+	return true;
+}
 
 Stage::Stage(StagePrivate *impl)
    : pimpl_(impl)
@@ -46,19 +56,21 @@ Stage::~Stage()
 	delete pimpl_;
 }
 
+Stage::operator StagePrivate *() {
+	return pimpl();
+}
 
-inline bool implies(bool p, bool q) { return !p || q; }
+Stage::operator const StagePrivate *() const {
+	return pimpl();
+}
+
 bool Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
-#if 0
 	auto impl = pimpl();
-	InterfaceFlags f = impl->announcedFlags();
-	if (!implies(f & WRITES_NEXT_START, impl->nextStarts()))
-		throw std::runtime_error("missing next unit for sendForward()");
-
-	if (!implies(f & WRITES_PREV_END, impl->prevEnds()))
-		throw std::runtime_error("missing previous unit for sendBackward()");
-#endif
+	if (impl->starts_) impl->starts_->clear();
+	if (impl->ends_) impl->ends_->clear();
+	impl->prev_ends_ = nullptr;
+	impl->next_starts_ = nullptr;
 	return true;
 }
 
@@ -118,9 +130,13 @@ size_t ComputeBase::numSolutions() const {
 	return pimpl()->trajectories_.size();
 }
 
-const std::list<SubTrajectory> &ComputeBase::trajectories() const
-{
+const std::list<SubTrajectory> &ComputeBase::trajectories() const {
 	return pimpl()->trajectories_;
+}
+
+bool ComputeBase::init(const planning_scene::PlanningSceneConstPtr &scene) {
+	pimpl()->trajectories_.clear();
+	return Stage::init(scene);
 }
 
 
