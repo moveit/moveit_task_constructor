@@ -96,7 +96,7 @@ protected:
 
 private:
 	/// append s as SubTrajectories to solution (lifted from private API)
-	virtual void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const = 0;
+	virtual void append(const SolutionBase& s, SolutionTrajectory& solution) const = 0;
 	/// callback for new solutions
 	virtual void onNewSolution(SolutionBase &s) = 0;
 };

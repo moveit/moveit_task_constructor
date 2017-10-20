@@ -9,7 +9,7 @@
 
 namespace moveit { namespace task_constructor {
 
-bool publishSolution(ros::Publisher& pub, const std::vector<const SubTrajectory*>& solution, double cost, bool wait){
+bool publishSolution(ros::Publisher& pub, const SolutionTrajectory& solution, double cost, bool wait){
 	if (solution.empty())
 		return true;
 
@@ -56,7 +56,7 @@ NewSolutionPublisher::NewSolutionPublisher(const std::string &topic)
 void NewSolutionPublisher::operator()(const SolutionBase &s)
 {
 	// flatten s into vector of SubTrajectories
-	std::vector<const SubTrajectory*> solution;
+	SolutionTrajectory solution;
 	Task::flatten(s, solution);
 
 	publishSolution(pub_, solution, s.cost(), false);

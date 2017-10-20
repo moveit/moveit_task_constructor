@@ -187,7 +187,7 @@ void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) c
 }
 
 void Task::processSolutions(const Task::SolutionProcessor& processor) const {
-	std::vector<const SubTrajectory*> solution;
+	SolutionTrajectory solution;
 	processSolutions([&solution, &processor](const SolutionBase& s) {
 		solution.clear();
 		Task::flatten(s, solution);

@@ -47,20 +47,19 @@ public:
 	/// For each solution, composed from several SubTrajectories,
 	/// the vector of SubTrajectories as well as the associated costs are provided.
 	/// Return true, if traversal should continue, otherwise false.
-	typedef std::function<bool(const std::vector<const SubTrajectory*>& solution,
+	typedef std::function<bool(const SolutionTrajectory& solution,
 	                           double accumulated_cost)> SolutionProcessor;
 	/// process all solutions
 	void processSolutions(const Task::SolutionProcessor &processor) const;
 
-	static std::vector<const SubTrajectory*>&
-	flatten(const SolutionBase &s, std::vector<const SubTrajectory*>& result);
+	static SolutionTrajectory& flatten(const SolutionBase &s, SolutionTrajectory& result);
 
 protected:
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 	bool canCompute() const override;
 	bool compute() override;
 	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
-	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const override;
+	void append(const SolutionBase& s, SolutionTrajectory& solution) const override;
 	void onNewSolution(SolutionBase &s) override;
 
 private:

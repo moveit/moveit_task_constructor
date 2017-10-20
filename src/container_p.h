@@ -50,7 +50,7 @@ public:
 	explicit SerialSolution(StagePrivate* creator, std::vector<const SolutionBase*>&& subsolutions, double cost)
 	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
 	{}
-	void appendTo(std::vector<const SubTrajectory*>& solution) const;
+	void appendTo(SolutionTrajectory& solution) const;
 
 private:
 	// series of sub solutions
@@ -68,7 +68,7 @@ public:
 	void storeNewSolution(std::vector<const SolutionBase *> &&s, double cost);
 	const std::list<SerialSolution>& solutions() const { return solutions_; }
 
-	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const override {
+	void append(const SolutionBase& s, SolutionTrajectory& solution) const override {
 		assert(s.creator() == this);
 		static_cast<const SerialSolution&>(s).appendTo(solution);
 	}
@@ -104,7 +104,7 @@ class WrapperBasePrivate : public ContainerBasePrivate {
 	friend class WrapperBase;
 public:
 	// these methods are lifted to the public API
-	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const;
+	void append(const SolutionBase& s, SolutionTrajectory& solution) const;
 	void onNewSolution(SolutionBase &s) override;
 
 protected:

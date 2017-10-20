@@ -48,6 +48,8 @@ private:
 	// trajectories could have a name, e.g. a generator could name its solutions
 	std::string name_;
 };
+/// SolutionTrajectory is composed of a series of SubTrajectories
+typedef std::vector<const SubTrajectory*> SolutionTrajectory;
 
 
 /// exception thrown by Stage::init()
