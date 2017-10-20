@@ -25,6 +25,7 @@ enum InterfaceFlag {
 };
 typedef Flags<InterfaceFlag> InterfaceFlags;
 
+
 class ContainerBasePrivate;
 class StagePrivate {
 	friend class Stage;
@@ -35,30 +36,31 @@ public:
 	StagePrivate(Stage* me, const std::string& name);
 
 	InterfaceFlags interfaceFlags() const;
-	InterfaceFlags deducedFlags() const;
-	virtual InterfaceFlags announcedFlags() const = 0;
-	std::list<SubTrajectory>& trajectories() { return trajectories_; }
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
+	inline const std::string& name() const { return name_; }
 	inline ContainerBasePrivate* parent() const { return parent_; }
 	inline container_type::iterator it() const { return it_; }
-	inline Interface* starts() const { return starts_.get(); }
-	inline Interface* ends() const { return ends_.get(); }
-	inline Interface* prevEnds() const { return prev_ends_; }
-	inline Interface* nextStarts() const { return next_starts_; }
-	inline const std::list<SubTrajectory> trajectories() const { return trajectories_; }
+	inline const InterfacePtr& starts() const { return starts_; }
+	inline const InterfacePtr& ends() const { return ends_; }
+	inline InterfacePtr prevEnds() const { return prev_ends_.lock(); }
+	inline InterfacePtr nextStarts() const { return next_starts_.lock(); }
 
-	inline bool isConnected() const { return prev_ends_ || next_starts_; }
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+	inline bool isConnected() const { return prevEnds() || nextStarts(); }
+	/// validate that sendForward() and sendBackward() will succeed
+	/// should be only called by containers' init() method
+	void validate() const;
 
 	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {
 		parent_ = parent;
 		it_ = it;
 	}
-	inline void setPrevEnds(Interface * prev_ends) { prev_ends_ = prev_ends; }
-	inline void setNextStarts(Interface * next_starts) { next_starts_ = next_starts; }
+	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
+	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
+
+	virtual void append(const SolutionBase& s, SolutionTrajectory& solution) const = 0;
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
@@ -66,28 +68,45 @@ protected:
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
-	std::list<SubTrajectory> trajectories_;
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
 	ContainerBasePrivate* parent_; // owning parent
 	container_type::iterator it_; // iterator into parent's children_ list referring to this
 
-	Interface *prev_ends_;    // interface to be used for sendBackward()
-	Interface *next_starts_;  // interface to be used for sendForward()
+	InterfaceWeakPtr prev_ends_;    // interface to be used for sendBackward()
+	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 };
 std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 
-class PropagatingEitherWayPrivate : public StagePrivate {
+// ComputeBasePrivate is the base class for all computing stages, i.e. non-containers.
+// It adds the trajectories_ variable.
+class ComputeBasePrivate : public StagePrivate {
+	friend class ComputeBase;
+
+public:
+	ComputeBasePrivate(Stage* me, const std::string& name)
+	   : StagePrivate(me, name)
+	{}
+	void append(const SolutionBase& s, SolutionTrajectory& solution) const override {
+		assert(s.creator() == this);
+		solution.push_back(static_cast<const SubTrajectory*>(&s));
+	}
+
+private:
+	std::list<SubTrajectory> trajectories_;
+};
+
+
+class PropagatingEitherWayPrivate : public ComputeBasePrivate {
 	friend class PropagatingEitherWay;
 
 public:
 	PropagatingEitherWay::Direction dir;
 
 	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir,
-	                                const std::string &name);
-	InterfaceFlags announcedFlags() const override;
+	                                   const std::string &name);
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -120,22 +139,20 @@ public:
 };
 
 
-class GeneratorPrivate : public StagePrivate {
+class GeneratorPrivate : public ComputeBasePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
-	InterfaceFlags announcedFlags() const override;
 
 	bool canCompute() const override;
 	bool compute() override;
 };
 
 
-class ConnectingPrivate : public StagePrivate {
+class ConnectingPrivate : public ComputeBasePrivate {
 	friend class Connecting;
 
 public:
 	inline ConnectingPrivate(Connecting *me, const std::string &name);
-	InterfaceFlags announcedFlags() const override;
 
 	bool canCompute() const override;
 	bool compute() override;

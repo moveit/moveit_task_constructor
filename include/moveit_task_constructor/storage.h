@@ -4,8 +4,9 @@
 
 #include <moveit/macros/class_forward.h>
 
-#include <deque>
 #include <list>
+#include <vector>
+#include <deque>
 #include <cassert>
 #include <functional>
 
@@ -19,9 +20,10 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 
 namespace moveit { namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(SubTrajectory)
+class SolutionBase;
 MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
+typedef std::weak_ptr<Interface> InterfaceWeakPtr;
 MOVEIT_CLASS_FORWARD(Stage)
 
 
@@ -30,24 +32,32 @@ MOVEIT_CLASS_FORWARD(Stage)
  *  A start or goal state for planning is essentially defined by the state of a planning scene.
  */
 class InterfaceState {
+	friend class SolutionBase; // addIncoming() / addOutgoing() should be called only by SolutionBase
 public:
-	typedef std::deque<SubTrajectory*> SubTrajectoryList;
+	// TODO turn this into priority queue
+	typedef std::deque<SolutionBase*> Solutions;
 
+	/// create an InterfaceState from a planning scene
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
-	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
-	inline const SubTrajectoryList& incomingTrajectories() const { return incoming_trajectories_; }
-	inline const SubTrajectoryList& outgoingTrajectories() const { return outgoing_trajectories_; }
+	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
+	InterfaceState(const InterfaceState& existing);
 
-	inline void addIncoming(SubTrajectory* t) { incoming_trajectories_.push_back(t); }
-	inline void addOutgoing(SubTrajectory* t) { outgoing_trajectories_.push_back(t); }
+	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
+	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
+	inline const Solutions& outgoingTrajectories() const { return outgoing_trajectories_; }
+
+private:
+	// these methods should be only called by SolutionBase::set[Start|End]State()
+	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
+	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
 
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
 	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
 	// TODO: add visualization_msgs::MarkerArray to allow for any complex visualization of the state
-	SubTrajectoryList incoming_trajectories_;
-	SubTrajectoryList outgoing_trajectories_;
+	Solutions incoming_trajectories_;
+	Solutions outgoing_trajectories_;
 };
 
 
@@ -64,7 +74,10 @@ public:
 
 	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	// and finally run the notify callback
-	container_type::iterator add(InterfaceState &&state, SubTrajectory* incoming, SubTrajectory* outgoing);
+	container_type::iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
+
+	// clone an existing InterfaceState, but without its incoming/outgoing connections
+	container_type::iterator clone(const InterfaceState &state);
 
 	using container_type::value_type;
 	using container_type::reference;
@@ -95,31 +108,56 @@ private:
 };
 
 
-struct SubTrajectory {
-	SubTrajectory(robot_trajectory::RobotTrajectoryPtr traj)
-		: trajectory(traj),
-		  begin(NULL),
-		  end(NULL),
-		  cost(0)
-	{}
+class StagePrivate;
+class SolutionBase {
+public:
+	inline const StagePrivate* creator() const { return creator_; }
+	inline double cost() const { return cost_; }
+
+	inline const InterfaceState* start() const { return start_; }
+	inline const InterfaceState* end() const { return end_; }
 
 	inline void setStartState(const InterfaceState& state){
-		assert(begin == NULL);
-		begin= &state;
+		assert(start_ == NULL);
+		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
-		assert(end == NULL);
-		end= &state;
+		assert(end_ == NULL);
+		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
+	void setCost(double cost);
 
-	// TODO: trajectories could have a name, e.g. a generator could name its solutions
-	const robot_trajectory::RobotTrajectoryPtr trajectory;
-	const InterfaceState* begin;
-	const InterfaceState* end;
-	double cost;
+protected:
+	SolutionBase(StagePrivate* creator, double cost)
+	   : creator_(creator), cost_(cost)
+	{}
+
+private:
+	// back-pointer to creating stage, allows to access sub-solutions
+	StagePrivate *creator_;
+	// associated cost
+	double cost_;
+
+	// begin and end InterfaceState of this solution/trajectory
+	const InterfaceState* start_ = nullptr;
+	const InterfaceState* end_ = nullptr;
 };
+
+
+enum TraverseDirection { FORWARD, BACKWARD };
+template <TraverseDirection dir>
+const InterfaceState::Solutions& trajectories(const SolutionBase &start);
+
+template <> inline
+const InterfaceState::Solutions& trajectories<FORWARD>(const SolutionBase &solution) {
+	return solution.end()->outgoingTrajectories();
+}
+template <> inline
+const InterfaceState::Solutions& trajectories<BACKWARD>(const SolutionBase &solution) {
+	return solution.start()->incomingTrajectories();
+}
 
 } }

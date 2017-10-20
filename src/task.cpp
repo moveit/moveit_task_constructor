@@ -13,15 +13,26 @@
 
 namespace moveit { namespace task_constructor {
 
-class TaskPrivate : public SerialContainerPrivate {
+/** A Task wraps a single container. This wrapped container spawns its solutions
+ *  into the prevEnds(), nextStarts() interface, which are provided by the wrappers
+ *  end_ and start_ and interfaces respectively. */
+class TaskPrivate : public WrapperBasePrivate {
 	friend class Task;
+
 	robot_model_loader::RobotModelLoaderPtr rml_;
-	planning_scene::PlanningSceneConstPtr scene_;
+	planning_scene::PlanningSceneConstPtr scene_; // initial scene
+	std::list<Task::SolutionCallback> callbacks_; // functions called for each new solution
 
 public:
-	TaskPrivate(Task* me, const std::string &name)
-	   : SerialContainerPrivate(me, name)
+	TaskPrivate(Task* me, const std::string &name = std::string())
+	   : WrapperBasePrivate(me, name)
 	{
+		// provide external interfaces to the wrapped container
+		starts_.reset(new Interface(Interface::NotifyFunction()));
+		ends_.reset(new Interface(Interface::NotifyFunction()));
+		// suppress insertion of this stage into another container
+		// thus, this->parent() == this indicates the root
+		setHierarchy(this, iterator());
 		initModel();
 	}
 
@@ -62,11 +73,13 @@ public:
 };
 
 
-Task::Task(const std::string &name)
-   : SerialContainer(new TaskPrivate(this, name))
+Task::Task(ContainerBase::pointer &&container)
+   : WrapperBase(new TaskPrivate(this))
 {
+	insert(std::move(container));
 }
 PIMPL_FUNCTIONS(Task)
+PIMPL_FUNCTIONS(ContainerBase)
 
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
@@ -92,81 +105,120 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
-	if (!insert(std::move(stage)))
-		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->getName());
+
+	if (!wrapped()->insert(std::move(stage)))
+		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
+}
+
+void Task::clear()
+{
+	wrapped()->clear();
+}
+
+Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
+{
+	auto& callbacks = pimpl()->callbacks_;
+	callbacks.emplace_back(std::move(cb));
+	return --callbacks.cend();
+}
+
+void Task::erase(SolutionCallbackList::const_iterator which)
+{
+	auto impl = pimpl();
+	pimpl()->callbacks_.erase(which);
+}
+
+bool Task::canCompute() const
+{
+	return wrapped()->canCompute();
+}
+
+bool Task::compute()
+{
+	return wrapped()->compute();
+}
+
+void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	auto impl = pimpl();
+	// connect child
+	StagePrivate *child = *wrapped();
+	child->setPrevEnds(impl->starts());
+	child->setNextStarts(impl->ends());
+
+	WrapperBase::init(scene);
 }
 
 bool Task::plan(){
 	auto impl = pimpl();
-	NewSolutionPublisher debug(*this);
+	add(NewSolutionPublisher());
 
+	reset();
 	impl->initScene();
-	this->init(impl->scene_);
+	init(impl->scene_);
+
 	while(ros::ok() && canCompute()) {
-		if (compute()) {
-			debug.publish();
+	if (compute())
 			printState();
-		} else
+		else
 			break;
 	}
-	return false;
-}
-
-const robot_state::RobotState& Task::getCurrentRobotState() const {
-	auto impl = pimpl();
-	return impl->scene_->getCurrentState();
+	return numSolutions() > 0;
 }
 
 void Task::printState(){
 	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
 		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+		return true;
 	};
-	traverseStages(processor);
+	wrapped()->traverseRecursively(processor);
 }
 
-namespace {
-bool traverseFullTrajectories(
-	SubTrajectory& start,
-	int nr_of_trajectories,
-	const Task::SolutionCallback& cb,
-	std::vector<SubTrajectory*>& trace)
+size_t Task::numSolutions() const
 {
-	bool ret= true;
-
-	trace.push_back(&start);
-
-	if(nr_of_trajectories == 1){
-		ret= cb(trace);
-	}
-	else if( start.end ){
-		for( SubTrajectory* successor : start.end->outgoingTrajectories() ){
-			if( !traverseFullTrajectories(*successor, nr_of_trajectories-1, cb, trace) ){
-				ret= false;
-				break;
-			}
-		}
-	}
-
-	trace.pop_back();
-
-	return ret;
-}
+	auto w = wrapped();
+	// during initial insert() we call numSolutions(), but wrapped() is not yet defined
+	return w ? w->numSolutions() : 0;
 }
 
-bool Task::processSolutions(const Task::SolutionCallback& processor) {
-	auto impl = pimpl();
-	const TaskPrivate::container_type& children = impl->children();
-	const size_t nr_of_trajectories = children.size();
-	std::vector<SubTrajectory*> trace;
-	trace.reserve(nr_of_trajectories);
-	for(SubTrajectory& st : children.front()->pimpl()->trajectories())
-		if( !traverseFullTrajectories(st, nr_of_trajectories, processor, trace) )
-			return false;
-	return true;
+void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) const
+{
+	wrapped()->processSolutions(processor);
 }
 
-bool Task::processSolutions(const Task::SolutionCallback& processor) const {
-	return const_cast<Task*>(this)->processSolutions(processor);
+void Task::processSolutions(const Task::SolutionProcessor& processor) const {
+	SolutionTrajectory solution;
+	processSolutions([&solution, &processor](const SolutionBase& s) {
+		solution.clear();
+		Task::flatten(s, solution);
+		return processor(solution, s.cost());
+	});
+}
+
+void Task::append(const SolutionBase &s, std::vector<const SubTrajectory *> &solution) const {
+	wrapped()->pimpl()->append(s, solution);
+}
+
+void Task::onNewSolution(SolutionBase &s)
+{
+	for (const auto& cb : pimpl()->callbacks_)
+		cb(s);
+}
+
+std::vector<const SubTrajectory *>& Task::flatten(const SolutionBase &s, std::vector<const SubTrajectory *> &result)
+{
+	s.creator()->append(s, result);
+	return result;
+}
+
+inline ContainerBase* Task::wrapped()
+{
+	return static_cast<ContainerBase*>(WrapperBase::wrapped());
+}
+
+inline const ContainerBase* Task::wrapped() const
+{
+	return const_cast<Task*>(this)->wrapped();
 }
 
 } }

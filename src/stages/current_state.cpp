@@ -9,8 +9,9 @@ CurrentState::CurrentState(std::string name)
 	ran_= false;
 }
 
-bool CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
+void CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	Generator::init(scene);
 	scene_ = scene;
 	ran_= false;
 }

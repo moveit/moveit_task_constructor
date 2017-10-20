@@ -14,7 +14,7 @@ class Gripper : public PropagatingEitherWay {
 public:
 	Gripper(std::string name);
 
-	bool init(const planning_scene::PlanningSceneConstPtr &scene);
+	void init(const planning_scene::PlanningSceneConstPtr &scene);
 	bool computeForward(const InterfaceState& from) override;
 	bool computeBackward(const InterfaceState& to) override;
 

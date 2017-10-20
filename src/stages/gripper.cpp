@@ -17,8 +17,9 @@ Gripper::Gripper(std::string name)
    : PropagatingEitherWay(name)
 {}
 
-bool Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	PropagatingEitherWay::init(scene);
 	planner_ = Task::createPlanner(scene->getRobotModel());
 }
 
