@@ -91,6 +91,41 @@ void ContainerBase::clear()
 	pimpl()->children_.clear();
 }
 
+void ContainerBase::reset()
+{
+	// recursively reset children
+	for (auto& child: pimpl()->children())
+		child->reset();
+	Stage::reset();
+}
+
+void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	InitStageException errors;
+	auto& children = pimpl()->children();
+
+	// recursively init all children
+	for (auto& child : children) {
+		try {
+			child->init(scene);
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
+	}
+
+	// validate connectivity of children
+	for (auto& child : children) {
+		try {
+			child->pimpl()->validate();
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
+	}
+
+	if (errors)
+		throw errors;
+}
+
 
 SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
    : ContainerBasePrivate(me, name)
@@ -207,8 +242,7 @@ void SerialContainerPrivate::storeNewSolution(std::vector<const SolutionBase*> &
 	}
 
 	// inform parent about new solution
-	if (parent())
-		parent()->onNewSolution(solutions_.back());
+	parent()->onNewSolution(solutions_.back());
 }
 
 
@@ -230,8 +264,7 @@ void SerialContainer::reset()
 	impl->solutions_.clear();
 
 	// recursively reset children
-	for (auto& child: impl->children())
-		child->reset();
+	ContainerBase::reset();
 }
 
 void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
@@ -287,25 +320,9 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		impl->connect(**prev, **cur);
 	}
 
-	// recursively init all children
-	for (auto& child : impl->children()) {
-		try {
-			child->init(scene);
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
-	}
+	// recursively init + validate all children
+	ContainerBase::init(scene);
 
-	// validate connectivity of chain
-	for (auto& child : impl->children()) {
-		try {
-			child->pimpl()->validate();
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
-	}
-
-	std::cerr << errors;
 	if (errors)
 		throw errors;
 }
@@ -334,8 +351,15 @@ size_t SerialContainer::numSolutions() const
 	return pimpl()->solutions_.size();
 }
 
+void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &processor) const
+{
+	for(const SolutionBase& s : pimpl()->solutions())
+		if (!processor(s))
+			break;
+}
+
 template <TraverseDirection dir>
-bool SerialContainer::traverse(const SolutionBase &start, const SolutionCallback &cb,
+bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
                                std::vector<const SolutionBase *> &trace, double trace_cost)
 {
 	if (!cb(start, trace, trace_cost))
@@ -362,6 +386,52 @@ void SerialSolution::appendTo(std::vector<const SubTrajectory *> &solution) cons
 	solution.reserve(solution.size() + subsolutions_.size());
 	for (const SolutionBase* s : subsolutions_)
 		s->creator()->append(*s, solution);
+}
+
+
+void WrapperBasePrivate::append(const SolutionBase &s, std::vector<const SubTrajectory *> &solution) const
+{
+	auto me = static_cast<const WrapperBase*>(me_);
+	assert(me->wrapped());
+	me->append(s, solution);
+}
+
+void WrapperBasePrivate::onNewSolution(SolutionBase &s)
+{
+	auto me = static_cast<WrapperBase*>(me_);
+	me->onNewSolution(s);
+}
+
+WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
+   : WrapperBase(new WrapperBasePrivate(this, name))
+{
+	if (child) insert(std::move(child));
+}
+WrapperBase::WrapperBase(WrapperBasePrivate *impl)
+   : ContainerBase(impl)
+{}
+PIMPL_FUNCTIONS(WrapperBase)
+
+bool WrapperBase::insert(Stage::pointer &&stage, int before)
+{
+	// restrict num of children to one
+	if (numChildren() > 0)
+		return false;
+	return ContainerBase::insert(std::move(stage), before);
+}
+
+void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	if (numChildren() != 1)
+		throw InitStageException(*this, "no wrapped child");
+
+	// init + validate children
+	ContainerBase::init(scene);
+}
+
+Stage* WrapperBase::wrapped()
+{
+	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
 }
 
 } }

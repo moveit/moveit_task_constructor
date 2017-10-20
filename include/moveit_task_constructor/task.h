@@ -19,26 +19,29 @@ MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
 class TaskPrivate;
-class Task : protected SerialContainer {
+class Task : protected WrapperBase {
 	PRIVATE_CLASS(Task)
 public:
-	Task(const std::string &name = std::string());
+	Task(Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
 	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
 	                                                            const std::string &ns = "move_group",
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
 	void add(Stage::pointer &&stage);
-	using SerialContainer::clear;
+	void clear();
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
 	/// add function to be called for every newly found solution
 	SolutionCallbackList::const_iterator add(SolutionCallback &&cb);
+	/// remove function callback
 	void erase(SolutionCallbackList::const_iterator which);
 
 	bool plan();
 	void printState();
+
+	size_t numSolutions() const override;
 
 	/// function type used for processing solutions
 	/// For each solution, composed from several SubTrajectories,
@@ -47,11 +50,22 @@ public:
 	typedef std::function<bool(const std::vector<const SubTrajectory*>& solution,
 	                           double accumulated_cost)> SolutionProcessor;
 	/// process all solutions
-	void processSolutions(const SolutionProcessor &processor);
-	void processSolutions(const SolutionProcessor &processor) const;
+	void processSolutions(const Task::SolutionProcessor &processor) const;
 
 	static std::vector<const SubTrajectory*>&
 	flatten(const SolutionBase &s, std::vector<const SubTrajectory*>& result);
+
+protected:
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	bool canCompute() const override;
+	bool compute() override;
+	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
+	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const override;
+	void onNewSolution(SolutionBase &s) override;
+
+private:
+	inline ContainerBase *wrapped();
+	inline const ContainerBase *wrapped() const;
 };
 
 } }

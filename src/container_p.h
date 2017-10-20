@@ -99,4 +99,18 @@ private:
 	std::list<SerialSolution> solutions_;
 };
 
+
+class WrapperBasePrivate : public ContainerBasePrivate {
+	friend class WrapperBase;
+public:
+	// these methods are lifted to the public API
+	void append(const SolutionBase& s, std::vector<const SubTrajectory*>& solution) const;
+	void onNewSolution(SolutionBase &s) override;
+
+protected:
+	WrapperBasePrivate(WrapperBase* me, const std::string &name)
+	   : ContainerBasePrivate(me, name)
+	{}
+};
+
 } }
