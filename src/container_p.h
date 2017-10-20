@@ -47,14 +47,14 @@ private:
 
 class SerialSolution : public SolutionBase {
 public:
-	explicit SerialSolution(StagePrivate* creator, std::vector<const SolutionBase*>&& subsolutions, double cost)
+	explicit SerialSolution(StagePrivate* creator, SerialContainer::solution_container&& subsolutions, double cost)
 	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
 	{}
 	void appendTo(SolutionTrajectory& solution) const;
 
 private:
 	// series of sub solutions
-	std::vector<const SolutionBase*> subsolutions_;
+	SerialContainer::solution_container subsolutions_;
 };
 
 
@@ -65,7 +65,7 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 	void onNewSolution(SolutionBase &s) override;
-	void storeNewSolution(std::vector<const SolutionBase *> &&s, double cost);
+	void storeNewSolution(SerialContainer::solution_container &&s, double cost);
 	const std::list<SerialSolution>& solutions() const { return solutions_; }
 
 	void append(const SolutionBase& s, SolutionTrajectory& solution) const override {

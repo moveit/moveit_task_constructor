@@ -151,7 +151,7 @@ inline ContainerBasePrivate::const_iterator SerialContainerPrivate::next(const_i
 struct SolutionCollector {
 	SolutionCollector(const Stage::pointer& stage) : stopping_stage(stage->pimpl()) {}
 
-	bool operator()(const SolutionBase& current, const std::vector<const SolutionBase*>& trace, double cost) {
+	bool operator()(const SolutionBase& current, const SerialContainer::solution_container& trace, double cost) {
 		if (current.creator() != stopping_stage)
 			return true; // not yet traversed to stopping_stage
 
@@ -159,7 +159,7 @@ struct SolutionCollector {
 		return false; // we are done
 	}
 
-	std::list<std::pair<std::vector<const SolutionBase*>, double>> solutions;
+	std::list<std::pair<SerialContainer::solution_container, double>> solutions;
 	const StagePrivate* const stopping_stage;
 };
 
@@ -175,7 +175,7 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 	SerialContainer *me = static_cast<SerialContainer*>(me_);
 
 	// TODO: can we get rid of this and use a temporary when calling traverse()?
-	std::vector<const SolutionBase*> trace; trace.reserve(children().size());
+	SerialContainer::solution_container trace; trace.reserve(children().size());
 
 	// find all incoming trajectories connected to s
 	SolutionCollector incoming(children().front());
@@ -193,7 +193,7 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 	std::cerr << "new solution for: " << name() << std::endl;
 
 	// add solutions for all combinations of incoming + s + outgoing
-	std::vector<const SolutionBase*> solution;
+	SerialContainer::solution_container solution;
 	solution.reserve(children().size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
@@ -211,7 +211,7 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 	}
 }
 
-void SerialContainerPrivate::storeNewSolution(std::vector<const SolutionBase*> &&s, double cost)
+void SerialContainerPrivate::storeNewSolution(SerialContainer::solution_container &&s, double cost)
 {
 	assert(!s.empty());
 	const InterfaceState *internal_from = s.front()->start();
@@ -360,7 +360,7 @@ void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &p
 
 template <TraverseDirection dir>
 bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
-                               std::vector<const SolutionBase *> &trace, double trace_cost)
+                               solution_container &trace, double trace_cost)
 {
 	if (!cb(start, trace, trace_cost))
 		// stopping criterium met: stop traversal along dir

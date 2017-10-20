@@ -54,20 +54,23 @@ public:
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const;
 
+	/// container used to represent a serial solution
+	typedef std::vector<const SolutionBase*> solution_container;
+
 protected:
 	/// function type used for traversing solutions
 	/// For each sub solution (current), the trace from the start as well as the
 	/// accumulated cost of all solutions in the trace are provided.
 	/// Return true, if traversal should continue, otherwise false.
 	typedef std::function<bool(const SolutionBase& current,
-	                           const std::vector<const SolutionBase*>& trace,
+	                           const solution_container& trace,
 	                           double trace_accumulated_cost)> SolutionProcessor;
 
 	/// traverse all solutions, starting at start and call the callback for each subsolution
 	/// The return value is always false, indicating that the traversal eventually stopped.
 	template<TraverseDirection dir>
 	bool traverse(const SolutionBase &start, const SolutionProcessor &cb,
-	              std::vector<const SolutionBase*> &trace, double trace_cost = 0);
+	              solution_container &trace, double trace_cost = 0);
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);
