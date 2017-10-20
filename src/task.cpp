@@ -18,7 +18,7 @@ class TaskPrivate : public SerialContainerPrivate {
 
 	robot_model_loader::RobotModelLoaderPtr rml_;
 	planning_scene::PlanningSceneConstPtr scene_; // initial scene
-	Task::SolutionCallback cb_; // function called for each new solution
+	std::list<Task::SolutionCallback> callbacks_; // functions called for each new solution
 
 public:
 	TaskPrivate(Task* me, const std::string &name)
@@ -68,7 +68,8 @@ public:
 void TaskPrivate::onNewSolution(SolutionBase &s)
 {
 	SerialContainerPrivate::onNewSolution(s);
-	if (cb_) cb_(s);
+	for (const auto& cb : callbacks_)
+		cb(s);
 }
 
 
@@ -106,17 +107,22 @@ void Task::add(pointer &&stage) {
 		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
-Task::SolutionCallback Task::setSolutionCallback(const Task::SolutionCallback &cb)
+Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
+{
+	auto& callbacks = pimpl()->callbacks_;
+	callbacks.emplace_back(std::move(cb));
+	return --callbacks.cend();
+}
+
+void Task::erase(SolutionCallbackList::const_iterator which)
 {
 	auto impl = pimpl();
-	SolutionCallback old = impl->cb_;
-	impl->cb_ = cb;
-	return old;
+	pimpl()->callbacks_.erase(which);
 }
 
 bool Task::plan(){
 	auto impl = pimpl();
-	setSolutionCallback(NewSolutionPublisher());
+	add(NewSolutionPublisher());
 
 	reset();
 	impl->initScene();

@@ -32,8 +32,10 @@ public:
 	using SerialContainer::clear;
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
-	/// set function called for every newly found solution
-	SolutionCallback setSolutionCallback(const SolutionCallback &cb);
+	typedef std::list<SolutionCallback> SolutionCallbackList;
+	/// add function to be called for every newly found solution
+	SolutionCallbackList::const_iterator add(SolutionCallback &&cb);
+	void erase(SolutionCallbackList::const_iterator which);
 
 	bool plan();
 	void printState();

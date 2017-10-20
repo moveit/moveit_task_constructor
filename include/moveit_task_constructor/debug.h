@@ -14,11 +14,11 @@ MOVEIT_CLASS_FORWARD(SolutionBase)
 void publishAllPlans(const Task &task, const std::string &topic = "task_plan", bool wait = true);
 
 class NewSolutionPublisher {
-   ros::Publisher pub_;
+	ros::Publisher pub_;
 
 public:
-   NewSolutionPublisher(const std::string &topic = "task_plan");
-   void operator()(const SolutionBase &s);
+	NewSolutionPublisher(const std::string &topic = "task_plan");
+	void operator()(const SolutionBase &s);
 };
 
 } }
