@@ -272,8 +272,6 @@ SerialContainer::SerialContainer(const std::string &name)
    : SerialContainer(new SerialContainerPrivate(this, name))
 {}
 
-PIMPL_FUNCTIONS(SerialContainer)
-
 void SerialContainer::reset()
 {
 	auto impl = pimpl();
@@ -454,8 +452,6 @@ ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate *impl)
 ParallelContainerBase::ParallelContainerBase(const std::string &name)
    : ParallelContainerBase(new ParallelContainerBasePrivate(this, name))
 {}
-
-PIMPL_FUNCTIONS(ParallelContainerBase)
 
 void ParallelContainerBase::reset()
 {

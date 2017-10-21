@@ -110,6 +110,7 @@ private:
 	// set of all solutions
 	std::list<SerialSolution> solutions_;
 };
+PIMPL_FUNCTIONS(SerialContainer)
 
 
 /** Representation of a single solution of a ParallelContainer.
@@ -141,5 +142,6 @@ public:
 private:
 	std::list<WrappedSolution> solutions_;
 };
+PIMPL_FUNCTIONS(ParallelContainerBase)
 
 } }

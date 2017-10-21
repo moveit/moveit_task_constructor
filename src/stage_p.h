@@ -82,6 +82,7 @@ private:
 	InterfaceWeakPtr prev_ends_;    // interface to be used for sendBackward()
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 };
+PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
 
 
@@ -98,6 +99,7 @@ public:
 private:
 	std::list<SubTrajectory> trajectories_;
 };
+PIMPL_FUNCTIONS(ComputeBase)
 
 
 class PropagatingEitherWayPrivate : public ComputeBasePrivate {
@@ -129,18 +131,21 @@ protected:
 	Interface::const_iterator next_start_state_;
 	Interface::const_iterator next_end_state_;
 };
+PIMPL_FUNCTIONS(PropagatingEitherWay)
 
 
 class PropagatingForwardPrivate : public PropagatingEitherWayPrivate {
 public:
 	inline PropagatingForwardPrivate(PropagatingForward *me, const std::string &name);
 };
+PIMPL_FUNCTIONS(PropagatingForward)
 
 
 class PropagatingBackwardPrivate : public PropagatingEitherWayPrivate {
 public:
 	inline PropagatingBackwardPrivate(PropagatingBackward *me, const std::string &name);
 };
+PIMPL_FUNCTIONS(PropagatingBackward)
 
 
 class GeneratorPrivate : public ComputeBasePrivate {
@@ -150,6 +155,7 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 };
+PIMPL_FUNCTIONS(Generator)
 
 
 class ConnectingPrivate : public ComputeBasePrivate {
@@ -171,7 +177,6 @@ private:
 
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };
-
-PIMPL_FUNCTIONS(Stage)
+PIMPL_FUNCTIONS(Connecting)
 
 } }

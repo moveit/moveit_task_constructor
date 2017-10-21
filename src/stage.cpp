@@ -139,7 +139,6 @@ ComputeBase::ComputeBase(ComputeBasePrivate *impl)
    : Stage(impl)
 {
 }
-PIMPL_FUNCTIONS(ComputeBase)
 
 SubTrajectory& ComputeBase::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
 	auto &trajs = pimpl()->trajectories_;
@@ -250,8 +249,6 @@ PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
 	initInterface();
 }
 
-PIMPL_FUNCTIONS(PropagatingEitherWay)
-
 void PropagatingEitherWay::initInterface()
 {
 	auto impl = pimpl();
@@ -342,7 +339,6 @@ PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward *me, con
 PropagatingForward::PropagatingForward(const std::string& name)
    : PropagatingEitherWay(new PropagatingForwardPrivate(this, name))
 {}
-PIMPL_FUNCTIONS(PropagatingForward)
 
 bool PropagatingForward::computeBackward(const InterfaceState &to)
 {
@@ -362,7 +358,6 @@ PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward *me, 
 PropagatingBackward::PropagatingBackward(const std::string &name)
    : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name))
 {}
-PIMPL_FUNCTIONS(PropagatingBackward)
 
 bool PropagatingBackward::computeForward(const InterfaceState &from)
 {
@@ -386,7 +381,6 @@ bool GeneratorPrivate::compute() {
 Generator::Generator(const std::string &name)
    : ComputeBase(new GeneratorPrivate(this, name))
 {}
-PIMPL_FUNCTIONS(Generator)
 
 void Generator::spawn(InterfaceState&& state, double cost)
 {
@@ -444,7 +438,6 @@ Connecting::Connecting(const std::string &name)
    : ComputeBase(new ConnectingPrivate(this, name))
 {
 }
-PIMPL_FUNCTIONS(Connecting)
 
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
                          const robot_trajectory::RobotTrajectoryPtr& t, double cost) {

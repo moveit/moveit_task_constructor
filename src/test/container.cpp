@@ -4,12 +4,6 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 
-namespace moveit { namespace task_constructor {
-PIMPL_FUNCTIONS(Generator)
-PIMPL_FUNCTIONS(PropagatingForward)
-PIMPL_FUNCTIONS(SerialContainer)
-}}
-
 namespace testing { namespace internal {
 enum GTestColor {
 	COLOR_DEFAULT,
