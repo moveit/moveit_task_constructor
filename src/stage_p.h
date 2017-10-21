@@ -41,15 +41,18 @@ public:
 	virtual bool compute() = 0;
 
 	inline const std::string& name() const { return name_; }
-	inline ContainerBase* parent() const { return parent_; }
-	inline container_type::iterator it() const { return it_; }
-	// TODO correctly consider constness
+	inline const ContainerBase* parent() const { return parent_; }
+	inline ContainerBase* parent() { return parent_; }
+	inline container_type::const_iterator it() const { return it_; }
+
 	inline InterfacePtr& starts() { return starts_; }
 	inline InterfacePtr& ends() { return ends_; }
-	inline const InterfacePtr& starts() const { return starts_; }
-	inline const InterfacePtr& ends() const { return ends_; }
-	inline InterfacePtr prevEnds() const { return prev_ends_.lock(); }
-	inline InterfacePtr nextStarts() const { return next_starts_.lock(); }
+	inline InterfacePtr prevEnds() { return prev_ends_.lock(); }
+	inline InterfacePtr nextStarts() { return next_starts_.lock(); }
+	inline InterfaceConstPtr starts() const { return starts_; }
+	inline InterfaceConstPtr ends() const { return ends_; }
+	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
+	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
 	/// validate that sendForward() and sendBackward() will succeed
 	/// should be only called by containers' init() method

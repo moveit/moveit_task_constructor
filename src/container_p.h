@@ -48,7 +48,7 @@ protected:
 	   : StagePrivate(me, name)
 	{}
 	/// copy external_state to a child's interface and remember the link in internal_to map
-	void copyState(InterfaceState &external_state, const Stage &child, bool to_start);
+	void copyState(InterfaceState &external_state, Stage &child, bool to_start);
 
 protected:
 	container_type children_;

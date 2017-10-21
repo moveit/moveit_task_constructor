@@ -51,7 +51,7 @@ bool ContainerBasePrivate::compute()
 }
 
 void ContainerBasePrivate::copyState(InterfaceState &external_state,
-                                     const Stage &child, bool to_start) {
+                                     Stage &child, bool to_start) {
 	if (to_start) {
 		auto internal = child.pimpl()->starts()->clone(external_state);
 		internal_to_my_starts_.insert(std::make_pair(&*internal, &external_state));
@@ -302,7 +302,7 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	// initialize starts_ and ends_ interfaces
 	auto cur = impl->children().begin();
-	const Stage* child = cur->get();
+	Stage* child = cur->get();
 	if (child->pimpl()->starts())
 		impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
 			// new external state in our starts_ interface is copied to first child

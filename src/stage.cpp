@@ -114,7 +114,7 @@ const char* direction(const StagePrivate& stage) {
 std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	auto impl = stage.pimpl();
 	// starts
-	for (const InterfacePtr& i : {impl->prevEnds(), impl->starts()}) {
+	for (const InterfaceConstPtr& i : {impl->prevEnds(), impl->starts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
@@ -124,7 +124,7 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	   << std::setw(3) << stage.numSolutions()
 	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(*impl);
 	// ends
-	for (const InterfacePtr& i : {impl->ends(), impl->nextStarts()}) {
+	for (const InterfaceConstPtr& i : {impl->ends(), impl->nextStarts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
