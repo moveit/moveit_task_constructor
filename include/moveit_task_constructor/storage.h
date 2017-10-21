@@ -109,8 +109,14 @@ private:
 
 
 class StagePrivate;
+class SubTrajectory;
+
+/// SolutionTrajectory is composed of a series of SubTrajectories
+typedef std::vector<const SubTrajectory*> SolutionTrajectory;
+
 class SolutionBase {
 public:
+	// TODO: get rid of creator (only used in SerialContainer)
 	inline const StagePrivate* creator() const { return creator_; }
 	inline double cost() const { return cost_; }
 
@@ -130,6 +136,9 @@ public:
 	}
 	void setCost(double cost);
 
+	/// flatten this solution to full solution trajectory, appending to solution
+	virtual void flattenTo(SolutionTrajectory& solution) const = 0;
+
 protected:
 	SolutionBase(StagePrivate* creator, double cost)
 	   : creator_(creator), cost_(cost)
@@ -144,6 +153,26 @@ private:
 	// begin and end InterfaceState of this solution/trajectory
 	const InterfaceState* start_ = nullptr;
 	const InterfaceState* end_ = nullptr;
+};
+
+
+// SubTrajectory connects interface states of ComputeStages
+class SubTrajectory : public SolutionBase {
+public:
+	explicit SubTrajectory(StagePrivate* creator, const robot_trajectory::RobotTrajectoryPtr& traj, double cost);
+
+	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
+	const std::string& name() const { return name_; }
+	void setName(const std::string& name) { name_ = name; }
+
+	void flattenTo(SolutionTrajectory& solution) const override {
+		solution.push_back(this);
+	}
+
+private:
+	const robot_trajectory::RobotTrajectoryPtr trajectory_;
+	// trajectories could have a name, e.g. a generator could name its solutions
+	std::string name_;
 };
 
 

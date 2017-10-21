@@ -63,7 +63,7 @@ protected:
 		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it, ++exp_it, ++pos) {
 			StagePrivate *child = (*it)->pimpl();
 			EXPECT_EQ(child, *exp_it) << "wrong order";
-			EXPECT_EQ(child->parent(), container) << "wrong parent";
+			EXPECT_EQ(child->parent()->pimpl(), container) << "wrong parent";
 			EXPECT_EQ(it, container->position(pos)) << "bad forward position resolution";
 			EXPECT_EQ(it, container->position(pos-num-1)) << "bad backward position resolution";
 		}

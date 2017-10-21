@@ -34,24 +34,6 @@ class InterfaceState;
 typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
 
 
-// SubTrajectory connects interface states of ComputeStages
-class SubTrajectory : public SolutionBase {
-public:
-	explicit SubTrajectory(StagePrivate* creator, const robot_trajectory::RobotTrajectoryPtr& traj, double cost);
-
-	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
-	const std::string& name() const { return name_; }
-	void setName(const std::string& name) { name_ = name; }
-
-private:
-	const robot_trajectory::RobotTrajectoryPtr trajectory_;
-	// trajectories could have a name, e.g. a generator could name its solutions
-	std::string name_;
-};
-/// SolutionTrajectory is composed of a series of SubTrajectories
-typedef std::vector<const SubTrajectory*> SolutionTrajectory;
-
-
 /// exception thrown by Stage::init()
 /// It collects individual errors in stages throughout the pipeline to allow overall error reporting
 class InitStageException : public std::exception {

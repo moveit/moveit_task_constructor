@@ -13,73 +13,50 @@
 
 namespace moveit { namespace task_constructor {
 
-/** A Task wraps a single container. This wrapped container spawns its solutions
- *  into the prevEnds(), nextStarts() interface, which are provided by the wrappers
- *  end_ and start_ and interfaces respectively. */
-class TaskPrivate : public WrapperBasePrivate {
-	friend class Task;
-
-	robot_model_loader::RobotModelLoaderPtr rml_;
-	planning_scene::PlanningSceneConstPtr scene_; // initial scene
-	std::list<Task::SolutionCallback> callbacks_; // functions called for each new solution
-
-public:
-	TaskPrivate(Task* me, const std::string &name = std::string())
-	   : WrapperBasePrivate(me, name)
-	{
-		// provide external interfaces to the wrapped container
-		starts_.reset(new Interface(Interface::NotifyFunction()));
-		ends_.reset(new Interface(Interface::NotifyFunction()));
-		// suppress insertion of this stage into another container
-		// thus, this->parent() == this indicates the root
-		setHierarchy(this, iterator());
-		initModel();
-	}
-
-	void initModel () {
-		rml_.reset(new robot_model_loader::RobotModelLoader);
-		if( !rml_->getModel() )
-			throw Exception("Task failed to construct RobotModel");
-	}
-	void initScene() {
-		assert(rml_);
-
-		ros::NodeHandle h;
-		ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-		client.waitForExistence();
-
-		moveit_msgs::GetPlanningScene::Request req;
-		moveit_msgs::GetPlanningScene::Response res;
-
-		req.components.components =
-			moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
-			| moveit_msgs::PlanningSceneComponents::ROBOT_STATE
-			| moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
-			| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
-			| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
-			| moveit_msgs::PlanningSceneComponents::OCTOMAP
-			| moveit_msgs::PlanningSceneComponents::TRANSFORMS
-			| moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
-			| moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
-			| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
-
-		if(!client.call(req, res)){
-			throw Exception("Task failed to acquire current PlanningScene");
-		}
-
-		scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
-		std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
-	}
-};
-
-
 Task::Task(ContainerBase::pointer &&container)
-   : WrapperBase(new TaskPrivate(this))
+   : WrapperBase(std::string())
 {
+	task_starts_.reset(new Interface(Interface::NotifyFunction()));
+	task_ends_.reset(new Interface(Interface::NotifyFunction()));
+
 	insert(std::move(container));
+	initModel();
 }
-PIMPL_FUNCTIONS(Task)
-PIMPL_FUNCTIONS(ContainerBase)
+
+void Task::initModel () {
+	rml_.reset(new robot_model_loader::RobotModelLoader);
+	if( !rml_->getModel() )
+		throw Exception("Task failed to construct RobotModel");
+}
+void Task::initScene() {
+	assert(rml_);
+
+	ros::NodeHandle h;
+	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+	client.waitForExistence();
+
+	moveit_msgs::GetPlanningScene::Request req;
+	moveit_msgs::GetPlanningScene::Response res;
+
+	req.components.components =
+		moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
+		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE
+		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
+		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
+		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
+		| moveit_msgs::PlanningSceneComponents::OCTOMAP
+		| moveit_msgs::PlanningSceneComponents::TRANSFORMS
+		| moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
+		| moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
+		| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+
+	if(!client.call(req, res)){
+		throw Exception("Task failed to acquire current PlanningScene");
+	}
+
+	scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
+	std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
+}
 
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
@@ -117,15 +94,25 @@ void Task::clear()
 
 Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
 {
-	auto& callbacks = pimpl()->callbacks_;
-	callbacks.emplace_back(std::move(cb));
-	return --callbacks.cend();
+	callbacks_.emplace_back(std::move(cb));
+	return --callbacks_.cend();
 }
 
 void Task::erase(SolutionCallbackList::const_iterator which)
 {
+	callbacks_.erase(which);
+}
+
+void Task::reset()
+{
+	task_starts_->clear();
+	task_ends_->clear();
+	WrapperBase::reset();
+
+	// connect my prevEnds() / nextStarts as WrapperBase will refer to them
 	auto impl = pimpl();
-	pimpl()->callbacks_.erase(which);
+	impl->setPrevEnds(task_ends_);
+	impl->setNextStarts(task_starts_);
 }
 
 bool Task::canCompute() const
@@ -138,24 +125,12 @@ bool Task::compute()
 	return wrapped()->compute();
 }
 
-void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
-{
-	auto impl = pimpl();
-	// connect child
-	StagePrivate *child = *wrapped();
-	child->setPrevEnds(impl->starts());
-	child->setNextStarts(impl->ends());
-
-	WrapperBase::init(scene);
-}
-
 bool Task::plan(){
-	auto impl = pimpl();
 	add(NewSolutionPublisher());
 
 	reset();
-	impl->initScene();
-	init(impl->scene_);
+	initScene();
+	init(scene_);
 
 	while(ros::ok() && canCompute()) {
 	if (compute())
@@ -190,25 +165,15 @@ void Task::processSolutions(const Task::SolutionProcessor& processor) const {
 	SolutionTrajectory solution;
 	processSolutions([&solution, &processor](const SolutionBase& s) {
 		solution.clear();
-		Task::flatten(s, solution);
+		s.flattenTo(solution);
 		return processor(solution, s.cost());
 	});
 }
 
-void Task::append(const SolutionBase &s, std::vector<const SubTrajectory *> &solution) const {
-	wrapped()->pimpl()->append(s, solution);
-}
-
 void Task::onNewSolution(SolutionBase &s)
 {
-	for (const auto& cb : pimpl()->callbacks_)
+	for (const auto& cb : callbacks_)
 		cb(s);
-}
-
-std::vector<const SubTrajectory *>& Task::flatten(const SolutionBase &s, std::vector<const SubTrajectory *> &result)
-{
-	s.creator()->append(s, result);
-	return result;
 }
 
 inline ContainerBase* Task::wrapped()

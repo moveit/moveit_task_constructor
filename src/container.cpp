@@ -50,11 +50,21 @@ bool ContainerBasePrivate::compute()
 	return static_cast<ContainerBase*>(me_)->compute();
 }
 
+void ContainerBasePrivate::copyState(InterfaceState &external_state,
+                                     const Stage &child, bool to_start) {
+	if (to_start) {
+		auto internal = child.pimpl()->starts()->clone(external_state);
+		internal_to_my_starts_.insert(std::make_pair(&*internal, &external_state));
+	} else {
+		auto internal = child.pimpl()->ends()->clone(external_state);
+		internal_to_my_ends_.insert(std::make_pair(&*internal, &external_state));
+	}
+}
+
 ContainerBase::ContainerBase(ContainerBasePrivate *impl)
    : Stage(impl)
 {
 }
-PIMPL_FUNCTIONS(ContainerBase)
 
 size_t ContainerBase::numChildren() const
 {
@@ -82,7 +92,7 @@ bool ContainerBase::insert(Stage::pointer &&stage, int before)
 
 	ContainerBasePrivate::const_iterator where = pimpl()->position(before);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
-	impl->setHierarchy(pimpl(), it);
+	impl->setHierarchy(this, it);
 	return true;
 }
 
@@ -93,9 +103,16 @@ void ContainerBase::clear()
 
 void ContainerBase::reset()
 {
+	auto impl = pimpl();
+
 	// recursively reset children
-	for (auto& child: pimpl()->children())
+	for (auto& child: impl->children())
 		child->reset();
+
+	// clear mapping
+	impl->internal_to_my_starts_.clear();
+	impl->internal_to_my_ends_.clear();
+
 	Stage::reset();
 }
 
@@ -103,6 +120,14 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	InitStageException errors;
 	auto& children = pimpl()->children();
+
+	Stage::init(scene);
+
+	// we need to have some children to do the actual work
+	if (children.empty()) {
+		errors.push_back(*this, "no children");
+		throw errors;
+	}
 
 	// recursively init all children
 	for (auto& child : children) {
@@ -122,6 +147,13 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 		}
 	}
 
+	// validate connectivity of this
+	try {
+		pimpl()->validate();
+	} catch (InitStageException &e) {
+		errors.append(e);
+	}
+
 	if (errors)
 		throw errors;
 }
@@ -133,18 +165,6 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 	// these lists don't need a notify function, connections are handled by onNewSolution()
 	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
 	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
-}
-
-inline ContainerBasePrivate::const_iterator SerialContainerPrivate::prev(const_iterator it) const
-{
-	assert(it != children().cbegin());
-	return --it;
-}
-
-inline ContainerBasePrivate::const_iterator SerialContainerPrivate::next(const_iterator it) const
-{
-	assert(it != children().cend());
-	return ++it;
 }
 
 
@@ -163,30 +183,29 @@ struct SolutionCollector {
 	const StagePrivate* const stopping_stage;
 };
 
-void SerialContainerPrivate::onNewSolution(SolutionBase &current)
+void SerialContainer::onNewSolution(SolutionBase &current)
 {
 	const StagePrivate *creator = current.creator();
+	auto& children = pimpl()->children();
 
 	// s.creator() should be one of our children
-	assert(std::find_if(children().begin(), children().end(),
+	assert(std::find_if(children.begin(), children.end(),
 	                    [creator](const Stage::pointer& stage) { return stage->pimpl() == creator; } )
-	       != children().end());
-
-	SerialContainer *me = static_cast<SerialContainer*>(me_);
+	       != children.end());
 
 	// TODO: can we get rid of this and use a temporary when calling traverse()?
-	SerialContainer::solution_container trace; trace.reserve(children().size());
+	SerialContainer::solution_container trace; trace.reserve(children.size());
 
 	// find all incoming trajectories connected to s
-	SolutionCollector incoming(children().front());
-	me->traverse<BACKWARD>(current, std::ref(incoming), trace);
+	SolutionCollector incoming(children.front());
+	traverse<BACKWARD>(current, std::ref(incoming), trace);
 	if (incoming.solutions.empty())
 		return; // no connection to front()
 
 
 	// find all outgoing trajectories connected to s
-	SolutionCollector outgoing(children().back());
-	me->traverse<FORWARD>(current, std::ref(outgoing), trace);
+	SolutionCollector outgoing(children.back());
+	traverse<FORWARD>(current, std::ref(outgoing), trace);
 	if (outgoing.solutions.empty())
 		return; // no connection to back()
 
@@ -194,7 +213,7 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 
 	// add solutions for all combinations of incoming + s + outgoing
 	SerialContainer::solution_container solution;
-	solution.reserve(children().size());
+	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
 			assert(solution.empty());
@@ -206,7 +225,7 @@ void SerialContainerPrivate::onNewSolution(SolutionBase &current)
 			solution.insert(solution.end(), out.first.begin(), out.first.end());
 
 			// TODO: store/announce solutions sorted by cost
-			storeNewSolution(std::move(solution), in.second + current.cost() + out.second);
+			pimpl()->storeNewSolution(std::move(solution), in.second + current.cost() + out.second);
 		}
 	}
 }
@@ -258,10 +277,11 @@ PIMPL_FUNCTIONS(SerialContainer)
 void SerialContainer::reset()
 {
 	auto impl = pimpl();
+
 	// clear queues
-	impl->internal_to_my_starts_.clear();
-	impl->internal_to_my_ends_.clear();
 	impl->solutions_.clear();
+	impl->pending_backward_->clear();
+	impl->pending_forward_->clear();
 
 	// recursively reset children
 	ContainerBase::reset();
@@ -277,29 +297,24 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 	InitStageException errors;
 	auto impl = pimpl();
 
-	// we need to have some children to do the actual work
-	if (impl->children().empty()) {
-		errors.push_back(*this, "no children");
-		throw errors;
-	}
+	// if there are no children, there is nothing to connect
+	if (!impl->children().empty()) {
 
 	// initialize starts_ and ends_ interfaces
 	auto cur = impl->children().begin();
-	StagePrivate* child_impl = **cur;
-	if (child_impl->starts())
-		impl->starts_.reset(new Interface([impl, child_impl](const Interface::iterator& internal){
-			// new state in our starts_ interface is copied to first child, remembering the link
-			auto it = child_impl->starts()->clone(*internal);
-			impl->internal_to_my_starts_.insert(std::make_pair(&*it, &*internal));
+	const Stage* child = cur->get();
+	if (child->pimpl()->starts())
+		impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
+			// new external state in our starts_ interface is copied to first child
+			impl->copyState(*external, *child, true);
 		}));
 
 	auto last = --impl->children().end();
-	child_impl = **last;
-	if (child_impl->ends())
-		impl->ends_.reset(new Interface([impl, child_impl](const Interface::iterator& internal){
-			// new state in our ends_ interface is copied to last child, remembering the link
-			auto it = child_impl->ends()->clone(*internal);
-			impl->internal_to_my_ends_.insert(std::make_pair(&*it, &*internal));
+	child = last->get();
+	if (child->pimpl()->ends())
+		impl->ends_.reset(new Interface([impl, child](const Interface::iterator& external){
+			// new external state in our ends_ interface is copied to last child
+			impl->copyState(*external, *child, false);
 		}));
 
 	/*** connect children ***/
@@ -321,7 +336,27 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 	}
 
 	// recursively init + validate all children
+	// this needs to be done *after* initializing the connections
 	ContainerBase::init(scene);
+
+	// after initializing children, they might have changed their mind about reading...
+	if (!impl->children().front()->pimpl()->starts())
+		impl->starts_.reset();
+	if (!impl->children().back()->pimpl()->ends())
+		impl->ends_.reset();
+
+	} else {
+		// no children -> no reading
+		impl->starts_.reset();
+		impl->ends_.reset();
+
+		// validate connectivity of this (would have been done in ContainerBase::init)
+		try {
+			pimpl()->validate();
+		} catch (InitStageException &e) {
+			errors.append(e);
+		}
+	}
 
 	if (errors)
 		throw errors;
@@ -381,43 +416,106 @@ bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcesso
 	return result;
 }
 
-void SerialSolution::appendTo(std::vector<const SubTrajectory *> &solution) const
+void SerialSolution::flattenTo(std::vector<const SubTrajectory *> &solution) const
 {
 	solution.reserve(solution.size() + subsolutions_.size());
 	for (const SolutionBase* s : subsolutions_)
-		s->creator()->append(*s, solution);
+		s->flattenTo(solution);
 }
 
 
-void WrapperBasePrivate::append(const SolutionBase &s, std::vector<const SubTrajectory *> &solution) const
+ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::__cxx11::string &name)
+   : ContainerBasePrivate(me, name)
 {
-	auto me = static_cast<const WrapperBase*>(me_);
-	assert(me->wrapped());
-	me->append(s, solution);
+	starts_.reset(new Interface([me](const Interface::iterator& external){
+		me->onNewStartState(*external);
+	}));
+	ends_.reset(new Interface([me](const Interface::iterator& external){
+		me->onNewEndState(*external);
+	}));
 }
 
-void WrapperBasePrivate::onNewSolution(SolutionBase &s)
+void ParallelContainerBase::onNewSolution(SolutionBase &s)
 {
-	auto me = static_cast<WrapperBase*>(me_);
-	me->onNewSolution(s);
+	auto impl = pimpl();
+	WrappedSolution wrapped(impl, &s);
+	// TODO: correctly clone start/end states from s to wrapped
+
+	// store solution in our own list
+	impl->solutions_.emplace_back(std::move(wrapped));
+	// inform parent
+	impl->parent()->onNewSolution(impl->solutions_.back());
 }
 
-WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
-   : WrapperBase(new WrapperBasePrivate(this, name))
-{
-	if (child) insert(std::move(child));
-}
-WrapperBase::WrapperBase(WrapperBasePrivate *impl)
+
+ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate *impl)
    : ContainerBase(impl)
 {}
-PIMPL_FUNCTIONS(WrapperBase)
+ParallelContainerBase::ParallelContainerBase(const std::string &name)
+   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name))
+{}
+
+PIMPL_FUNCTIONS(ParallelContainerBase)
+
+void ParallelContainerBase::reset()
+{
+	// clear solutions
+	pimpl()->solutions_.clear();
+
+	// recursively reset children
+	ContainerBase::reset();
+}
+
+void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	InitStageException errors;
+	auto impl = pimpl();
+
+	// connect children such that they directly send this' prevEnds() / nextStarts()
+	for (const Stage::pointer& stage : impl->children()) {
+		StagePrivate *child = stage->pimpl();
+		child->setPrevEnds(impl->prevEnds());
+		child->setNextStarts(impl->nextStarts());
+	}
+
+	// recursively init + validate all children
+	// this needs to be done *after* initializing the connections
+	ContainerBase::init(scene);
+
+	if (errors)
+		throw errors;
+}
+
+
+size_t ParallelContainerBase::numSolutions() const
+{
+	return pimpl()->solutions_.size();
+}
+
+void ParallelContainerBase::processSolutions(const ContainerBase::SolutionProcessor &processor) const
+{
+	for(const SolutionBase& s : pimpl()->solutions())
+		if (!processor(s))
+			break;
+}
+
+
+WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
+   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name))
+{
+	auto impl = pimpl();
+	if (child) insert(std::move(child));
+	// as a generator-like stage, we don't accept inputs
+	impl->starts().reset();
+	impl->ends().reset();
+}
 
 bool WrapperBase::insert(Stage::pointer &&stage, int before)
 {
 	// restrict num of children to one
 	if (numChildren() > 0)
 		return false;
-	return ContainerBase::insert(std::move(stage), before);
+	return ParallelContainerBase::insert(std::move(stage), before);
 }
 
 void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -426,7 +524,7 @@ void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 		throw InitStageException(*this, "no wrapped child");
 
 	// init + validate children
-	ContainerBase::init(scene);
+	ParallelContainerBase::init(scene);
 }
 
 Stage* WrapperBase::wrapped()

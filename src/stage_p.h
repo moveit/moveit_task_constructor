@@ -26,7 +26,7 @@ enum InterfaceFlag {
 typedef Flags<InterfaceFlag> InterfaceFlags;
 
 
-class ContainerBasePrivate;
+class ContainerBase;
 class StagePrivate {
 	friend class Stage;
 	friend std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
@@ -41,8 +41,11 @@ public:
 	virtual bool compute() = 0;
 
 	inline const std::string& name() const { return name_; }
-	inline ContainerBasePrivate* parent() const { return parent_; }
+	inline ContainerBase* parent() const { return parent_; }
 	inline container_type::iterator it() const { return it_; }
+	// TODO correctly consider constness
+	inline InterfacePtr& starts() { return starts_; }
+	inline InterfacePtr& ends() { return ends_; }
 	inline const InterfacePtr& starts() const { return starts_; }
 	inline const InterfacePtr& ends() const { return ends_; }
 	inline InterfacePtr prevEnds() const { return prev_ends_.lock(); }
@@ -52,14 +55,14 @@ public:
 	/// should be only called by containers' init() method
 	void validate() const;
 
-	inline void setHierarchy(ContainerBasePrivate* parent, container_type::iterator it) {
+	/// the following methods should be called only by a container
+	/// to setup the connection structure of their children
+	inline void setHierarchy(ContainerBase* parent, container_type::iterator it) {
 		parent_ = parent;
 		it_ = it;
 	}
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
-
-	virtual void append(const SolutionBase& s, SolutionTrajectory& solution) const = 0;
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
@@ -70,7 +73,7 @@ protected:
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
-	ContainerBasePrivate* parent_; // owning parent
+	ContainerBase* parent_;       // owning parent
 	container_type::iterator it_; // iterator into parent's children_ list referring to this
 
 	InterfaceWeakPtr prev_ends_;    // interface to be used for sendBackward()
@@ -88,10 +91,6 @@ public:
 	ComputeBasePrivate(Stage* me, const std::string& name)
 	   : StagePrivate(me, name)
 	{}
-	void append(const SolutionBase& s, SolutionTrajectory& solution) const override {
-		assert(s.creator() == this);
-		solution.push_back(static_cast<const SubTrajectory*>(&s));
-	}
 
 private:
 	std::list<SubTrajectory> trajectories_;
