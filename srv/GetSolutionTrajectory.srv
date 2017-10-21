@@ -1,0 +1,7 @@
+# ID of solution (as published in Task msg)
+uint32 solution_id
+
+---
+
+# solution trajectory composed from multiple sub trajectories
+moveit_msgs/DisplayTrajectory trajectory

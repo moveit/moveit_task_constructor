@@ -2,14 +2,31 @@ cmake_minimum_required(VERSION 2.6.12)
 
 project(moveit_task_constructor)
 
+set(MSG_DEPS trajectory_msgs moveit_msgs)
+
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
+	genmsg ${MSG_DEPS}
 	moveit_core
 	moveit_ros_planning
 	moveit_ros_planning_interface
 	moveit_msgs
 	eigen_conversions
 )
+
+# ROS messages, services and actions
+add_message_files(DIRECTORY msg
+	FILES
+	Stage.msg
+	Task.msg
+	Solution.msg
+)
+add_service_files(DIRECTORY srv
+	FILES
+	GetInterfaceState.srv
+	GetSolutionTrajectory.srv
+)
+generate_messages(DEPENDENCIES ${MSG_DEPS})
 
 catkin_package(
 	INCLUDE_DIRS include
