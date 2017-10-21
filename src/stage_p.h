@@ -48,7 +48,6 @@ public:
 	inline InterfacePtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfacePtr nextStarts() const { return next_starts_.lock(); }
 
-	inline bool isConnected() const { return prevEnds() || nextStarts(); }
 	/// validate that sendForward() and sendBackward() will succeed
 	/// should be only called by containers' init() method
 	void validate() const;
@@ -107,6 +106,9 @@ public:
 
 	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir,
 	                                   const std::string &name);
+
+	// returns true if prevEnds() or nextStarts() are accessible
+	inline bool isConnected() const { return prevEnds() || nextStarts(); }
 
 	bool canCompute() const override;
 	bool compute() override;
