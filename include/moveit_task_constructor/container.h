@@ -33,6 +33,9 @@ public:
 	/// process all solutions, calling the callback for each of them
 	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
 
+	/// called by a (direct) child when a new solution becomes available
+	virtual void onNewSolution(SolutionBase& t) = 0;
+
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
 };
@@ -58,6 +61,9 @@ public:
 	typedef std::vector<const SolutionBase*> solution_container;
 
 protected:
+	/// called by a (direct) child when a new solution becomes available
+	void onNewSolution(SolutionBase &s) override;
+
 	/// function type used for traversing solutions
 	/// For each sub solution (current), the trace from the start as well as the
 	/// accumulated cost of all solutions in the trace are provided.
@@ -77,18 +83,53 @@ protected:
 };
 
 
-class WrapperBasePrivate;
-/** Wrappers wrap a single child stage. WrapperBase is an abstract base class */
-class WrapperBase : protected ContainerBase
+class ParallelContainerBasePrivate;
+class ParallelContainerBase;
+/** Parallel containers allow for alternative planning stages
+ *  Parallel containers can come in different flavours:
+ *  - alternatives: each child stage can contribute a solution
+ *  - fallbacks: the children are considered in series
+ *  - merged: solutions of all children (actuating disjoint groups)
+ *            are merged into a single solution for parallel execution
+*/
+class ParallelContainerBase : public ContainerBase
 {
 public:
-	PRIVATE_CLASS(WrapperBase)
+	PRIVATE_CLASS(ParallelContainerBase)
+	ParallelContainerBase(const std::string &name);
+
+	void reset();
+	void init(const planning_scene::PlanningSceneConstPtr &scene);
+
+	size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const;
+
+protected:
+	ParallelContainerBase(ParallelContainerBasePrivate* impl);
+
+	/// called by a (direct) child when a new solution becomes available
+	void onNewSolution(SolutionBase &s) override;
+
+	/// callback for new start states (received externally)
+	virtual void onNewStartState(const InterfaceState &external) = 0;
+	/// callback for new end states (received externally)
+	virtual void onNewEndState(const InterfaceState &external) = 0;
+};
+
+
+/** A wrapper can wrap a single generator-style stage (and acts itself as a generator).
+ *
+ * The wrapped stage must act as a generator, i.e. only spawn new states
+ * in its external interfaces. It's intended, e.g. to filter or clone
+ * a generated solution of its wrapped generator. */
+class WrapperBase : protected ParallelContainerBase
+{
+public:
 	WrapperBase(const std::string &name, pointer &&child = Stage::pointer());
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 protected:
-	WrapperBase(WrapperBasePrivate *impl);
-	// insertion is only allowed if children() is empty
+	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
 
 	/// access the single wrapped child
@@ -98,10 +139,8 @@ protected:
 	}
 
 private:
-	/// append s as SubTrajectories to solution (lifted from private API)
-	virtual void append(const SolutionBase& s, SolutionTrajectory& solution) const = 0;
-	/// callback for new solutions
-	virtual void onNewSolution(SolutionBase &s) = 0;
+	void onNewStartState(const InterfaceState&) override {}
+	void onNewEndState(const InterfaceState&) override {}
 };
 
 } }

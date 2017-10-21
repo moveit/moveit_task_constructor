@@ -8,6 +8,17 @@
 
 namespace moveit { namespace task_constructor {
 
+/* A container needs to decouple its interfaces from those of its children.
+ * Both, the container and the children have their own starts_ and ends_.
+ * The container needs to forward states received in its interfaces to
+ * the interfaces of the children.
+ * Solutions found by the children, then need to be connected to the
+ * container's interface states. To this end, we remember the mapping
+ * from internal to external states.
+ * Note, that there might be many solutions connecting a signle start-end pair.
+ * These solutions might origin from different children (ParallelContainer)
+ * or from different solution paths in a SerialContainer.
+ */
 class ContainerBasePrivate : public StagePrivate
 {
 	friend class ContainerBase;
@@ -19,12 +30,12 @@ public:
 
 	inline const container_type& children() const { return children_; }
 
-	// Retrieve iterator into children_ pointing to indexed element.
-	// Negative index counts from end().
-	// Contrary to std::advance(), iterator limits are considered.
+	/** Retrieve iterator into children_ pointing to indexed element.
+	 * Negative index counts from end().
+	 * Contrary to std::advance(), iterator limits are considered. */
 	const_iterator position(int index) const;
 
-	// traversing all stages upto max_depth
+	/// traversing all stages upto max_depth
 	bool traverseStages(const ContainerBase::StageCallback &processor,
 	                    unsigned int cur_depth, unsigned int max_depth) const;
 
@@ -32,85 +43,105 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
-	// callback when a new trajectory or combined solution becomes available
-	virtual void onNewSolution(SolutionBase& t) = 0;
-
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name)
 	   : StagePrivate(me, name)
 	{}
+	/// copy external_state to a child's interface and remember the link in internal_to map
+	void copyState(InterfaceState &external_state, Stage &child, bool to_start);
 
-private:
+protected:
 	container_type children_;
+
+	// map first child's start states to the corresponding states in this' starts_
+	std::map<const InterfaceState*, InterfaceState*> internal_to_my_starts_;
+	// map last child's end states to the corresponding states in this' ends_
+	std::map<const InterfaceState*, InterfaceState*> internal_to_my_ends_;
 };
+PIMPL_FUNCTIONS(ContainerBase)
 
-
+/** Representation of a single, full solution path of a SerialContainer.
+ *
+ * A serial solution describes a full solution path through all children
+ * of a SerialContainer. This is a vector (of children().size()) of pointers
+ * to all solutions of the children. Hence, we don't need to copy those solutions. */
 class SerialSolution : public SolutionBase {
 public:
 	explicit SerialSolution(StagePrivate* creator, SerialContainer::solution_container&& subsolutions, double cost)
 	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
 	{}
-	void appendTo(SolutionTrajectory& solution) const;
+	/// append all subsolutions to solution
+	void flattenTo(SolutionTrajectory& solution) const override;
 
 private:
-	// series of sub solutions
+	/// series of sub solutions
 	SerialContainer::solution_container subsolutions_;
 };
 
 
+/* A solution of a SerialContainer needs to connect start to end via a full path.
+ * The solution of a single child stage is usually disconnected to the container's start or end.
+ * Only if all the children in the chain have found a coherent solution from start to end,
+ * this solution can be announced as a solution of the SerialContainer.
+ *
+ * Particularly, the first/last stage's sendBackward()/sendForward() call
+ * cannot directly propagate their associated state to the previous/next stage of this container,
+ * because we cannot provide a full solution yet. Hence, the first/last stage
+ * propagate to the pending_backward_/pending_forward_ interface first.
+ * If eventually a full solution is found, it is propagated to prevEnds()/nextStarts() -
+ * together with the solution. */
 class SerialContainerPrivate : public ContainerBasePrivate {
 	friend class SerialContainer;
 
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
-	void onNewSolution(SolutionBase &s) override;
 	void storeNewSolution(SerialContainer::solution_container &&s, double cost);
 	const std::list<SerialSolution>& solutions() const { return solutions_; }
 
-	void append(const SolutionBase& s, SolutionTrajectory& solution) const override {
-		assert(s.creator() == this);
-		static_cast<const SerialSolution&>(s).appendTo(solution);
+private:
+	void connect(StagePrivate *prev, StagePrivate *next);
+
+	// interface to buffer first child's sendBackward() states
+	InterfacePtr pending_backward_;
+	// interface to buffer last child's sendForward() states
+	InterfacePtr pending_forward_;
+
+	// set of all solutions
+	std::list<SerialSolution> solutions_;
+};
+PIMPL_FUNCTIONS(SerialContainer)
+
+
+/** Representation of a single solution of a ParallelContainer.
+ *
+ * This essentially wraps a solution of a child and thus allows
+ * for new new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase {
+public:
+	explicit WrappedSolution(StagePrivate* creator, SolutionBase* wrapped)
+	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
+	{}
+	void flattenTo(SolutionTrajectory& solution) const override {
+		wrapped_->flattenTo(solution);
 	}
 
 private:
-	inline const_iterator prev(const_iterator it) const;
-	inline const_iterator next(const_iterator it) const;
-	void connect(StagePrivate *prev, StagePrivate *next);
-
-	/* A container needs to decouple its interface from those of its children:
-	 * A solution of a container needs to connect start to end via a full path.
-	 * Start/end states of a single stage may only need to have a single outgoing/incoming trajectory.
-	 * Note, that there might be many solutions connecting the same start-end state pair. */
-
-	// map first child's start states to the corresponding states in this' starts_
-	std::map<const InterfaceState*, InterfaceState*> internal_to_my_starts_;
-	// map last child's end states to the corresponding states in this' ends_
-	std::map<const InterfaceState*, InterfaceState*> internal_to_my_ends_;
-
-	/* First/last childrens sendBackward()/sendForward() states are not directly propagated
-	 * to previous/next stage of this container, because we cannot provide a solution yet.
-	 * Only if we have full solution from start to end available, we can propagate the states */
-	// interface to receive first child's sendBackward() states
-	InterfacePtr pending_backward_;
-	// interface to receive last child's sendForward() states
-	InterfacePtr pending_forward_;
-
-	std::list<SerialSolution> solutions_;
+	SolutionBase* wrapped_;
 };
 
 
-class WrapperBasePrivate : public ContainerBasePrivate {
-	friend class WrapperBase;
+class ParallelContainerBasePrivate : public ContainerBasePrivate {
+	friend class ParallelContainerBase;
+
 public:
-	// these methods are lifted to the public API
-	void append(const SolutionBase& s, SolutionTrajectory& solution) const;
-	void onNewSolution(SolutionBase &s) override;
+	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
+	const std::list<WrappedSolution>& solutions() const { return solutions_; }
 
-protected:
-	WrapperBasePrivate(WrapperBase* me, const std::string &name)
-	   : ContainerBasePrivate(me, name)
-	{}
+private:
+	std::list<WrappedSolution> solutions_;
 };
+PIMPL_FUNCTIONS(ParallelContainerBase)
 
 } }

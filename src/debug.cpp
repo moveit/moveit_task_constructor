@@ -57,7 +57,7 @@ void NewSolutionPublisher::operator()(const SolutionBase &s)
 {
 	// flatten s into vector of SubTrajectories
 	SolutionTrajectory solution;
-	Task::flatten(s, solution);
+	s.flattenTo(solution);
 
 	publishSolution(pub_, solution, s.cost(), false);
 }

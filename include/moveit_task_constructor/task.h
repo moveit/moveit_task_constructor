@@ -7,6 +7,9 @@
 
 #include <moveit/macros/class_forward.h>
 
+namespace robot_model_loader {
+	MOVEIT_CLASS_FORWARD(RobotModelLoader)
+}
 namespace moveit { namespace core {
 	MOVEIT_CLASS_FORWARD(RobotModel)
 	MOVEIT_CLASS_FORWARD(RobotState)
@@ -18,9 +21,12 @@ MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
-class TaskPrivate;
+/** A Task is the root of a tree of stages.
+ *
+ * Actually a tasks wraps a single container, which serves as the root of all stages.
+ * The wrapped container spawns its solutions into the prevEnds(), nextStarts() interfaces,
+ * which are provided by the wrappers end_ and start_ and interfaces respectively. */
 class Task : protected WrapperBase {
-	PRIVATE_CLASS(Task)
 public:
 	Task(Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
 	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
@@ -52,19 +58,27 @@ public:
 	/// process all solutions
 	void processSolutions(const Task::SolutionProcessor &processor) const;
 
-	static SolutionTrajectory& flatten(const SolutionBase &s, SolutionTrajectory& result);
-
 protected:
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void reset() override;
+	void initModel();
+	void initScene();
 	bool canCompute() const override;
 	bool compute() override;
 	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
-	void append(const SolutionBase& s, SolutionTrajectory& solution) const override;
 	void onNewSolution(SolutionBase &s) override;
 
 private:
 	inline ContainerBase *wrapped();
 	inline const ContainerBase *wrapped() const;
+
+private:
+	robot_model_loader::RobotModelLoaderPtr rml_;
+	planning_scene::PlanningSceneConstPtr scene_; // initial scene
+	std::list<Task::SolutionCallback> callbacks_; // functions called for each new solution
+
+	// use separate interfaces as targets for wrapper's prevEnds() / nextStarts()
+	InterfacePtr task_starts_;
+	InterfacePtr task_ends_;
 };
 
 } }
