@@ -1,6 +1,7 @@
 #pragma once
 
 #include <set>
+#include <deque>
 #include <iostream>
 
 /**
@@ -13,7 +14,10 @@
  *
  *  @tparam T        container type
  */
-template <typename ContainerType, typename CostType = double, typename Compare = std::less<CostType>>
+template <typename ValueType,
+          typename ContainerType = std::deque<ValueType>,
+          typename CostType = double,
+          typename Compare = std::less<CostType>>
 class cost_ordered
 {
 public:
@@ -52,24 +56,39 @@ public:
 	typedef typename sorted_type::const_iterator sorted_const_iterator;
 
 protected:
-	container_type const & container_; // contains the actual data items
+	container_type managed_container_; // item container, owned by this instance
+	container_type* container_; // reference to the actually used item container
 	sorted_type sorted_; // sorted queue
 
 public:
-	/// initialize empty list
-	explicit cost_ordered(ContainerType& c) : container_(c) {}
+	/// initialize empty self-managed container
+	explicit cost_ordered()
+	   : managed_container_()
+	   , container_(&managed_container_) {}
+	/// initialize from externally managed container c
+	explicit cost_ordered(ContainerType& c)
+	   : container_(&c) {}
 
-	bool empty() const { return container_.empty(); }
-	size_type size() const { return container_.size(); }
+#if 0 // TODO: not yet working
+	/// initialize from externally managed container, but take ownership
+	explicit cost_ordered(ContainerType&& c)
+	   : managed_container_(std::move<ContainerType>(c.managed_container_))
+	   , container_(&managed_container_){}
+#endif
 
+	bool empty() const { return container_->empty(); }
+	size_type size() const { return container_->size(); }
+
+	const container_type& items() const { return *container_; }
 	const sorted_type& sorted() const { return sorted_; }
 
 	void clear() { sorted_.clear(); }
 
 	cost_item_pair top() const { return *sorted_.begin(); }
 
-	/// push container iterator to sorted queue
-	sorted_iterator push_back(const container_iterator& item, const CostType& cost = CostType()) {
+	/// push new value to container_ + sorted_
+	sorted_iterator push_back(const value_type& value, const CostType& cost = CostType()) {
+		auto item = container_->insert(container_->cend(), value);
 		return sorted_.insert(std::make_pair(cost, item));
 	}
 
@@ -81,19 +100,9 @@ public:
 	}
 };
 
-#if 0 && __cplusplus >= 201103L
-template<typename ContainerType>
-constexpr cost_ordered<typename ContainerType, typename std::greater<double>>
-make_cost_ordered(ContainerType& __c)
-{
-	// TODO use std::forward + reference stripping from std::make_pair
-	return cost_ordered<ContainerType, double>(__c);
-}
-#else
-template<class ContainerType>
-inline cost_ordered<ContainerType>
-make_cost_ordered(ContainerType& __c)
-{
-	return cost_ordered<ContainerType, double>(__c);
+#if 0 // TODO: allow make_cost_ordered<CostType>(ContainerType)
+template<typename ContainerType, typename CostType = double, typename Compare = std::less<CostType>>
+auto make_cost_ordered(const ContainerType &c) {
+	return cost_ordered<typename ContainerType::value_type, ContainerType, CostType, Compare>(c);
 }
 #endif
