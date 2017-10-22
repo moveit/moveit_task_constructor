@@ -4,19 +4,6 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 
-namespace testing { namespace internal {
-enum GTestColor {
-	COLOR_DEFAULT,
-	COLOR_RED,
-	COLOR_GREEN,
-	COLOR_YELLOW
-};
-extern void ColoredPrintf(GTestColor color, const char* fmt, ...);
-} }
-#define PRINTF(...)  do { \
-	testing::internal::ColoredPrintf(testing::internal::COLOR_YELLOW, __VA_ARGS__); \
-} while(0)
-
 namespace moveit { namespace task_constructor {
 
 class TestGenerator : public Generator {
@@ -46,11 +33,6 @@ protected:
 		EXPECT_EQ(container->children().begin(), container->position(-(num+1)));
 		EXPECT_EQ(container->children().end(), container->position(num));
 
-		// print order
-		for (auto it = container->children().begin(), end = container->children().end(); it != end; ++it)
-			PRINTF(" %p", (*it)->pimpl());
-		PRINTF(" *** parent: %p ***\n", container);
-
 		// validate order
 		size_t pos = 0;
 		auto exp_it = expected.begin();
@@ -64,23 +46,18 @@ protected:
 	}
 };
 
-TEST_F(BaseTest, interfaceFlags) {
-	std::unique_ptr<Generator> g = std::make_unique<TestGenerator>();
-	EXPECT_EQ(g->pimpl()->interfaceFlags(),
-	          InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+#define VALIDATE(...) {\
+	SCOPED_TRACE("validateOrder({" #__VA_ARGS__ "})"); \
+	validateOrder(cp, {__VA_ARGS__}); \
 }
-
-#define VALIDATE(...) \
-	PRINTF("*** validateOrder({" #__VA_ARGS__ "}) ***"); \
-	validateOrder(cp, {__VA_ARGS__});
 
 TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
 	SerialContainerPrivate *cp = c.pimpl();
+	planning_scene::PlanningScenePtr scene;
 
-	EXPECT_TRUE(bool(cp->starts()));
-	EXPECT_TRUE(bool(cp->ends()));
 	EXPECT_EQ(cp->parent(), nullptr);
+	c.init(scene);
 	VALIDATE();
 
 	/*****  inserting first stage  *****/
@@ -103,6 +80,12 @@ TEST_F(BaseTest, serialContainer) {
 	ASSERT_TRUE(c.insert(std::move(f2), 1));
 	EXPECT_FALSE(f2); // ownership transferred to container
 	VALIDATE(gp, fp2, fp);
+
+	EXPECT_NO_THROW(c.init(scene));
+
+	/*****  inserting another generator stage  *****/
+	ASSERT_TRUE(c.insert(std::make_unique<TestGenerator>()));
+	EXPECT_THROW(c.init(scene), InitStageException);
 }
 
 } }
