@@ -8,7 +8,7 @@
 namespace moveit { namespace task_constructor {
 
 Introspection::Introspection(const std::string &task_topic,
-                                               const std::string &solution_topic)
+                             const std::string &solution_topic)
 {
 	ros::NodeHandle n;
 	task_publisher_ = n.advertise<moveit_task_constructor::Task>(task_topic, 1);

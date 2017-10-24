@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_ros_planning_interface
 	moveit_msgs
 	eigen_conversions
+	rviz
 )
 
 # ROS messages, services and actions
@@ -58,6 +59,16 @@ add_library(${PROJECT_NAME}
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
+install(TARGETS ${PROJECT_NAME}
+	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+install(DIRECTORY include/ DESTINATION include)
+install(FILES
+	task_panel_rviz_plugin_description.xml
+	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 add_subdirectory(src/stages)
 add_subdirectory(src/demo)
 add_subdirectory(src/test)
+
+add_subdirectory(visualization)

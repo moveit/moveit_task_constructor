@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 
-namespace moveit { namespace task_constructor {
+using namespace moveit::task_constructor;
 
 class TestGenerator : public Generator {
 public:
@@ -87,5 +87,3 @@ TEST_F(BaseTest, serialContainer) {
 	ASSERT_TRUE(c.insert(std::make_unique<TestGenerator>()));
 	EXPECT_THROW(c.init(scene), InitStageException);
 }
-
-} }

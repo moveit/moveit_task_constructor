@@ -28,6 +28,19 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 
 namespace moveit { namespace task_constructor {
 
+enum InterfaceFlag {
+	READS_START        = 0x01,
+	READS_END          = 0x02,
+	WRITES_NEXT_START  = 0x04,
+	WRITES_PREV_END    = 0x08,
+
+	OWN_IF_MASK        = READS_START | READS_END,
+	EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
+	INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
+	OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
+};
+typedef Flags<InterfaceFlag> InterfaceFlags;
+
 MOVEIT_CLASS_FORWARD(Interface)
 MOVEIT_CLASS_FORWARD(Stage)
 class InterfaceState;

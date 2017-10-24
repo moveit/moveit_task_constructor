@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>moveit_rviz_plugin::TaskPanel</class>
+ <widget class="QWidget" name="moveit_rviz_plugin::TaskPanel">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="tasks_view_label">
+     <property name="text">
+      <string>Task Tree</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTreeView" name="tasks_view"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="settings_view_label">
+     <property name="text">
+      <string>Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="rviz::PropertyTreeWidget" name="settings_view"/>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>rviz::PropertyTreeWidget</class>
+   <extends>QTreeView</extends>
+   <header location="global">rviz/properties/property_tree_widget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

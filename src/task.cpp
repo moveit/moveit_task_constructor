@@ -204,7 +204,7 @@ inline const ContainerBase* Task::wrapped() const
 
 std::string Task::id() const
 {
-	ros::NodeHandle n;
+	ros::NodeHandle n("~");
 	return std::to_string(id_) + '@' + n.getNamespace();
 }
 

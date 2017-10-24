@@ -11,4 +11,4 @@ add_library(${PROJECT_NAME}_stages
 	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/generate_grasp_pose.h
 	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/cartesian_position_motion.h
 )
-target_link_libraries(${PROJECT_NAME}_stages ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})

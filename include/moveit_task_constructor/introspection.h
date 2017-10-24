@@ -13,6 +13,9 @@ namespace moveit { namespace task_constructor {
 MOVEIT_CLASS_FORWARD(Task)
 MOVEIT_CLASS_FORWARD(SolutionBase)
 
+#define DEFAULT_TASK_MONITOR_TOPIC "task_monitoring"
+#define DEFAULT_TASK_SOLUTION_TOPIC "task_solutions"
+
 class Introspection {
 	// publish Task state and (new) Solutions
 	ros::Publisher task_publisher_;
@@ -22,8 +25,8 @@ class Introspection {
 	ros::ServiceServer get_solution_service_;
 
 public:
-	Introspection(const std::string &task_topic = "task",
-	              const std::string &solution_topic = "task_plan");
+	Introspection(const std::string &task_topic = DEFAULT_TASK_MONITOR_TOPIC,
+	              const std::string &solution_topic = DEFAULT_TASK_SOLUTION_TOPIC);
 	Introspection(const Introspection &other) = delete;
 	static Introspection &instance();
 
