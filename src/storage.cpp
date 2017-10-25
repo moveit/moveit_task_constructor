@@ -5,12 +5,26 @@ namespace moveit { namespace task_constructor {
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
    : scene_(ps)
 {
+	registerID();
 }
 
 InterfaceState::InterfaceState(const InterfaceState &existing)
    : scene_(existing.scene())
 {
+	registerID();
 }
+
+InterfaceState::~InterfaceState()
+{
+	Repository<InterfaceState>::instance().remove(this);
+	id_ = 0;
+}
+
+void InterfaceState::registerID()
+{
+	id_ = Repository<InterfaceState>::instance().add(this);
+}
+
 
 Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)

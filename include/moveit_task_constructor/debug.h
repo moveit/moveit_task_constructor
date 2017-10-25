@@ -1,10 +1,7 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
-#include <moveit_msgs/DisplayTrajectory.h>
-
 #include <ros/publisher.h>
-#include <set>
 
 namespace moveit { namespace task_constructor {
 

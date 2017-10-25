@@ -3,6 +3,7 @@
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/container.h>
 #include <moveit_task_constructor/debug.h>
+#include <moveit_task_constructor/introspection_publisher.h>
 
 #include <ros/ros.h>
 
@@ -11,16 +12,27 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
+#include <functional>
+
 namespace moveit { namespace task_constructor {
 
+static size_t g_task_id = 0;
+
 Task::Task(ContainerBase::pointer &&container)
-   : WrapperBase(std::string())
+   : WrapperBase(std::string()), id_(++g_task_id)
 {
 	task_starts_.reset(new Interface(Interface::NotifyFunction()));
 	task_ends_.reset(new Interface(Interface::NotifyFunction()));
 
 	insert(std::move(container));
 	initModel();
+
+	// monitor state on commandline
+	add(&printState);
+	// publish state
+	add(std::bind(&IntrospectionPublisher::publish,
+	              IntrospectionPublisher::instance(),
+	              std::placeholders::_1));
 }
 
 void Task::initModel () {
@@ -90,17 +102,29 @@ void Task::add(pointer &&stage) {
 void Task::clear()
 {
 	wrapped()->clear();
+	id_ = ++g_task_id;
 }
 
 Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
 {
-	callbacks_.emplace_back(std::move(cb));
-	return --callbacks_.cend();
+	solution_cbs_.emplace_back(std::move(cb));
+	return --solution_cbs_.cend();
 }
 
 void Task::erase(SolutionCallbackList::const_iterator which)
 {
-	callbacks_.erase(which);
+	solution_cbs_.erase(which);
+}
+
+Task::TaskCallbackList::const_iterator Task::add(TaskCallback &&cb)
+{
+	task_cbs_.emplace_back(std::move(cb));
+	return --task_cbs_.cend();
+}
+
+void Task::erase(TaskCallbackList::const_iterator which)
+{
+	task_cbs_.erase(which);
 }
 
 void Task::reset()
@@ -126,27 +150,18 @@ bool Task::compute()
 }
 
 bool Task::plan(){
-	add(NewSolutionPublisher());
-
 	reset();
 	initScene();
 	init(scene_);
 
 	while(ros::ok() && canCompute()) {
-	if (compute())
-			printState();
-		else
+		if (compute()) {
+			for (const auto& cb : task_cbs_)
+				cb(*this);
+		} else
 			break;
 	}
 	return numSolutions() > 0;
-}
-
-void Task::printState(){
-	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
-		std::cout << std::string(2*depth, ' ') << stage << std::endl;
-		return true;
-	};
-	wrapped()->traverseRecursively(processor);
 }
 
 size_t Task::numSolutions() const
@@ -172,7 +187,7 @@ void Task::processSolutions(const Task::SolutionProcessor& processor) const {
 
 void Task::onNewSolution(SolutionBase &s)
 {
-	for (const auto& cb : callbacks_)
+	for (const auto& cb : solution_cbs_)
 		cb(s);
 }
 
@@ -184,6 +199,56 @@ inline ContainerBase* Task::wrapped()
 inline const ContainerBase* Task::wrapped() const
 {
 	return const_cast<Task*>(this)->wrapped();
+}
+
+void Task::printState(const Task &t){
+	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
+		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+		return true;
+	};
+	t.wrapped()->traverseRecursively(processor);
+}
+
+template <typename Container>
+void fillStateList(Container &c, const InterfaceConstPtr& interface) {
+	c.clear();
+	if (!interface) return;
+	for (const InterfaceState& state : *interface)
+		c.push_back(state.id());
+}
+
+moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &msg) const
+{
+	std::map<const Stage*, moveit_task_constructor::Stage::_id_type> stage_to_id_map;
+	ContainerBase::StageCallback processor =
+	      [&stage_to_id_map, &msg](const Stage& stage, int) -> bool {
+		// this method is called for each child stage of a given parent
+		const StagePrivate *simpl = stage.pimpl();
+
+		moveit_task_constructor::Stage s; // create new Stage msg
+		s.id = stage_to_id_map.size();
+		stage_to_id_map[&stage] = s.id;
+		s.name = stage.name();
+		s.flags = stage.pimpl()->interfaceFlags();
+		auto it = stage_to_id_map.find(simpl->parent());
+		assert (it != stage_to_id_map.cend());
+		s.parent_id = it->second;
+
+		fillStateList(s.received_starts, simpl->starts());
+		fillStateList(s.received_ends, simpl->ends());
+		fillStateList(s.generated_starts, simpl->nextStarts());
+		fillStateList(s.generated_ends, simpl->prevEnds());
+
+		// TODO: insert solutions via processSolutions()
+
+		msg.stages.push_back(std::move(s));
+		return true;
+	};
+
+	msg.id = id_;
+	stage_to_id_map[this] = 0; // ID for root
+	wrapped()->traverseRecursively(processor);
+	return msg;
 }
 
 } }
