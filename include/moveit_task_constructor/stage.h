@@ -81,6 +81,11 @@ public:
 	const std::string& name() const;
 	virtual size_t numSolutions() const = 0;
 
+	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
+	/// process all solutions, calling the callback for each of them
+	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
+	virtual void processFailures(const SolutionProcessor &processor) const {}
+
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);
@@ -97,13 +102,13 @@ public:
 	PRIVATE_CLASS(ComputeBase)
 	void reset() override;
 	virtual size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
 	/// ComputeBase can only be instantiated by derived classes in stage.cpp
 	ComputeBase(ComputeBasePrivate* impl);
 
-	// TODO: Do we really need/want to expose the trajectories?
-	const std::list<SubTrajectory>& trajectories() const;
 	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
 };
 

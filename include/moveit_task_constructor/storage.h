@@ -3,6 +3,8 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
+#include <moveit_task_constructor/Solution.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <list>
 #include <vector>
@@ -181,8 +183,8 @@ public:
 	}
 	void setCost(double cost);
 
-	/// flatten this solution to full solution trajectory, appending to solution
-	virtual void flattenTo(SolutionTrajectory& solution) const = 0;
+	/// append this solution to Solution msg
+	virtual void fillMessage(::moveit_task_constructor::Solution &solution) const = 0;
 
 protected:
 	SolutionBase(StagePrivate* creator, double cost)
@@ -215,17 +217,20 @@ public:
 	explicit SubTrajectory(StagePrivate* creator, const robot_trajectory::RobotTrajectoryPtr& traj, double cost);
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
+	const visualization_msgs::MarkerArray& markers() const { return markers_; }
+
 	const std::string& name() const { return name_; }
 	void setName(const std::string& name) { name_ = name; }
 
-	void flattenTo(SolutionTrajectory& solution) const override {
-		solution.push_back(this);
-	}
+	void fillMessage(::moveit_task_constructor::Solution &msg) const override;
 
 private:
-	const robot_trajectory::RobotTrajectoryPtr trajectory_;
 	// trajectories could have a name, e.g. a generator could name its solutions
 	std::string name_;
+	// actual trajectory, might be empty
+	const robot_trajectory::RobotTrajectoryPtr trajectory_;
+	// additional markers
+	visualization_msgs::MarkerArray markers_;
 };
 
 

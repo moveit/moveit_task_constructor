@@ -7,6 +7,7 @@
 
 #include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor/Task.h>
+#include <moveit_task_constructor/Solution.h>
 
 namespace robot_model_loader {
 	MOVEIT_CLASS_FORWARD(RobotModelLoader)
@@ -35,7 +36,7 @@ public:
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
-	size_t id() const { return id_; }
+	std::string id() const;
 	void add(Stage::pointer &&stage);
 	void clear() override;
 
@@ -65,7 +66,7 @@ public:
 	/// For each solution, composed from several SubTrajectories,
 	/// the vector of SubTrajectories as well as the associated costs are provided.
 	/// Return true, if traversal should continue, otherwise false.
-	typedef std::function<bool(const SolutionTrajectory& solution,
+	typedef std::function<bool(const ::moveit_task_constructor::Solution& msg,
 	                           double accumulated_cost)> SolutionProcessor;
 	/// process all solutions
 	void processSolutions(const Task::SolutionProcessor &processor) const;

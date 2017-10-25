@@ -150,8 +150,16 @@ size_t ComputeBase::numSolutions() const {
 	return pimpl()->trajectories_.size();
 }
 
-const std::list<SubTrajectory> &ComputeBase::trajectories() const {
-	return pimpl()->trajectories_;
+void ComputeBase::processSolutions(const Stage::SolutionProcessor &processor) const
+{
+	for (const auto& s : pimpl()->trajectories_)
+		if (!processor(s))
+			return;
+}
+
+void ComputeBase::processFailures(const Stage::SolutionProcessor &processor) const
+{
+	// TODO
 }
 
 void ComputeBase::reset() {

@@ -1,4 +1,7 @@
+#include "stage_p.h"
 #include <moveit_task_constructor/storage.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/robot_state/conversions.h>
 
 namespace moveit { namespace task_constructor {
 
@@ -59,5 +62,19 @@ Interface::iterator Interface::clone(const InterfaceState &state)
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
+
+
+void SubTrajectory::fillMessage(moveit_task_constructor::Solution &msg) const {
+	msg.sub_trajectory.emplace_back();
+	moveit_task_constructor::SubTrajectory& t = msg.sub_trajectory.back();
+	t.id = this->id();
+	t.name = this->name();
+	t.cost = this->cost();
+	t.stage = this->creator()->name();
+	if (trajectory())
+		trajectory()->getRobotTrajectoryMsg(t.trajectory);
+	t.markers = this->markers();
+}
+
 
 } }

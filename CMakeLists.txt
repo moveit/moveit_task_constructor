@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6.12)
 project(moveit_task_constructor)
 
-set(MSG_DEPS trajectory_msgs moveit_msgs)
+set(MSG_DEPS moveit_msgs visualization_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
@@ -18,12 +18,14 @@ add_message_files(DIRECTORY msg
 	FILES
 	Stage.msg
 	Task.msg
+	SubSolution.msg
+	SubTrajectory.msg
 	Solution.msg
 )
 add_service_files(DIRECTORY srv
 	FILES
 	GetInterfaceState.srv
-	GetSolutionTrajectory.srv
+	GetSolution.srv
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 

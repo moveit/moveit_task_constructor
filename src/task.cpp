@@ -177,11 +177,13 @@ void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) c
 }
 
 void Task::processSolutions(const Task::SolutionProcessor& processor) const {
-	SolutionTrajectory solution;
-	processSolutions([&solution, &processor](const SolutionBase& s) {
-		solution.clear();
-		s.flattenTo(solution);
-		return processor(solution, s.cost());
+	::moveit_task_constructor::Solution msg;
+	msg.task_id = id();
+	processSolutions([&msg, &processor](const SolutionBase& s) {
+		msg.sub_solution.clear();
+		msg.sub_trajectory.clear();
+		s.fillMessage(msg);
+		return processor(msg, s.cost());
 	});
 }
 
@@ -201,6 +203,12 @@ inline const ContainerBase* Task::wrapped() const
 	return const_cast<Task*>(this)->wrapped();
 }
 
+std::string Task::id() const
+{
+	ros::NodeHandle n;
+	return std::to_string(id_) + '@' + n.getNamespace();
+}
+
 void Task::printState(const Task &t){
 	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
 		std::cout << std::string(2*depth, ' ') << stage << std::endl;
@@ -209,8 +217,8 @@ void Task::printState(const Task &t){
 	t.wrapped()->traverseRecursively(processor);
 }
 
-template <typename Container>
-void fillStateList(Container &c, const InterfaceConstPtr& interface) {
+void fillStateList(moveit_task_constructor::Stage::_received_starts_type &c,
+                   const InterfaceConstPtr& interface) {
 	c.clear();
 	if (!interface) return;
 	for (const InterfaceState& state : *interface)
@@ -220,7 +228,7 @@ void fillStateList(Container &c, const InterfaceConstPtr& interface) {
 moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &msg) const
 {
 	std::map<const Stage*, moveit_task_constructor::Stage::_id_type> stage_to_id_map;
-	ContainerBase::StageCallback processor =
+	ContainerBase::StageCallback stageProcessor =
 	      [&stage_to_id_map, &msg](const Stage& stage, int) -> bool {
 		// this method is called for each child stage of a given parent
 		const StagePrivate *simpl = stage.pimpl();
@@ -239,15 +247,28 @@ moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &
 		fillStateList(s.generated_starts, simpl->nextStarts());
 		fillStateList(s.generated_ends, simpl->prevEnds());
 
-		// TODO: insert solutions via processSolutions()
+		// insert solution IDs
+		Stage::SolutionProcessor solutionProcessor = [&s](const SolutionBase& solution) {
+			s.solved.push_back(solution.id());
+			return true;
+		};
+		stage.processSolutions(solutionProcessor);
 
+		solutionProcessor = [&s](const SolutionBase& solution) {
+			s.failed.push_back(solution.id());
+			return true;
+		};
+		stage.processFailures(solutionProcessor);
+
+		// finally store in msg.stages
 		msg.stages.push_back(std::move(s));
 		return true;
 	};
 
-	msg.id = id_;
+	msg.id = id();
+	msg.stages.clear();
 	stage_to_id_map[this] = 0; // ID for root
-	wrapped()->traverseRecursively(processor);
+	wrapped()->traverseRecursively(stageProcessor);
 	return msg;
 }
 

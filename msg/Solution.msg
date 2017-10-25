@@ -1,8 +1,8 @@
-# unique id within task
-uint32 id
+# id of associated task
+string task_id
 
-# IDs of subsolutions, empty if ID refers to an actual SubTrajectory
-uint32[] sub_solutions
+# set of all sub solutions involved
+SubSolution[] sub_solution
 
-# associated cost
-float32 cost
+# (ordered) sequence of actual trajectories
+SubTrajectory[] sub_trajectory

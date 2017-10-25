@@ -28,11 +28,6 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
-	size_t numSolutions() const = 0;
-	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
-	/// process all solutions, calling the callback for each of them
-	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
-
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(SolutionBase& t) = 0;
 
@@ -55,7 +50,7 @@ public:
 	bool compute() override;
 
 	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const;
+	void processSolutions(const SolutionProcessor &processor) const override;
 
 	/// container used to represent a serial solution
 	typedef std::vector<const SolutionBase*> solution_container;
@@ -102,7 +97,7 @@ public:
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const;
+	void processSolutions(const SolutionProcessor &processor) const override;
 
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
