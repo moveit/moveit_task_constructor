@@ -18,6 +18,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}
   ${QT_LIBRARIES}
   ${Boost_LIBRARIES}
 )
+target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
 
 install(DIRECTORY include/ DESTINATION include)
 

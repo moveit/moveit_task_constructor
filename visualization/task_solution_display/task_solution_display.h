@@ -33,15 +33,15 @@
  *********************************************************************/
 
 /* Author: Dave Coleman
-   Desc:   Wraps a trajectory_visualization playback class for Rviz into a stand alone display
+   Desc:   Wraps a task_solution_visualization playback class for Rviz into a stand alone display
 */
 
-#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TRAJECTORY_DISPLAY
-#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TRAJECTORY_DISPLAY
+#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
+#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
 
 #include <rviz/display.h>
 
-#include <moveit/rviz_plugin_render_tools/trajectory_visualization.h>
+#include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 #ifndef Q_MOC_RUN
 #include <ros/ros.h>
 #include <moveit/rdf_loader/rdf_loader.h>
@@ -54,15 +54,15 @@ class StringProperty;
 
 namespace moveit_rviz_plugin
 {
-class TrajectoryDisplay : public rviz::Display
+class TaskSolutionDisplay : public rviz::Display
 {
   Q_OBJECT
-  // friend class TrajectoryVisualization; // allow the visualization class to access the display
+  // friend class TaskSolutionVisualization; // allow the visualization class to access the display
 
 public:
-  TrajectoryDisplay();
+  TaskSolutionDisplay();
 
-  virtual ~TrajectoryDisplay();
+  virtual ~TaskSolutionDisplay();
 
   void loadRobotModel();
 
@@ -83,7 +83,7 @@ private Q_SLOTS:
 
 protected:
   // The trajectory playback component
-  TrajectoryVisualizationPtr trajectory_visual_;
+  TaskSolutionVisualizationPtr trajectory_visual_;
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;

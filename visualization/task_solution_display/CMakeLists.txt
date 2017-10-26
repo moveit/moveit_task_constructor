@@ -9,6 +9,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}_core
   moveit_task_visualization_tools
   ${catkin_LIBRARIES} ${OGRE_LIBRARIES} ${QT_LIBRARIES} ${Boost_LIBRARIES}
 )
+target_include_directories(${MOVEIT_LIB_NAME}_core PUBLIC include)
 
 # Plugin Initializer
 add_library(${MOVEIT_LIB_NAME} plugin_init.cpp)

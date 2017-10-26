@@ -34,20 +34,20 @@
 
 /* Author: Yannick Jonetzko */
 
-#include <moveit/rviz_plugin_render_tools/trajectory_panel.h>
+#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
 #include <QHBoxLayout>
 
 namespace moveit_rviz_plugin
 {
-TrajectoryPanel::TrajectoryPanel(QWidget* parent) : Panel(parent)
+TaskSolutionPanel::TaskSolutionPanel(QWidget* parent) : Panel(parent)
 {
 }
 
-TrajectoryPanel::~TrajectoryPanel()
+TaskSolutionPanel::~TaskSolutionPanel()
 {
 }
 
-void TrajectoryPanel::onInitialize()
+void TaskSolutionPanel::onInitialize()
 {
   slider_ = new QSlider(Qt::Horizontal);
   slider_->setTickInterval(1);
@@ -79,20 +79,20 @@ void TrajectoryPanel::onInitialize()
   parentWidget()->setVisible(false);
 }
 
-void TrajectoryPanel::onEnable()
+void TaskSolutionPanel::onEnable()
 {
   show();
   parentWidget()->show();
 }
 
-void TrajectoryPanel::onDisable()
+void TaskSolutionPanel::onDisable()
 {
   hide();
   paused_ = false;
   parentWidget()->hide();
 }
 
-void TrajectoryPanel::update(int way_point_count)
+void TaskSolutionPanel::update(int way_point_count)
 {
   int max_way_point = std::max(0, way_point_count - 1);
 
@@ -106,7 +106,7 @@ void TrajectoryPanel::update(int way_point_count)
   maximum_label_->setText(QString::number(max_way_point));
 }
 
-void TrajectoryPanel::pauseButton(bool pause)
+void TaskSolutionPanel::pauseButton(bool pause)
 {
   if (pause)
   {
@@ -122,17 +122,17 @@ void TrajectoryPanel::pauseButton(bool pause)
   }
 }
 
-void TrajectoryPanel::setSliderPosition(int position)
+void TaskSolutionPanel::setSliderPosition(int position)
 {
   slider_->setSliderPosition(position);
 }
 
-void TrajectoryPanel::sliderValueChanged(int value)
+void TaskSolutionPanel::sliderValueChanged(int value)
 {
   minimum_label_->setText(QString::number(value));
 }
 
-void TrajectoryPanel::buttonClicked()
+void TaskSolutionPanel::buttonClicked()
 {
   if (paused_)
     pauseButton(false);

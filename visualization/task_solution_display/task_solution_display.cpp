@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Author: Dave Coleman
-   Desc:   Wraps a trajectory_visualization playback class for Rviz into a stand alone display
+   Desc:   Wraps a task_solution_visualization playback class for Rviz into a stand alone display
 */
 
 #include "task_solution_display.h"
@@ -41,29 +41,29 @@
 
 namespace moveit_rviz_plugin
 {
-TrajectoryDisplay::TrajectoryDisplay() : Display(), load_robot_model_(false)
+TaskSolutionDisplay::TaskSolutionDisplay() : Display(), load_robot_model_(false)
 {
   // The robot description property is only needed when using the trajectory playback standalone (not within motion
   // planning plugin)
   robot_description_property_ = new rviz::StringProperty(
-      "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
-      this, SLOT(changedRobotDescription()), this);
+        "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
+        this, SLOT(changedRobotDescription()), this);
 
-  trajectory_visual_.reset(new TrajectoryVisualization(this, this));
+  trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
 }
 
-TrajectoryDisplay::~TrajectoryDisplay()
+TaskSolutionDisplay::~TaskSolutionDisplay()
 {
 }
 
-void TrajectoryDisplay::onInitialize()
+void TaskSolutionDisplay::onInitialize()
 {
   Display::onInitialize();
 
   trajectory_visual_->onInitialize(scene_node_, context_, update_nh_);
 }
 
-void TrajectoryDisplay::loadRobotModel()
+void TaskSolutionDisplay::loadRobotModel()
 {
   load_robot_model_ = false;
   rdf_loader_.reset(new rdf_loader::RDFLoader(robot_description_property_->getStdString()));
@@ -85,26 +85,26 @@ void TrajectoryDisplay::loadRobotModel()
   trajectory_visual_->onEnable();
 }
 
-void TrajectoryDisplay::reset()
+void TaskSolutionDisplay::reset()
 {
   Display::reset();
   loadRobotModel();
   trajectory_visual_->reset();
 }
 
-void TrajectoryDisplay::onEnable()
+void TaskSolutionDisplay::onEnable()
 {
   Display::onEnable();
   load_robot_model_ = true;  // allow loading of robot model in update()
 }
 
-void TrajectoryDisplay::onDisable()
+void TaskSolutionDisplay::onDisable()
 {
   Display::onDisable();
   trajectory_visual_->onDisable();
 }
 
-void TrajectoryDisplay::update(float wall_dt, float ros_dt)
+void TaskSolutionDisplay::update(float wall_dt, float ros_dt)
 {
   Display::update(wall_dt, ros_dt);
 
@@ -114,13 +114,13 @@ void TrajectoryDisplay::update(float wall_dt, float ros_dt)
   trajectory_visual_->update(wall_dt, ros_dt);
 }
 
-void TrajectoryDisplay::setName(const QString& name)
+void TaskSolutionDisplay::setName(const QString& name)
 {
   BoolProperty::setName(name);
   trajectory_visual_->setName(name);
 }
 
-void TrajectoryDisplay::changedRobotDescription()
+void TaskSolutionDisplay::changedRobotDescription()
 {
   if (isEnabled())
     reset();

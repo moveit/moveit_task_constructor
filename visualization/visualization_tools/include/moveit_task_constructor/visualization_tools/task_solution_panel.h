@@ -34,8 +34,8 @@
 
 /* Author: Yannick Jonetzko */
 
-#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN_TRAJECTORY_PANEL_
-#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN_TRAJECTORY_PANEL_
+#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN_TASK_SOLUTION_PANEL_
+#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN_TASK_SOLUTION_PANEL_
 
 #ifndef Q_MOC_RUN
 #include <ros/ros.h>
@@ -49,14 +49,14 @@
 
 namespace moveit_rviz_plugin
 {
-class TrajectoryPanel : public rviz::Panel
+class TaskSolutionPanel : public rviz::Panel
 {
   Q_OBJECT
 
 public:
-  TrajectoryPanel(QWidget* parent = 0);
+  TaskSolutionPanel(QWidget* parent = 0);
 
-  virtual ~TrajectoryPanel();
+  virtual ~TaskSolutionPanel();
 
   void onInitialize();
   void onEnable();

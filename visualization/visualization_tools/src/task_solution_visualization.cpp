@@ -37,7 +37,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-#include <moveit/rviz_plugin_render_tools/trajectory_visualization.h>
+#include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 
 #include <moveit/rviz_plugin_render_tools/planning_link_updater.h>
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
@@ -58,7 +58,7 @@
 
 namespace moveit_rviz_plugin
 {
-TrajectoryVisualization::TrajectoryVisualization(rviz::Property* widget, rviz::Display* display)
+TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* widget, rviz::Display* display)
   : display_(display)
   , widget_(widget)
   , animating_path_(false)
@@ -69,8 +69,8 @@ TrajectoryVisualization::TrajectoryVisualization(rviz::Property* widget, rviz::D
 {
   trajectory_topic_property_ =
       new rviz::RosTopicProperty("Trajectory Topic", "/move_group/display_planned_path",
-                                 ros::message_traits::datatype<moveit_msgs::DisplayTrajectory>(),
-                                 "The topic on which the moveit_msgs::DisplayTrajectory messages are received", widget,
+                                 ros::message_traits::datatype<moveit_task_constructor::Solution>(),
+                                 "The topic on which the moveit_task_constructor::Solution messages are received", widget,
                                  SLOT(changedTrajectoryTopic()), this);
 
   display_path_visual_enabled_property_ =
@@ -110,17 +110,17 @@ TrajectoryVisualization::TrajectoryVisualization(rviz::Property* widget, rviz::D
   trail_step_size_property_->setMin(1);
 
   interrupt_display_property_ = new rviz::BoolProperty(
-      "Interrupt Display", false,
-      "Immediately show newly planned trajectory, interrupting the currently displayed one.", widget);
+        "Interrupt Display", false,
+        "Immediately show newly planned trajectory, interrupting the currently displayed one.", widget);
 
   robot_color_property_ = new rviz::ColorProperty(
-      "Robot Color", QColor(150, 50, 150), "The color of the animated robot", widget, SLOT(changedRobotColor()), this);
+        "Robot Color", QColor(150, 50, 150), "The color of the animated robot", widget, SLOT(changedRobotColor()), this);
 
   enable_robot_color_property_ = new rviz::BoolProperty(
-      "Color Enabled", false, "Specifies whether robot coloring is enabled", widget, SLOT(enabledRobotColor()), this);
+        "Color Enabled", false, "Specifies whether robot coloring is enabled", widget, SLOT(enabledRobotColor()), this);
 }
 
-TrajectoryVisualization::~TrajectoryVisualization()
+TaskSolutionVisualization::~TaskSolutionVisualization()
 {
   clearTrajectoryTrail();
   trajectory_message_to_display_.reset();
@@ -131,8 +131,8 @@ TrajectoryVisualization::~TrajectoryVisualization()
     delete trajectory_slider_dock_panel_;
 }
 
-void TrajectoryVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context,
-                                           ros::NodeHandle update_nh)
+void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context,
+                                             ros::NodeHandle update_nh)
 {
   // Save pointers for later use
   scene_node_ = scene_node;
@@ -148,7 +148,7 @@ void TrajectoryVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::Di
   rviz::WindowManagerInterface* window_context = context_->getWindowManager();
   if (window_context)
   {
-    trajectory_slider_panel_ = new TrajectoryPanel(window_context->getParentWindow());
+    trajectory_slider_panel_ = new TaskSolutionPanel(window_context->getParentWindow());
     trajectory_slider_dock_panel_ =
         window_context->addPane(display_->getName() + " - Slider", trajectory_slider_panel_);
     trajectory_slider_dock_panel_->setIcon(display_->getIcon());
@@ -158,20 +158,20 @@ void TrajectoryVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::Di
   }
 }
 
-void TrajectoryVisualization::setName(const QString& name)
+void TaskSolutionVisualization::setName(const QString& name)
 {
   if (trajectory_slider_dock_panel_)
     trajectory_slider_dock_panel_->setWindowTitle(name + " - Slider");
 }
 
-void TrajectoryVisualization::onRobotModelLoaded(robot_model::RobotModelConstPtr robot_model)
+void TaskSolutionVisualization::onRobotModelLoaded(robot_model::RobotModelConstPtr robot_model)
 {
   robot_model_ = robot_model;
 
   // Error check
   if (!robot_model_)
   {
-    ROS_ERROR_STREAM_NAMED("trajectory_visualization", "No robot model found");
+    ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot model found");
     return;
   }
 
@@ -184,7 +184,7 @@ void TrajectoryVisualization::onRobotModelLoaded(robot_model::RobotModelConstPtr
   enabledRobotColor();  // force-refresh to account for saved display configuration
 }
 
-void TrajectoryVisualization::reset()
+void TaskSolutionVisualization::reset()
 {
   clearTrajectoryTrail();
   trajectory_message_to_display_.reset();
@@ -196,21 +196,21 @@ void TrajectoryVisualization::reset()
   display_path_robot_->setVisible(false);
 }
 
-void TrajectoryVisualization::clearTrajectoryTrail()
+void TaskSolutionVisualization::clearTrajectoryTrail()
 {
   for (std::size_t i = 0; i < trajectory_trail_.size(); ++i)
     delete trajectory_trail_[i];
   trajectory_trail_.clear();
 }
 
-void TrajectoryVisualization::changedLoopDisplay()
+void TaskSolutionVisualization::changedLoopDisplay()
 {
   display_path_robot_->setVisible(display_->isEnabled() && displaying_trajectory_message_ && animating_path_);
   if (loop_display_property_->getBool() && trajectory_slider_panel_)
     trajectory_slider_panel_->pauseButton(false);
 }
 
-void TrajectoryVisualization::changedShowTrail()
+void TaskSolutionVisualization::changedShowTrail()
 {
   clearTrajectoryTrail();
 
@@ -241,30 +241,30 @@ void TrajectoryVisualization::changedShowTrail()
   }
 }
 
-void TrajectoryVisualization::changedTrailStepSize()
+void TaskSolutionVisualization::changedTrailStepSize()
 {
   if (trail_display_property_->getBool())
     changedShowTrail();
 }
 
-void TrajectoryVisualization::changedRobotPathAlpha()
+void TaskSolutionVisualization::changedRobotPathAlpha()
 {
   display_path_robot_->setAlpha(robot_path_alpha_property_->getFloat());
   for (std::size_t i = 0; i < trajectory_trail_.size(); ++i)
     trajectory_trail_[i]->setAlpha(robot_path_alpha_property_->getFloat());
 }
 
-void TrajectoryVisualization::changedTrajectoryTopic()
+void TaskSolutionVisualization::changedTrajectoryTopic()
 {
   trajectory_topic_sub_.shutdown();
   if (!trajectory_topic_property_->getStdString().empty())
   {
     trajectory_topic_sub_ = update_nh_.subscribe(trajectory_topic_property_->getStdString(), 2,
-                                                 &TrajectoryVisualization::incomingDisplayTrajectory, this);
+                                                 &TaskSolutionVisualization::incomingSolution, this);
   }
 }
 
-void TrajectoryVisualization::changedDisplayPathVisualEnabled()
+void TaskSolutionVisualization::changedDisplayPathVisualEnabled()
 {
   if (display_->isEnabled())
   {
@@ -275,11 +275,11 @@ void TrajectoryVisualization::changedDisplayPathVisualEnabled()
   }
 }
 
-void TrajectoryVisualization::changedStateDisplayTime()
+void TaskSolutionVisualization::changedStateDisplayTime()
 {
 }
 
-void TrajectoryVisualization::changedDisplayPathCollisionEnabled()
+void TaskSolutionVisualization::changedDisplayPathCollisionEnabled()
 {
   if (display_->isEnabled())
   {
@@ -290,7 +290,7 @@ void TrajectoryVisualization::changedDisplayPathCollisionEnabled()
   }
 }
 
-void TrajectoryVisualization::onEnable()
+void TaskSolutionVisualization::onEnable()
 {
   changedRobotPathAlpha();  // set alpha property
 
@@ -307,7 +307,7 @@ void TrajectoryVisualization::onEnable()
   changedTrajectoryTopic();  // load topic at startup if default used
 }
 
-void TrajectoryVisualization::onDisable()
+void TaskSolutionVisualization::onDisable()
 {
   display_path_robot_->setVisible(false);
   for (std::size_t i = 0; i < trajectory_trail_.size(); ++i)
@@ -318,7 +318,7 @@ void TrajectoryVisualization::onDisable()
     trajectory_slider_panel_->onDisable();
 }
 
-void TrajectoryVisualization::interruptCurrentDisplay()
+void TaskSolutionVisualization::interruptCurrentDisplay()
 {
   // update() starts a new trajectory as soon as it is available
   // interrupting may cause the newly received trajectory to interrupt
@@ -327,7 +327,7 @@ void TrajectoryVisualization::interruptCurrentDisplay()
     animating_path_ = false;
 }
 
-float TrajectoryVisualization::getStateDisplayTime()
+float TaskSolutionVisualization::getStateDisplayTime()
 {
   std::string tm = state_display_time_property_->getStdString();
   if (tm == "REALTIME")
@@ -349,12 +349,12 @@ float TrajectoryVisualization::getStateDisplayTime()
   }
 }
 
-void TrajectoryVisualization::dropTrajectory()
+void TaskSolutionVisualization::dropTrajectory()
 {
   drop_displaying_trajectory_ = true;
 }
 
-void TrajectoryVisualization::update(float wall_dt, float ros_dt)
+void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
 {
   if (drop_displaying_trajectory_)
   {
@@ -388,7 +388,7 @@ void TrajectoryVisualization::update(float wall_dt, float ros_dt)
         if (trajectory_slider_panel_->getSliderPosition() == displaying_trajectory_message_->getWayPointCount() - 1)
         {  // show the last waypoint if the slider is enabled
           display_path_robot_->update(
-              displaying_trajectory_message_->getWayPointPtr(displaying_trajectory_message_->getWayPointCount() - 1));
+                displaying_trajectory_message_->getWayPointPtr(displaying_trajectory_message_->getWayPointCount() - 1));
         }
         else
           animating_path_ = true;
@@ -426,8 +426,8 @@ void TrajectoryVisualization::update(float wall_dt, float ros_dt)
         display_path_robot_->update(displaying_trajectory_message_->getWayPointPtr(current_state_));
         for (std::size_t i = 0; i < trajectory_trail_.size(); ++i)
           trajectory_trail_[i]->setVisible(
-              std::min(waypoint_count - 1, static_cast<int>(i) * trail_step_size_property_->getInt()) <=
-              current_state_);
+                std::min(waypoint_count - 1, static_cast<int>(i) * trail_step_size_property_->getInt()) <=
+                current_state_);
       }
       else
       {
@@ -442,12 +442,12 @@ void TrajectoryVisualization::update(float wall_dt, float ros_dt)
   }
 }
 
-void TrajectoryVisualization::incomingDisplayTrajectory(const moveit_msgs::DisplayTrajectory::ConstPtr& msg)
+void TaskSolutionVisualization::incomingSolution(const moveit_task_constructor::Solution::ConstPtr& msg)
 {
   // Error check
   if (!robot_state_ || !robot_model_)
   {
-    ROS_ERROR_STREAM_NAMED("trajectory_visualization", "No robot state or robot model loaded");
+    ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot state or robot model loaded");
     return;
   }
 
@@ -458,16 +458,16 @@ void TrajectoryVisualization::incomingDisplayTrajectory(const moveit_msgs::Displ
   trajectory_message_to_display_.reset();
 
   robot_trajectory::RobotTrajectoryPtr t(new robot_trajectory::RobotTrajectory(robot_model_, ""));
-  for (std::size_t i = 0; i < msg->trajectory.size(); ++i)
+  for (std::size_t i = 0; i < msg->sub_trajectory.size(); ++i)
   {
     if (t->empty())
     {
-      t->setRobotTrajectoryMsg(*robot_state_, msg->trajectory_start, msg->trajectory[i]);
+      t->setRobotTrajectoryMsg(*robot_state_, msg->sub_trajectory[i].trajectory);
     }
     else
     {
       robot_trajectory::RobotTrajectory tmp(robot_model_, "");
-      tmp.setRobotTrajectoryMsg(t->getLastWayPoint(), msg->trajectory[i]);
+      tmp.setRobotTrajectoryMsg(t->getLastWayPoint(), msg->sub_trajectory[i].trajectory);
       t->append(tmp, 0.0);
     }
   }
@@ -481,13 +481,13 @@ void TrajectoryVisualization::incomingDisplayTrajectory(const moveit_msgs::Displ
   }
 }
 
-void TrajectoryVisualization::changedRobotColor()
+void TaskSolutionVisualization::changedRobotColor()
 {
   if (enable_robot_color_property_->getBool())
     setRobotColor(&(display_path_robot_->getRobot()), robot_color_property_->getColor());
 }
 
-void TrajectoryVisualization::enabledRobotColor()
+void TaskSolutionVisualization::enabledRobotColor()
 {
   if (enable_robot_color_property_->getBool())
     setRobotColor(&(display_path_robot_->getRobot()), robot_color_property_->getColor());
@@ -495,19 +495,19 @@ void TrajectoryVisualization::enabledRobotColor()
     unsetRobotColor(&(display_path_robot_->getRobot()));
 }
 
-void TrajectoryVisualization::unsetRobotColor(rviz::Robot* robot)
+void TaskSolutionVisualization::unsetRobotColor(rviz::Robot* robot)
 {
   for (auto& link : robot->getLinks())
     link.second->unsetColor();
 }
 
-void TrajectoryVisualization::setRobotColor(rviz::Robot* robot, const QColor& color)
+void TaskSolutionVisualization::setRobotColor(rviz::Robot* robot, const QColor& color)
 {
   for (auto& link : robot->getLinks())
     robot->getLink(link.first)->setColor(color.redF(), color.greenF(), color.blueF());
 }
 
-void TrajectoryVisualization::trajectorySliderPanelVisibilityChange(bool enable)
+void TaskSolutionVisualization::trajectorySliderPanelVisibilityChange(bool enable)
 {
   if (!trajectory_slider_panel_)
     return;

@@ -34,8 +34,8 @@
 
 /* Author: Dave Coleman */
 
-#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TRAJECTORY_VISUALIZATION
-#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TRAJECTORY_VISUALIZATION
+#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLITION_VISUALIZATION
+#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_VISUALIZATION
 
 #include <moveit/macros/class_forward.h>
 #include <rviz/display.h>
@@ -43,12 +43,12 @@
 
 #ifndef Q_MOC_RUN
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
-#include <moveit/rviz_plugin_render_tools/trajectory_panel.h>
+#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
 #include <ros/ros.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
-#include <moveit_msgs/DisplayTrajectory.h>
+#include <moveit_task_constructor/Solution.h>
 #endif
 
 namespace rviz
@@ -68,9 +68,9 @@ class MovableText;
 
 namespace moveit_rviz_plugin
 {
-MOVEIT_CLASS_FORWARD(TrajectoryVisualization);
+MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
 
-class TrajectoryVisualization : public QObject
+class TaskSolutionVisualization : public QObject
 {
   Q_OBJECT
 
@@ -81,9 +81,9 @@ public:
    * \param display - the rviz::Display from the parent
    * \return true on success
    */
-  TrajectoryVisualization(rviz::Property* widget, rviz::Display* display);
+  TaskSolutionVisualization(rviz::Property* widget, rviz::Display* display);
 
-  virtual ~TrajectoryVisualization();
+  virtual ~TaskSolutionVisualization();
 
   virtual void update(float wall_dt, float ros_dt);
   virtual void reset();
@@ -120,7 +120,7 @@ protected:
   /**
    * \brief ROS callback for an incoming path message
    */
-  void incomingDisplayTrajectory(const moveit_msgs::DisplayTrajectory::ConstPtr& msg);
+  void incomingSolution(const moveit_task_constructor::Solution::ConstPtr& msg);
   float getStateDisplayTime();
   void clearTrajectoryTrail();
 
@@ -150,7 +150,7 @@ protected:
   Ogre::SceneNode* scene_node_;
   rviz::DisplayContext* context_;
   ros::NodeHandle update_nh_;
-  TrajectoryPanel* trajectory_slider_panel_;
+  TaskSolutionPanel* trajectory_slider_panel_;
   rviz::PanelDockWidget* trajectory_slider_dock_panel_;
 
   // Properties
