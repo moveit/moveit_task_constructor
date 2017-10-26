@@ -3,7 +3,7 @@
          type="moveit_rviz_plugin::TaskPanel"
          base_class_type="rviz::Panel">
     <description>
-      A panel widget to visualize and edit planning tasks
+      A panel widget to monitor and edit planning tasks
     </description>
   </class>
 </library>

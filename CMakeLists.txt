@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_ros_planning
 	moveit_ros_planning_interface
 	moveit_msgs
+	moveit_ros_visualization
 	eigen_conversions
 	rviz
 )
@@ -65,6 +66,7 @@ install(TARGETS ${PROJECT_NAME}
 install(DIRECTORY include/ DESTINATION include)
 install(FILES
 	task_panel_rviz_plugin_description.xml
+	task_solution_rviz_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 add_subdirectory(src/stages)
