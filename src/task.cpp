@@ -2,8 +2,7 @@
 
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/container.h>
-#include <moveit_task_constructor/debug.h>
-#include <moveit_task_constructor/introspection_publisher.h>
+#include <moveit_task_constructor/introspection.h>
 
 #include <ros/ros.h>
 
@@ -28,11 +27,11 @@ Task::Task(ContainerBase::pointer &&container)
 	initModel();
 
 	// monitor state on commandline
-	add(&printState);
+	addTaskCallback(&printState);
 	// publish state
-	add(std::bind(&IntrospectionPublisher::publish,
-	              IntrospectionPublisher::instance(),
-	              std::placeholders::_1));
+	addTaskCallback(std::ref(Introspection::instance()));
+	// publish new solutions
+	addSolutionCallback(std::ref(Introspection::instance()));
 }
 
 void Task::initModel () {
@@ -105,7 +104,7 @@ void Task::clear()
 	id_ = ++g_task_id;
 }
 
-Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
+Task::SolutionCallbackList::const_iterator Task::addSolutionCallback(SolutionCallback &&cb)
 {
 	solution_cbs_.emplace_back(std::move(cb));
 	return --solution_cbs_.cend();
@@ -116,7 +115,7 @@ void Task::erase(SolutionCallbackList::const_iterator which)
 	solution_cbs_.erase(which);
 }
 
-Task::TaskCallbackList::const_iterator Task::add(TaskCallback &&cb)
+Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback &&cb)
 {
 	task_cbs_.emplace_back(std::move(cb));
 	return --task_cbs_.cend();

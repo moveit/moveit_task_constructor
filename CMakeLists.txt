@@ -45,8 +45,7 @@ add_library(${PROJECT_NAME}
 	src/stage.cpp
 	src/container.cpp
 	src/task.cpp
-	src/debug.cpp
-	src/introspection_publisher.cpp
+	src/introspection.cpp
 
 	src/stage_p.h
 	src/container_p.h
@@ -55,8 +54,7 @@ add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/stage.h
 	include/${PROJECT_NAME}/container.h
 	include/${PROJECT_NAME}/task.h
-	include/${PROJECT_NAME}/debug.h
-	include/${PROJECT_NAME}/introspection_publisher.h
+	include/${PROJECT_NAME}/introspection.h
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 

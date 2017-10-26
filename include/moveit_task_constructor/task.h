@@ -43,14 +43,14 @@ public:
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
 	/// add function to be called for every newly found solution
-	SolutionCallbackList::const_iterator add(SolutionCallback &&cb);
+	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
 	/// remove function callback
 	void erase(SolutionCallbackList::const_iterator which);
 
 	typedef std::function<void(const Task &t)> TaskCallback;
 	typedef std::list<TaskCallback> TaskCallbackList;
 	/// add function to be called for every newly found solution
-	TaskCallbackList::const_iterator add(TaskCallback &&cb);
+	TaskCallbackList::const_iterator addTaskCallback(TaskCallback &&cb);
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
