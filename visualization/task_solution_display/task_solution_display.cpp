@@ -37,6 +37,11 @@
 */
 
 #include "task_solution_display.h"
+
+#include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
+#include <moveit/rdf_loader/rdf_loader.h>
+#include <moveit/robot_model/robot_model.h>
+
 #include <rviz/properties/string_property.h>
 
 namespace moveit_rviz_plugin

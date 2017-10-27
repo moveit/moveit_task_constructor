@@ -41,10 +41,9 @@
 
 #include <rviz/display.h>
 
-#include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 #ifndef Q_MOC_RUN
 #include <ros/ros.h>
-#include <moveit/rdf_loader/rdf_loader.h>
+#include <moveit/macros/class_forward.h>
 #endif
 
 namespace rviz
@@ -52,12 +51,16 @@ namespace rviz
 class StringProperty;
 }
 
+namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
+namespace rdf_loader { MOVEIT_CLASS_FORWARD(RDFLoader) }
+
 namespace moveit_rviz_plugin
 {
+
+MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
 class TaskSolutionDisplay : public rviz::Display
 {
   Q_OBJECT
-  // friend class TaskSolutionVisualization; // allow the visualization class to access the display
 
 public:
   TaskSolutionDisplay();
@@ -87,8 +90,7 @@ protected:
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;
-  robot_model::RobotModelConstPtr robot_model_;
-  robot_state::RobotStatePtr robot_state_;
+  moveit::core::RobotModelConstPtr robot_model_;
   bool load_robot_model_;  // for delayed robot initialization
 
   // Properties

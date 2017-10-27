@@ -34,15 +34,20 @@
 
 /* Author: Dave Coleman */
 
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/replace.hpp>
-
 #include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
+#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
+#include <moveit_task_constructor/introspection.h>
 
+#include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
 #include <moveit/rviz_plugin_render_tools/planning_link_updater.h>
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
-#include <rviz/robot/robot.h>
 
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/trajectory_processing/trajectory_tools.h>
+
+#include <rviz/robot/robot.h>
+#include <rviz/robot/robot_link.h>
 #include <rviz/properties/property.h>
 #include <rviz/properties/int_property.h>
 #include <rviz/properties/string_property.h>
@@ -51,47 +56,42 @@
 #include <rviz/properties/ros_topic_property.h>
 #include <rviz/properties/editable_enum_property.h>
 #include <rviz/properties/color_property.h>
-#include <moveit/trajectory_processing/trajectory_tools.h>
-#include <rviz/robot/robot_link.h>
+#include <rviz/display.h>
 #include <rviz/display_context.h>
 #include <rviz/window_manager_interface.h>
+#include <rviz/panel_dock_widget.h>
 
 namespace moveit_rviz_plugin
 {
-TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* widget, rviz::Display* display)
+TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display)
   : display_(display)
-  , widget_(widget)
-  , animating_path_(false)
-  , drop_displaying_trajectory_(false)
-  , current_state_(-1)
-  , trajectory_slider_panel_(NULL)
-  , trajectory_slider_dock_panel_(NULL)
+  , parent_(parent)
 {
   trajectory_topic_property_ =
-      new rviz::RosTopicProperty("Trajectory Topic", "/move_group/display_planned_path",
+      new rviz::RosTopicProperty("Trajectory Topic", DEFAULT_TASK_SOLUTION_TOPIC,
                                  ros::message_traits::datatype<moveit_task_constructor::Solution>(),
-                                 "The topic on which the moveit_task_constructor::Solution messages are received", widget,
+                                 "The topic on which the moveit_task_constructor::Solution messages are received", parent,
                                  SLOT(changedTrajectoryTopic()), this);
 
   display_path_visual_enabled_property_ =
       new rviz::BoolProperty("Show Robot Visual", true, "Indicates whether the geometry of the robot as defined for "
                                                         "visualisation purposes should be displayed",
-                             widget, SLOT(changedDisplayPathVisualEnabled()), this);
+                             parent, SLOT(changedDisplayPathVisualEnabled()), this);
 
   display_path_collision_enabled_property_ =
       new rviz::BoolProperty("Show Robot Collision", false, "Indicates whether the geometry of the robot as defined "
                                                             "for collision detection purposes should be displayed",
-                             widget, SLOT(changedDisplayPathCollisionEnabled()), this);
+                             parent, SLOT(changedDisplayPathCollisionEnabled()), this);
 
   robot_path_alpha_property_ = new rviz::FloatProperty("Robot Alpha", 0.5f, "Specifies the alpha for the robot links",
-                                                       widget, SLOT(changedRobotPathAlpha()), this);
+                                                       parent, SLOT(changedRobotPathAlpha()), this);
   robot_path_alpha_property_->setMin(0.0);
   robot_path_alpha_property_->setMax(1.0);
 
   state_display_time_property_ = new rviz::EditableEnumProperty("State Display Time", "0.05 s",
                                                                 "The amount of wall-time to wait in between displaying "
                                                                 "states along a received trajectory path",
-                                                                widget, SLOT(changedStateDisplayTime()), this);
+                                                                parent, SLOT(changedStateDisplayTime()), this);
   state_display_time_property_->addOptionStd("REALTIME");
   state_display_time_property_->addOptionStd("0.05 s");
   state_display_time_property_->addOptionStd("0.1 s");
@@ -99,25 +99,25 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* widget, rvi
 
   loop_display_property_ = new rviz::BoolProperty("Loop Animation", false, "Indicates whether the last received path "
                                                                            "is to be animated in a loop",
-                                                  widget, SLOT(changedLoopDisplay()), this);
+                                                  parent, SLOT(changedLoopDisplay()), this);
 
   trail_display_property_ =
-      new rviz::BoolProperty("Show Trail", false, "Show a path trail", widget, SLOT(changedShowTrail()), this);
+      new rviz::BoolProperty("Show Trail", false, "Show a path trail", parent, SLOT(changedShowTrail()), this);
 
   trail_step_size_property_ = new rviz::IntProperty("Trail Step Size", 1, "Specifies the step size of the samples "
                                                                           "shown in the trajectory trail.",
-                                                    widget, SLOT(changedTrailStepSize()), this);
+                                                    parent, SLOT(changedTrailStepSize()), this);
   trail_step_size_property_->setMin(1);
 
   interrupt_display_property_ = new rviz::BoolProperty(
         "Interrupt Display", false,
-        "Immediately show newly planned trajectory, interrupting the currently displayed one.", widget);
+        "Immediately show newly planned trajectory, interrupting the currently displayed one.", parent);
 
   robot_color_property_ = new rviz::ColorProperty(
-        "Robot Color", QColor(150, 50, 150), "The color of the animated robot", widget, SLOT(changedRobotColor()), this);
+        "Robot Color", QColor(150, 50, 150), "The color of the animated robot", parent, SLOT(changedRobotColor()), this);
 
   enable_robot_color_property_ = new rviz::BoolProperty(
-        "Color Enabled", false, "Specifies whether robot coloring is enabled", widget, SLOT(enabledRobotColor()), this);
+        "Color Enabled", false, "Specifies whether robot coloring is enabled", parent, SLOT(enabledRobotColor()), this);
 }
 
 TaskSolutionVisualization::~TaskSolutionVisualization()
@@ -140,7 +140,7 @@ void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::
   update_nh_ = update_nh;
 
   // Load trajectory robot
-  display_path_robot_.reset(new RobotStateVisualization(scene_node_, context_, "Planned Path", widget_));
+  display_path_robot_.reset(new RobotStateVisualization(scene_node_, context_, "Planned Path", parent_));
   display_path_robot_->setVisualVisible(display_path_visual_enabled_property_->getBool());
   display_path_robot_->setCollisionVisible(display_path_collision_enabled_property_->getBool());
   display_path_robot_->setVisible(false);
@@ -385,7 +385,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       }
       else if (trajectory_slider_panel_ && trajectory_slider_panel_->isVisible())
       {
-        if (trajectory_slider_panel_->getSliderPosition() == displaying_trajectory_message_->getWayPointCount() - 1)
+        if (trajectory_slider_panel_->getSliderPosition() == (int)displaying_trajectory_message_->getWayPointCount() - 1)
         {  // show the last waypoint if the slider is enabled
           display_path_robot_->update(
                 displaying_trajectory_message_->getWayPointPtr(displaying_trajectory_message_->getWayPointCount() - 1));
@@ -419,7 +419,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       else
         ++current_state_;
       int waypoint_count = displaying_trajectory_message_->getWayPointCount();
-      if ((std::size_t)current_state_ < waypoint_count)
+      if (current_state_ < waypoint_count)
       {
         if (trajectory_slider_panel_)
           trajectory_slider_panel_->setSliderPosition(current_state_);

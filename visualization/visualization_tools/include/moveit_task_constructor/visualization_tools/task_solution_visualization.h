@@ -38,23 +38,24 @@
 #define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_VISUALIZATION
 
 #include <moveit/macros/class_forward.h>
-#include <rviz/display.h>
-#include <rviz/panel_dock_widget.h>
+#include <moveit_task_constructor/Solution.h>
+#include <QObject>
+#include <boost/thread/mutex.hpp>
 
 #ifndef Q_MOC_RUN
-#include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
-#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
-#include <ros/ros.h>
-#include <moveit/robot_model/robot_model.h>
-#include <moveit/robot_state/robot_state.h>
-#include <moveit/robot_trajectory/robot_trajectory.h>
-#include <moveit_task_constructor/Solution.h>
+#include <ros/node_handle.h>
 #endif
+
+namespace Ogre
+{
+class SceneNode;
+}
 
 namespace rviz
 {
+class Display;
+class DisplayContext;
 class Robot;
-class Shape;
 class Property;
 class IntProperty;
 class StringProperty;
@@ -63,13 +64,22 @@ class FloatProperty;
 class RosTopicProperty;
 class EditableEnumProperty;
 class ColorProperty;
-class MovableText;
+class PanelDockWidget;
 }
+
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(RobotState)
+} }
+namespace robot_trajectory { MOVEIT_CLASS_FORWARD(RobotTrajectory) }
 
 namespace moveit_rviz_plugin
 {
+
+MOVEIT_CLASS_FORWARD(RobotStateVisualization)
 MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
 
+class TaskSolutionPanel;
 class TaskSolutionVisualization : public QObject
 {
   Q_OBJECT
@@ -77,11 +87,11 @@ class TaskSolutionVisualization : public QObject
 public:
   /**
    * \brief Playback a trajectory from a planned path
-   * \param widget - either a rviz::Display or rviz::Property
+   * \param parent - either a rviz::Display or rviz::Property
    * \param display - the rviz::Display from the parent
    * \return true on success
    */
-  TaskSolutionVisualization(rviz::Property* widget, rviz::Display* display);
+  TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display);
 
   virtual ~TaskSolutionVisualization();
 
@@ -89,7 +99,7 @@ public:
   virtual void reset();
 
   void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context, ros::NodeHandle update_nh);
-  void onRobotModelLoaded(robot_model::RobotModelConstPtr robot_model);
+  void onRobotModelLoaded(moveit::core::RobotModelConstPtr robot_model);
   void onEnable();
   void onDisable();
   void setName(const QString& name);
@@ -135,23 +145,23 @@ protected:
   robot_trajectory::RobotTrajectoryPtr trajectory_message_to_display_;
   std::vector<rviz::Robot*> trajectory_trail_;
   ros::Subscriber trajectory_topic_sub_;
-  bool animating_path_;
-  bool drop_displaying_trajectory_;
-  int current_state_;
+  bool animating_path_ = false;
+  bool drop_displaying_trajectory_ = false;
+  int current_state_ = -1;
   float current_state_time_;
   boost::mutex update_trajectory_message_;
 
-  robot_model::RobotModelConstPtr robot_model_;
-  robot_state::RobotStatePtr robot_state_;
+  moveit::core::RobotModelConstPtr robot_model_;
+  moveit::core::RobotStatePtr robot_state_;
 
   // Pointers from parent display taht we save
   rviz::Display* display_;  // the parent display that this class populates
-  rviz::Property* widget_;
+  rviz::Property* parent_;
   Ogre::SceneNode* scene_node_;
   rviz::DisplayContext* context_;
   ros::NodeHandle update_nh_;
-  TaskSolutionPanel* trajectory_slider_panel_;
-  rviz::PanelDockWidget* trajectory_slider_dock_panel_;
+  TaskSolutionPanel* trajectory_slider_panel_ = nullptr;
+  rviz::PanelDockWidget* trajectory_slider_dock_panel_ = nullptr;
 
   // Properties
   rviz::BoolProperty* display_path_visual_enabled_property_;
