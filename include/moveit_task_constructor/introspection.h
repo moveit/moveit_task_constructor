@@ -14,13 +14,12 @@ MOVEIT_CLASS_FORWARD(Task)
 MOVEIT_CLASS_FORWARD(SolutionBase)
 
 class Introspection {
+	// publish Task state and (new) Solutions
 	ros::Publisher task_publisher_;
 	ros::Publisher solution_publisher_;
-	// TODO add services to provide InterfaceState and Solution
-	ros::ServiceServer interfaceState_service_;
-	ros::ServiceServer solution_service_;
-
-	ros::NodeHandle n;
+	// services to provide InterfaceState and Solution
+	ros::ServiceServer get_interface_state_service_;
+	ros::ServiceServer get_solution_service_;
 
 public:
 	Introspection(const std::string &task_topic = "task",
@@ -43,11 +42,10 @@ public:
 	}
 	void operator()(const SolutionBase &s) { publishSolution(s); }
 
-	//advertise services
-	void generateInterfaceService();
-	void generateSolutionService();
+	// get interface state
 	bool getInterfaceState(moveit_task_constructor::GetInterfaceState::Request  &req,
 	                       moveit_task_constructor::GetInterfaceState::Response &res);
+	// get solution
 	bool getSolution(moveit_task_constructor::GetSolution::Request  &req,
 	                 moveit_task_constructor::GetSolution::Response &res);
 };

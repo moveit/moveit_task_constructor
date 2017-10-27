@@ -13,6 +13,10 @@ Introspection::Introspection(const std::string &task_topic,
 	ros::NodeHandle n;
 	task_publisher_ = n.advertise<moveit_task_constructor::Task>(task_topic, 1);
 	solution_publisher_ = n.advertise<::moveit_task_constructor::Solution>(solution_topic, 1, true);
+
+	n = ros::NodeHandle("~"); // services are advertised in private namespace
+	get_interface_state_service_ = n.advertiseService("get_interface_state", &Introspection::getInterfaceState, this);
+	get_solution_service_ = n.advertiseService("get_solution", &Introspection::getSolution, this);
 }
 
 Introspection &Introspection::instance()
@@ -32,18 +36,6 @@ void Introspection::publishSolution(const SolutionBase &s)
 	::moveit_task_constructor::Solution msg;
 	s.fillMessage(msg);
 	publishSolution(msg);
-}
-
-void Introspection::generateInterfaceService()
-{
-	Introspection i;
-	interfaceState_service_ = n.advertiseService("get_interface_state", &Introspection::getInterfaceState, &i);
-}
-
-void Introspection::generateSolutionService()
-{
-	Introspection i;
-	solution_service_ = n.advertiseService("get_solution", &Introspection::getSolution, &i);
 }
 
 bool Introspection::getInterfaceState(moveit_task_constructor::GetInterfaceState::Request  &req,
