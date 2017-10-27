@@ -34,6 +34,37 @@ void Introspection::publishSolution(const SolutionBase &s)
 	publishSolution(msg);
 }
 
+void Introspection::generateInterfaceService()
+{
+	Introspection i;
+	interfaceState_service_ = n.advertiseService("get_interface_state", &Introspection::getInterfaceState, &i);
+}
+
+void Introspection::generateSolutionService()
+{
+	Introspection i;
+	solution_service_ = n.advertiseService("get_solution", &Introspection::getSolution, &i);
+}
+
+bool Introspection::getInterfaceState(moveit_task_constructor::GetInterfaceState::Request  &req,
+                                      moveit_task_constructor::GetInterfaceState::Response &res)
+{
+	const InterfaceState& state = Repository<InterfaceState>::instance()[req.state_id];
+	moveit_msgs::PlanningScene msg;
+	state.scene()->getPlanningSceneDiffMsg(msg);
+	res.scene = msg;
+	return true;
+}
+
+bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &req,
+                                moveit_task_constructor::GetSolution::Response &res)
+{
+	::moveit_task_constructor::Solution msg;
+	const SolutionBase& solution = Repository<SolutionBase>::instance()[req.solution_id];
+	solution.fillMessage(msg);
+	res.solution = msg;
+	return true;
+}
 
 void publishAllPlans(const Task &task, bool wait) {
 	Task::SolutionProcessor processor
