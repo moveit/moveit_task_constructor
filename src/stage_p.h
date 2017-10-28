@@ -34,6 +34,7 @@ class StagePrivate {
 public:
 	typedef std::list<Stage::pointer> container_type;
 	StagePrivate(Stage* me, const std::string& name);
+	virtual ~StagePrivate() = default;
 
 	InterfaceFlags interfaceFlags() const;
 

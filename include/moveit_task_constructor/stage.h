@@ -67,7 +67,7 @@ class Stage {
 public:
 	PRIVATE_CLASS(Stage)
 	typedef std::unique_ptr<Stage> pointer;
-	~Stage();
+	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
 	operator StagePrivate*();
