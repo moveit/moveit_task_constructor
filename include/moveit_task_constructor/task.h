@@ -35,7 +35,7 @@ public:
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
 	void add(Stage::pointer &&stage);
-	void clear();
+	void clear() override;
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;

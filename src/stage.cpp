@@ -207,9 +207,6 @@ bool PropagatingEitherWayPrivate::compute()
 	PropagatingEitherWay* me = static_cast<PropagatingEitherWay*>(me_);
 
 	bool result = false;
-	planning_scene::PlanningScenePtr ps;
-	robot_trajectory::RobotTrajectoryPtr trajectory;
-	double cost;
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
 		if (me->computeForward(fetchStartState()))
 			result |= true;

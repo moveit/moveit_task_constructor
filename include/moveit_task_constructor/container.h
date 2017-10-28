@@ -98,8 +98,8 @@ public:
 	PRIVATE_CLASS(ParallelContainerBase)
 	ParallelContainerBase(const std::string &name);
 
-	void reset();
-	void init(const planning_scene::PlanningSceneConstPtr &scene);
+	void reset() override;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const;
