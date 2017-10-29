@@ -3,10 +3,13 @@ set(MOVEIT_LIB_NAME motion_planning_tasks_rviz_plugin)
 qt_wrap_ui(UIC_FILES task_panel.ui)
 
 add_library(${MOVEIT_LIB_NAME}
-	mainloop_processing.cpp
+	job_queue.cpp
 	stage_wrapper.cpp
 	task_model.cpp
+	composite_proxy_model.cpp
+	task_model_cache.cpp
 	task_panel.cpp
+	task_panel_p.h
 	task_display.cpp
 	plugin_init.cpp
 	${UIC_FILES}

@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2015, University of Colorado, Boulder
+ *  Copyright (c) 2017, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the Univ of CO, Boulder nor the names of its
+ *   * Neither the name of Bielefeld University nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,23 +32,24 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Dave Coleman
-   Desc:   Wraps a task_solution_visualization playback class for Rviz into a stand alone display
+/* Author: Robert Haschke
+   Desc:   Monitor manipulation tasks and visualize their solutions
 */
 
-#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
-#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
+#pragma once
 
 #include <rviz/display.h>
 
 #ifndef Q_MOC_RUN
-#include <ros/ros.h>
+#include "job_queue.h"
 #include <moveit/macros/class_forward.h>
+#include <ros/subscriber.h>
 #endif
 
 namespace rviz
 {
 class StringProperty;
+class RosTopicProperty;
 }
 
 namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
@@ -58,14 +59,15 @@ namespace moveit_rviz_plugin
 {
 
 MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
+MOVEIT_CLASS_FORWARD(TaskModel)
+
 class TaskDisplay : public rviz::Display
 {
   Q_OBJECT
 
 public:
   TaskDisplay();
-
-  virtual ~TaskDisplay();
+  ~TaskDisplay() override;
 
   void loadRobotModel();
 
@@ -83,20 +85,31 @@ private Q_SLOTS:
    * \brief Slot Event Functions
    */
   void changedRobotDescription();
+  void changedTaskMonitorTopic();
+  void changedTaskSolutionTopic();
 
 protected:
+  void updateTaskModel();
+
+protected:
+  ros::Subscriber task_monitor_sub;
+  ros::Subscriber task_solution_sub;
+  // handle processing of task+solution messages in Qt mainloop
+  moveit::tools::JobQueue mainloop_jobs_;
+
   // The trajectory playback component
   TaskSolutionVisualizationPtr trajectory_visual_;
+  // The TaskModel storing actual task and solution data
+  TaskModelPtr task_model_;
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;
   moveit::core::RobotModelConstPtr robot_model_;
-  bool load_robot_model_;  // for delayed robot initialization
 
   // Properties
   rviz::StringProperty* robot_description_property_;
+  rviz::RosTopicProperty* task_monitor_topic_property_;
+  rviz::RosTopicProperty* task_solution_topic_property_;
 };
 
 }  // namespace moveit_rviz_plugin
-
-#endif

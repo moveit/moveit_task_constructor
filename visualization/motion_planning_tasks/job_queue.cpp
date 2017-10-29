@@ -32,60 +32,60 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
-*/
+/* Author: Robert Haschke, Dave Coleman */
 
-#include <stdio.h>
+#include "job_queue.h"
+#include <ros/console.h>
 
-#include "task_panel_p.h"
-#include "task_display.h"
+namespace moveit { namespace tools {
 
-#include <rviz/properties/property.h>
-
-namespace moveit_rviz_plugin {
-
-TaskPanel::TaskPanel(QWidget* parent)
-  : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
+JobQueue::JobQueue(QObject *parent) : QObject(parent)
 {
 }
 
-TaskPanel::~TaskPanel()
+void JobQueue::addJob(const std::function<void()>& job)
 {
-	delete d_ptr;
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	jobs_.push_back(job);
 }
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
-   : q_ptr(q_ptr)
-   , tasks_model(modelCacheInstance().getTaskModel())
-   , settings(new rviz::PropertyTreeModel(new rviz::Property))
+void JobQueue::clear()
 {
-	setupUi(q_ptr);
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
-	tasks_view->setModel(&modelCacheInstance());
+	jobs_.clear();
 }
 
-void TaskPanelPrivate::initSettings(rviz::Property* root)
+size_t JobQueue::numPending()
 {
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	return jobs_.size();
 }
 
-void TaskPanel::onInitialize()
+void JobQueue::waitForAllJobs()
 {
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	while (!jobs_.empty())
+		idle_condition_.wait(ulock);
 }
 
-void TaskPanel::save(rviz::Config config) const
+void JobQueue::executeJobs()
 {
-	rviz::Panel::save(config);
-	d_ptr->settings->getRoot()->save(config);
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	while (!jobs_.empty())
+	{
+		std::function<void()> fn = jobs_.front();
+		jobs_.pop_front();
+		ulock.unlock();
+		try
+		{
+			fn();
+		}
+		catch (std::exception& ex)
+		{
+			ROS_ERROR("Exception caught executing main loop job: %s", ex.what());
+		}
+		ulock.lock();
+	}
+	idle_condition_.notify_all();
 }
 
-void TaskPanel::load(const rviz::Config& config)
-{
-	rviz::Panel::load(config);
-	d_ptr->settings->getRoot()->load(config);
-}
-
-}
-
-#include "moc_task_panel.cpp"
+} }

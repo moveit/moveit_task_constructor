@@ -98,12 +98,13 @@ public:
   virtual void update(float wall_dt, float ros_dt);
   virtual void reset();
 
-  void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context, ros::NodeHandle update_nh);
+  void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
   void onRobotModelLoaded(moveit::core::RobotModelConstPtr robot_model);
   void onEnable();
   void onDisable();
   void setName(const QString& name);
 
+  void showTrajectory(const moveit_task_constructor::Solution& msg);
   void dropTrajectory();
 
 public Q_SLOTS:
@@ -120,17 +121,12 @@ private Q_SLOTS:
   void changedLoopDisplay();
   void changedShowTrail();
   void changedTrailStepSize();
-  void changedTrajectoryTopic();
   void changedStateDisplayTime();
   void changedRobotColor();
   void enabledRobotColor();
   void trajectorySliderPanelVisibilityChange(bool enable);
 
 protected:
-  /**
-   * \brief ROS callback for an incoming path message
-   */
-  void incomingSolution(const moveit_task_constructor::Solution::ConstPtr& msg);
   float getStateDisplayTime();
   void clearTrajectoryTrail();
 
@@ -144,7 +140,6 @@ protected:
   robot_trajectory::RobotTrajectoryPtr displaying_trajectory_message_;
   robot_trajectory::RobotTrajectoryPtr trajectory_message_to_display_;
   std::vector<rviz::Robot*> trajectory_trail_;
-  ros::Subscriber trajectory_topic_sub_;
   bool animating_path_ = false;
   bool drop_displaying_trajectory_ = false;
   int current_state_ = -1;
@@ -159,7 +154,6 @@ protected:
   rviz::Property* parent_;
   Ogre::SceneNode* scene_node_;
   rviz::DisplayContext* context_;
-  ros::NodeHandle update_nh_;
   TaskSolutionPanel* trajectory_slider_panel_ = nullptr;
   rviz::PanelDockWidget* trajectory_slider_dock_panel_ = nullptr;
 
@@ -167,7 +161,6 @@ protected:
   rviz::BoolProperty* display_path_visual_enabled_property_;
   rviz::BoolProperty* display_path_collision_enabled_property_;
   rviz::EditableEnumProperty* state_display_time_property_;
-  rviz::RosTopicProperty* trajectory_topic_property_;
   rviz::FloatProperty* robot_path_alpha_property_;
   rviz::BoolProperty* loop_display_property_;
   rviz::BoolProperty* trail_display_property_;

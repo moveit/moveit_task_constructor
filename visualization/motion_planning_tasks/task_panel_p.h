@@ -36,56 +36,32 @@
    Desc:   Monitor manipulation tasks and visualize their solutions
 */
 
-#include <stdio.h>
+#pragma once
 
-#include "task_panel_p.h"
-#include "task_display.h"
+#include "task_panel.h"
+#include "ui_task_panel.h"
+#include "task_model_cache.h"
 
-#include <rviz/properties/property.h>
+#include <rviz/panel.h>
+#include <rviz/properties/property_tree_model.h>
 
 namespace moveit_rviz_plugin {
 
-TaskPanel::TaskPanel(QWidget* parent)
-  : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
-{
-}
+class TaskPanelPrivate : public Ui_TaskPanel {
+public:
+	TaskPanelPrivate(TaskPanel *q_ptr);
 
-TaskPanel::~TaskPanel()
-{
-	delete d_ptr;
-}
+	// retrieve singleton TaskModelCache, shared by all TaskPanel instances
+	static TaskModelCache& modelCacheInstance() {
+		static TaskModelCache instance_;
+		return instance_;
+	}
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
-   : q_ptr(q_ptr)
-   , tasks_model(modelCacheInstance().getTaskModel())
-   , settings(new rviz::PropertyTreeModel(new rviz::Property))
-{
-	setupUi(q_ptr);
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
-	tasks_view->setModel(&modelCacheInstance());
-}
+	void initSettings(rviz::Property *root);
 
-void TaskPanelPrivate::initSettings(rviz::Property* root)
-{
-}
-
-void TaskPanel::onInitialize()
-{
-}
-
-void TaskPanel::save(rviz::Config config) const
-{
-	rviz::Panel::save(config);
-	d_ptr->settings->getRoot()->save(config);
-}
-
-void TaskPanel::load(const rviz::Config& config)
-{
-	rviz::Panel::load(config);
-	d_ptr->settings->getRoot()->load(config);
-}
+	TaskPanel* q_ptr;
+	TaskModelPtr tasks_model;
+	rviz::PropertyTreeModel* settings;
+};
 
 }
-
-#include "moc_task_panel.cpp"

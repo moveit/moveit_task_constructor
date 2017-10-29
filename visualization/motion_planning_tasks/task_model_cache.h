@@ -32,60 +32,56 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
-*/
+/* Author: Robert Haschke */
 
-#include <stdio.h>
+#pragma once
 
-#include "task_panel_p.h"
-#include "task_display.h"
+#include "composite_proxy_model.h"
+#include "task_model.h"
+#include <map>
 
-#include <rviz/properties/property.h>
-
+class QStandardItemModel;
+class QStandardItem;
 namespace moveit_rviz_plugin {
 
-TaskPanel::TaskPanel(QWidget* parent)
-  : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
-{
-}
+class TaskDisplay;
 
-TaskPanel::~TaskPanel()
-{
-	delete d_ptr;
-}
+/** TaskModelCache maintains the set of all known TaskModels.
+ *
+ *  This is a singleton instance.
+ */
+class TaskModelCache : public moveit::tools::CompositeProxyItemModel {
+	Q_OBJECT
+	struct Entry : public std::pair<TaskModelWeakPtr, QStandardItem*> {
+		TaskModelWeakPtr& model() { return first; }
+		QStandardItem*& item() { return second; }
+	};
+	std::map<const TaskDisplay*, Entry> display_map_;
+	std::map<std::pair<QString, QString>, TaskModelWeakPtr> task_model_map_;
+	QStandardItemModel *root_model_;
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
-   : q_ptr(q_ptr)
-   , tasks_model(modelCacheInstance().getTaskModel())
-   , settings(new rviz::PropertyTreeModel(new rviz::Property))
-{
-	setupUi(q_ptr);
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
-	tasks_view->setModel(&modelCacheInstance());
-}
+	/// class is non-copyable
+	TaskModelCache(const TaskModelCache&) = delete;
+	void operator=(const TaskModelCache&) = delete;
 
-void TaskPanelPrivate::initSettings(rviz::Property* root)
-{
-}
+	QModelIndex getOrCreateItem(TaskModelCache::Entry &e, const QString &name, int insert_row = -1);
+	TaskModelPtr getOrCreateTaskModel(Entry &e, const QModelIndex &mount_point);
 
-void TaskPanel::onInitialize()
-{
-}
+public:
+	TaskModelCache(QObject *parent = nullptr);
 
-void TaskPanel::save(rviz::Config config) const
-{
-	rviz::Panel::save(config);
-	d_ptr->settings->getRoot()->save(config);
-}
+	/// get TaskModel for a TaskDisplay
+	TaskModelPtr getTaskModel(const TaskDisplay& display,
+	                          const QString& task_monitor_topic,
+	                          const QString& task_solution_topic);
+	/// release TaskModel for given TaskDisplay
+	void release(TaskDisplay& display);
 
-void TaskPanel::load(const rviz::Config& config)
-{
-	rviz::Panel::load(config);
-	d_ptr->settings->getRoot()->load(config);
-}
+	/// call to keep model in sync with display name
+	void updateDisplayName(const TaskDisplay& display);
+
+	/// get global TaskModel instance used for panels
+	TaskModelPtr getTaskModel();
+};
 
 }
-
-#include "moc_task_panel.cpp"

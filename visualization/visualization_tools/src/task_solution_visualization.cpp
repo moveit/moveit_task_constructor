@@ -67,12 +67,6 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
   : display_(display)
   , parent_(parent)
 {
-  trajectory_topic_property_ =
-      new rviz::RosTopicProperty("Trajectory Topic", DEFAULT_TASK_SOLUTION_TOPIC,
-                                 ros::message_traits::datatype<moveit_task_constructor::Solution>(),
-                                 "The topic on which the moveit_task_constructor::Solution messages are received", parent,
-                                 SLOT(changedTrajectoryTopic()), this);
-
   display_path_visual_enabled_property_ =
       new rviz::BoolProperty("Show Robot Visual", true, "Indicates whether the geometry of the robot as defined for "
                                                         "visualisation purposes should be displayed",
@@ -131,16 +125,14 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
     delete trajectory_slider_dock_panel_;
 }
 
-void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context,
-                                             ros::NodeHandle update_nh)
+void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context)
 {
   // Save pointers for later use
   scene_node_ = scene_node;
   context_ = context;
-  update_nh_ = update_nh;
 
   // Load trajectory robot
-  display_path_robot_.reset(new RobotStateVisualization(scene_node_, context_, "Planned Path", parent_));
+  display_path_robot_.reset(new RobotStateVisualization(scene_node_, context_, "Solution Trajectory", parent_));
   display_path_robot_->setVisualVisible(display_path_visual_enabled_property_->getBool());
   display_path_robot_->setCollisionVisible(display_path_collision_enabled_property_->getBool());
   display_path_robot_->setVisible(false);
@@ -254,16 +246,6 @@ void TaskSolutionVisualization::changedRobotPathAlpha()
     trajectory_trail_[i]->setAlpha(robot_path_alpha_property_->getFloat());
 }
 
-void TaskSolutionVisualization::changedTrajectoryTopic()
-{
-  trajectory_topic_sub_.shutdown();
-  if (!trajectory_topic_property_->getStdString().empty())
-  {
-    trajectory_topic_sub_ = update_nh_.subscribe(trajectory_topic_property_->getStdString(), 2,
-                                                 &TaskSolutionVisualization::incomingSolution, this);
-  }
-}
-
 void TaskSolutionVisualization::changedDisplayPathVisualEnabled()
 {
   if (display_->isEnabled())
@@ -303,8 +285,6 @@ void TaskSolutionVisualization::onEnable()
     trajectory_trail_[i]->setCollisionVisible(display_path_collision_enabled_property_->getBool());
     trajectory_trail_[i]->setVisible(true);
   }
-
-  changedTrajectoryTopic();  // load topic at startup if default used
 }
 
 void TaskSolutionVisualization::onDisable()
@@ -442,7 +422,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
   }
 }
 
-void TaskSolutionVisualization::incomingSolution(const moveit_task_constructor::Solution::ConstPtr& msg)
+void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor::Solution& msg)
 {
   // Error check
   if (!robot_state_ || !robot_model_)
@@ -451,23 +431,23 @@ void TaskSolutionVisualization::incomingSolution(const moveit_task_constructor::
     return;
   }
 
-  if (!msg->model_id.empty() && msg->model_id != robot_model_->getName())
-    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected", msg->model_id.c_str(),
+  if (!msg.model_id.empty() && msg.model_id != robot_model_->getName())
+    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected", msg.model_id.c_str(),
              robot_model_->getName().c_str());
 
   trajectory_message_to_display_.reset();
 
   robot_trajectory::RobotTrajectoryPtr t(new robot_trajectory::RobotTrajectory(robot_model_, ""));
-  for (std::size_t i = 0; i < msg->sub_trajectory.size(); ++i)
+  for (std::size_t i = 0; i < msg.sub_trajectory.size(); ++i)
   {
     if (t->empty())
     {
-      t->setRobotTrajectoryMsg(*robot_state_, msg->sub_trajectory[i].trajectory);
+      t->setRobotTrajectoryMsg(*robot_state_, msg.sub_trajectory[i].trajectory);
     }
     else
     {
       robot_trajectory::RobotTrajectory tmp(robot_model_, "");
-      tmp.setRobotTrajectoryMsg(t->getLastWayPoint(), msg->sub_trajectory[i].trajectory);
+      tmp.setRobotTrajectoryMsg(t->getLastWayPoint(), msg.sub_trajectory[i].trajectory);
       t->append(tmp, 0.0);
     }
   }

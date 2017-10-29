@@ -32,60 +32,35 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
-*/
+/* Author: Robert Haschke, Dave Coleman */
 
-#include <stdio.h>
+#pragma once
+#include <QObject>
 
-#include "task_panel_p.h"
-#include "task_display.h"
+#include <QObject>
+#include <deque>
+#include <functional>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
-#include <rviz/properties/property.h>
+namespace moveit { namespace tools {
 
-namespace moveit_rviz_plugin {
-
-TaskPanel::TaskPanel(QWidget* parent)
-  : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
+/** Job Queue (of std::functions) */
+class JobQueue : public QObject
 {
-}
+	Q_OBJECT
+	boost::mutex jobs_mutex_;
+	std::deque<std::function<void()> > jobs_;
+	boost::condition_variable idle_condition_;
 
-TaskPanel::~TaskPanel()
-{
-	delete d_ptr;
-}
+public:
+	explicit JobQueue(QObject *parent = 0);
+	void addJob(const std::function<void()> &job);
+	void clear();
+	size_t numPending();
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
-   : q_ptr(q_ptr)
-   , tasks_model(modelCacheInstance().getTaskModel())
-   , settings(new rviz::PropertyTreeModel(new rviz::Property))
-{
-	setupUi(q_ptr);
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
-	tasks_view->setModel(&modelCacheInstance());
-}
+	void waitForAllJobs();
+	void executeJobs();
+};
 
-void TaskPanelPrivate::initSettings(rviz::Property* root)
-{
-}
-
-void TaskPanel::onInitialize()
-{
-}
-
-void TaskPanel::save(rviz::Config config) const
-{
-	rviz::Panel::save(config);
-	d_ptr->settings->getRoot()->save(config);
-}
-
-void TaskPanel::load(const rviz::Config& config)
-{
-	rviz::Panel::load(config);
-	d_ptr->settings->getRoot()->load(config);
-}
-
-}
-
-#include "moc_task_panel.cpp"
+} }

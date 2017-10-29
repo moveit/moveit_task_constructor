@@ -30,9 +30,14 @@ public:
 TaskModel::TaskModel(QObject *parent)
    : QAbstractItemModel(parent)
    , d_ptr (new TaskModelPrivate(this))
-{}
+{
+	ROS_DEBUG_NAMED("TaskModel", "created task model: %p", this);
+}
 
-TaskModel::~TaskModel() { delete d_ptr; }
+TaskModel::~TaskModel() {
+	ROS_DEBUG_NAMED("TaskModel", "destroying task model: %p", this);
+	delete d_ptr;
+}
 
 int TaskModel::rowCount(const QModelIndex &parent) const
 {
@@ -157,6 +162,7 @@ bool TaskModel::setData(const QModelIndex &index, const QVariant &value, int rol
 void TaskModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 {
 	Q_D(TaskModel);
+
 	// retrieve existing or insert new remote task for given id
 	auto it_inserted = d->remote_tasks.insert(std::make_pair(msg.id, nullptr));
 	bool created = it_inserted.second;
@@ -176,6 +182,7 @@ void TaskModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 
 	// notify model about newly created task
 	if (created) {
+		ROS_DEBUG_NAMED("TaskModel", "received new Task: %s", msg.id.c_str());
 		int row = rowCount();
 		beginInsertRows(QModelIndex(), row, row);
 		d->tasks.push_back(std::unique_ptr<RemoteTask>(remote_task));
@@ -243,6 +250,11 @@ void TaskModel::processTaskMessage(RemoteTask* root, const moveit_task_construct
 			if (notify) endInsertRows();
 		}
 	}
+}
+
+void TaskModel::processSolutionMessage(const moveit_task_constructor::Solution &msg)
+{
+	// TODO
 }
 
 }
