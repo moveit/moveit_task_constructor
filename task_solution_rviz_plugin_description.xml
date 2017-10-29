@@ -1,9 +1,0 @@
-<library path="libmoveit_task_solution_rviz_plugin">
-  <class name="moveit_task_constructor/Task Solution Display"
-         type="moveit_rviz_plugin::TaskSolutionDisplay"
-         base_class_type="rviz::Display">
-    <description>
-      Animate task solution trajectories
-    </description>
-  </class>
-</library>

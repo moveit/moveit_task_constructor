@@ -36,7 +36,7 @@
    Desc:   Wraps a task_solution_visualization playback class for Rviz into a stand alone display
 */
 
-#include "task_solution_display.h"
+#include "task_display.h"
 
 #include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 #include <moveit/rdf_loader/rdf_loader.h>
@@ -46,7 +46,7 @@
 
 namespace moveit_rviz_plugin
 {
-TaskSolutionDisplay::TaskSolutionDisplay() : Display(), load_robot_model_(false)
+TaskDisplay::TaskDisplay() : Display(), load_robot_model_(false)
 {
   // The robot description property is only needed when using the trajectory playback standalone (not within motion
   // planning plugin)
@@ -57,18 +57,18 @@ TaskSolutionDisplay::TaskSolutionDisplay() : Display(), load_robot_model_(false)
   trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
 }
 
-TaskSolutionDisplay::~TaskSolutionDisplay()
+TaskDisplay::~TaskDisplay()
 {
 }
 
-void TaskSolutionDisplay::onInitialize()
+void TaskDisplay::onInitialize()
 {
   Display::onInitialize();
 
   trajectory_visual_->onInitialize(scene_node_, context_, update_nh_);
 }
 
-void TaskSolutionDisplay::loadRobotModel()
+void TaskDisplay::loadRobotModel()
 {
   load_robot_model_ = false;
   rdf_loader_.reset(new rdf_loader::RDFLoader(robot_description_property_->getStdString()));
@@ -90,26 +90,26 @@ void TaskSolutionDisplay::loadRobotModel()
   trajectory_visual_->onEnable();
 }
 
-void TaskSolutionDisplay::reset()
+void TaskDisplay::reset()
 {
   Display::reset();
   loadRobotModel();
   trajectory_visual_->reset();
 }
 
-void TaskSolutionDisplay::onEnable()
+void TaskDisplay::onEnable()
 {
   Display::onEnable();
   load_robot_model_ = true;  // allow loading of robot model in update()
 }
 
-void TaskSolutionDisplay::onDisable()
+void TaskDisplay::onDisable()
 {
   Display::onDisable();
   trajectory_visual_->onDisable();
 }
 
-void TaskSolutionDisplay::update(float wall_dt, float ros_dt)
+void TaskDisplay::update(float wall_dt, float ros_dt)
 {
   Display::update(wall_dt, ros_dt);
 
@@ -119,13 +119,13 @@ void TaskSolutionDisplay::update(float wall_dt, float ros_dt)
   trajectory_visual_->update(wall_dt, ros_dt);
 }
 
-void TaskSolutionDisplay::setName(const QString& name)
+void TaskDisplay::setName(const QString& name)
 {
   BoolProperty::setName(name);
   trajectory_visual_->setName(name);
 }
 
-void TaskSolutionDisplay::changedRobotDescription()
+void TaskDisplay::changedRobotDescription()
 {
   if (isEnabled())
     reset();

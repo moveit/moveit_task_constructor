@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2008, Willow Garage, Inc.
+ *  Copyright (c) 2015, University of Colorado, Boulder
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Willow Garage nor the names of its
+ *   * Neither the name of the Univ of CO, Boulder nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,9 +32,71 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Dave Coleman */
+/* Author: Dave Coleman
+   Desc:   Wraps a task_solution_visualization playback class for Rviz into a stand alone display
+*/
 
-#include <class_loader/class_loader.h>
-#include <task_solution_display.h>
+#ifndef MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
+#define MOVEIT_TRAJECTORY_RVIZ_PLUGIN__TASK_SOLUTION_DISPLAY
 
-CLASS_LOADER_REGISTER_CLASS(moveit_rviz_plugin::TaskSolutionDisplay, rviz::Display)
+#include <rviz/display.h>
+
+#ifndef Q_MOC_RUN
+#include <ros/ros.h>
+#include <moveit/macros/class_forward.h>
+#endif
+
+namespace rviz
+{
+class StringProperty;
+}
+
+namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
+namespace rdf_loader { MOVEIT_CLASS_FORWARD(RDFLoader) }
+
+namespace moveit_rviz_plugin
+{
+
+MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
+class TaskDisplay : public rviz::Display
+{
+  Q_OBJECT
+
+public:
+  TaskDisplay();
+
+  virtual ~TaskDisplay();
+
+  void loadRobotModel();
+
+  virtual void update(float wall_dt, float ros_dt);
+  virtual void reset();
+
+  // overrides from Display
+  virtual void onInitialize();
+  virtual void onEnable();
+  virtual void onDisable();
+  void setName(const QString& name);
+
+private Q_SLOTS:
+  /**
+   * \brief Slot Event Functions
+   */
+  void changedRobotDescription();
+
+protected:
+  // The trajectory playback component
+  TaskSolutionVisualizationPtr trajectory_visual_;
+
+  // Load robot model
+  rdf_loader::RDFLoaderPtr rdf_loader_;
+  moveit::core::RobotModelConstPtr robot_model_;
+  bool load_robot_model_;  // for delayed robot initialization
+
+  // Properties
+  rviz::StringProperty* robot_description_property_;
+};
+
+}  // namespace moveit_rviz_plugin
+
+#endif

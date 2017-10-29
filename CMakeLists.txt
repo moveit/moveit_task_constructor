@@ -65,8 +65,7 @@ install(TARGETS ${PROJECT_NAME}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 install(DIRECTORY include/ DESTINATION include)
 install(FILES
-	task_panel_rviz_plugin_description.xml
-	task_solution_rviz_plugin_description.xml
+	motion_planning_tasks_rviz_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 add_subdirectory(src/stages)

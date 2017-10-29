@@ -21,5 +21,4 @@ set(CMAKE_AUTOMOC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
 add_subdirectory(visualization_tools)
-add_subdirectory(task_solution_display)
-add_subdirectory(task_panel)
+add_subdirectory(motion_planning_tasks)

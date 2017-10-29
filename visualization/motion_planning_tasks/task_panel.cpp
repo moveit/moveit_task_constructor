@@ -107,9 +107,3 @@ void TaskPanel::load(const rviz::Config& config)
 }
 
 #include "moc_task_panel.cpp"
-
-// Tell pluginlib about this class.  Every class which should be
-// loadable by pluginlib::ClassLoader must have these two lines
-// compiled in its .cpp file, outside of any namespace scope.
-#include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
