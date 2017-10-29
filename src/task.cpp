@@ -94,13 +94,13 @@ void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 
-	if (!wrapped()->insert(std::move(stage)))
+	if (!stages()->insert(std::move(stage)))
 		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
 void Task::clear()
 {
-	wrapped()->clear();
+	stages()->clear();
 	id_ = ++g_task_id;
 }
 
@@ -140,12 +140,12 @@ void Task::reset()
 
 bool Task::canCompute() const
 {
-	return wrapped()->canCompute();
+	return stages()->canCompute();
 }
 
 bool Task::compute()
 {
-	return wrapped()->compute();
+	return stages()->compute();
 }
 
 bool Task::plan(){
@@ -165,14 +165,14 @@ bool Task::plan(){
 
 size_t Task::numSolutions() const
 {
-	auto w = wrapped();
+	auto w = stages();
 	// during initial insert() we call numSolutions(), but wrapped() is not yet defined
 	return w ? w->numSolutions() : 0;
 }
 
 void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) const
 {
-	wrapped()->processSolutions(processor);
+	stages()->processSolutions(processor);
 }
 
 void Task::processSolutions(const Task::SolutionProcessor& processor) const {
@@ -192,14 +192,14 @@ void Task::onNewSolution(SolutionBase &s)
 		cb(s);
 }
 
-inline ContainerBase* Task::wrapped()
+inline ContainerBase* Task::stages()
 {
 	return static_cast<ContainerBase*>(WrapperBase::wrapped());
 }
 
-inline const ContainerBase* Task::wrapped() const
+inline const ContainerBase* Task::stages() const
 {
-	return const_cast<Task*>(this)->wrapped();
+	return const_cast<Task*>(this)->stages();
 }
 
 std::string Task::id() const
@@ -213,7 +213,7 @@ void Task::printState(const Task &t){
 		std::cout << std::string(2*depth, ' ') << stage << std::endl;
 		return true;
 	};
-	t.wrapped()->traverseRecursively(processor);
+	t.stages()->traverseRecursively(processor);
 }
 
 void fillStateList(moveit_task_constructor::Stage::_received_starts_type &c,
@@ -267,7 +267,7 @@ moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &
 	msg.id = id();
 	msg.stages.clear();
 	stage_to_id_map[this] = 0; // ID for root
-	wrapped()->traverseRecursively(stageProcessor);
+	stages()->traverseRecursively(stageProcessor);
 	return msg;
 }
 

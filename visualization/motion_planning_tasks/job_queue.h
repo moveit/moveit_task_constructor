@@ -34,9 +34,33 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#pragma once
+#include <QObject>
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include <QObject>
+#include <deque>
+#include <functional>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
+
+namespace moveit { namespace tools {
+
+/** Job Queue (of std::functions) */
+class JobQueue : public QObject
+{
+	Q_OBJECT
+	boost::mutex jobs_mutex_;
+	std::deque<std::function<void()> > jobs_;
+	boost::condition_variable idle_condition_;
+
+public:
+	explicit JobQueue(QObject *parent = 0);
+	void addJob(const std::function<void()> &job);
+	void clear();
+	size_t numPending();
+
+	void waitForAllJobs();
+	void executeJobs();
+};
+
+} }

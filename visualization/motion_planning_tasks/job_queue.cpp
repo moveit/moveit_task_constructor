@@ -34,9 +34,58 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#include "job_queue.h"
+#include <ros/console.h>
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+namespace moveit { namespace tools {
+
+JobQueue::JobQueue(QObject *parent) : QObject(parent)
+{
+}
+
+void JobQueue::addJob(const std::function<void()>& job)
+{
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	jobs_.push_back(job);
+}
+
+void JobQueue::clear()
+{
+	jobs_.clear();
+}
+
+size_t JobQueue::numPending()
+{
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	return jobs_.size();
+}
+
+void JobQueue::waitForAllJobs()
+{
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	while (!jobs_.empty())
+		idle_condition_.wait(ulock);
+}
+
+void JobQueue::executeJobs()
+{
+	boost::unique_lock<boost::mutex> ulock(jobs_mutex_);
+	while (!jobs_.empty())
+	{
+		std::function<void()> fn = jobs_.front();
+		jobs_.pop_front();
+		ulock.unlock();
+		try
+		{
+			fn();
+		}
+		catch (std::exception& ex)
+		{
+			ROS_ERROR("Exception caught executing main loop job: %s", ex.what());
+		}
+		ulock.lock();
+	}
+	idle_condition_.notify_all();
+}
+
+} }

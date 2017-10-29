@@ -34,9 +34,34 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#pragma once
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include "task_list_model.h"
+#include <moveit_task_constructor/task.h>
+
+namespace moveit_rviz_plugin {
+
+class LocalTaskModel
+      : public BaseTaskModel
+      , public moveit::task_constructor::Task
+{
+	Q_OBJECT
+	typedef moveit::task_constructor::StagePrivate Node;
+	Node *root_;
+
+	inline Node* node(const QModelIndex &index) const;
+	QModelIndex index(Node *n) const;
+
+public:
+	LocalTaskModel(QObject *parent = nullptr);
+	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+
+	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex &index) const override;
+
+	Qt::ItemFlags flags(const QModelIndex & index) const override;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+};
+
+}

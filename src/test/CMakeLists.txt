@@ -8,10 +8,16 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 ## Add gtest based cpp test target and link libraries
 if (CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}-test-container test_container.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-container ${PROJECT_NAME} gtest_main ${catkin_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME}-test-container
+		${PROJECT_NAME}
+		${catkin_LIBRARIES}
+		gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-task_model test_task_model.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-task_model motion_planning_tasks_rviz_plugin gtest_main)
+	target_link_libraries(${PROJECT_NAME}-test-task_model
+		motion_planning_tasks_rviz_plugin
+		${PROJECT_NAME}_stages
+		gtest_main)
 endif()
 
 add_executable(test_plan_current_state test_plan_current_state.cpp)

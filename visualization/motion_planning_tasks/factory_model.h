@@ -34,9 +34,19 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#pragma once
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include <rviz/factory.h>
+#include <QStandardItemModel>
+
+namespace moveit_rviz_plugin {
+
+class FactoryModel : public QStandardItemModel
+{
+	void fillTree(rviz::Factory *factory);
+
+public:
+	FactoryModel(rviz::Factory *factory, QObject *parent = nullptr);
+};
+
+}

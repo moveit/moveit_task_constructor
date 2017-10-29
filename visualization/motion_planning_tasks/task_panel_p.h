@@ -32,11 +32,29 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke */
+/* Author: Robert Haschke
+   Desc:   Monitor manipulation tasks and visualize their solutions
+*/
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
+#pragma once
+
 #include "task_panel.h"
+#include "ui_task_panel.h"
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include <rviz/panel.h>
+#include <rviz/properties/property_tree_model.h>
+
+namespace moveit_rviz_plugin {
+
+class TaskPanelPrivate : public Ui_TaskPanel {
+public:
+	TaskPanelPrivate(TaskPanel *q_ptr);
+
+	void initSettings(rviz::Property *root);
+
+	TaskPanel* q_ptr;
+	TaskListModelPtr tasks_model;
+	rviz::PropertyTreeModel* settings;
+};
+
+}

@@ -3,17 +3,22 @@ set(MOVEIT_LIB_NAME motion_planning_tasks_rviz_plugin)
 qt_wrap_ui(UIC_FILES task_panel.ui)
 
 add_library(${MOVEIT_LIB_NAME}
-	mainloop_processing.cpp
-	stage_wrapper.cpp
-	task_model.cpp
+	job_queue.cpp
+	local_task_model.cpp
+	remote_task_model.cpp
+	task_list_model.cpp
+	task_list_model_cache.cpp
 	task_panel.cpp
+	task_panel_p.h
 	task_display.cpp
+	pluginlib_factory.h
+	factory_model.cpp
 	plugin_init.cpp
 	${UIC_FILES}
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION})
 target_link_libraries(${MOVEIT_LIB_NAME}
-	moveit_task_visualization_tools
+	moveit_task_visualization_tools ${PROJECT_NAME}
 	${catkin_LIBRARIES} ${QT_LIBRARIES}
 )
 target_include_directories(${MOVEIT_LIB_NAME}

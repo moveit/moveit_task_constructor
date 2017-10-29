@@ -39,6 +39,7 @@ template <typename T>
 class Repository : private std::deque<const T*> {
 	typedef std::deque<const T*> base_type;
 
+	// non-copyable singleton
 	Repository() {}
 	Repository(const Repository&) = delete;
 	void operator=(const Repository&) = delete;

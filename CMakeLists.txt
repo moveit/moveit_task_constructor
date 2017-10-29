@@ -59,6 +59,9 @@ add_library(${PROJECT_NAME}
 	include/${PROJECT_NAME}/introspection.h
 )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
+target_include_directories(${PROJECT_NAME}
+	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+)
 
 install(TARGETS ${PROJECT_NAME}
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

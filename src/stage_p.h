@@ -27,6 +27,8 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
+	inline const Stage* me() const { return me_; }
+	inline Stage* me() { return me_; }
 	inline const std::string& name() const { return name_; }
 	inline const ContainerBase* parent() const { return parent_; }
 	inline ContainerBase* parent() { return parent_; }
@@ -56,7 +58,7 @@ public:
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
-	const std::string name_;
+	std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;

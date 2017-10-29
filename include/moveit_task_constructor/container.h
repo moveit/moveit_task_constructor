@@ -42,7 +42,7 @@ class SerialContainer : public ContainerBase
 {
 public:
 	PRIVATE_CLASS(SerialContainer)
-	SerialContainer(const std::string& name);
+	SerialContainer(const std::string& name = "serial container");
 
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;

@@ -92,6 +92,7 @@ public:
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
 	const std::string& name() const;
+	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
 
 	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
@@ -102,6 +103,8 @@ public:
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);
+	/// Stage cannot be copied
+	Stage(const Stage&) = delete;
 
 protected:
 	StagePrivate* const pimpl_; // constness guarantees one initial write

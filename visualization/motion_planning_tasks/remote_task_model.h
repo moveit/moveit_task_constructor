@@ -34,9 +34,35 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#pragma once
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include "task_list_model.h"
+#include <memory>
+
+namespace moveit_rviz_plugin {
+
+class RemoteTaskModel : public BaseTaskModel {
+	Q_OBJECT
+	class Node;
+	Node* const root_;
+	std::map<uint32_t, Node*> id_to_stage_;
+
+	inline Node* node(const QModelIndex &index) const;
+	QModelIndex index(const Node* n) const;
+
+public:
+	RemoteTaskModel(QObject *parent = nullptr);
+	~RemoteTaskModel();
+	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+
+	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex &index) const override;
+
+	Qt::ItemFlags flags(const QModelIndex & index) const override;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+
+	void processTaskMessage(const moveit_task_constructor::Task &msg);
+};
+
+}
