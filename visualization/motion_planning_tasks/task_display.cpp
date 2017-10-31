@@ -37,7 +37,7 @@
 */
 
 #include "task_display.h"
-#include "task_panel_p.h"
+#include "task_list_model_cache.h"
 #include <moveit_task_constructor/introspection.h>
 #include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 
@@ -71,11 +71,6 @@ TaskDisplay::TaskDisplay() : Display()
 
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
-}
-
-TaskDisplay::~TaskDisplay()
-{
-	TaskPanelPrivate::modelCacheInstance().release(*this);
 }
 
 void TaskDisplay::onInitialize()
@@ -118,7 +113,7 @@ void TaskDisplay::onEnable()
 	loadRobotModel();
 
 	// (re)initialize task model
-	updateTaskModel();
+	updateTaskListModel();
 }
 
 void TaskDisplay::onDisable()
@@ -142,7 +137,6 @@ void TaskDisplay::setName(const QString& name)
 {
 	BoolProperty::setName(name);
 	trajectory_visual_->setName(name);
-	TaskPanelPrivate::modelCacheInstance().updateDisplayName(*this);
 }
 
 void TaskDisplay::changedRobotDescription()
@@ -153,12 +147,11 @@ void TaskDisplay::changedRobotDescription()
 		loadRobotModel();
 }
 
-void TaskDisplay::updateTaskModel()
+void TaskDisplay::updateTaskListModel()
 {
-	task_model_ = TaskPanelPrivate::modelCacheInstance().getTaskModel
-	              (*this,
-	               task_monitor_topic_property_->getString(),
-	               task_solution_topic_property_->getString());
+	task_model_ = TaskListModelCache::instance().getModel(
+	                 task_monitor_topic_property_->getString(),
+	                 task_solution_topic_property_->getString());
 
 	if (!task_model_) {
 		if (task_monitor_topic_property_->getString().isEmpty())
@@ -166,7 +159,7 @@ void TaskDisplay::updateTaskModel()
 		else if (task_solution_topic_property_->getString().isEmpty())
 			setStatus(rviz::StatusProperty::Warn, "Task Monitor", "invalid task solution topic");
 		else
-			setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskModel");
+			setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
 	} else {
 		boost::function<void(const moveit_task_constructor::TaskConstPtr &)> taskCB
 		      ([this](const moveit_task_constructor::TaskConstPtr &msg){
@@ -189,13 +182,13 @@ void TaskDisplay::updateTaskModel()
 void TaskDisplay::changedTaskMonitorTopic()
 {
 	task_monitor_sub.shutdown();
-	updateTaskModel();
+	updateTaskListModel();
 }
 
 void TaskDisplay::changedTaskSolutionTopic()
 {
 	task_solution_sub.shutdown();
-	updateTaskModel();
+	updateTaskListModel();
 }
 
 }  // namespace moveit_rviz_plugin

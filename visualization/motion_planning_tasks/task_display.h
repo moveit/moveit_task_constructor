@@ -59,7 +59,7 @@ namespace moveit_rviz_plugin
 {
 
 MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
-MOVEIT_CLASS_FORWARD(TaskModel)
+MOVEIT_CLASS_FORWARD(TaskListModel)
 
 class TaskDisplay : public rviz::Display
 {
@@ -67,7 +67,6 @@ class TaskDisplay : public rviz::Display
 
 public:
   TaskDisplay();
-  ~TaskDisplay() override;
 
   void loadRobotModel();
 
@@ -89,7 +88,7 @@ private Q_SLOTS:
   void changedTaskSolutionTopic();
 
 protected:
-  void updateTaskModel();
+  void updateTaskListModel();
 
 protected:
   ros::Subscriber task_monitor_sub;
@@ -99,8 +98,8 @@ protected:
 
   // The trajectory playback component
   TaskSolutionVisualizationPtr trajectory_visual_;
-  // The TaskModel storing actual task and solution data
-  TaskModelPtr task_model_;
+  // The TaskListModel storing actual task and solution data
+  TaskListModelPtr task_model_;
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;

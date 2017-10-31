@@ -36,52 +36,32 @@
 
 #pragma once
 
-#include "composite_proxy_model.h"
-#include "task_model.h"
-#include <map>
+#include "task_list_model.h"
+#include <moveit_task_constructor/task.h>
 
-class QStandardItemModel;
-class QStandardItem;
 namespace moveit_rviz_plugin {
 
-class TaskDisplay;
-
-/** TaskModelCache maintains the set of all known TaskModels.
- *
- *  This is a singleton instance.
- */
-class TaskModelCache : public moveit::tools::CompositeProxyItemModel {
+class LocalTaskModel
+      : public BaseTaskModel
+      , public moveit::task_constructor::Task
+{
 	Q_OBJECT
-	struct Entry : public std::pair<TaskModelWeakPtr, QStandardItem*> {
-		TaskModelWeakPtr& model() { return first; }
-		QStandardItem*& item() { return second; }
-	};
-	std::map<const TaskDisplay*, Entry> display_map_;
-	std::map<std::pair<QString, QString>, TaskModelWeakPtr> task_model_map_;
-	QStandardItemModel *root_model_;
+	typedef moveit::task_constructor::StagePrivate Node;
+	Node *root_;
 
-	/// class is non-copyable
-	TaskModelCache(const TaskModelCache&) = delete;
-	void operator=(const TaskModelCache&) = delete;
-
-	QModelIndex getOrCreateItem(TaskModelCache::Entry &e, const QString &name, int insert_row = -1);
-	TaskModelPtr getOrCreateTaskModel(Entry &e, const QModelIndex &mount_point);
+	inline Node* node(const QModelIndex &index) const;
+	QModelIndex index(Node *n) const;
 
 public:
-	TaskModelCache(QObject *parent = nullptr);
+	LocalTaskModel(QObject *parent = nullptr);
+	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
-	/// get TaskModel for a TaskDisplay
-	TaskModelPtr getTaskModel(const TaskDisplay& display,
-	                          const QString& task_monitor_topic,
-	                          const QString& task_solution_topic);
-	/// release TaskModel for given TaskDisplay
-	void release(TaskDisplay& display);
+	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex &index) const override;
 
-	/// call to keep model in sync with display name
-	void updateDisplayName(const TaskDisplay& display);
-
-	/// get global TaskModel instance used for panels
-	TaskModelPtr getTaskModel();
+	Qt::ItemFlags flags(const QModelIndex & index) const override;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 };
 
 }

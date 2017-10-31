@@ -40,7 +40,6 @@
 
 #include "task_panel.h"
 #include "ui_task_panel.h"
-#include "task_model_cache.h"
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
@@ -51,13 +50,10 @@ class TaskPanelPrivate : public Ui_TaskPanel {
 public:
 	TaskPanelPrivate(TaskPanel *q_ptr);
 
-	// retrieve singleton TaskModelCache, shared by all TaskPanel instances
-	static TaskModelCache& modelCacheInstance();
-
 	void initSettings(rviz::Property *root);
 
 	TaskPanel* q_ptr;
-	TaskModelPtr tasks_model;
+	TaskListModelPtr tasks_model;
 	rviz::PropertyTreeModel* settings;
 };
 

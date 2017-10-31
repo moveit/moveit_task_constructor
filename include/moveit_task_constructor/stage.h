@@ -103,6 +103,8 @@ public:
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);
+	/// Stage cannot be copied
+	Stage(const Stage&) = delete;
 
 protected:
 	StagePrivate* const pimpl_; // constness guarantees one initial write

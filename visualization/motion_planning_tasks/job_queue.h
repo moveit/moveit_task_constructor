@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke, Dave Coleman */
+/* Author: Robert Haschke */
 
 #pragma once
 #include <QObject>

@@ -44,8 +44,8 @@
 namespace moveit_rviz_plugin {
 
 class TaskSolutionVisualization;
-MOVEIT_CLASS_FORWARD(TaskModel)
-typedef std::weak_ptr<TaskModel> TaskModelWeakPtr;
+MOVEIT_CLASS_FORWARD(TaskListModel)
+typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
 
 /** The TaskPanel displays information about manipulation tasks in the system.
  *

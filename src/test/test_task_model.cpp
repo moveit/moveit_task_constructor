@@ -1,10 +1,54 @@
-#include <task_model.h>
+/*********************************************************************
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2017, Bielefeld University
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Bielefeld University nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
+
+/* Author: Robert Haschke */
+
+#include <task_list_model.h>
+#include <local_task_model.h>
+#include <remote_task_model.h>
+#include <moveit_task_constructor/container.h>
+#include <moveit_task_constructor/stages/current_state.h>
+
+#include <ros/init.h>
 #include <gtest/gtest.h>
 #include <initializer_list>
 
-class TaskModelTest : public ::testing::Test {
+using namespace moveit::task_constructor;
+
+class TaskListModelTest : public ::testing::Test {
 protected:
-	moveit_rviz_plugin::TaskModel model;
+	moveit_rviz_plugin::TaskListModel model;
 	int children = 0;
 	int num_inserts = 0;
 	int num_updates = 0;
@@ -30,7 +74,7 @@ protected:
 		return t;
 	}
 
-	void validate(const std::initializer_list<const char*> &expected) {
+	void validate(QAbstractItemModel& model, const std::initializer_list<const char*> &expected) {
 		// validate root index
 		ASSERT_EQ(model.rowCount(), expected.size());
 		EXPECT_EQ(model.columnCount(), 3);
@@ -71,7 +115,7 @@ protected:
 	}
 
 	void populateAndValidate() {
-		{ SCOPED_TRACE("empty"); validate({}); }
+		{ SCOPED_TRACE("empty"); validate(model, {}); }
 		EXPECT_EQ(num_inserts, 0);
 		EXPECT_EQ(num_updates, 0);
 
@@ -85,7 +129,7 @@ protected:
 			else EXPECT_EQ(num_inserts, 0);
 			EXPECT_EQ(num_updates, 0);
 
-			validate({"first"});
+			validate(model, {"first"});
 		}
 		for (int i = 0; i < 2; ++i) {
 			SCOPED_TRACE("second i=" + std::to_string(i));
@@ -97,7 +141,7 @@ protected:
 			else EXPECT_EQ(num_inserts, 0);
 			EXPECT_EQ(num_updates, 0);
 
-			validate({"first", "second"});
+			validate(model, {"first", "second"});
 		}
 	}
 
@@ -110,27 +154,48 @@ protected:
 	void TearDown() {}
 };
 
-TEST_F(TaskModelTest, noChildren) {
+TEST_F(TaskListModelTest, remoteTaskModel) {
+	children = 3;
+	moveit_rviz_plugin::RemoteTaskModel m;
+	m.processTaskMessage(genMsg("first"));
+	SCOPED_TRACE("first");
+	validate(m, {"first"});
+}
+
+TEST_F(TaskListModelTest, localTaskModel) {
+	int argc = 0;
+	char *argv = nullptr;
+	ros::init(argc, &argv, "testLocalTaskModel");
+
+	children = 3;
+	moveit_rviz_plugin::LocalTaskModel m;
+	for (int i = 0; i != children; ++i)
+		m.add(std::make_unique<stages::CurrentState>(std::to_string(i)));
+
+	{ SCOPED_TRACE("localTaskModel"); validate(m, {"task pipeline"}); }
+}
+
+TEST_F(TaskListModelTest, noChildren) {
 	children = 0;
 	populateAndValidate();
 }
 
-TEST_F(TaskModelTest, threeChildren) {
+TEST_F(TaskListModelTest, threeChildren) {
 	children = 3;
 	populateAndValidate();
 }
 
-TEST_F(TaskModelTest, visitedPopulate) {
+TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
 	model.processTaskMessage(genMsg("first"));
-	validate({"first"}); // validation visits root node
+	validate(model, {"first"}); // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
 	model.processTaskMessage(genMsg("first"));
-	validate({"first"});
+	validate(model, {"first"});
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
 	EXPECT_EQ(num_updates, 0);

@@ -4,10 +4,10 @@ qt_wrap_ui(UIC_FILES task_panel.ui)
 
 add_library(${MOVEIT_LIB_NAME}
 	job_queue.cpp
-	stage_wrapper.cpp
-	task_model.cpp
-	composite_proxy_model.cpp
-	task_model_cache.cpp
+	local_task_model.cpp
+	remote_task_model.cpp
+	task_list_model.cpp
+	task_list_model_cache.cpp
 	task_panel.cpp
 	task_panel_p.h
 	task_display.cpp

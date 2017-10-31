@@ -39,7 +39,8 @@
 #include <stdio.h>
 
 #include "task_panel_p.h"
-#include "task_display.h"
+#include "task_list_model_cache.h"
+#include "local_task_model.h"
 #include "factory_model.h"
 #include "pluginlib_factory.h"
 #include <moveit_task_constructor/stage.h>
@@ -51,11 +52,6 @@
 #include <ros/console.h>
 
 namespace moveit_rviz_plugin {
-
-TaskModelCache &TaskPanelPrivate::modelCacheInstance() {
-	static TaskModelCache instance_;
-	return instance_;
-}
 
 typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
 StageFactory* getStageFactory() {
@@ -97,13 +93,13 @@ TaskPanel::~TaskPanel()
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
-   , tasks_model(modelCacheInstance().getTaskModel())
+   , tasks_model(TaskListModelCache::instance().getGlobalModel())
    , settings(new rviz::PropertyTreeModel(new rviz::Property))
 {
 	setupUi(q_ptr);
 	initSettings(settings->getRoot());
 	settings_view->setModel(settings);
-	tasks_view->setModel(&modelCacheInstance());
+	tasks_view->setModel(tasks_model.get());
 
 	// init actions
 	tasks_view->addActions({actionNewTask, actionNewStage, actionRemoveStages});
@@ -133,7 +129,7 @@ void TaskPanel::onAddTask()
 {
 	Q_D(TaskPanel);
 	QModelIndex current = d->tasks_view->currentIndex();
-	d_ptr->tasks_model->insertLocalTask(current.row());
+	d_ptr->tasks_model->insertTask(new LocalTaskModel(this), current.row());
 }
 
 void TaskPanel::onAddStage()

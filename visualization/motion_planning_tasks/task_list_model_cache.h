@@ -34,9 +34,45 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
-#include "task_display.h"
-#include "task_panel.h"
+#pragma once
 
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskDisplay, rviz::Display)
-PLUGINLIB_EXPORT_CLASS(moveit_rviz_plugin::TaskPanel, rviz::Panel)
+#include "task_list_model.h"
+#include <map>
+
+namespace moveit_rviz_plugin {
+
+/** TaskListModelCache maintains a global TaskListModel comprising all known TaskModels.
+ *
+ *  This global model instance is used by TaskPanels and can be retrieved via getGlobalModel().
+ *  Additionally, this instance maintains a cache for all TaskListModels used e.g. by TaskDisplays.
+ *  Displays subscribing to the same (monitor, solution) topic pair, will share the same model.
+ *
+ *  This is a singleton instance.
+ */
+class TaskListModelCache : public QObject {
+	Q_OBJECT
+
+	TaskListModelPtr global_model_;
+	std::map<std::pair<QString, QString>, TaskListModelWeakPtr> cache_;
+
+	/// class is singleton
+	TaskListModelCache();
+	TaskListModelCache(const TaskListModelCache&) = delete;
+	void operator=(const TaskListModelCache&) = delete;
+
+private Q_SLOTS:
+	void onInsertTasks(const QModelIndex &parent, int first, int last);
+	void onRemoveTasks(const QModelIndex &parent, int first, int last);
+
+public:
+	static TaskListModelCache& instance();
+
+	/// get TaskListModel for a TaskDisplay
+	TaskListModelPtr getModel(const QString& task_monitor_topic,
+	                          const QString& task_solution_topic);
+
+	/// get global TaskListModel instance used for panels
+	TaskListModelPtr getGlobalModel();
+};
+
+}
