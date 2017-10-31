@@ -52,10 +52,7 @@ public:
 	TaskPanelPrivate(TaskPanel *q_ptr);
 
 	// retrieve singleton TaskModelCache, shared by all TaskPanel instances
-	static TaskModelCache& modelCacheInstance() {
-		static TaskModelCache instance_;
-		return instance_;
-	}
+	static TaskModelCache& modelCacheInstance();
 
 	void initSettings(rviz::Property *root);
 

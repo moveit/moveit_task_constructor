@@ -92,6 +92,7 @@ public:
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
 	const std::string& name() const;
+	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
 
 	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;

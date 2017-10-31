@@ -71,6 +71,10 @@ public:
 	/// process all solutions
 	void processSolutions(const Task::SolutionProcessor &processor) const;
 
+	/// access stage tree
+	ContainerBase *stages();
+	const ContainerBase *stages() const;
+
 protected:
 	void reset() override;
 	void initModel();
@@ -79,10 +83,6 @@ protected:
 	bool compute() override;
 	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
 	void onNewSolution(SolutionBase &s) override;
-
-private:
-	inline ContainerBase *wrapped();
-	inline const ContainerBase *wrapped() const;
 
 private:
 	size_t id_; // unique task ID

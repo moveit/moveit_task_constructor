@@ -40,10 +40,15 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
+	bool removeRows(int row, int count, const QModelIndex &parent) override;
+
 	/// process an incoming task message - only call in Qt's main loop
 	void processTaskMessage(const moveit_task_constructor::Task &msg);
 	/// process an incoming solution message - only call in Qt's main loop
 	void processSolutionMessage(const moveit_task_constructor::Solution &msg);
+
+	/// create a new LocalTask (managed by this model)
+	void insertLocalTask(int row);
 
 private:
 	void processTaskMessage(RemoteTask *root, const moveit_task_constructor::Task &msg);

@@ -56,7 +56,7 @@ public:
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
-	const std::string name_;
+	std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;

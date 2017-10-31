@@ -78,7 +78,7 @@ Stage::operator StagePrivate *() {
 	return pimpl();
 }
 
-Stage::operator const StagePrivate *() const {
+Stage::operator const StagePrivate*() const {
 	return pimpl();
 }
 
@@ -97,6 +97,11 @@ void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 const std::string& Stage::name() const {
 	return pimpl_->name_;
+}
+
+void Stage::setName(const std::string& name)
+{
+	pimpl_->name_ = name;
 }
 
 template<InterfaceFlag own, InterfaceFlag other>

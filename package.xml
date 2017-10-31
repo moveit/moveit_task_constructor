@@ -23,5 +23,6 @@
 
 	<export>
 		<rviz plugin="${prefix}/motion_planning_tasks_rviz_plugin_description.xml"/>
+		<moveit_task_constructor plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>
 	</export>
 </package>

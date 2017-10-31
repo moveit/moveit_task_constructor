@@ -1,5 +1,7 @@
 #pragma once
 
+#include <moveit_task_constructor/stage.h>
+#include <moveit_task_constructor/task.h>
 #include <vector>
 #include <map>
 #include <memory>
@@ -19,7 +21,9 @@ enum StageFlag {
 };
 typedef QFlags<StageFlag> StageFlags;
 
-/** Wrapper class used in QAbstractItemModel of rviz::Panel to show the task tree */
+/** Wrapper class used in QAbstractItemModel of rviz::Panel to show the task tree.
+ *  The abstract base class allows transparent access to both local and remote tasks/stages.
+ */
 class StageWrapperInterface {
 public:
 	virtual ~StageWrapperInterface() {}
@@ -35,6 +39,43 @@ public:
 
 	mutable StageFlags flags;
 };
+
+
+class LocalStage : public StageWrapperInterface {
+private:
+	LocalStage *parent_;
+	std::vector<std::unique_ptr<LocalStage>> children_;
+protected:
+	moveit::task_constructor::Stage* stage_;
+
+public:
+	LocalStage(LocalStage *parent, moveit::task_constructor::Stage* stage)
+	   : parent_(parent), stage_(stage)
+	{}
+
+	virtual StageWrapperInterface* parent() { return parent_; }
+	virtual size_t numChildren() const;
+	virtual StageWrapperInterface* child(size_t index);
+
+	virtual const std::string& name() const { return stage_->name(); }
+	virtual bool setName(const std::string& name);
+	virtual size_t numSolved() const;
+	virtual size_t numFailed() const;
+};
+
+// root stage of a tree of local stages
+class LocalTask : public LocalStage {
+	std::unique_ptr<moveit::task_constructor::Task> task_;
+
+public:
+	LocalTask()
+	   : LocalStage(nullptr, nullptr)
+	   , task_(std::make_unique<moveit::task_constructor::Task>())
+	{
+		stage_ = task_->stages();
+	}
+};
+
 
 class RemoteStage : public StageWrapperInterface {
 	std::string name_;

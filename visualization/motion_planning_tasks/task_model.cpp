@@ -156,6 +156,12 @@ bool TaskModel::setData(const QModelIndex &index, const QVariant &value, int rol
 	return indexNode->setName(value.toString().toStdString());
 }
 
+bool TaskModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	// TODO
+	return false;
+}
+
 // process a task monitoring message:
 // update existing RemoteTask, create a new one,
 // or (if msg.stages is empty) delete an existing one
@@ -255,6 +261,16 @@ void TaskModel::processTaskMessage(RemoteTask* root, const moveit_task_construct
 void TaskModel::processSolutionMessage(const moveit_task_constructor::Solution &msg)
 {
 	// TODO
+}
+
+void TaskModel::insertLocalTask(int row) {
+	Q_D(TaskModel);
+	if (row < 0 || row > rowCount())
+		row = rowCount();
+
+	beginInsertRows(QModelIndex(), row, row);
+	d->tasks.push_back(std::make_unique<LocalTask>());
+	endInsertRows();
 }
 
 }

@@ -67,6 +67,11 @@ public:
 	void onInitialize() override;
 	void load(const rviz::Config& config) override;
 	void save(rviz::Config config) const override;
+
+public Q_SLOTS:
+	void onAddTask();
+	void onAddStage();
+	void onRemoveStages();
 };
 
 }

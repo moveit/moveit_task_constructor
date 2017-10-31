@@ -40,14 +40,54 @@
 
 #include "task_panel_p.h"
 #include "task_display.h"
+#include "factory_model.h"
+#include "pluginlib_factory.h"
+#include <moveit_task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
+#include <rviz/visualization_manager.h>
+#include <rviz/window_manager_interface.h>
+#include <rviz/panel_dock_widget.h>
+#include <ros/console.h>
 
 namespace moveit_rviz_plugin {
+
+TaskModelCache &TaskPanelPrivate::modelCacheInstance() {
+	static TaskModelCache instance_;
+	return instance_;
+}
+
+typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
+StageFactory* getStageFactory() {
+	static std::shared_ptr<StageFactory> factory
+	      (new StageFactory("moveit_task_constructor",
+	                        "moveit::task_constructor::Stage"));
+	return factory.get();
+}
+
+rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
+	static rviz::PanelDockWidget *widget = nullptr;
+	if (!widget && mgr) { // create widget
+		QTreeView *view = new QTreeView(mgr->getParentWindow());
+		view->setModel(new FactoryModel(getStageFactory(), view));
+		view->expandAll();
+		view->setHeaderHidden(true);
+		view->setDragDropMode(QAbstractItemView::DragOnly);
+		widget = mgr->addPane("Motion Planning Stages", view);
+	}
+	widget->show();
+	return widget;
+}
+
 
 TaskPanel::TaskPanel(QWidget* parent)
   : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
 {
+	Q_D(TaskPanel);
+	// connect signals
+	connect(d->actionNewTask, &QAction::triggered, this, &TaskPanel::onAddTask);
+	connect(d->actionNewStage, &QAction::triggered, this, &TaskPanel::onAddStage);
+	connect(d->actionRemoveStages, &QAction::triggered, this, &TaskPanel::onRemoveStages);
 }
 
 TaskPanel::~TaskPanel()
@@ -64,6 +104,9 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 	initSettings(settings->getRoot());
 	settings_view->setModel(settings);
 	tasks_view->setModel(&modelCacheInstance());
+
+	// init actions
+	tasks_view->addActions({actionNewTask, actionNewStage, actionRemoveStages});
 }
 
 void TaskPanelPrivate::initSettings(rviz::Property* root)
@@ -84,6 +127,26 @@ void TaskPanel::load(const rviz::Config& config)
 {
 	rviz::Panel::load(config);
 	d_ptr->settings->getRoot()->load(config);
+}
+
+void TaskPanel::onAddTask()
+{
+	Q_D(TaskPanel);
+	QModelIndex current = d->tasks_view->currentIndex();
+	d_ptr->tasks_model->insertLocalTask(current.row());
+}
+
+void TaskPanel::onAddStage()
+{
+	rviz::PanelDockWidget *dock = getStageDockWidget(vis_manager_->getWindowManager());
+	dock->show();
+}
+
+void TaskPanel::onRemoveStages()
+{
+	Q_D(TaskPanel);
+	for (const auto &range : d_ptr->tasks_view->selectionModel()->selection())
+		d_ptr->tasks_model->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
 }
 
 }
