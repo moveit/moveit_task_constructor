@@ -32,11 +32,11 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Dave Coleman */
+/* Author: Dave Coleman, Robert Haschke */
 
 #include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
 #include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
-#include <moveit_task_constructor/introspection.h>
+
 
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
 #include <moveit/rviz_plugin_render_tools/planning_link_updater.h>

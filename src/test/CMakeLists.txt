@@ -2,9 +2,6 @@
 ## Testing ##
 #############
 
-## access to private headers
-include_directories(${CMAKE_SOURCE_DIR}/src)
-
 ## Add gtest based cpp test target and link libraries
 if (CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
