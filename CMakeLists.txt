@@ -35,44 +35,14 @@ catkin_package(
 	INCLUDE_DIRS include
 )
 
-include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
-)
-
 set(CMAKE_CXX_STANDARD 14)
+set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
 
-add_library(${PROJECT_NAME}
-	src/storage.cpp
-	src/stage.cpp
-	src/container.cpp
-	src/task.cpp
-	src/introspection.cpp
+include_directories(${catkin_INCLUDE_DIRS})
+add_subdirectory(src)
+add_subdirectory(visualization)
 
-	src/stage_p.h
-	src/container_p.h
-	include/${PROJECT_NAME}/utils.h
-	include/${PROJECT_NAME}/storage.h
-	include/${PROJECT_NAME}/stage.h
-	include/${PROJECT_NAME}/container.h
-	include/${PROJECT_NAME}/task.h
-	include/${PROJECT_NAME}/introspection.h
-)
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
-target_include_directories(${PROJECT_NAME}
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-)
-
-install(TARGETS ${PROJECT_NAME}
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 install(DIRECTORY include/ DESTINATION include)
 install(FILES
 	motion_planning_tasks_rviz_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
-add_subdirectory(src/stages)
-add_subdirectory(src/demo)
-add_subdirectory(src/test)
-
-add_subdirectory(visualization)
