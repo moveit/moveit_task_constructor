@@ -143,6 +143,8 @@ public:
 		return q_ptr->createIndex(src.row(), src.column(), src_parent.internalPointer());
 	}
 
+	void removeTask(BaseTaskModel *model);
+
 private:
 	void _q_sourceRowsAboutToBeInserted(const QModelIndex &parent, int start, int end);
 	void _q_sourceRowsInserted(const QModelIndex &parent, int start, int end);
@@ -248,12 +250,6 @@ bool TaskListModel::setData(const QModelIndex &index, const QVariant &value, int
 	return task->model_->setData(src_index, value, role);
 }
 
-bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
-{
-	// TODO
-	return false;
-}
-
 // process a task monitoring message:
 // update existing RemoteTask, create a new one,
 // or (if msg.stages is empty) delete an existing one
@@ -309,7 +305,8 @@ BaseTaskModel *TaskListModel::getTask(int row) const
 	return d->tasks_.at(row).model_;
 }
 
-void TaskListModel::insertTask(BaseTaskModel* model, int row) {
+void TaskListModel::insertTask(BaseTaskModel* model, int row)
+{
 	Q_D(TaskListModel);
 
 	if (row < 0 || (size_t)row > d->tasks_.size())
@@ -322,11 +319,6 @@ void TaskListModel::insertTask(BaseTaskModel* model, int row) {
 	beginInsertRows(QModelIndex(), row, row);
 	d->tasks_.insert(it, TaskListModelPrivate::BaseModelData(model));
 	endInsertRows();
-
-	// notice destruction of task
-	if (model->parent() != this)
-		connect(model, &BaseTaskModel::destroyed,
-		        [this](QObject* o) { removeTask(static_cast<BaseTaskModel*>(o), false); });
 
 	connect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
 	        this, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
@@ -344,38 +336,72 @@ void TaskListModel::insertTask(BaseTaskModel* model, int row) {
 	        this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
 }
 
-bool TaskListModel::removeTask(BaseTaskModel* model, bool disconnect_signals) {
+bool TaskListModel::removeTask(BaseTaskModel* model)
+{
 	Q_D(TaskListModel);
 
 	// find row corresponding to model
 	auto it = std::find_if(d->tasks_.begin(), d->tasks_.end(),
-	                       [model](const TaskListModelPrivate::BaseModelData& data) { return	data.model_ == model; });
+	                       [model](const TaskListModelPrivate::BaseModelData& data) {
+		return data.model_ == model;
+	});
 	if (it == d->tasks_.end())
 		return false; // model not found
 
-	ROS_DEBUG_NAMED("TaskListModel", "%p: removing task: %p", this, model);
-	size_t row = it - d->tasks_.begin();
-	beginRemoveRows(QModelIndex(), row, row);
-	d->tasks_.insert(it, TaskListModelPrivate::BaseModelData(model));
-	endRemoveRows();
+	return removeTasks(it - d->tasks_.begin(), 1);
+}
 
-	if (disconnect_signals) { // reacting on signal destroyed(), signals are already disconnected
-		disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
-		           this, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
-		disconnect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-		           this, SLOT(_q_sourceRowsInserted(QModelIndex,int,int)));
-		disconnect(model, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-		           this, SLOT(_q_sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
-		disconnect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-		           this, SLOT(_q_sourceRowsRemoved(QModelIndex,int,int)));
-		disconnect(model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)),
-		           this, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
-		disconnect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
-		           this, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
-		disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
-		           this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
-	}
+bool TaskListModel::removeTasks(int row, int count)
+{
+	Q_D(TaskListModel);
+	if (row < 0 || row+count > rowCount())
+		return false;
+
+	auto first = d->tasks_.begin(); std::advance(first, row);
+	auto last = first; std::advance(last, count);
+	beginRemoveRows(QModelIndex(), row, row+count-1);
+	std::for_each(first, last, [d](TaskListModelPrivate::BaseModelData &data) {
+		d->removeTask(data.model_);
+	});
+	d->tasks_.erase(first, last);
+	endRemoveRows();
 	return true;
+}
+
+bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	Q_D(TaskListModel);
+	if (!parent.isValid()) { // top-level items = tasks
+		return removeTasks(row, count);
+	} else {
+		TaskListModelPrivate::BaseModelData *data = nullptr;
+		QModelIndex src_parent = d->mapToSource(parent, &data);
+		return data->model_->removeRows(row, count, src_parent);
+	}
+}
+
+void TaskListModelPrivate::removeTask(BaseTaskModel *model)
+{
+	ROS_DEBUG_NAMED("TaskListModel", "%p: removing task: %p", q_ptr, model);
+
+	QObject::disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
+	                    q_ptr, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
+	QObject::disconnect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
+	                    q_ptr, SLOT(_q_sourceRowsInserted(QModelIndex,int,int)));
+	QObject::disconnect(model, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+	                    q_ptr, SLOT(_q_sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
+	QObject::disconnect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+	                    q_ptr, SLOT(_q_sourceRowsRemoved(QModelIndex,int,int)));
+	QObject::disconnect(model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)),
+	                    q_ptr, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
+	QObject::disconnect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
+	                    q_ptr, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
+	QObject::disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
+	                    q_ptr, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
+
+	// delete model if we own it
+	if (model->parent() == q_ptr)
+		model->deleteLater();
 }
 
 void TaskListModelPrivate::_q_sourceRowsAboutToBeInserted(const QModelIndex &parent, int start, int end)

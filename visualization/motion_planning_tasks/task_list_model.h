@@ -99,7 +99,8 @@ public:
 
 	/// insert a TaskModel into our list
 	void insertTask(BaseTaskModel* model, int row = -1);
-	bool removeTask(BaseTaskModel* model, bool disconnect_signals = true);
+	bool removeTask(BaseTaskModel* model);
+	bool removeTasks(int row, int count);
 
 private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))

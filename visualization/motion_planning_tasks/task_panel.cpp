@@ -81,9 +81,8 @@ TaskPanel::TaskPanel(QWidget* parent)
 {
 	Q_D(TaskPanel);
 	// connect signals
-	connect(d->actionNewTask, &QAction::triggered, this, &TaskPanel::onAddTask);
-	connect(d->actionNewStage, &QAction::triggered, this, &TaskPanel::onAddStage);
-	connect(d->actionRemoveStages, &QAction::triggered, this, &TaskPanel::onRemoveStages);
+	connect(d->actionRemoveTaskTreeRows, &QAction::triggered, this, &TaskPanel::removeTaskTreeRows);
+	connect(d->button_show_stage_dock_widget, &QToolButton::clicked, this, &TaskPanel::showStageDockWidget);
 }
 
 TaskPanel::~TaskPanel()
@@ -93,16 +92,16 @@ TaskPanel::~TaskPanel()
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
-   , tasks_model(TaskListModelCache::instance().getGlobalModel())
+   , task_list_model(TaskListModelCache::instance().getGlobalModel())
    , settings(new rviz::PropertyTreeModel(new rviz::Property))
 {
 	setupUi(q_ptr);
 	initSettings(settings->getRoot());
 	settings_view->setModel(settings);
-	tasks_view->setModel(tasks_model.get());
+	tasks_view->setModel(task_list_model.get());
 
 	// init actions
-	tasks_view->addActions({actionNewTask, actionNewStage, actionRemoveStages});
+	tasks_view->addActions({actionRemoveTaskTreeRows});
 }
 
 void TaskPanelPrivate::initSettings(rviz::Property* root)
@@ -129,20 +128,20 @@ void TaskPanel::onAddTask()
 {
 	Q_D(TaskPanel);
 	QModelIndex current = d->tasks_view->currentIndex();
-	d_ptr->tasks_model->insertTask(new LocalTaskModel(this), current.row());
+	d_ptr->task_list_model->insertTask(new LocalTaskModel(this), current.row());
 }
 
-void TaskPanel::onAddStage()
+void TaskPanel::showStageDockWidget()
 {
 	rviz::PanelDockWidget *dock = getStageDockWidget(vis_manager_->getWindowManager());
 	dock->show();
 }
 
-void TaskPanel::onRemoveStages()
+void TaskPanel::removeTaskTreeRows()
 {
 	Q_D(TaskPanel);
 	for (const auto &range : d_ptr->tasks_view->selectionModel()->selection())
-		d_ptr->tasks_model->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
+		d_ptr->task_list_model->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
 }
 
 }

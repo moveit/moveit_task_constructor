@@ -70,8 +70,8 @@ public:
 
 public Q_SLOTS:
 	void onAddTask();
-	void onAddStage();
-	void onRemoveStages();
+	void showStageDockWidget();
+	void removeTaskTreeRows();
 };
 
 }
