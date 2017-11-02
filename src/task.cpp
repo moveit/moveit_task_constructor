@@ -2,7 +2,7 @@
 
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/container.h>
-#include <moveit_task_constructor/debug.h>
+#include <moveit_task_constructor/introspection.h>
 
 #include <ros/ros.h>
 
@@ -11,16 +11,27 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
+#include <functional>
+
 namespace moveit { namespace task_constructor {
 
+static size_t g_task_id = 0;
+
 Task::Task(ContainerBase::pointer &&container)
-   : WrapperBase(std::string())
+   : WrapperBase(std::string()), id_(++g_task_id)
 {
 	task_starts_.reset(new Interface(Interface::NotifyFunction()));
 	task_ends_.reset(new Interface(Interface::NotifyFunction()));
 
 	insert(std::move(container));
 	initModel();
+
+	// monitor state on commandline
+	addTaskCallback(&printState);
+	// publish state
+	addTaskCallback(std::ref(Introspection::instance()));
+	// publish new solutions
+	addSolutionCallback(std::ref(Introspection::instance()));
 }
 
 void Task::initModel () {
@@ -83,24 +94,36 @@ void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 
-	if (!wrapped()->insert(std::move(stage)))
+	if (!stages()->insert(std::move(stage)))
 		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
 void Task::clear()
 {
-	wrapped()->clear();
+	stages()->clear();
+	id_ = ++g_task_id;
 }
 
-Task::SolutionCallbackList::const_iterator Task::add(SolutionCallback &&cb)
+Task::SolutionCallbackList::const_iterator Task::addSolutionCallback(SolutionCallback &&cb)
 {
-	callbacks_.emplace_back(std::move(cb));
-	return --callbacks_.cend();
+	solution_cbs_.emplace_back(std::move(cb));
+	return --solution_cbs_.cend();
 }
 
 void Task::erase(SolutionCallbackList::const_iterator which)
 {
-	callbacks_.erase(which);
+	solution_cbs_.erase(which);
+}
+
+Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback &&cb)
+{
+	task_cbs_.emplace_back(std::move(cb));
+	return --task_cbs_.cend();
+}
+
+void Task::erase(TaskCallbackList::const_iterator which)
+{
+	task_cbs_.erase(which);
 }
 
 void Task::reset()
@@ -117,73 +140,135 @@ void Task::reset()
 
 bool Task::canCompute() const
 {
-	return wrapped()->canCompute();
+	return stages()->canCompute();
 }
 
 bool Task::compute()
 {
-	return wrapped()->compute();
+	return stages()->compute();
 }
 
 bool Task::plan(){
-	add(NewSolutionPublisher());
-
 	reset();
 	initScene();
 	init(scene_);
 
 	while(ros::ok() && canCompute()) {
-	if (compute())
-			printState();
-		else
+		if (compute()) {
+			for (const auto& cb : task_cbs_)
+				cb(*this);
+		} else
 			break;
 	}
 	return numSolutions() > 0;
 }
 
-void Task::printState(){
-	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
-		std::cout << std::string(2*depth, ' ') << stage << std::endl;
-		return true;
-	};
-	wrapped()->traverseRecursively(processor);
-}
-
 size_t Task::numSolutions() const
 {
-	auto w = wrapped();
+	auto w = stages();
 	// during initial insert() we call numSolutions(), but wrapped() is not yet defined
 	return w ? w->numSolutions() : 0;
 }
 
 void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) const
 {
-	wrapped()->processSolutions(processor);
+	stages()->processSolutions(processor);
 }
 
 void Task::processSolutions(const Task::SolutionProcessor& processor) const {
-	SolutionTrajectory solution;
-	processSolutions([&solution, &processor](const SolutionBase& s) {
-		solution.clear();
-		s.flattenTo(solution);
-		return processor(solution, s.cost());
+	::moveit_task_constructor::Solution msg;
+	msg.task_id = id();
+	processSolutions([&msg, &processor](const SolutionBase& s) {
+		msg.sub_solution.clear();
+		msg.sub_trajectory.clear();
+		s.fillMessage(msg);
+		return processor(msg, s.cost());
 	});
 }
 
 void Task::onNewSolution(SolutionBase &s)
 {
-	for (const auto& cb : callbacks_)
+	for (const auto& cb : solution_cbs_)
 		cb(s);
 }
 
-inline ContainerBase* Task::wrapped()
+inline ContainerBase* Task::stages()
 {
 	return static_cast<ContainerBase*>(WrapperBase::wrapped());
 }
 
-inline const ContainerBase* Task::wrapped() const
+inline const ContainerBase* Task::stages() const
 {
-	return const_cast<Task*>(this)->wrapped();
+	return const_cast<Task*>(this)->stages();
+}
+
+std::string Task::id() const
+{
+	ros::NodeHandle n("~");
+	return std::to_string(id_) + '@' + n.getNamespace();
+}
+
+void Task::printState(const Task &t){
+	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
+		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+		return true;
+	};
+	t.stages()->traverseRecursively(processor);
+}
+
+void fillStateList(moveit_task_constructor::Stage::_received_starts_type &c,
+                   const InterfaceConstPtr& interface) {
+	c.clear();
+	if (!interface) return;
+	for (const InterfaceState& state : *interface)
+		c.push_back(state.id());
+}
+
+moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &msg) const
+{
+	std::map<const Stage*, moveit_task_constructor::Stage::_id_type> stage_to_id_map;
+	ContainerBase::StageCallback stageProcessor =
+	      [&stage_to_id_map, &msg](const Stage& stage, int) -> bool {
+		// this method is called for each child stage of a given parent
+		const StagePrivate *simpl = stage.pimpl();
+
+		moveit_task_constructor::Stage s; // create new Stage msg
+		s.id = stage_to_id_map.size();
+		stage_to_id_map[&stage] = s.id;
+		s.name = stage.name();
+		s.flags = stage.pimpl()->interfaceFlags();
+		auto it = stage_to_id_map.find(simpl->parent());
+		assert (it != stage_to_id_map.cend());
+		s.parent_id = it->second;
+
+		fillStateList(s.received_starts, simpl->starts());
+		fillStateList(s.received_ends, simpl->ends());
+		fillStateList(s.generated_starts, simpl->nextStarts());
+		fillStateList(s.generated_ends, simpl->prevEnds());
+
+		// insert solution IDs
+		Stage::SolutionProcessor solutionProcessor = [&s](const SolutionBase& solution) {
+			s.solved.push_back(solution.id());
+			return true;
+		};
+		stage.processSolutions(solutionProcessor);
+
+		solutionProcessor = [&s](const SolutionBase& solution) {
+			s.failed.push_back(solution.id());
+			return true;
+		};
+		stage.processFailures(solutionProcessor);
+
+		// finally store in msg.stages
+		msg.stages.push_back(std::move(s));
+		return true;
+	};
+
+	msg.id = id();
+	msg.stages.clear();
+	stage_to_id_map[this] = 0; // ID for root
+	stages()->traverseRecursively(stageProcessor);
+	return msg;
 }
 
 } }

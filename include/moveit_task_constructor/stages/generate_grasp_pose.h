@@ -51,27 +51,27 @@ protected:
 
 	std::string ik_link_;
 
-	double grasp_offset_;
+	double grasp_offset_ = 0.0;
 
 	uint32_t max_ik_solutions_;
 
-	bool ignore_collisions_;
+	bool ignore_collisions_ = false;
 
 	std::string gripper_grasp_pose_;
 
 	std::string object_;
 
-	double timeout_;
+	double timeout_ = 0.1;
 
-	double angle_delta_;
+	double angle_delta_ = 0.1;
 
 	/* temp values */
 
-	double current_angle_;
+	double current_angle_ = 0.0;
 
 	double remaining_time_;
 
-	bool tried_current_state_as_seed_;
+	bool tried_current_state_as_seed_ = false;
 
 	std::vector< std::vector<double> > previous_solutions_;
 

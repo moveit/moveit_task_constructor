@@ -78,7 +78,7 @@ Stage::operator StagePrivate *() {
 	return pimpl();
 }
 
-Stage::operator const StagePrivate *() const {
+Stage::operator const StagePrivate*() const {
 	return pimpl();
 }
 
@@ -97,6 +97,11 @@ void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 const std::string& Stage::name() const {
 	return pimpl_->name_;
+}
+
+void Stage::setName(const std::string& name)
+{
+	pimpl_->name_ = name;
 }
 
 template<InterfaceFlag own, InterfaceFlag other>
@@ -150,8 +155,16 @@ size_t ComputeBase::numSolutions() const {
 	return pimpl()->trajectories_.size();
 }
 
-const std::list<SubTrajectory> &ComputeBase::trajectories() const {
-	return pimpl()->trajectories_;
+void ComputeBase::processSolutions(const Stage::SolutionProcessor &processor) const
+{
+	for (const auto& s : pimpl()->trajectories_)
+		if (!processor(s))
+			return;
+}
+
+void ComputeBase::processFailures(const Stage::SolutionProcessor &processor) const
+{
+	// TODO
 }
 
 void ComputeBase::reset() {
@@ -207,9 +220,6 @@ bool PropagatingEitherWayPrivate::compute()
 	PropagatingEitherWay* me = static_cast<PropagatingEitherWay*>(me_);
 
 	bool result = false;
-	planning_scene::PlanningScenePtr ps;
-	robot_trajectory::RobotTrajectoryPtr trajectory;
-	double cost;
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
 		if (me->computeForward(fetchStartState()))
 			result |= true;

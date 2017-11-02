@@ -5,10 +5,14 @@ add_library(${PROJECT_NAME}_stages
 	generate_grasp_pose.cpp
 	cartesian_position_motion.cpp
 
-	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/move.h
-	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/current_state.h
-	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/gripper.h
-	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/generate_grasp_pose.h
-	${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}/stages/cartesian_position_motion.h
+	${PROJECT_INCLUDE}/stages/move.h
+	${PROJECT_INCLUDE}/stages/current_state.h
+	${PROJECT_INCLUDE}/stages/gripper.h
+	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
+	${PROJECT_INCLUDE}/stages/cartesian_position_motion.h
 )
-target_link_libraries(${PROJECT_NAME}_stages ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
+
+install(TARGETS ${PROJECT_NAME}_stages
+	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})

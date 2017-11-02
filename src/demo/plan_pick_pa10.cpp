@@ -1,5 +1,5 @@
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/debug.h>
+#include <moveit_task_constructor/introspection.h>
 
 #include <moveit_task_constructor/stages/current_state.h>
 #include <moveit_task_constructor/stages/gripper.h>

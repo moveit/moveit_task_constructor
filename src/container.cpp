@@ -414,11 +414,19 @@ bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcesso
 	return result;
 }
 
-void SerialSolution::flattenTo(std::vector<const SubTrajectory *> &solution) const
+void SerialSolution::fillMessage(::moveit_task_constructor::Solution &msg) const
 {
-	solution.reserve(solution.size() + subsolutions_.size());
+	::moveit_task_constructor::SubSolution sub_msg;
+	sub_msg.id = this->id();
+	sub_msg.cost = this->cost();
+	sub_msg.sub_solution_id.reserve(subsolutions_.size());
 	for (const SolutionBase* s : subsolutions_)
-		s->flattenTo(solution);
+		sub_msg.sub_solution_id.push_back(s->id());
+	msg.sub_solution.push_back(sub_msg);
+
+	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
+	for (const SolutionBase* s : subsolutions_)
+		s->fillMessage(msg);
 }
 
 
@@ -529,3 +537,7 @@ Stage* WrapperBase::wrapped()
 }
 
 } }
+
+/// register plugins
+#include <pluginlib/class_list_macros.h>
+PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::SerialContainer, moveit::task_constructor::Stage)

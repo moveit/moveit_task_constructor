@@ -12,20 +12,6 @@
 
 namespace moveit { namespace task_constructor {
 
-enum InterfaceFlag {
-	READS_START        = 0x01,
-	READS_END          = 0x02,
-	WRITES_NEXT_START  = 0x04,
-	WRITES_PREV_END    = 0x08,
-
-	OWN_IF_MASK        = READS_START | READS_END,
-	EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
-	INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
-	OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
-};
-typedef Flags<InterfaceFlag> InterfaceFlags;
-
-
 class ContainerBase;
 class StagePrivate {
 	friend class Stage;
@@ -34,12 +20,15 @@ class StagePrivate {
 public:
 	typedef std::list<Stage::pointer> container_type;
 	StagePrivate(Stage* me, const std::string& name);
+	virtual ~StagePrivate() = default;
 
 	InterfaceFlags interfaceFlags() const;
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
+	inline const Stage* me() const { return me_; }
+	inline Stage* me() { return me_; }
 	inline const std::string& name() const { return name_; }
 	inline const ContainerBase* parent() const { return parent_; }
 	inline ContainerBase* parent() { return parent_; }
@@ -69,7 +58,7 @@ public:
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
-	const std::string name_;
+	std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;

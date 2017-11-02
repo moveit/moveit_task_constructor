@@ -6,6 +6,8 @@
 #include "container.h"
 
 #include <moveit/macros/class_forward.h>
+#include <moveit_task_constructor/Task.h>
+#include <moveit_task_constructor/Solution.h>
 
 namespace robot_model_loader {
 	MOVEIT_CLASS_FORWARD(RobotModelLoader)
@@ -34,18 +36,29 @@ public:
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
+	std::string id() const;
 	void add(Stage::pointer &&stage);
-	void clear();
+	void clear() override;
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
 	/// add function to be called for every newly found solution
-	SolutionCallbackList::const_iterator add(SolutionCallback &&cb);
+	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
 	/// remove function callback
 	void erase(SolutionCallbackList::const_iterator which);
 
+	typedef std::function<void(const Task &t)> TaskCallback;
+	typedef std::list<TaskCallback> TaskCallbackList;
+	/// add function to be called for every newly found solution
+	TaskCallbackList::const_iterator addTaskCallback(TaskCallback &&cb);
+	/// remove function callback
+	void erase(TaskCallbackList::const_iterator which);
+
 	bool plan();
-	void printState();
+	/// print current state std::cout
+	static void printState(const Task &t);
+	/// fill task message for publishing the current state
+	moveit_task_constructor::Task& fillMessage(moveit_task_constructor::Task& msg) const;
 
 	size_t numSolutions() const override;
 
@@ -53,10 +66,14 @@ public:
 	/// For each solution, composed from several SubTrajectories,
 	/// the vector of SubTrajectories as well as the associated costs are provided.
 	/// Return true, if traversal should continue, otherwise false.
-	typedef std::function<bool(const SolutionTrajectory& solution,
+	typedef std::function<bool(const ::moveit_task_constructor::Solution& msg,
 	                           double accumulated_cost)> SolutionProcessor;
 	/// process all solutions
 	void processSolutions(const Task::SolutionProcessor &processor) const;
+
+	/// access stage tree
+	ContainerBase *stages();
+	const ContainerBase *stages() const;
 
 protected:
 	void reset() override;
@@ -68,13 +85,11 @@ protected:
 	void onNewSolution(SolutionBase &s) override;
 
 private:
-	inline ContainerBase *wrapped();
-	inline const ContainerBase *wrapped() const;
-
-private:
+	size_t id_; // unique task ID
 	robot_model_loader::RobotModelLoaderPtr rml_;
 	planning_scene::PlanningSceneConstPtr scene_; // initial scene
-	std::list<Task::SolutionCallback> callbacks_; // functions called for each new solution
+	std::list<Task::SolutionCallback> solution_cbs_; // functions called for each new solution
+	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 
 	// use separate interfaces as targets for wrapper's prevEnds() / nextStarts()
 	InterfacePtr task_starts_;

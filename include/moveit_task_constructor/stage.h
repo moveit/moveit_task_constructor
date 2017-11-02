@@ -28,6 +28,19 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 
 namespace moveit { namespace task_constructor {
 
+enum InterfaceFlag {
+	READS_START        = 0x01,
+	READS_END          = 0x02,
+	WRITES_NEXT_START  = 0x04,
+	WRITES_PREV_END    = 0x08,
+
+	OWN_IF_MASK        = READS_START | READS_END,
+	EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
+	INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
+	OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
+};
+typedef Flags<InterfaceFlag> InterfaceFlags;
+
 MOVEIT_CLASS_FORWARD(Interface)
 MOVEIT_CLASS_FORWARD(Stage)
 class InterfaceState;
@@ -67,7 +80,7 @@ class Stage {
 public:
 	PRIVATE_CLASS(Stage)
 	typedef std::unique_ptr<Stage> pointer;
-	~Stage();
+	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
 	operator StagePrivate*();
@@ -79,11 +92,19 @@ public:
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
 	const std::string& name() const;
+	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
+
+	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
+	/// process all solutions, calling the callback for each of them
+	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
+	virtual void processFailures(const SolutionProcessor &processor) const {}
 
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);
+	/// Stage cannot be copied
+	Stage(const Stage&) = delete;
 
 protected:
 	StagePrivate* const pimpl_; // constness guarantees one initial write
@@ -97,13 +118,13 @@ public:
 	PRIVATE_CLASS(ComputeBase)
 	void reset() override;
 	virtual size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
 	/// ComputeBase can only be instantiated by derived classes in stage.cpp
 	ComputeBase(ComputeBasePrivate* impl);
 
-	// TODO: Do we really need/want to expose the trajectories?
-	const std::list<SubTrajectory>& trajectories() const;
 	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
 };
 

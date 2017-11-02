@@ -1,16 +1,33 @@
+#include "stage_p.h"
 #include <moveit_task_constructor/storage.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/robot_state/conversions.h>
 
 namespace moveit { namespace task_constructor {
 
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
    : scene_(ps)
 {
+	registerID();
 }
 
 InterfaceState::InterfaceState(const InterfaceState &existing)
    : scene_(existing.scene())
 {
+	registerID();
 }
+
+InterfaceState::~InterfaceState()
+{
+	Repository<InterfaceState>::instance().remove(this);
+	id_ = 0;
+}
+
+void InterfaceState::registerID()
+{
+	id_ = Repository<InterfaceState>::instance().add(this);
+}
+
 
 Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
@@ -45,5 +62,19 @@ Interface::iterator Interface::clone(const InterfaceState &state)
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
+
+
+void SubTrajectory::fillMessage(moveit_task_constructor::Solution &msg) const {
+	msg.sub_trajectory.emplace_back();
+	moveit_task_constructor::SubTrajectory& t = msg.sub_trajectory.back();
+	t.id = this->id();
+	t.name = this->name();
+	t.cost = this->cost();
+	t.stage = this->creator()->name();
+	if (trajectory())
+		trajectory()->getRobotTrajectoryMsg(t.trajectory);
+	t.markers = this->markers();
+}
+
 
 } }

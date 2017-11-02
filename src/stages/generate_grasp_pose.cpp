@@ -19,15 +19,7 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 GenerateGraspPose::GenerateGraspPose(std::string name)
-: Generator(name),
-  timeout_(0.1),
-  angle_delta_(0.1),
-  max_ik_solutions_(0),
-  current_angle_(0.0),
-  grasp_offset_(0.0),
-  ignore_collisions_(false),
-  remaining_time_(timeout_),
-  tried_current_state_as_seed_(false)
+: Generator(name)
 {
 	ros::NodeHandle nh;
 	pub= nh.advertise<moveit_msgs::DisplayRobotState>("display_robot_state", 50);

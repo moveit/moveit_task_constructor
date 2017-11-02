@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>moveit_rviz_plugin::TaskPanel</class>
+ <widget class="QWidget" name="moveit_rviz_plugin::TaskPanel">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="tasks_view_label_layout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="tasks_view_label">
+       <property name="text">
+        <string>Task Tree</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="button_add_stage">
+       <property name="maximumSize">
+        <size>
+         <width>18</width>
+         <height>18</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset theme="add">
+         <normaloff>.</normaloff>.</iconset>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTreeView" name="tasks_view">
+     <property name="contextMenuPolicy">
+      <enum>Qt::ActionsContextMenu</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="settings_view_label">
+     <property name="text">
+      <string>Settings</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="rviz::PropertyTreeWidget" name="settings_view"/>
+   </item>
+  </layout>
+  <action name="actionNewStage">
+   <property name="icon">
+    <iconset theme="add">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>New Stage</string>
+   </property>
+   <property name="toolTip">
+    <string>Add a new stage</string>
+   </property>
+  </action>
+  <action name="actionNewTask">
+   <property name="icon">
+    <iconset theme="add">
+     <normaloff>.</normaloff>.</iconset>
+   </property>
+   <property name="text">
+    <string>New Task</string>
+   </property>
+   <property name="toolTip">
+    <string>Add a new task</string>
+   </property>
+  </action>
+  <action name="actionRemoveStages">
+   <property name="text">
+    <string>Remove Stages</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove selected stages</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>rviz::PropertyTreeWidget</class>
+   <extends>QTreeView</extends>
+   <header location="global">rviz/properties/property_tree_widget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>button_add_stage</sender>
+   <signal>clicked()</signal>
+   <receiver>actionNewStage</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>378</x>
+     <y>21</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

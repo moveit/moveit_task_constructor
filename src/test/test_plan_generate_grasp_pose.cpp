@@ -49,7 +49,7 @@ int main(int argc, char** argv){
 
 	t.plan();
 
-	t.printState();
+	Task::printState(t);
 
 	return 0;
 }
