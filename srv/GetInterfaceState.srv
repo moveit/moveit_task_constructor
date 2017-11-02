@@ -1,0 +1,7 @@
+# ID of InterfaceState
+uint32 state_id
+
+---
+
+# planning scene diff to tasks' main planning scene
+moveit_msgs/PlanningScene scene

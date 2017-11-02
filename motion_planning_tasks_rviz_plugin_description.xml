@@ -1,0 +1,16 @@
+<library path="libmotion_planning_tasks_rviz_plugin">
+  <class name="moveit_task_constructor/Motion Planning Tasks"
+         type="moveit_rviz_plugin::TaskPanel"
+         base_class_type="rviz::Panel">
+    <description>
+      A panel widget to monitor and edit motion planning tasks
+    </description>
+  </class>
+  <class name="moveit_task_constructor/Motion Planning Tasks"
+         type="moveit_rviz_plugin::TaskDisplay"
+         base_class_type="rviz::Display">
+    <description>
+      Monitor motion planning tasks and animate their solution trajectories
+    </description>
+  </class>
+</library>

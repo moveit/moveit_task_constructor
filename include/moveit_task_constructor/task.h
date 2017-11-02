@@ -1,62 +1,99 @@
 // copyright Michael 'v4hn' Goerner @ 2017
+// copyright Robert Haschke @ 2017
 
 #pragma once
 
-#include <moveit_task_constructor/storage.h>
+#include "container.h"
 
 #include <moveit/macros/class_forward.h>
-
-#include <ros/ros.h>
-
-#include <vector>
-
-namespace planning_scene {
-	MOVEIT_CLASS_FORWARD(PlanningScene)
-}
+#include <moveit_task_constructor/Task.h>
+#include <moveit_task_constructor/Solution.h>
 
 namespace robot_model_loader {
 	MOVEIT_CLASS_FORWARD(RobotModelLoader)
 }
-
-namespace planning_pipeline {
-	MOVEIT_CLASS_FORWARD(PlanningPipeline)
-}
-
 namespace moveit { namespace core {
+	MOVEIT_CLASS_FORWARD(RobotModel)
 	MOVEIT_CLASS_FORWARD(RobotState)
 }}
 
 namespace moveit { namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(SubTask)
+MOVEIT_CLASS_FORWARD(Stage)
+MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
-class Task {
+/** A Task is the root of a tree of stages.
+ *
+ * Actually a tasks wraps a single container, which serves as the root of all stages.
+ * The wrapped container spawns its solutions into the prevEnds(), nextStarts() interfaces,
+ * which are provided by the wrappers end_ and start_ and interfaces respectively. */
+class Task : protected WrapperBase {
 public:
-	typedef std::function<bool(std::vector<SubTrajectory*>&)> SolutionCallback;
+	Task(Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
+	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
+	                                                            const std::string &ns = "move_group",
+	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
+	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 
-	Task();
-	~Task();
+	std::string id() const;
+	void add(Stage::pointer &&stage);
+	void clear() override;
 
-	void add( SubTaskPtr );
+	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
+	typedef std::list<SolutionCallback> SolutionCallbackList;
+	/// add function to be called for every newly found solution
+	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
+	/// remove function callback
+	void erase(SolutionCallbackList::const_iterator which);
+
+	typedef std::function<void(const Task &t)> TaskCallback;
+	typedef std::list<TaskCallback> TaskCallbackList;
+	/// add function to be called for every newly found solution
+	TaskCallbackList::const_iterator addTaskCallback(TaskCallback &&cb);
+	/// remove function callback
+	void erase(TaskCallbackList::const_iterator which);
 
 	bool plan();
+	/// print current state std::cout
+	static void printState(const Task &t);
+	/// fill task message for publishing the current state
+	moveit_task_constructor::Task& fillMessage(moveit_task_constructor::Task& msg) const;
 
-	bool processSolutions(const SolutionCallback &processor) const;
+	size_t numSolutions() const override;
 
-	const moveit::core::RobotState &getCurrentRobotState() const;
+	/// function type used for processing solutions
+	/// For each solution, composed from several SubTrajectories,
+	/// the vector of SubTrajectories as well as the associated costs are provided.
+	/// Return true, if traversal should continue, otherwise false.
+	typedef std::function<bool(const ::moveit_task_constructor::Solution& msg,
+	                           double accumulated_cost)> SolutionProcessor;
+	/// process all solutions
+	void processSolutions(const Task::SolutionProcessor &processor) const;
 
-	void printState();
-
-	void clear();
+	/// access stage tree
+	ContainerBase *stages();
+	const ContainerBase *stages() const;
 
 protected:
-	std::vector<SubTaskPtr> subtasks_;
+	void reset() override;
+	void initModel();
+	void initScene();
+	bool canCompute() const override;
+	bool compute() override;
+	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
+	void onNewSolution(SolutionBase &s) override;
 
-	planning_scene::PlanningScenePtr scene_;
+private:
+	size_t id_; // unique task ID
 	robot_model_loader::RobotModelLoaderPtr rml_;
+	planning_scene::PlanningSceneConstPtr scene_; // initial scene
+	std::list<Task::SolutionCallback> solution_cbs_; // functions called for each new solution
+	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 
-	planning_pipeline::PlanningPipelinePtr planner_;
+	// use separate interfaces as targets for wrapper's prevEnds() / nextStarts()
+	InterfacePtr task_starts_;
+	InterfacePtr task_ends_;
 };
 
 } }

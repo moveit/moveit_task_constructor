@@ -1,42 +1,48 @@
 cmake_minimum_required(VERSION 2.6.12)
-
 project(moveit_task_constructor)
+
+set(MSG_DEPS moveit_msgs visualization_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
+	genmsg ${MSG_DEPS}
 	moveit_core
 	moveit_ros_planning
 	moveit_ros_planning_interface
 	moveit_msgs
+	moveit_ros_visualization
 	eigen_conversions
+	rviz
 )
+
+# ROS messages, services and actions
+add_message_files(DIRECTORY msg
+	FILES
+	Stage.msg
+	Task.msg
+	SubSolution.msg
+	SubTrajectory.msg
+	Solution.msg
+)
+add_service_files(DIRECTORY srv
+	FILES
+	GetInterfaceState.srv
+	GetSolution.srv
+)
+generate_messages(DEPENDENCIES ${MSG_DEPS})
 
 catkin_package(
 	INCLUDE_DIRS include
 )
 
-include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
-)
+set(CMAKE_CXX_STANDARD 14)
+set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
 
-add_compile_options(-std=c++14)
+include_directories(${catkin_INCLUDE_DIRS})
+add_subdirectory(src)
+add_subdirectory(visualization)
 
-add_library(${PROJECT_NAME}_subtasks
-	src/subtasks/move.cpp
-	src/subtasks/current_state.cpp
-	src/subtasks/gripper.cpp
-	src/subtasks/generate_grasp_pose.cpp
-	src/subtasks/cartesian_position_motion.cpp
-)
-target_link_libraries(${PROJECT_NAME}_subtasks ${catkin_LIBRARIES})
-
-add_library(${PROJECT_NAME}
-	src/subtask.cpp
-	src/task.cpp
-	src/debug.cpp
-)
-
-add_subdirectory(src/demo)
-
-add_subdirectory(src/test)
+install(DIRECTORY include/ DESTINATION include)
+install(FILES
+	motion_planning_tasks_rviz_plugin_description.xml
+	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

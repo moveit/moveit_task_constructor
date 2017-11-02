@@ -1,11 +1,11 @@
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/debug.h>
+#include <moveit_task_constructor/introspection.h>
 
-#include <moveit_task_constructor/subtasks/current_state.h>
-#include <moveit_task_constructor/subtasks/gripper.h>
-#include <moveit_task_constructor/subtasks/move.h>
-#include <moveit_task_constructor/subtasks/generate_grasp_pose.h>
-#include <moveit_task_constructor/subtasks/cartesian_position_motion.h>
+#include <moveit_task_constructor/stages/current_state.h>
+#include <moveit_task_constructor/stages/gripper.h>
+#include <moveit_task_constructor/stages/move.h>
+#include <moveit_task_constructor/stages/generate_grasp_pose.h>
+#include <moveit_task_constructor/stages/cartesian_position_motion.h>
 
 #include <ros/ros.h>
 
@@ -41,25 +41,25 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add(std::make_unique<stages::CurrentState>("current state"));
 
 	{
-		auto move= std::make_shared<subtasks::Gripper>("open gripper");
+		auto move = std::make_unique<stages::Gripper>("open gripper");
 		move->setEndEffector("gripper");
 		move->setTo("open");
-		t.add(move);
+		t.add(std::move(std::move(move)));
 	}
 
 	{
-		auto move= std::make_shared<subtasks::Move>("move to pre-grasp");
+		auto move = std::make_unique<stages::Move>("move to pre-grasp");
 		move->setGroup("arm");
 		move->setPlannerId("RRTConnectkConfigDefault");
 		move->setTimeout(8.0);
-		t.add(move);
+		t.add(std::move(std::move(move)));
 	}
 
 	{
-		auto move= std::make_shared<subtasks::CartesianPositionMotion>("proceed to grasp pose");
+		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(.03, 0.1);
@@ -68,11 +68,11 @@ int main(int argc, char** argv){
 		geometry_msgs::PointStamped target;
 		target.header.frame_id= "object";
 		move->towards(target);
-		t.add(move);
+		t.add(std::move(std::move(move)));
 	}
 
 	{
-		auto gengrasp= std::make_shared<subtasks::GenerateGraspPose>("generate grasp pose");
+		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->setEndEffector("gripper");
 		//gengrasp->setGroup("arm");
 		gengrasp->setGripperGraspPose("open");
@@ -80,19 +80,19 @@ int main(int argc, char** argv){
 		gengrasp->setGraspOffset(.03);
 		gengrasp->setAngleDelta(-.2);
 		gengrasp->setMaxIKSolutions(8);
-		t.add(gengrasp);
+		t.add(std::move(std::move(gengrasp)));
 	}
 
 	{
-		auto move= std::make_shared<subtasks::Gripper>("grasp");
+		auto move = std::make_unique<stages::Gripper>("grasp");
 		move->setEndEffector("gripper");
 		move->setTo("closed");
 		move->graspObject("object");
-		t.add(move);
+		t.add(std::move(std::move(move)));
 	}
 
 	{
-		auto move= std::make_shared<subtasks::CartesianPositionMotion>("lift object");
+		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(0.03, 0.05);
@@ -102,7 +102,7 @@ int main(int argc, char** argv){
 		direction.header.frame_id= "world";
 		direction.vector.z= 1.0;
 		move->along(direction);
-		t.add(move);
+		t.add(std::move(std::move(move)));
 	}
 
 	t.plan();

@@ -2,7 +2,7 @@
 
 #include <moveit_task_constructor/task.h>
 
-#include <moveit_task_constructor/subtasks/current_state.h>
+#include <moveit_task_constructor/stages/current_state.h>
 
 using namespace moveit::task_constructor;
 
@@ -11,7 +11,7 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add( std::make_shared<subtasks::CurrentState>("current state") );
+	t.add( std::make_unique<stages::CurrentState>("current state") );
 
 	t.plan();
 
