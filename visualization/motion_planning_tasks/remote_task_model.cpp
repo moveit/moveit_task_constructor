@@ -39,6 +39,9 @@
 #include "remote_task_model.h"
 #include <moveit_task_constructor/container.h>
 #include <ros/console.h>
+
+#include <QApplication>
+#include <QPalette>
 #include <qflags.h>
 
 using namespace moveit::task_constructor;
@@ -170,6 +173,10 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 		case 2: return 0;
 		}
 		break;
+	case Qt::ForegroundRole:
+		if (index.column() == 0 && !index.parent().isValid())
+			return (flags_ & IS_DESTROYED) ? QColor(Qt::red) : QApplication::palette().text().color();
+		break;
 	}
 	return QVariant();
 }
@@ -224,8 +231,13 @@ void RemoteTaskModel::processTaskMessage(const moveit_task_constructor::Task &ms
 		// emit notify about model changes when node was already visited
 		if (changed && (n->node_flags_ & WAS_VISITED)) {
 			QModelIndex idx = index(n);
-			dataChanged(idx, idx);
+			dataChanged(idx, idx.sibling(idx.row(), 2));
 		}
+	}
+
+	if (msg.stages.empty()) {
+		flags_ |= IS_DESTROYED;
+		dataChanged(index(0, 0), index(0, 2));
 	}
 }
 

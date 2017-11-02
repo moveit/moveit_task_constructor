@@ -47,13 +47,23 @@ namespace moveit_rviz_plugin {
 
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
+protected:
+	unsigned int flags_ = 0;
+
 public:
+	enum TaskModelFlag {
+		IS_DESTROYED   = 0x01,
+		IS_INITIALIZED = 0x02,
+		IS_RUNNING     = 0x04,
+	};
+
 	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
+	unsigned int taskFlags() const { return flags_; }
 };
 
 class TaskListModelPrivate;

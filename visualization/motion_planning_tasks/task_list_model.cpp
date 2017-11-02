@@ -42,6 +42,8 @@
 
 namespace moveit_rviz_plugin {
 
+static const std::string LOGNAME("TaskListModel");
+
 QString TaskListModel::horizontalHeader(int column)
 {
 	switch (column) {
@@ -67,9 +69,6 @@ Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
 	return flags;
 }
 
-enum TaskModelFlag {
-	IS_DESTROYED = 0x01,
-};
 
 class TaskListModelPrivate {
 public:
@@ -82,7 +81,6 @@ public:
 		BaseTaskModel* model_;
 		// map of proxy=source QModelIndex's internal pointer to source QModelIndex
 		QHash<void*, QModelIndex> proxy_to_source_mapping_;
-		unsigned int flags_ = 0;
 	};
 
 	// top-level items
@@ -161,11 +159,11 @@ TaskListModel::TaskListModel(QObject *parent)
    : QAbstractItemModel(parent)
 {
 	d_ptr = new TaskListModelPrivate(this);
-	ROS_DEBUG_NAMED("TaskListModel", "created TaskListModel: %p", this);
+	ROS_DEBUG_NAMED(LOGNAME, "created TaskListModel: %p", this);
 }
 
 TaskListModel::~TaskListModel() {
-	ROS_DEBUG_NAMED("TaskListModel", "destroying TaskListModel: %p", this);
+	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
 	delete d_ptr;
 }
 
@@ -262,19 +260,15 @@ void TaskListModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 	bool created = it_inserted.second;
 	RemoteTaskModel*& remote_task = it_inserted.first->second;
 
+	if (!msg.stages.empty() && remote_task && remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)
+		created = true; // re-create remote task after it was destroyed beforehand
+
 	// empty stages list indicates, that this remote task is not available anymore
 	if (msg.stages.empty()) {
 		if (!remote_task) { // task was already deleted locally
 			// we can now remove it from remote_tasks_
 			d->remote_tasks_.erase(it_inserted.first);
 			return;
-		}
-		// task is still in use, mark it as destroyed
-		for (auto& t : d->tasks_) {
-			if (t.model_ == remote_task) {
-				t.flags_ |= IS_DESTROYED;
-				break;
-			}
 		}
 	} else if (created) { // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
@@ -287,7 +281,7 @@ void TaskListModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 
 	// insert newly created model into this' model instance
 	if (created) {
-		ROS_DEBUG_NAMED("TaskListModel", "received new Task: %s", msg.id.c_str());
+		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s", msg.id.c_str());
 		insertTask(remote_task, -1);
 	}
 }
@@ -315,7 +309,7 @@ void TaskListModel::insertTask(BaseTaskModel* model, int row)
 	auto it = d->tasks_.begin();
 	std::advance(it, row);
 
-	ROS_DEBUG_NAMED("TaskListModel", "%p: inserting task: %p", this, model);
+	ROS_DEBUG_NAMED(LOGNAME, "%p: inserting task: %p", this, model);
 	beginInsertRows(QModelIndex(), row, row);
 	d->tasks_.insert(it, TaskListModelPrivate::BaseModelData(model));
 	endInsertRows();
@@ -382,7 +376,7 @@ bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
 
 void TaskListModelPrivate::removeTask(BaseTaskModel *model)
 {
-	ROS_DEBUG_NAMED("TaskListModel", "%p: removing task: %p", q_ptr, model);
+	ROS_DEBUG_NAMED(LOGNAME, "%p: removing task: %p", q_ptr, model);
 
 	QObject::disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
 	                    q_ptr, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
