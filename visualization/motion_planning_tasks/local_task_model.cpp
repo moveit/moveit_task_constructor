@@ -153,6 +153,7 @@ bool LocalTaskModel::setData(const QModelIndex &index, const QVariant &value, in
 	if (name == n->name().c_str())
 		return false;
 	n->me()->setName(name.toStdString());
+	dataChanged(index, index);
 	return true;
 }
 

@@ -190,6 +190,7 @@ void TaskDisplay::updateTaskListModel()
 		onTasksInserted(QModelIndex(), 0, task_list_model_->rowCount()-1);
 		connect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
 		connect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
+		connect(task_list_model_.get(), &TaskListModel::dataChanged, this, &TaskDisplay::onTaskDataChanged);
 	}
 }
 
@@ -207,7 +208,7 @@ void TaskDisplay::changedTaskSolutionTopic()
 
 void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
 {
-	if (parent.isValid()) return;
+	if (parent.isValid()) return; // only handle top-level items
 
 	TaskListModel* m = static_cast<TaskListModel*>(sender());
 	for (; first <= last; ++first) {
@@ -218,11 +219,24 @@ void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last
 
 void TaskDisplay::onTasksRemoved(const QModelIndex &parent, int first, int last)
 {
-	if (parent.isValid()) return;
+	if (parent.isValid()) return; // only handle top-level items
 
 	for (; first <= last; ++first) {
 		rviz::Property *child = tasks_property_->takeChildAt(first);
 		delete child;
+	}
+}
+
+void TaskDisplay::onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
+{
+	if (topLeft.parent().isValid()) return; // only handle top-level items
+
+	for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
+		rviz::Property *child = tasks_property_->childAt(row);
+		if (topLeft.column() <= 0 && 0 <= bottomRight.column()) // name changed
+			child->setName(topLeft.sibling(row, 0).data().toString());
+		if (topLeft.column() <= 1 && 1 <= bottomRight.column()) // #solutions changed
+			child->setValue(topLeft.sibling(row, 1).data());
 	}
 }
 

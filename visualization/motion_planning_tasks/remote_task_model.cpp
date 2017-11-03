@@ -50,6 +50,7 @@ namespace moveit_rviz_plugin {
 
 enum NodeFlag {
 	WAS_VISITED        = 0x01, // indicate that model should emit change notifications
+	NAME_CHANGED       = 0x02, // indicate that name was manually changed
 };
 typedef QFlags<NodeFlag> NodeFlags;
 
@@ -186,7 +187,10 @@ bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, i
 	Node *n = node(index);
 	if (!n || index.column() != 0 || role != Qt::EditRole)
 		return false;
-	return n->setName(value.toString());
+	n->setName(value.toString());
+	n->node_flags_ |= NAME_CHANGED;
+	dataChanged(index, index);
+	return true;
 }
 
 typedef moveit_task_constructor::Stage StageMsg;
@@ -219,7 +223,9 @@ void RemoteTaskModel::processTaskMessage(const moveit_task_constructor::Task &ms
 		Q_ASSERT(n->parent_ == parent);
 
 		// set content of stage
-		bool changed = n->setName(QString::fromStdString(s.name));
+		bool changed = false;
+		if (!(n->node_flags_ & NAME_CHANGED)) // avoid overwriting a manually changed name
+			n->setName(QString::fromStdString(s.name));
 		InterfaceFlags old_flags = n->interface_flags_;
 		n->interface_flags_ = InterfaceFlags();
 		for (auto f : {READS_START, READS_END, WRITES_NEXT_START, WRITES_PREV_END}) {

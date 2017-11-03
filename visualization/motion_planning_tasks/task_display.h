@@ -88,6 +88,7 @@ private Q_SLOTS:
   void changedTaskSolutionTopic();
   void onTasksInserted(const QModelIndex& parent, int first, int last);
   void onTasksRemoved(const QModelIndex& parent, int first, int last);
+  void onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
 
 protected:
   void updateTaskListModel();
