@@ -65,6 +65,8 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
+	bool removeRows(int row, int count, const QModelIndex &parent) override;
+
 	/// providing a StageFactory makes the model accepting drops
 	void setStageFactory(const StageFactoryPtr &factory);
 	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;

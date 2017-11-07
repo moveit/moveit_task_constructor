@@ -169,6 +169,26 @@ bool LocalTaskModel::setData(const QModelIndex &index, const QVariant &value, in
 	return true;
 }
 
+bool LocalTaskModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	if (!parent.isValid())
+		return false; // cannot remove top-level container
+	if (flags_ & IS_RUNNING)
+		return false; // cannot modify running task
+
+	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)->me()));
+	ContainerBasePrivate *cp = static_cast<ContainerBasePrivate*>(node(parent));
+	ContainerBase *c = static_cast<ContainerBase*>(cp->me());
+	if (row < 0 || (size_t)row + count > cp->children().size())
+		return false;
+
+	beginRemoveRows(parent, row, row+count-1);
+	for (; count > 0; --count)
+		c->remove(row);
+	endRemoveRows();
+	return true;
+}
+
 void LocalTaskModel::setStageFactory(const StageFactoryPtr &factory)
 {
 	stage_factory_ = factory;
