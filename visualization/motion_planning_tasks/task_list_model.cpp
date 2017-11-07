@@ -37,8 +37,10 @@
 #include "task_list_model.h"
 #include "local_task_model.h"
 #include "remote_task_model.h"
+#include "factory_model.h"
 
 #include <ros/console.h>
+#include <QMimeData>
 
 namespace moveit_rviz_plugin {
 
@@ -70,6 +72,21 @@ Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
 }
 
 
+StageFactoryPtr getStageFactory()
+{
+	static std::weak_ptr<StageFactory> factory;
+	if (!factory.expired())
+		return factory.lock();
+
+	StageFactoryPtr result(new StageFactory("moveit_task_constructor",
+	                                        "moveit::task_constructor::Stage"));
+	// Hm. pluglinlib / ClassLoader cannot instantiate classes in implicitly loaded libs
+	result->addBuiltInClass<moveit::task_constructor::SerialContainer>("Serial Container", "");
+	factory = result; // remember for future uses
+	return result;
+}
+
+
 class TaskListModelPrivate {
 public:
 	Q_DECLARE_PUBLIC(TaskListModel)
@@ -90,6 +107,9 @@ public:
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
 	// if task is removed locally from tasks vector, it is marked with a nullptr
 	std::map<std::string, RemoteTaskModel*> remote_tasks_;
+
+	// factory used to create stages
+	StageFactoryPtr stage_factory_;
 
 public:
 	TaskListModelPrivate(TaskListModel* q_ptr) : q_ptr(q_ptr) {}
@@ -217,11 +237,31 @@ Qt::ItemFlags TaskListModel::flags(const QModelIndex &index) const
 {
 	Q_D(const TaskListModel);
 
-	if (!index.isValid())
-		return QAbstractItemModel::flags(index);
+	if (!index.isValid()) {
+		Qt::ItemFlags f = QAbstractItemModel::flags(index);
+		// dropping at root will create a new task
+		if (d->stage_factory_)
+			f |= Qt::ItemIsDropEnabled;
+		return f;
+	}
 
 	QModelIndex src_index = d->mapToSource(index);
 	return src_index.model()->flags(src_index);
+}
+
+void TaskListModel::setStageFactory(const StageFactoryPtr &factory)
+{
+	Q_D(TaskListModel);
+	d->stage_factory_ = factory;
+}
+
+QStringList TaskListModel::mimeTypes() const
+{
+	Q_D(const TaskListModel);
+	QStringList result;
+	if (d->stage_factory_)
+		result << d->stage_factory_->mimeType();
+	return result;
 }
 
 QVariant TaskListModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -309,6 +349,9 @@ void TaskListModel::insertTask(BaseTaskModel* model, int row)
 	auto it = d->tasks_.begin();
 	std::advance(it, row);
 
+	if (LocalTaskModel* lm = dynamic_cast<LocalTaskModel*>(model))
+		lm->setStageFactory(d->stage_factory_);
+
 	ROS_DEBUG_NAMED(LOGNAME, "%p: inserting task: %p", this, model);
 	beginInsertRows(QModelIndex(), row, row);
 	d->tasks_.insert(it, TaskListModelPrivate::BaseModelData(model));
@@ -372,6 +415,43 @@ bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
 		QModelIndex src_parent = d->mapToSource(parent, &data);
 		return data->model_->removeRows(row, count, src_parent);
 	}
+}
+
+bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent)
+{
+	Q_UNUSED(column);
+	Q_D(TaskListModel);
+	if (!d->stage_factory_)
+		return false;
+	const QString& mime_type = d->stage_factory_->mimeType();
+	if (!mime->hasFormat(mime_type))
+		return false;
+
+	if (!parent.isValid() && mime->hasFormat(mime_type)) {
+		QString error;
+		moveit::task_constructor::Stage* stage
+		      = d->stage_factory_->makeRaw(mime->data(mime_type), &error);
+		std::unique_ptr<moveit::task_constructor::ContainerBase> container
+		      (dynamic_cast<moveit::task_constructor::ContainerBase*>(stage));
+		if (!container) { // only accept container at root level
+			if (stage) delete stage;
+			return false;
+		}
+
+		// create a new local task using the given container as root
+		insertTask(new LocalTaskModel(std::move(container), this), row);
+		return true;
+	}
+
+	// propagate to corresponding child model
+	TaskListModelPrivate::BaseModelData *data = nullptr;
+	QModelIndex src_parent = d->mapToSource(parent, &data);
+	return data->model_->dropMimeData(mime, action, row, column, src_parent);
+}
+
+Qt::DropActions TaskListModel::supportedDragActions() const
+{
+	return Qt::CopyAction | Qt::MoveAction;
 }
 
 void TaskListModelPrivate::removeTask(BaseTaskModel *model)

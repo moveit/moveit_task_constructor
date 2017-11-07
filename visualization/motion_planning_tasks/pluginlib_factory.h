@@ -38,10 +38,11 @@
 
 #ifndef Q_MOC_RUN
 #include <pluginlib/class_loader.h>
+#include <rviz/load_resource.h>
+#include <functional>
 #endif
 
 #include <rviz/factory.h>
-#include <rviz/load_resource.h>
 
 namespace moveit_rviz_plugin {
 
@@ -55,11 +56,12 @@ private:
     QString package_;
     QString name_;
     QString description_;
-    Type*(*factory_function_)();
+    std::function<Type*()> factory_function_;
   };
 
 public:
   PluginlibFactory( const QString& package, const QString& base_class_type )
+     : mime_type_(QString("application/%1/%2").arg(package, base_class_type))
     {
       class_loader_ = new pluginlib::ClassLoader<Type>( package.toStdString(), base_class_type.toStdString() );
     }
@@ -68,56 +70,58 @@ public:
       delete class_loader_;
     }
 
+  /// retrieve mime type used for given factory
+  QString mimeType() const {
+    return mime_type_;
+  }
+
   virtual QStringList getDeclaredClassIds()
     {
       QStringList ids;
-      std::vector<std::string> std_ids = class_loader_->getDeclaredClasses();
-      for( size_t i = 0; i < std_ids.size(); i++ )
-      {
-        ids.push_back( QString::fromStdString( std_ids[ i ]));
-      }
-      typename QHash<QString, BuiltInClassRecord>::const_iterator iter;
-      for( iter = built_ins_.begin(); iter != built_ins_.end(); iter++ )
-      {
-        ids.push_back( iter.key() );
+      for(const auto& record : built_ins_)
+        ids.push_back(record.class_id_);
+      for (const auto& id : class_loader_->getDeclaredClasses()) {
+        QString sid = QString::fromStdString(id);
+        if (ids.contains(sid)) continue; // built_in take precedence
+        ids.push_back(sid);
       }
       return ids;
     }
 
   virtual QString getClassDescription( const QString& class_id ) const
     {
-      typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find( class_id );
-      if( iter != built_ins_.end() )
+      auto it = built_ins_.find( class_id );
+      if( it != built_ins_.end() )
       {
-        return iter->description_;
+        return it->description_;
       }
       return QString::fromStdString( class_loader_->getClassDescription( class_id.toStdString() ));
     }
 
   virtual QString getClassName( const QString& class_id ) const
     {
-      typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find( class_id );
-      if( iter != built_ins_.end() )
+      auto it = built_ins_.find( class_id );
+      if( it != built_ins_.end() )
       {
-        return iter->name_;
+        return it->name_;
       }
       return QString::fromStdString( class_loader_->getName( class_id.toStdString() ));
     }
 
   virtual QString getClassPackage( const QString& class_id ) const
     {
-      typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find( class_id );
-      if( iter != built_ins_.end() )
+      auto it = built_ins_.find( class_id );
+      if( it != built_ins_.end() )
       {
-        return iter->package_;
+        return it->package_;
       }
       return QString::fromStdString( class_loader_->getClassPackage( class_id.toStdString() ));
     }
 
   virtual QString getPluginManifestPath( const QString& class_id ) const
     {
-      typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find( class_id );
-      if( iter != built_ins_.end() )
+      auto it = built_ins_.find( class_id );
+      if( it != built_ins_.end() )
       {
         return "";
       }
@@ -140,8 +144,8 @@ public:
     return icon;
   }
 
-  virtual void addBuiltInClass( const QString& package, const QString& name, const QString& description,
-                                Type* (*factory_function)() )
+  void addBuiltInClass(const QString& package, const QString& name, const QString& description,
+                       const std::function<Type*()>& factory_function)
     {
       BuiltInClassRecord record;
       record.class_id_ = package + "/" + name;
@@ -151,8 +155,12 @@ public:
       record.factory_function_ = factory_function;
       built_ins_[ record.class_id_ ] = record;
     }
+  template <class Derived>
+  void addBuiltInClass(const QString& name, const QString& description)
+  {
+    addBuiltInClass(ROS_PACKAGE_NAME, name, description, [](){return new Derived();});
+  }
 
-protected:
   /** @brief Instantiate and return a instance of a subclass of Type using our
    *         pluginlib::ClassLoader.
    * @param class_id A string identifying the class uniquely among
@@ -193,6 +201,7 @@ protected:
     }
 
 private:
+  const QString mime_type_;
   pluginlib::ClassLoader<Type>* class_loader_;
   QHash<QString, BuiltInClassRecord> built_ins_;
 };

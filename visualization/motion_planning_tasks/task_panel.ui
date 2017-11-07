@@ -80,6 +80,11 @@
     <enum>Qt::WidgetShortcut</enum>
    </property>
   </action>
+  <action name="actionAddLocalTask">
+   <property name="text">
+    <string>Add task</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

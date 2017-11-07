@@ -48,12 +48,14 @@ class LocalTaskModel
 	Q_OBJECT
 	typedef moveit::task_constructor::StagePrivate Node;
 	Node *root_;
+	StageFactoryPtr stage_factory_;
 
 	inline Node* node(const QModelIndex &index) const;
 	QModelIndex index(Node *n) const;
 
 public:
 	LocalTaskModel(QObject *parent = nullptr);
+	LocalTaskModel(ContainerBase::pointer &&container, QObject *parent = nullptr);
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
 	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
@@ -62,6 +64,10 @@ public:
 	Qt::ItemFlags flags(const QModelIndex & index) const override;
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+
+	/// providing a StageFactory makes the model accepting drops
+	void setStageFactory(const StageFactoryPtr &factory);
+	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 };
 
 }

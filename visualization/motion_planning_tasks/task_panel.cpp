@@ -50,22 +50,16 @@
 #include <rviz/window_manager_interface.h>
 #include <rviz/panel_dock_widget.h>
 #include <ros/console.h>
+#include <QPointer>
 
 namespace moveit_rviz_plugin {
 
-typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
-StageFactory* getStageFactory() {
-	static std::shared_ptr<StageFactory> factory
-	      (new StageFactory("moveit_task_constructor",
-	                        "moveit::task_constructor::Stage"));
-	return factory.get();
-}
-
 rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
-	static rviz::PanelDockWidget *widget = nullptr;
+	static QPointer<rviz::PanelDockWidget> widget = nullptr;
 	if (!widget && mgr) { // create widget
-		QTreeView *view = new QTreeView(mgr->getParentWindow());
-		view->setModel(new FactoryModel(getStageFactory(), view));
+		QTreeView *view = new QTreeView();
+		StageFactoryPtr factory = getStageFactory();
+		view->setModel(new FactoryModel(*factory, factory->mimeType(), view));
 		view->expandAll();
 		view->setHeaderHidden(true);
 		view->setDragDropMode(QAbstractItemView::DragOnly);
@@ -82,6 +76,7 @@ TaskPanel::TaskPanel(QWidget* parent)
 	Q_D(TaskPanel);
 	// connect signals
 	connect(d->actionRemoveTaskTreeRows, &QAction::triggered, this, &TaskPanel::removeTaskTreeRows);
+	connect(d->actionAddLocalTask, &QAction::triggered, this, &TaskPanel::addTask);
 	connect(d->button_show_stage_dock_widget, &QToolButton::clicked, this, &TaskPanel::showStageDockWidget);
 }
 
@@ -96,12 +91,21 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    , settings(new rviz::PropertyTreeModel(new rviz::Property, q_ptr))
 {
 	setupUi(q_ptr);
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
+	// init tasks view
+	task_list_model->setStageFactory(getStageFactory());
 	tasks_view->setModel(task_list_model.get());
 
+	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
+	tasks_view->setAcceptDrops(true);
+	tasks_view->setDefaultDropAction(Qt::CopyAction);
+	tasks_view->setDropIndicatorShown(true);
+	tasks_view->setDragEnabled(true);
+
 	// init actions
-	tasks_view->addActions({actionRemoveTaskTreeRows});
+	tasks_view->addActions({actionRemoveTaskTreeRows, actionAddLocalTask});
+
+	initSettings(settings->getRoot());
+	settings_view->setModel(settings);
 }
 
 void TaskPanelPrivate::initSettings(rviz::Property* root)
@@ -124,11 +128,11 @@ void TaskPanel::load(const rviz::Config& config)
 	d_ptr->settings->getRoot()->load(config);
 }
 
-void TaskPanel::onAddTask()
+void TaskPanel::addTask()
 {
 	Q_D(TaskPanel);
 	QModelIndex current = d->tasks_view->currentIndex();
-	d_ptr->task_list_model->insertTask(new LocalTaskModel(this), current.row());
+	d_ptr->task_list_model->insertTask(new LocalTaskModel(d_ptr->task_list_model.get()), current.row());
 }
 
 void TaskPanel::showStageDockWidget()

@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include "pluginlib_factory.h"
+#include <moveit_task_constructor/stage.h>
+
 #include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor/Task.h>
 #include <moveit_task_constructor/Solution.h>
@@ -65,6 +68,12 @@ public:
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
 };
+
+
+typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
+typedef std::shared_ptr<StageFactory> StageFactoryPtr;
+StageFactoryPtr getStageFactory();
+
 
 class TaskListModelPrivate;
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
@@ -111,6 +120,12 @@ public:
 	void insertTask(BaseTaskModel* model, int row = -1);
 	bool removeTask(BaseTaskModel* model);
 	bool removeTasks(int row, int count);
+
+	/// providing a StageFactory makes the model accepting drops
+	void setStageFactory(const StageFactoryPtr &factory);
+	QStringList mimeTypes() const override;
+	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+	Qt::DropActions supportedDragActions() const override;
 
 private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))

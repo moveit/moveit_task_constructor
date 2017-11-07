@@ -35,9 +35,12 @@
 /* Author: Robert Haschke */
 
 #include "local_task_model.h"
+#include "factory_model.h"
 #include <container_p.h>
 
 #include <ros/console.h>
+
+#include <QMimeData>
 
 using namespace moveit::task_constructor;
 
@@ -75,6 +78,13 @@ QModelIndex LocalTaskModel::index(Node *n) const
 LocalTaskModel::LocalTaskModel(QObject *parent)
    : BaseTaskModel(parent)
    , Task()
+{
+	root_ = pimpl();
+}
+
+LocalTaskModel::LocalTaskModel(Stage::pointer &&container, QObject *parent)
+   : BaseTaskModel(parent)
+   , Task(std::move(container))
 {
 	root_ = pimpl();
 }
@@ -120,7 +130,9 @@ Qt::ItemFlags LocalTaskModel::flags(const QModelIndex &index) const
 {
 	Qt::ItemFlags flags = BaseTaskModel::flags(index);
 	ContainerBasePrivate *c = dynamic_cast<ContainerBasePrivate*>(node(index));
-	if (c) flags |= Qt::ItemIsDropEnabled;
+	// dropping into containers is enabled
+	if (c && stage_factory_)
+		flags |= Qt::ItemIsDropEnabled;
 	return flags;
 }
 
@@ -154,6 +166,36 @@ bool LocalTaskModel::setData(const QModelIndex &index, const QVariant &value, in
 		return false;
 	n->me()->setName(name.toStdString());
 	dataChanged(index, index);
+	return true;
+}
+
+void LocalTaskModel::setStageFactory(const StageFactoryPtr &factory)
+{
+	stage_factory_ = factory;
+}
+
+bool LocalTaskModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent)
+{
+	Q_UNUSED(column);
+
+	if (!stage_factory_ || (flags_ & IS_RUNNING))
+		return false;
+	const QString mime_type = stage_factory_->mimeType();
+	if (!mime->hasFormat(mime_type))
+		return false;
+
+	ContainerBasePrivate *c = dynamic_cast<ContainerBasePrivate*>(node(parent));
+	Q_ASSERT(c);
+
+	QString error;
+	moveit::task_constructor::Stage* stage
+	      = stage_factory_->makeRaw(mime->data(mime_type), &error);
+	if (!stage)
+		return false;
+
+	beginInsertRows(parent, row, row);
+	static_cast<ContainerBase*>(c->me())->insert(moveit::task_constructor::Stage::pointer(stage), row);
+	endInsertRows();
 	return true;
 }
 
