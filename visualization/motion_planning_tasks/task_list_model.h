@@ -44,12 +44,14 @@
 #include <moveit_task_constructor/Solution.h>
 
 #include <QAbstractItemModel>
+#include <QTreeView>
 #include <memory>
 
 namespace moveit_rviz_plugin {
 
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
+	Q_OBJECT
 protected:
 	unsigned int flags_ = 0;
 
@@ -139,5 +141,14 @@ private:
 };
 MOVEIT_CLASS_FORWARD(TaskListModel)
 typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
+
+
+class TaskListView : public QTreeView {
+	Q_OBJECT
+public:
+	TaskListView(QWidget *parent = nullptr);
+
+	void dropEvent(QDropEvent *event) override;
+};
 
 }

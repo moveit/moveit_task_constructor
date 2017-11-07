@@ -49,7 +49,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QTreeView" name="tasks_view">
+    <widget class="moveit_rviz_plugin::TaskListView" name="tasks_view">
      <property name="contextMenuPolicy">
       <enum>Qt::ActionsContextMenu</enum>
      </property>
@@ -91,6 +91,11 @@
    <class>rviz::PropertyTreeWidget</class>
    <extends>QTreeView</extends>
    <header location="global">rviz/properties/property_tree_widget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>moveit_rviz_plugin::TaskListView</class>
+   <extends>QTreeView</extends>
+   <header>task_list_model.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

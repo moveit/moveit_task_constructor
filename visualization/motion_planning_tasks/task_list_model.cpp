@@ -41,6 +41,7 @@
 
 #include <ros/console.h>
 #include <QMimeData>
+#include <qevent.h>
 
 namespace moveit_rviz_plugin {
 
@@ -522,6 +523,21 @@ void TaskListModelPrivate::_q_sourceRowsRemoved(const QModelIndex &parent, int s
 void TaskListModelPrivate::_q_sourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
 {
 	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight), roles);
+}
+
+
+TaskListView::TaskListView(QWidget *parent)
+   : QTreeView(parent)
+{
+}
+
+// dropping onto an item, should expand this item
+void TaskListView::dropEvent(QDropEvent *event)
+{
+	QModelIndex index = indexAt(event->pos());
+	QTreeView::dropEvent(event);
+	if (event->isAccepted())
+		expand(index);
 }
 
 }
