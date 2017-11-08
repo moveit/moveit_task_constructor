@@ -8,10 +8,6 @@
 
 #include <moveit/macros/class_forward.h>
 
-namespace moveit { namespace planning_interface {
-MOVEIT_CLASS_FORWARD(MoveGroupInterface);
-} }
-
 namespace moveit { namespace task_constructor { namespace stages {
 
 class GenerateGraspPose : public Generator {
