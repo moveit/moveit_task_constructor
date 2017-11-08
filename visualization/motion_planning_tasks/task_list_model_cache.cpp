@@ -49,14 +49,13 @@ TaskListModelCache &TaskListModelCache::instance()
 	return instance_;
 }
 
-TaskListModelPtr TaskListModelCache::getModel(const QString &task_monitor_topic,
-                                              const QString &task_solution_topic)
+TaskListModelPtr TaskListModelCache::getModel(const std::string& ns)
 {
-	if (task_monitor_topic.isEmpty() || task_solution_topic.isEmpty()) {
+	if (ns.empty()) {
 		return TaskListModelPtr();
 	} else {
 		// retrieve existing model for given topic pair
-		TaskListModelWeakPtr& model = cache_[std::make_pair(task_monitor_topic, task_solution_topic)];
+		TaskListModelWeakPtr& model = cache_[ns];
 		TaskListModelPtr result;
 
 		if (model.expired()) {

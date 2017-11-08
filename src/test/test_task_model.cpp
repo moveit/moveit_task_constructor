@@ -53,23 +53,25 @@ protected:
 	int num_inserts = 0;
 	int num_updates = 0;
 
-	moveit_task_constructor::Task genMsg(const std::string &name) {
-		moveit_task_constructor::Task t;
+	moveit_task_constructor::TaskDescription genMsg(const std::string &name) {
+		moveit_task_constructor::TaskDescription t;
 		t.id = name;
-		uint id = 0;
+		uint id = 0, root_id;
 
-		moveit_task_constructor::Stage root;
-		root.parent_id = id;
-		root.id = ++id;
-		root.name = name;
-		t.stages.push_back(root);
+		moveit_task_constructor::StageDescription desc;
+		moveit_task_constructor::StageStatistics stat;
+		desc.parent_id = stat.parent_id = id;
+		desc.id = stat.id = root_id = ++id;
+		desc.name = name;
+		t.description.push_back(desc);
+		t.statistics.push_back(stat);
 
 		for (int i = 0; i != children; ++i) {
-			moveit_task_constructor::Stage child;
-			child.parent_id = root.id;
-			child.id = ++id;
-			child.name = std::to_string(i);
-			t.stages.push_back(child);
+			desc.parent_id = stat.parent_id = root_id;
+			desc.id = stat.id = ++id;
+			desc.name = std::to_string(i);
+			t.description.push_back(desc);
+			t.statistics.push_back(stat);
 		}
 		return t;
 	}
@@ -123,7 +125,7 @@ protected:
 			SCOPED_TRACE("first i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskMessage(genMsg("first"));
+			model.processTaskDescriptionMessage(genMsg("first"));
 
 			if (i == 0) EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
 			else EXPECT_EQ(num_inserts, 0);
@@ -135,7 +137,7 @@ protected:
 			SCOPED_TRACE("second i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskMessage(genMsg("second"));  // 1 notify for inserted task
+			model.processTaskDescriptionMessage(genMsg("second"));  // 1 notify for inserted task
 
 			if (i == 0) EXPECT_EQ(num_inserts, 1);
 			else EXPECT_EQ(num_inserts, 0);
@@ -157,7 +159,7 @@ protected:
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
 	moveit_rviz_plugin::RemoteTaskModel m;
-	m.processTaskMessage(genMsg("first"));
+	m.processStageDescriptions(genMsg("first").description);
 	SCOPED_TRACE("first");
 	validate(m, {"first"});
 }
@@ -188,13 +190,13 @@ TEST_F(TaskListModelTest, threeChildren) {
 TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
-	model.processTaskMessage(genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"));
 	validate(model, {"first"}); // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
-	model.processTaskMessage(genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"));
 	validate(model, {"first"});
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);

@@ -431,8 +431,9 @@ void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor::So
     return;
   }
 
-  if (!msg.model_id.empty() && msg.model_id != robot_model_->getName())
-    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected", msg.model_id.c_str(),
+  if (msg.start_scene.robot_model_name != robot_model_->getName())
+    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected",
+             msg.start_scene.robot_model_name .c_str(),
              robot_model_->getName().c_str());
 
   trajectory_message_to_display_.reset();

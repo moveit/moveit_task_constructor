@@ -68,9 +68,8 @@ void SubTrajectory::fillMessage(moveit_task_constructor::Solution &msg) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor::SubTrajectory& t = msg.sub_trajectory.back();
 	t.id = this->id();
-	t.name = this->name();
 	t.cost = this->cost();
-	t.stage = this->creator()->name();
+	t.name = this->name();
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 	t.markers = this->markers();

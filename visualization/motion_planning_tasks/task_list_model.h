@@ -37,7 +37,8 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
-#include <moveit_task_constructor/Task.h>
+#include <moveit_task_constructor/TaskDescription.h>
+#include <moveit_task_constructor/TaskStatistics.h>
 #include <moveit_task_constructor/Solution.h>
 
 #include <QAbstractItemModel>
@@ -89,8 +90,10 @@ public:
 
 	bool removeRows(int row, int count, const QModelIndex &parent) override;
 
-	/// process an incoming task message - only call in Qt's main loop
-	void processTaskMessage(const moveit_task_constructor::Task &msg);
+	/// process an incoming task description message - only call in Qt's main loop
+	void processTaskDescriptionMessage(const moveit_task_constructor::TaskDescription &msg);
+	/// process an incoming task description message - only call in Qt's main loop
+	void processTaskStatisticsMessage(const moveit_task_constructor::TaskStatistics &msg);
 	/// process an incoming solution message - only call in Qt's main loop
 	void processSolutionMessage(const moveit_task_constructor::Solution &msg);
 

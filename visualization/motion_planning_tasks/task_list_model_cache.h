@@ -45,7 +45,7 @@ namespace moveit_rviz_plugin {
  *
  *  This global model instance is used by TaskPanels and can be retrieved via getGlobalModel().
  *  Additionally, this instance maintains a cache for all TaskListModels used e.g. by TaskDisplays.
- *  Displays subscribing to the same (monitor, solution) topic pair, will share the same model.
+ *  Displays subscribing to the same topic namespace, will share the same model.
  *
  *  This is a singleton instance.
  */
@@ -53,7 +53,7 @@ class TaskListModelCache : public QObject {
 	Q_OBJECT
 
 	TaskListModelPtr global_model_;
-	std::map<std::pair<QString, QString>, TaskListModelWeakPtr> cache_;
+	std::map<std::string, TaskListModelWeakPtr> cache_;
 
 	/// class is singleton
 	TaskListModelCache();
@@ -68,8 +68,7 @@ public:
 	static TaskListModelCache& instance();
 
 	/// get TaskListModel for a TaskDisplay
-	TaskListModelPtr getModel(const QString& task_monitor_topic,
-	                          const QString& task_solution_topic);
+	TaskListModelPtr getModel(const std::__cxx11::string &ns);
 
 	/// get global TaskListModel instance used for panels
 	TaskListModelPtr getGlobalModel();

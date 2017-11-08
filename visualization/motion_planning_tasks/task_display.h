@@ -84,15 +84,15 @@ private Q_SLOTS:
    * \brief Slot Event Functions
    */
   void changedRobotDescription();
-  void changedTaskMonitorTopic();
   void changedTaskSolutionTopic();
 
 protected:
   void updateTaskListModel();
 
 protected:
-  ros::Subscriber task_monitor_sub;
   ros::Subscriber task_solution_sub;
+  ros::Subscriber task_description_sub;
+  ros::Subscriber task_statistics_sub;
   // handle processing of task+solution messages in Qt mainloop
   moveit::tools::JobQueue mainloop_jobs_;
 
@@ -107,7 +107,6 @@ protected:
 
   // Properties
   rviz::StringProperty* robot_description_property_;
-  rviz::RosTopicProperty* task_monitor_topic_property_;
   rviz::RosTopicProperty* task_solution_topic_property_;
 };
 

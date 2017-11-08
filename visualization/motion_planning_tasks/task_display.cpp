@@ -57,18 +57,11 @@ TaskDisplay::TaskDisplay() : Display()
 	                                 "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
 	                                 this, SLOT(changedRobotDescription()), this);
 
-	task_monitor_topic_property_ =
-	      new rviz::RosTopicProperty("Task Monitor Topic", DEFAULT_TASK_MONITOR_TOPIC,
-	                                 ros::message_traits::datatype<moveit_task_constructor::Task>(),
-	                                 "The topic on which task updates (moveit_msgs::Task messages) are received",
-	                                 this, SLOT(changedTaskMonitorTopic()), this);
-
 	task_solution_topic_property_ =
-	      new rviz::RosTopicProperty("Task Solution Topic", DEFAULT_TASK_SOLUTION_TOPIC,
+	      new rviz::RosTopicProperty("Task Solution Topic", "",
 	                                 ros::message_traits::datatype<moveit_task_constructor::Solution>(),
 	                                 "The topic on which task solutions (moveit_msgs::Solution messages) are received",
 	                                 this, SLOT(changedTaskSolutionTopic()), this);
-
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
 }
@@ -122,7 +115,8 @@ void TaskDisplay::onDisable()
 	trajectory_visual_->onDisable();
 
 	// don't monitor topics when disabled
-	task_monitor_sub.shutdown();
+	task_description_sub.shutdown();
+	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
 }
 
@@ -149,44 +143,49 @@ void TaskDisplay::changedRobotDescription()
 
 void TaskDisplay::updateTaskListModel()
 {
-	task_model_ = TaskListModelCache::instance().getModel(
-	                 task_monitor_topic_property_->getString(),
-	                 task_solution_topic_property_->getString());
+	// generate task monitoring topics from solution topic
+	std::string solution_topic = task_solution_topic_property_->getStdString();
+	auto lastSep = solution_topic.find_last_of('/');
+	std::string base_ns = solution_topic.substr(0, lastSep);
 
-	if (!task_model_) {
-		if (task_monitor_topic_property_->getString().isEmpty())
-			setStatus(rviz::StatusProperty::Warn, "Task Monitor", "invalid task monitor topic");
-		else if (task_solution_topic_property_->getString().isEmpty())
-			setStatus(rviz::StatusProperty::Warn, "Task Monitor", "invalid task solution topic");
-		else
-			setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
+	task_model_ = TaskListModelCache::instance().getModel(base_ns);
+
+	if (task_model_) {
+		// listen to task descriptions updates
+		boost::function<void(const moveit_task_constructor::TaskDescriptionConstPtr &)> taskDescCB
+		      ([this](const moveit_task_constructor::TaskDescriptionConstPtr &msg){
+			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskDescriptionMessage(*msg); });
+		});
+		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, taskDescCB);
+
+		// listen to task statistics updates
+		boost::function<void(const moveit_task_constructor::TaskDescriptionConstPtr &)> taskStatCB
+		      ([this](const moveit_task_constructor::TaskDescriptionConstPtr &msg){
+			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskDescriptionMessage(*msg); });
+		});
+		task_description_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, taskStatCB);
 	} else {
-		boost::function<void(const moveit_task_constructor::TaskConstPtr &)> taskCB
-		      ([this](const moveit_task_constructor::TaskConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskMessage(*msg); });
-		});
-		task_monitor_sub = update_nh_.subscribe(task_monitor_topic_property_->getStdString(), 2, taskCB);
-
-		boost::function<void(const moveit_task_constructor::SolutionConstPtr &)> solCB
-		      ([this](const moveit_task_constructor::SolutionConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processSolutionMessage(*msg); });
-			// TODO: use already processed trajectory (e.g. by ID)
-			mainloop_jobs_.addJob([this, msg]() {trajectory_visual_->showTrajectory(*msg);});
-		});
-		task_solution_sub = update_nh_.subscribe(task_solution_topic_property_->getStdString(), 2, solCB);
-
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
+		setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
 	}
-}
 
-void TaskDisplay::changedTaskMonitorTopic()
-{
-	task_monitor_sub.shutdown();
-	updateTaskListModel();
+	// listen to task solutions
+	boost::function<void(const moveit_task_constructor::SolutionConstPtr &)> solCB
+	      ([this](const moveit_task_constructor::SolutionConstPtr &msg){
+		mainloop_jobs_.addJob([this, msg]() {
+			if (task_model_) task_model_->processSolutionMessage(*msg);
+			// TODO: use already processed trajectory (e.g. by ID)
+			trajectory_visual_->showTrajectory(*msg);
+		});
+	});
+	task_solution_sub = update_nh_.subscribe(solution_topic, 2, solCB);
+
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
 }
 
 void TaskDisplay::changedTaskSolutionTopic()
 {
+	task_description_sub.shutdown();
+	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
 	updateTaskListModel();
 }

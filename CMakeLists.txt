@@ -18,15 +18,16 @@ find_package(catkin REQUIRED COMPONENTS
 # ROS messages, services and actions
 add_message_files(DIRECTORY msg
 	FILES
-	Stage.msg
-	Task.msg
+	StageDescription.msg
+	StageStatistics.msg
+	TaskDescription.msg
+	TaskStatistics.msg
+	Solution.msg
 	SubSolution.msg
 	SubTrajectory.msg
-	Solution.msg
 )
 add_service_files(DIRECTORY srv
 	FILES
-	GetInterfaceState.srv
 	GetSolution.srv
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})

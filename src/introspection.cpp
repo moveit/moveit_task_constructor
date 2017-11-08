@@ -7,15 +7,14 @@
 
 namespace moveit { namespace task_constructor {
 
-Introspection::Introspection(const std::string &task_topic,
-                             const std::string &solution_topic)
+Introspection::Introspection()
 {
 	ros::NodeHandle n;
-	task_publisher_ = n.advertise<moveit_task_constructor::Task>(task_topic, 1);
-	solution_publisher_ = n.advertise<::moveit_task_constructor::Solution>(solution_topic, 1, true);
+	task_description_publisher_ = n.advertise<moveit_task_constructor::TaskDescription>(DESCRIPTION_TOPIC, 1);
+	task_statistics_publisher_ = n.advertise<moveit_task_constructor::TaskStatistics>(STATISTICS_TOPIC, 1);
+	solution_publisher_ = n.advertise<::moveit_task_constructor::Solution>(SOLUTION_TOPIC, 1, true);
 
 	n = ros::NodeHandle("~"); // services are advertised in private namespace
-	get_interface_state_service_ = n.advertiseService("get_interface_state", &Introspection::getInterfaceState, this);
 	get_solution_service_ = n.advertiseService("get_solution", &Introspection::getSolution, this);
 }
 
@@ -25,10 +24,16 @@ Introspection &Introspection::instance()
 	return instance_;
 }
 
-void Introspection::publishTask(const Task &t)
+void Introspection::publishTaskDescription(const Task &t)
 {
-	::moveit_task_constructor::Task msg;
-	task_publisher_.publish(t.fillMessage(msg));
+	::moveit_task_constructor::TaskDescription msg;
+	task_description_publisher_.publish(t.fillTaskDescription(msg));
+}
+
+void Introspection::publishTaskState(const Task &t)
+{
+	::moveit_task_constructor::TaskStatistics msg;
+	task_statistics_publisher_.publish(t.fillTaskStatistics(msg));
 }
 
 void Introspection::publishSolution(const SolutionBase &s)
@@ -36,16 +41,6 @@ void Introspection::publishSolution(const SolutionBase &s)
 	::moveit_task_constructor::Solution msg;
 	s.fillMessage(msg);
 	publishSolution(msg);
-}
-
-bool Introspection::getInterfaceState(moveit_task_constructor::GetInterfaceState::Request  &req,
-                                      moveit_task_constructor::GetInterfaceState::Response &res)
-{
-	const InterfaceState& state = Repository<InterfaceState>::instance()[req.state_id];
-	moveit_msgs::PlanningScene msg;
-	state.scene()->getPlanningSceneDiffMsg(msg);
-	res.scene = msg;
-	return true;
 }
 
 bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &req,

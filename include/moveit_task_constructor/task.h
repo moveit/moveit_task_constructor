@@ -6,7 +6,8 @@
 #include "container.h"
 
 #include <moveit/macros/class_forward.h>
-#include <moveit_task_constructor/Task.h>
+#include <moveit_task_constructor/TaskDescription.h>
+#include <moveit_task_constructor/TaskStatistics.h>
 #include <moveit_task_constructor/Solution.h>
 
 namespace robot_model_loader {
@@ -57,8 +58,10 @@ public:
 	bool plan();
 	/// print current state std::cout
 	static void printState(const Task &t);
-	/// fill task message for publishing the current state
-	moveit_task_constructor::Task& fillMessage(moveit_task_constructor::Task& msg) const;
+	/// fill task description message for publishing the task configuration
+	moveit_task_constructor::TaskDescription& fillTaskDescription(moveit_task_constructor::TaskDescription& msg) const;
+	/// fill task state message for publishing the current task state
+	moveit_task_constructor::TaskStatistics& fillTaskStatistics(moveit_task_constructor::TaskStatistics& msg) const;
 
 	size_t numSolutions() const override;
 

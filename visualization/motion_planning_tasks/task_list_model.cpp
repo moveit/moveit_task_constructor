@@ -254,10 +254,9 @@ bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
 	return false;
 }
 
-// process a task monitoring message:
-// update existing RemoteTask, create a new one,
-// or (if msg.stages is empty) delete an existing one
-void TaskListModel::processTaskMessage(const moveit_task_constructor::Task &msg)
+// process a task description message:
+// update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
+void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor::TaskDescription &msg)
 {
 	Q_D(TaskListModel);
 
@@ -266,8 +265,8 @@ void TaskListModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 	bool created = it_inserted.second;
 	RemoteTaskModel*& remote_task = it_inserted.first->second;
 
-	// empty stages list indicates, that this remote task is not available anymore
-	if (msg.stages.empty()) {
+	// empty list indicates, that this remote task is not available anymore
+	if (msg.description.empty()) {
 		if (!remote_task) { // task was already deleted locally
 			// we can now remove it from remote_tasks_
 			d->remote_tasks_.erase(it_inserted.first);
@@ -287,13 +286,30 @@ void TaskListModel::processTaskMessage(const moveit_task_constructor::Task &msg)
 	if (!remote_task)
 		return; // task is not in use anymore
 
-	remote_task->processTaskMessage(msg);
+	remote_task->processStageDescriptions(msg.description);
+	remote_task->processStageStatistics(msg.statistics);
 
 	// insert newly created model into this' model instance
 	if (created) {
 		ROS_DEBUG_NAMED("TaskListModel", "received new Task: %s", msg.id.c_str());
 		insertTask(remote_task, -1);
 	}
+}
+
+// process a task statistics message
+void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor::TaskStatistics &msg)
+{
+	Q_D(TaskListModel);
+
+	auto it = d->remote_tasks_.find(msg.id);
+	if (it == d->remote_tasks_.cend())
+		return; // unkown task
+
+	RemoteTaskModel* remote_task = it->second;
+	if (!remote_task)
+		return; // task is not in use anymore
+
+	remote_task->processStageStatistics(msg.stages);
 }
 
 void TaskListModel::processSolutionMessage(const moveit_task_constructor::Solution &msg)

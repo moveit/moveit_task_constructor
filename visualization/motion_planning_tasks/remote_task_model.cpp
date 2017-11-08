@@ -182,11 +182,10 @@ bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, i
 	return n->setName(value.toString());
 }
 
-typedef moveit_task_constructor::Stage StageMsg;
-void RemoteTaskModel::processTaskMessage(const moveit_task_constructor::Task &msg)
+void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor::TaskDescription::_description_type &msg)
 {
-	// iterate over msg.stages and create new nodes where needed
-	for (const StageMsg &s : msg.stages) {
+	// iterate over descriptions and create new / update existing nodes where needed
+	for (const auto &s : msg) {
 		// find parent node for stage s, this should always exist
 		auto parent_it = id_to_stage_.find(s.parent_id);
 		if (parent_it == id_to_stage_.end()) {
@@ -227,6 +226,10 @@ void RemoteTaskModel::processTaskMessage(const moveit_task_constructor::Task &ms
 			dataChanged(idx, idx);
 		}
 	}
+}
+
+void RemoteTaskModel::processStageStatistics(const moveit_task_constructor::TaskDescription::_statistics_type &msg)
+{
 }
 
 }

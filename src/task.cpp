@@ -216,7 +216,7 @@ void Task::printState(const Task &t){
 	t.stages()->traverseRecursively(processor);
 }
 
-void fillStateList(moveit_task_constructor::Stage::_received_starts_type &c,
+void fillInterfaceList(moveit_task_constructor::StageStatistics::_received_starts_type &c,
                    const InterfaceConstPtr& interface) {
 	c.clear();
 	if (!interface) return;
@@ -224,50 +224,94 @@ void fillStateList(moveit_task_constructor::Stage::_received_starts_type &c,
 		c.push_back(state.id());
 }
 
-moveit_task_constructor::Task& Task::fillMessage(moveit_task_constructor::Task &msg) const
+void fillStageStatistics(const Stage& stage, moveit_task_constructor::StageStatistics& s)
 {
-	std::map<const Stage*, moveit_task_constructor::Stage::_id_type> stage_to_id_map;
+	const StagePrivate *simpl = stage.pimpl();
+
+	fillInterfaceList(s.received_starts, simpl->starts());
+	fillInterfaceList(s.received_ends, simpl->ends());
+	fillInterfaceList(s.generated_starts, simpl->nextStarts());
+	fillInterfaceList(s.generated_ends, simpl->prevEnds());
+
+	// insert solution IDs
+	Stage::SolutionProcessor solutionProcessor = [&s](const SolutionBase& solution) {
+		s.solved.push_back(solution.id());
+		return true;
+	};
+	stage.processSolutions(solutionProcessor);
+
+	solutionProcessor = [&s](const SolutionBase& solution) {
+		s.failed.push_back(solution.id());
+		return true;
+	};
+	stage.processFailures(solutionProcessor);
+}
+
+moveit_task_constructor::TaskDescription& Task::fillTaskDescription(moveit_task_constructor::TaskDescription &msg) const
+{
+	std::map<const Stage*, moveit_task_constructor::StageStatistics::_id_type> stage_to_id_map;
+	stage_to_id_map[this] = 0; // ID for root
+
 	ContainerBase::StageCallback stageProcessor =
 	      [&stage_to_id_map, &msg](const Stage& stage, int) -> bool {
 		// this method is called for each child stage of a given parent
-		const StagePrivate *simpl = stage.pimpl();
+		moveit_task_constructor::StageDescription desc;
+		moveit_task_constructor::StageStatistics stat;
+		desc.id = stat.id = stage_to_id_map.size();
+		stage_to_id_map[&stage] = stat.id;
 
-		moveit_task_constructor::Stage s; // create new Stage msg
-		s.id = stage_to_id_map.size();
-		stage_to_id_map[&stage] = s.id;
-		s.name = stage.name();
-		s.flags = stage.pimpl()->interfaceFlags();
-		auto it = stage_to_id_map.find(simpl->parent());
+		desc.name = stage.name();
+		desc.flags = stage.pimpl()->interfaceFlags();
+		// TODO fill stage properties
+
+		auto it = stage_to_id_map.find(stage.pimpl()->parent());
 		assert (it != stage_to_id_map.cend());
-		s.parent_id = it->second;
+		desc.parent_id = stat.parent_id = it->second;
 
-		fillStateList(s.received_starts, simpl->starts());
-		fillStateList(s.received_ends, simpl->ends());
-		fillStateList(s.generated_starts, simpl->nextStarts());
-		fillStateList(s.generated_ends, simpl->prevEnds());
+		fillStageStatistics(stage, stat);
 
-		// insert solution IDs
-		Stage::SolutionProcessor solutionProcessor = [&s](const SolutionBase& solution) {
-			s.solved.push_back(solution.id());
-			return true;
-		};
-		stage.processSolutions(solutionProcessor);
-
-		solutionProcessor = [&s](const SolutionBase& solution) {
-			s.failed.push_back(solution.id());
-			return true;
-		};
-		stage.processFailures(solutionProcessor);
-
-		// finally store in msg.stages
-		msg.stages.push_back(std::move(s));
+		// finally store in msg
+		msg.description.push_back(std::move(desc));
+		msg.statistics.push_back(std::move(stat));
 		return true;
 	};
 
-	msg.id = id();
-	msg.stages.clear();
-	stage_to_id_map[this] = 0; // ID for root
+	msg.description.clear();
+	msg.statistics.clear();
 	stages()->traverseRecursively(stageProcessor);
+
+	msg.id = id();
+	return msg;
+}
+
+moveit_task_constructor::TaskStatistics& Task::fillTaskStatistics(moveit_task_constructor::TaskStatistics &msg) const
+{
+	std::map<const Stage*, moveit_task_constructor::StageStatistics::_id_type> stage_to_id_map;
+	stage_to_id_map[this] = 0; // ID for root
+
+	ContainerBase::StageCallback stageProcessor =
+	      [&stage_to_id_map, &msg](const Stage& stage, int) -> bool {
+		// this method is called for each child stage of a given parent
+
+		moveit_task_constructor::StageStatistics stat; // create new Stage msg
+		stat.id = stage_to_id_map.size();
+		stage_to_id_map[&stage] = stat.id;
+
+		auto it = stage_to_id_map.find(stage.pimpl()->parent());
+		assert (it != stage_to_id_map.cend());
+		stat.parent_id = it->second;
+
+		fillStageStatistics(stage, stat);
+
+		// finally store in msg.stages
+		msg.stages.push_back(std::move(stat));
+		return true;
+	};
+
+	msg.stages.clear();
+	stages()->traverseRecursively(stageProcessor);
+
+	msg.id = id();
 	return msg;
 }
 
