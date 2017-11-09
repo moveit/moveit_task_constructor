@@ -1,9 +1,6 @@
 #include <moveit_task_constructor/stages/cartesian_position_motion.h>
 #include <moveit_task_constructor/storage.h>
 
-#include <ros/ros.h>
-#include <moveit_msgs/DisplayTrajectory.h>
-
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/robot_state/robot_state.h>
@@ -19,9 +16,6 @@ CartesianPositionMotion::CartesianPositionMotion(std::string name)
 : PropagatingEitherWay(name),
   step_size_(0.005)
 {
-	ros::NodeHandle nh;
-	pub= nh.advertise<moveit_msgs::DisplayTrajectory>("move_group/display_planned_path", 50);
-	ros::Duration(1.0).sleep();
 }
 
 void CartesianPositionMotion::setGroup(std::string group){
@@ -148,10 +142,6 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 		for( auto& tp : trajectory_steps )
 			traj->addSuffixWayPoint(tp, 0.0);
 		sendForward(from, InterfaceState(result_scene), traj);
-
-		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
-		robot_state= *result_state;
-		_publishTrajectory(result_scene, *traj, *result_state);
 	}
 
 	return succeeded;
@@ -214,27 +204,9 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 		for( auto& tp : trajectory_steps )
 			traj->addPrefixWayPoint(tp, 0.0);
 		sendBackward(InterfaceState(result_scene), to, traj);
-
-		moveit::core::RobotStatePtr result_state= trajectory_steps.back();
-		robot_state= *result_state;
-
-		_publishTrajectory(result_scene, *traj, *result_state);
 	}
 
 	return succeeded;
-}
-
-
-void CartesianPositionMotion::_publishTrajectory(const planning_scene::PlanningSceneConstPtr& scene,
-                                                 const robot_trajectory::RobotTrajectory& trajectory,
-                                                 const moveit::core::RobotState& start){
-	moveit_msgs::DisplayTrajectory dt;
-	robot_state::robotStateToRobotStateMsg(start, dt.trajectory_start);
-	dt.model_id= scene->getRobotModel()->getName();
-	dt.trajectory.resize(1);
-	trajectory.getRobotTrajectoryMsg(dt.trajectory[0]);
-	dt.model_id= start.getRobotModel()->getName();
-	pub.publish(dt);
 }
 
 } } }

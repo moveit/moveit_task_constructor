@@ -63,6 +63,14 @@ void StagePrivate::validate() const {
 	if (errors) throw errors;
 }
 
+void StagePrivate::newSolution(SolutionBase &solution)
+{
+	for (const auto& cb : solution_cbs_)
+		cb(solution);
+	if (parent())
+		parent()->onNewSolution(solution);
+}
+
 Stage::Stage(StagePrivate *impl)
    : pimpl_(impl)
 {
@@ -102,6 +110,18 @@ const std::string& Stage::name() const {
 void Stage::setName(const std::string& name)
 {
 	pimpl_->name_ = name;
+}
+
+Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionCallback &&cb)
+{
+	auto impl = pimpl();
+	impl->solution_cbs_.emplace_back(std::move(cb));
+	return --impl->solution_cbs_.cend();
+}
+
+void Stage::erase(SolutionCallbackList::const_iterator which)
+{
+	pimpl()->solution_cbs_.erase(which);
 }
 
 template<InterfaceFlag own, InterfaceFlag other>
@@ -321,7 +341,7 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
 	SubTrajectory &trajectory = addTrajectory(t, cost);
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
-	impl->parent()->onNewSolution(trajectory);
+	impl->newSolution(trajectory);
 }
 
 void PropagatingEitherWay::sendBackward(InterfaceState&& from,
@@ -333,7 +353,7 @@ void PropagatingEitherWay::sendBackward(InterfaceState&& from,
 	SubTrajectory& trajectory = addTrajectory(t, cost);
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
-	impl->parent()->onNewSolution(trajectory);
+	impl->newSolution(trajectory);
 }
 
 
@@ -404,7 +424,7 @@ void Generator::spawn(InterfaceState&& state, double cost)
 	SubTrajectory& trajectory = addTrajectory(dummy, cost);
 	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
 	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
-	impl->parent()->onNewSolution(trajectory);
+	impl->newSolution(trajectory);
 }
 
 
@@ -455,7 +475,7 @@ void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
 	SubTrajectory& trajectory = addTrajectory(t, cost);
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
-	impl->parent()->onNewSolution(trajectory);
+	impl->newSolution(trajectory);
 }
 
 } }

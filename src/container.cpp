@@ -260,8 +260,8 @@ void SerialContainerPrivate::storeNewSolution(SerialContainer::solution_containe
 		nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
 	}
 
-	// inform parent about new solution
-	parent()->onNewSolution(solutions_.back());
+	// perform default stage action on new solution
+	newSolution(solutions_.back());
 }
 
 
@@ -449,8 +449,8 @@ void ParallelContainerBase::onNewSolution(SolutionBase &s)
 
 	// store solution in our own list
 	impl->solutions_.emplace_back(std::move(wrapped));
-	// inform parent
-	impl->parent()->onNewSolution(impl->solutions_.back());
+	// perform default stage action on new solution
+	impl->newSolution(impl->solutions_.back());
 }
 
 

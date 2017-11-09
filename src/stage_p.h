@@ -56,12 +56,17 @@ public:
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
 
+	void newSolution(SolutionBase &current);
+
 protected:
 	Stage* const me_; // associated/owning Stage instance
 	std::string name_;
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
+
+	// functions called for each new solution
+	std::list<Stage::SolutionCallback> solution_cbs_;
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!

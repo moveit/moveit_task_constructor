@@ -112,15 +112,10 @@ void Task::enableIntrospection(bool enable)
 		introspection_.reset();
 }
 
-Task::SolutionCallbackList::const_iterator Task::addSolutionCallback(SolutionCallback &&cb)
+Introspection &Task::introspection()
 {
-	solution_cbs_.emplace_back(std::move(cb));
-	return --solution_cbs_.cend();
-}
-
-void Task::erase(SolutionCallbackList::const_iterator which)
-{
-	solution_cbs_.erase(which);
+	enableIntrospection(true);
+	return *introspection_;
 }
 
 Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback &&cb)
@@ -216,8 +211,7 @@ void Task::publishAllSolutions(bool wait)
 
 void Task::onNewSolution(SolutionBase &s)
 {
-	for (const auto& cb : solution_cbs_)
-		cb(s);
+	pimpl()->newSolution(s);
 	if (introspection_)
 		introspection_->publishSolution(s);
 }

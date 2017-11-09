@@ -4,8 +4,6 @@
 
 #include <moveit_task_constructor/stage.h>
 
-#include <ros/ros.h>
-
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/PointStamped.h>
 
@@ -52,10 +50,6 @@ protected:
 	geometry_msgs::Vector3Stamped along_;
 
 	double step_size_;
-
-	ros::Publisher pub;
-
-	void _publishTrajectory(const planning_scene::PlanningSceneConstPtr &scene, const robot_trajectory::RobotTrajectory& trajectory, const moveit::core::RobotState& start);
 };
 
 } } }

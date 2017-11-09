@@ -59,6 +59,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
+		move->addSolutionCallback(std::ref(t.introspection()));
 		move->setGroup("arm");
 		move->setLink("s_model_tool0");
 		move->setMinMaxDistance(.03, 0.1);

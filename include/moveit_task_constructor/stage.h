@@ -100,6 +100,13 @@ public:
 	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
 	virtual void processFailures(const SolutionProcessor &processor) const {}
 
+	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
+	typedef std::list<SolutionCallback> SolutionCallbackList;
+	/// add function to be called for every newly found solution
+	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
+	/// remove function callback
+	void erase(SolutionCallbackList::const_iterator which);
+
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);

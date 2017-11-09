@@ -4,10 +4,6 @@
 
 #include <moveit_task_constructor/stage.h>
 
-#include <ros/ros.h>
-
-#include <moveit/macros/class_forward.h>
-
 namespace moveit { namespace task_constructor { namespace stages {
 
 class GenerateGraspPose : public Generator {
@@ -70,8 +66,6 @@ protected:
 	bool tried_current_state_as_seed_ = false;
 
 	std::vector< std::vector<double> > previous_solutions_;
-
-	ros::Publisher pub;
 };
 
 } } }

@@ -21,9 +21,6 @@ namespace moveit { namespace task_constructor { namespace stages {
 GenerateGraspPose::GenerateGraspPose(std::string name)
 : Generator(name)
 {
-	ros::NodeHandle nh;
-	pub= nh.advertise<moveit_msgs::DisplayRobotState>("display_robot_state", 50);
-	ros::Duration(1.0).sleep();
 }
 
 void GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -162,11 +159,7 @@ bool GenerateGraspPose::compute(){
 		bool succeeded= grasp_state.setFromIK(jmg_active, grasp_pose, ik_link, 1, remaining_time_, is_valid);
 		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
-		if(succeeded){
-			moveit_msgs::DisplayRobotState drs;
-			robot_state::robotStateToRobotStateMsg(grasp_state, drs.state);
-			pub.publish(drs);
-
+		if(succeeded) {
 			previous_solutions_.emplace_back();
 			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
 			spawn(InterfaceState(grasp_scene));

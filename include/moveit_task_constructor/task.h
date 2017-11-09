@@ -49,17 +49,11 @@ public:
 
 	/// enable introspection publishing for use with rviz
 	void enableIntrospection(bool enable = true);
-
-	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
-	typedef std::list<SolutionCallback> SolutionCallbackList;
-	/// add function to be called for every newly found solution
-	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
-	/// remove function callback
-	void erase(SolutionCallbackList::const_iterator which);
+	Introspection &introspection();
 
 	typedef std::function<void(const Task &t)> TaskCallback;
 	typedef std::list<TaskCallback> TaskCallbackList;
-	/// add function to be called for every newly found solution
+	/// add function to be called after each top-level iteration
 	TaskCallbackList::const_iterator addTaskCallback(TaskCallback &&cb);
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
@@ -112,7 +106,6 @@ private:
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;
-	std::list<Task::SolutionCallback> solution_cbs_; // functions called for each new solution
 	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 };
 
