@@ -141,43 +141,58 @@ void TaskDisplay::changedRobotDescription()
 		loadRobotModel();
 }
 
+void TaskDisplay::taskDescriptionCB(const ros::MessageEvent<const moveit_task_constructor::TaskDescription> &event)
+{
+	const moveit_task_constructor::TaskDescriptionConstPtr& msg = event.getMessage();
+	const std::string id = event.getPublisherName() + "/" + msg->id;
+	mainloop_jobs_.addJob([this, id, msg]() {
+		task_model_->processTaskDescriptionMessage(id, *msg);
+	});
+}
+
+void TaskDisplay::taskStatisticsCB(const ros::MessageEvent<const moveit_task_constructor::TaskStatistics> &event)
+{
+	const moveit_task_constructor::TaskStatisticsConstPtr& msg = event.getMessage();
+	const std::string id = event.getPublisherName() + "/" + msg->id;
+	mainloop_jobs_.addJob([this, id, msg]() {
+		task_model_->processTaskStatisticsMessage(id, *msg);
+	});
+}
+
+void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_constructor::Solution> &event)
+{
+	const moveit_task_constructor::SolutionConstPtr& msg = event.getMessage();
+	const std::string id = event.getPublisherName() + "/" + msg->task_id;
+	mainloop_jobs_.addJob([this, id, msg]() {
+		if (task_model_) task_model_->processSolutionMessage(id, *msg);
+		// TODO: use already processed trajectory (e.g. by ID)
+		trajectory_visual_->showTrajectory(*msg);
+	});
+}
+
 void TaskDisplay::updateTaskListModel()
 {
 	// generate task monitoring topics from solution topic
 	std::string solution_topic = task_solution_topic_property_->getStdString();
-	auto lastSep = solution_topic.find_last_of('/');
-	std::string base_ns = solution_topic.substr(0, lastSep);
+	auto last_sep = solution_topic.find_last_of('/');
+	if (last_sep == std::string::npos)
+		return;
 
+	std::string base_ns = solution_topic.substr(0, last_sep+1);
 	task_model_ = TaskListModelCache::instance().getModel(base_ns);
 
 	if (task_model_) {
 		// listen to task descriptions updates
-		boost::function<void(const moveit_task_constructor::TaskDescriptionConstPtr &)> taskDescCB
-		      ([this](const moveit_task_constructor::TaskDescriptionConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskDescriptionMessage(*msg); });
-		});
-		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, taskDescCB);
+		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
 
 		// listen to task statistics updates
-		boost::function<void(const moveit_task_constructor::TaskDescriptionConstPtr &)> taskStatCB
-		      ([this](const moveit_task_constructor::TaskDescriptionConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskDescriptionMessage(*msg); });
-		});
-		task_description_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, taskStatCB);
+		task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
 	} else {
 		setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
 	}
 
 	// listen to task solutions
-	boost::function<void(const moveit_task_constructor::SolutionConstPtr &)> solCB
-	      ([this](const moveit_task_constructor::SolutionConstPtr &msg){
-		mainloop_jobs_.addJob([this, msg]() {
-			if (task_model_) task_model_->processSolutionMessage(*msg);
-			// TODO: use already processed trajectory (e.g. by ID)
-			trajectory_visual_->showTrajectory(*msg);
-		});
-	});
-	task_solution_sub = update_nh_.subscribe(solution_topic, 2, solCB);
+	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
 
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
 }

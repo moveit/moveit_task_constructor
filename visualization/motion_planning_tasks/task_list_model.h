@@ -91,11 +91,11 @@ public:
 	bool removeRows(int row, int count, const QModelIndex &parent) override;
 
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskDescriptionMessage(const moveit_task_constructor::TaskDescription &msg);
+	void processTaskDescriptionMessage(const std::__cxx11::string &id, const moveit_task_constructor::TaskDescription &msg);
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskStatisticsMessage(const moveit_task_constructor::TaskStatistics &msg);
+	void processTaskStatisticsMessage(const std::__cxx11::string &id, const moveit_task_constructor::TaskStatistics &msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	void processSolutionMessage(const moveit_task_constructor::Solution &msg);
+	void processSolutionMessage(const std::__cxx11::string &id, const moveit_task_constructor::Solution &msg);
 
 	/// retrieve TaskModel in given row
 	BaseTaskModel* getTask(int row) const;

@@ -44,6 +44,9 @@
 #include "job_queue.h"
 #include <moveit/macros/class_forward.h>
 #include <ros/subscriber.h>
+#include <moveit_task_constructor/TaskDescription.h>
+#include <moveit_task_constructor/TaskStatistics.h>
+#include <moveit_task_constructor/Solution.h>
 #endif
 
 namespace rviz
@@ -85,6 +88,10 @@ private Q_SLOTS:
    */
   void changedRobotDescription();
   void changedTaskSolutionTopic();
+
+  void taskDescriptionCB(const ros::MessageEvent<moveit_task_constructor::TaskDescription const>& event);
+  void taskStatisticsCB(const ros::MessageEvent<const moveit_task_constructor::TaskStatistics> &event);
+  void taskSolutionCB(const ros::MessageEvent<moveit_task_constructor::Solution const>& event);
 
 protected:
   void updateTaskListModel();

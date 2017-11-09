@@ -15,10 +15,8 @@
 
 namespace moveit { namespace task_constructor {
 
-static size_t g_task_id = 0;
-
-Task::Task(ContainerBase::pointer &&container)
-   : WrapperBase(std::string()), id_(++g_task_id)
+Task::Task(const std::string& id, ContainerBase::pointer &&container)
+   : WrapperBase(std::string()), id_(id)
 {
 	task_starts_.reset(new Interface(Interface::NotifyFunction()));
 	task_ends_.reset(new Interface(Interface::NotifyFunction()));
@@ -28,10 +26,8 @@ Task::Task(ContainerBase::pointer &&container)
 
 	// monitor state on commandline
 	addTaskCallback(&printState);
-	// publish state
-	addTaskCallback(std::ref(Introspection::instance()));
-	// publish new solutions
-	addSolutionCallback(std::ref(Introspection::instance()));
+	// enable introspection by default
+	enableIntrospection(true);
 }
 
 void Task::initModel () {
@@ -90,6 +86,11 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 	return planner;
 }
 
+Task::~Task()
+{
+	reset();
+}
+
 void Task::add(pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
@@ -101,7 +102,14 @@ void Task::add(pointer &&stage) {
 void Task::clear()
 {
 	stages()->clear();
-	id_ = ++g_task_id;
+}
+
+void Task::enableIntrospection(bool enable)
+{
+	if (enable && !introspection_)
+		introspection_.reset(new Introspection(*this));
+	else if (!enable && introspection_)
+		introspection_.reset();
 }
 
 Task::SolutionCallbackList::const_iterator Task::addSolutionCallback(SolutionCallback &&cb)
@@ -128,6 +136,10 @@ void Task::erase(TaskCallbackList::const_iterator which)
 
 void Task::reset()
 {
+	// signal introspection, that this task was reset
+	if (introspection_)
+		introspection_->reset();
+
 	task_starts_->clear();
 	task_ends_->clear();
 	WrapperBase::reset();
@@ -136,6 +148,13 @@ void Task::reset()
 	auto impl = pimpl();
 	impl->setPrevEnds(task_ends_);
 	impl->setNextStarts(task_starts_);
+}
+
+void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	WrapperBase::init(scene);
+	if (introspection_)
+		introspection_->publishTaskDescription();
 }
 
 bool Task::canCompute() const
@@ -148,7 +167,8 @@ bool Task::compute()
 	return stages()->compute();
 }
 
-bool Task::plan(){
+bool Task::plan()
+{
 	reset();
 	initScene();
 	init(scene_);
@@ -157,6 +177,8 @@ bool Task::plan(){
 		if (compute()) {
 			for (const auto& cb : task_cbs_)
 				cb(*this);
+			if (introspection_)
+				introspection_->publishTaskState();
 		} else
 			break;
 	}
@@ -186,10 +208,18 @@ void Task::processSolutions(const Task::SolutionProcessor& processor) const {
 	});
 }
 
+void Task::publishAllSolutions(bool wait)
+{
+	enableIntrospection(true);
+	introspection_->publishAllSolutions(wait);
+}
+
 void Task::onNewSolution(SolutionBase &s)
 {
 	for (const auto& cb : solution_cbs_)
 		cb(s);
+	if (introspection_)
+		introspection_->publishSolution(s);
 }
 
 inline ContainerBase* Task::stages()
@@ -204,8 +234,7 @@ inline const ContainerBase* Task::stages() const
 
 std::string Task::id() const
 {
-	ros::NodeHandle n("~");
-	return std::to_string(id_) + '@' + n.getNamespace();
+	return id_;
 }
 
 void Task::printState(const Task &t){

@@ -17,46 +17,47 @@ namespace moveit { namespace task_constructor {
 MOVEIT_CLASS_FORWARD(Task)
 MOVEIT_CLASS_FORWARD(SolutionBase)
 
+/** The Introspection class provides publishing of task state and solutions.
+ *
+ *  It is interlinked to its task.
+ */
 class Introspection {
-	// publish task detailed description and current state
+	ros::NodeHandle nh_;
+	/// associated task
+	const Task &task_;
+
+	/// publish task detailed description and current state
 	ros::Publisher task_description_publisher_;
 	ros::Publisher task_statistics_publisher_;
-	// publish new solutions
+	/// publish new solutions
 	ros::Publisher solution_publisher_;
-	// services to provide an individual Solution
+	/// services to provide an individual Solution
 	ros::ServiceServer get_solution_service_;
 
 public:
-	Introspection();
+	Introspection(const Task &task);
 	Introspection(const Introspection &other) = delete;
-	static Introspection &instance();
 
-	// publish detailed task description
-	void publishTaskDescription(const Task &t);
-	void publishTaskDescription(const ::moveit_task_constructor::TaskDescription &msg) {
-		task_description_publisher_.publish(msg);
-	}
+	/// publish detailed task description
+	void publishTaskDescription();
 
-	// publish the current state of given task
-	void publishTaskState(const Task &t);
-	void publishTaskState(const ::moveit_task_constructor::TaskStatistics &msg) {
-		task_statistics_publisher_.publish(msg);
-	}
+	/// publish the current state of task
+	void publishTaskState();
 
-	void operator()(const Task &t) { publishTaskState(t); }
+	/// indicate that this task was reset
+	void reset();
 
-	// publish the given solution
+	/// publish the given solution
 	void publishSolution(const SolutionBase &s);
-	void publishSolution(const ::moveit_task_constructor::Solution &msg) {
-		solution_publisher_.publish(msg);
-	}
+	/// operator version for use in stage callbacks
 	void operator()(const SolutionBase &s) { publishSolution(s); }
 
-	// get solution
+	/// publish all top-level solutions of task
+	void publishAllSolutions(bool wait = true);
+
+	/// get solution
 	bool getSolution(moveit_task_constructor::GetSolution::Request  &req,
 	                 moveit_task_constructor::GetSolution::Response &res);
 };
-
-void publishAllPlans(const Task &task, bool wait = true);
 
 } }

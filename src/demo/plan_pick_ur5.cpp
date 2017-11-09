@@ -1,5 +1,4 @@
 #include <moveit_task_constructor/task.h>
-#include <moveit_task_constructor/introspection.h>
 
 #include <moveit_task_constructor/stages/current_state.h>
 #include <moveit_task_constructor/stages/gripper.h>
@@ -106,8 +105,7 @@ int main(int argc, char** argv){
 	}
 
 	t.plan();
-
-	publishAllPlans(t);
+	t.publishAllSolutions();
 
 	return 0;
 }

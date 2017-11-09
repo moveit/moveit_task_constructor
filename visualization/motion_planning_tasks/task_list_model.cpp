@@ -256,12 +256,13 @@ bool TaskListModel::removeRows(int row, int count, const QModelIndex &parent)
 
 // process a task description message:
 // update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
-void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor::TaskDescription &msg)
+void TaskListModel::processTaskDescriptionMessage(const std::string& id,
+                                                  const moveit_task_constructor::TaskDescription &msg)
 {
 	Q_D(TaskListModel);
 
 	// retrieve existing or insert new remote task for given id
-	auto it_inserted = d->remote_tasks_.insert(std::make_pair(msg.id, nullptr));
+	auto it_inserted = d->remote_tasks_.insert(std::make_pair(id, nullptr));
 	bool created = it_inserted.second;
 	RemoteTaskModel*& remote_task = it_inserted.first->second;
 
@@ -297,11 +298,12 @@ void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor:
 }
 
 // process a task statistics message
-void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor::TaskStatistics &msg)
+void TaskListModel::processTaskStatisticsMessage(const std::string &id,
+                                                 const moveit_task_constructor::TaskStatistics &msg)
 {
 	Q_D(TaskListModel);
 
-	auto it = d->remote_tasks_.find(msg.id);
+	auto it = d->remote_tasks_.find(id);
 	if (it == d->remote_tasks_.cend())
 		return; // unkown task
 
@@ -312,7 +314,8 @@ void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor::
 	remote_task->processStageStatistics(msg.stages);
 }
 
-void TaskListModel::processSolutionMessage(const moveit_task_constructor::Solution &msg)
+void TaskListModel::processSolutionMessage(const std::string &id,
+                                           const moveit_task_constructor::Solution &msg)
 {
 	// TODO
 }

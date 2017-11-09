@@ -125,7 +125,7 @@ protected:
 			SCOPED_TRACE("first i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage(genMsg("first"));
+			model.processTaskDescriptionMessage("1", genMsg("first"));
 
 			if (i == 0) EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
 			else EXPECT_EQ(num_inserts, 0);
@@ -137,7 +137,7 @@ protected:
 			SCOPED_TRACE("second i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage(genMsg("second"));  // 1 notify for inserted task
+			model.processTaskDescriptionMessage("2", genMsg("second"));  // 1 notify for inserted task
 
 			if (i == 0) EXPECT_EQ(num_inserts, 1);
 			else EXPECT_EQ(num_inserts, 0);
@@ -190,13 +190,13 @@ TEST_F(TaskListModelTest, threeChildren) {
 TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
-	model.processTaskDescriptionMessage(genMsg("first"));
+	model.processTaskDescriptionMessage("1", genMsg("first"));
 	validate(model, {"first"}); // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
-	model.processTaskDescriptionMessage(genMsg("first"));
+	model.processTaskDescriptionMessage("1", genMsg("first"));
 	validate(model, {"first"});
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);

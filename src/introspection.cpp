@@ -7,40 +7,58 @@
 
 namespace moveit { namespace task_constructor {
 
-Introspection::Introspection()
+Introspection::Introspection(const Task &task)
+   : nh_(std::string("~/") + task.id()) // topics + services are advertised in private namespace
+   , task_(task)
 {
-	ros::NodeHandle n;
-	task_description_publisher_ = n.advertise<moveit_task_constructor::TaskDescription>(DESCRIPTION_TOPIC, 1);
-	task_statistics_publisher_ = n.advertise<moveit_task_constructor::TaskStatistics>(STATISTICS_TOPIC, 1);
-	solution_publisher_ = n.advertise<::moveit_task_constructor::Solution>(SOLUTION_TOPIC, 1, true);
+	task_description_publisher_ = nh_.advertise<moveit_task_constructor::TaskDescription>(DESCRIPTION_TOPIC, 1, true);
+	task_statistics_publisher_ = nh_.advertise<moveit_task_constructor::TaskStatistics>(STATISTICS_TOPIC, 1);
+	solution_publisher_ = nh_.advertise<::moveit_task_constructor::Solution>(SOLUTION_TOPIC, 1, true);
 
-	n = ros::NodeHandle("~"); // services are advertised in private namespace
-	get_solution_service_ = n.advertiseService("get_solution", &Introspection::getSolution, this);
+	get_solution_service_ = nh_.advertiseService("get_solution", &Introspection::getSolution, this);
 }
 
-Introspection &Introspection::instance()
-{
-	static Introspection instance_;
-	return instance_;
-}
-
-void Introspection::publishTaskDescription(const Task &t)
+void Introspection::publishTaskDescription()
 {
 	::moveit_task_constructor::TaskDescription msg;
-	task_description_publisher_.publish(t.fillTaskDescription(msg));
+	task_description_publisher_.publish(task_.fillTaskDescription(msg));
 }
 
-void Introspection::publishTaskState(const Task &t)
+void Introspection::publishTaskState()
 {
 	::moveit_task_constructor::TaskStatistics msg;
-	task_statistics_publisher_.publish(t.fillTaskStatistics(msg));
+	task_statistics_publisher_.publish(task_.fillTaskStatistics(msg));
+}
+
+void Introspection::reset()
+{
+	::moveit_task_constructor::TaskDescription msg;
+	task_description_publisher_.publish(msg);
 }
 
 void Introspection::publishSolution(const SolutionBase &s)
 {
 	::moveit_task_constructor::Solution msg;
 	s.fillMessage(msg);
-	publishSolution(msg);
+	solution_publisher_.publish(msg);
+}
+
+void Introspection::publishAllSolutions(bool wait)
+{
+	Task::SolutionProcessor processor
+	      = [this, wait](const ::moveit_task_constructor::Solution& msg, double cost) {
+		std::cout << "publishing solution with cost: " << cost << std::endl;
+		solution_publisher_.publish(msg);
+		if (wait) {
+			std::cout << "Press <Enter> to continue ..." << std::endl;
+			int ch = getchar();
+			if (ch == 'q' || ch == 'Q')
+				return false;
+		}
+		return true;
+	};
+
+	task_.processSolutions(processor);
 }
 
 bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &req,
@@ -51,23 +69,6 @@ bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &
 	solution.fillMessage(msg);
 	res.solution = msg;
 	return true;
-}
-
-void publishAllPlans(const Task &task, bool wait) {
-	Task::SolutionProcessor processor
-	      = [wait](const ::moveit_task_constructor::Solution& msg, double cost) {
-		std::cout << "publishing solution with cost: " << cost << std::endl;
-		Introspection::instance().publishSolution(msg);
-		if (wait) {
-			std::cout << "Press <Enter> to continue ..." << std::endl;
-			int ch = getchar();
-			if (ch == 'q' || ch == 'Q')
-				return false;
-		}
-		return true;
-	};
-
-	task.processSolutions(processor);
 }
 
 } }
