@@ -15,9 +15,9 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/task.h
 	${PROJECT_INCLUDE}/introspection.h
 )
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_include_directories(${PROJECT_NAME}
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
