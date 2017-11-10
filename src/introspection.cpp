@@ -90,12 +90,19 @@ void Introspection::publishSolution(const SolutionBase &s)
 	impl->solution_publisher_.publish(msg);
 }
 
-void Introspection::publishAllSolutions(bool wait) const
+void Introspection::publishAllSolutions(bool wait)
 {
-	Task::SolutionProcessor processor
-	      = [this, wait](const ::moveit_task_constructor::Solution& msg, double cost) {
-		std::cout << "publishing solution with cost: " << cost << std::endl;
+	::moveit_task_constructor::Solution msg;
+
+	Stage::SolutionProcessor processor = [this, &msg, wait](const SolutionBase& s) {
+		std::cout << "publishing solution with cost: " << s.cost() << std::endl;
+		msg.sub_solution.clear();
+		msg.sub_trajectory.clear();
+		s.fillMessage(msg, this);
+		msg.task_id = impl->task_.id();
+		s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
 		impl->solution_publisher_.publish(msg);
+
 		if (wait) {
 			std::cout << "Press <Enter> to continue ..." << std::endl;
 			int ch = getchar();

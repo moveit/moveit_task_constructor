@@ -63,15 +63,7 @@ public:
 	static void printState(const Task &t);
 
 	size_t numSolutions() const override;
-
-	/// function type used for processing solutions
-	/// For each solution, composed from several SubTrajectories,
-	/// the vector of SubTrajectories as well as the associated costs are provided.
-	/// Return true, if traversal should continue, otherwise false.
-	typedef std::function<bool(const ::moveit_task_constructor::Solution& msg,
-	                           double accumulated_cost)> SolutionProcessor;
-	/// process all solutions
-	void processSolutions(const Task::SolutionProcessor &processor) const;
+	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
 
 	/// publish all top-level solutions
 	void publishAllSolutions(bool wait = true);
@@ -85,7 +77,6 @@ protected:
 	void initScene();
 	bool canCompute() const override;
 	bool compute() override;
-	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
 	void onNewSolution(SolutionBase &s) override;
 
 private:

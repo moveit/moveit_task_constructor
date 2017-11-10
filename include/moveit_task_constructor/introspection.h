@@ -49,7 +49,7 @@ public:
 	void operator()(const SolutionBase &s) { publishSolution(s); }
 
 	/// publish all top-level solutions of task
-	void publishAllSolutions(bool wait = true) const;
+	void publishAllSolutions(bool wait = true);
 
 	/// get solution
 	bool getSolution(moveit_task_constructor::GetSolution::Request  &req,

@@ -192,17 +192,6 @@ void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) c
 	stages()->processSolutions(processor);
 }
 
-void Task::processSolutions(const Task::SolutionProcessor& processor) const {
-	::moveit_task_constructor::Solution msg;
-	msg.task_id = id();
-	processSolutions([&msg, &processor](const SolutionBase& s) {
-		msg.sub_solution.clear();
-		msg.sub_trajectory.clear();
-		s.fillMessage(msg);
-		return processor(msg, s.cost());
-	});
-}
-
 void Task::publishAllSolutions(bool wait)
 {
 	enableIntrospection(true);
