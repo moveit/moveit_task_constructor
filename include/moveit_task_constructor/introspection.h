@@ -1,13 +1,10 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
-#include <ros/publisher.h>
-#include <ros/service.h>
 #include <moveit_task_constructor/TaskDescription.h>
 #include <moveit_task_constructor/TaskStatistics.h>
 #include <moveit_task_constructor/Solution.h>
 #include <moveit_task_constructor/GetSolution.h>
-#include <boost/bimap.hpp>
 
 #define DESCRIPTION_TOPIC "description"
 #define STATISTICS_TOPIC  "statistics"
@@ -19,30 +16,19 @@ MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(Task)
 MOVEIT_CLASS_FORWARD(SolutionBase)
 
+class IntrospectionPrivate;
+
 /** The Introspection class provides publishing of task state and solutions.
  *
  *  It is interlinked to its task.
  */
 class Introspection {
-	ros::NodeHandle nh_;
-	/// associated task
-	const Task &task_;
-
-	/// publish task detailed description and current state
-	ros::Publisher task_description_publisher_;
-	ros::Publisher task_statistics_publisher_;
-	/// publish new solutions
-	ros::Publisher solution_publisher_;
-	/// services to provide an individual Solution
-	ros::ServiceServer get_solution_service_;
-
-	/// mapping from stages to their id
-	std::map<const void*, moveit_task_constructor::StageStatistics::_id_type> stage_to_id_map_;
-	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
+	IntrospectionPrivate *impl;
 
 public:
 	Introspection(const Task &task);
 	Introspection(const Introspection &other) = delete;
+	~Introspection();
 
 	/// fill task description message for publishing the task configuration
 	moveit_task_constructor::TaskDescription& fillTaskDescription(moveit_task_constructor::TaskDescription& msg);

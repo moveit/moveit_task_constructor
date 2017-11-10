@@ -3,57 +3,91 @@
 #include <moveit_task_constructor/task.h>
 #include <moveit_task_constructor/storage.h>
 
-#include <ros/ros.h>
+#include <ros/node_handle.h>
+#include <ros/publisher.h>
+#include <ros/service.h>
 #include <moveit/planning_scene/planning_scene.h>
+
+#include <boost/bimap.hpp>
 
 namespace moveit { namespace task_constructor {
 
+class IntrospectionPrivate {
+public:
+	IntrospectionPrivate(const Task &task)
+	   : nh_(std::string("~/") + task.id()) // topics + services are advertised in private namespace
+	   , task_(task)
+	{
+		resetMaps();
+		task_description_publisher_ = nh_.advertise<moveit_task_constructor::TaskDescription>(DESCRIPTION_TOPIC, 1, true);
+		task_statistics_publisher_ = nh_.advertise<moveit_task_constructor::TaskStatistics>(STATISTICS_TOPIC, 1);
+		solution_publisher_ = nh_.advertise<::moveit_task_constructor::Solution>(SOLUTION_TOPIC, 1, true);
+	}
+	void resetMaps () {
+		// reset maps
+		stage_to_id_map_.clear();
+		stage_to_id_map_[&task_] = 0; // root is task having ID = 0
+
+		id_solution_bimap_.clear();
+	}
+
+	ros::NodeHandle nh_;
+	/// associated task
+	const Task &task_;
+
+	/// publish task detailed description and current state
+	ros::Publisher task_description_publisher_;
+	ros::Publisher task_statistics_publisher_;
+	/// publish new solutions
+	ros::Publisher solution_publisher_;
+	/// services to provide an individual Solution
+	ros::ServiceServer get_solution_service_;
+
+	/// mapping from stages to their id
+	std::map<const void*, moveit_task_constructor::StageStatistics::_id_type> stage_to_id_map_;
+	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
+};
+
 Introspection::Introspection(const Task &task)
-   : nh_(std::string("~/") + task.id()) // topics + services are advertised in private namespace
-   , task_(task)
+   : impl(new IntrospectionPrivate(task))
 {
-	stage_to_id_map_[&task_] = 0; // root is task having ID = 0
+	impl->get_solution_service_ = impl->nh_.advertiseService("get_solution", &Introspection::getSolution, this);
+}
 
-	task_description_publisher_ = nh_.advertise<moveit_task_constructor::TaskDescription>(DESCRIPTION_TOPIC, 1, true);
-	task_statistics_publisher_ = nh_.advertise<moveit_task_constructor::TaskStatistics>(STATISTICS_TOPIC, 1);
-	solution_publisher_ = nh_.advertise<::moveit_task_constructor::Solution>(SOLUTION_TOPIC, 1, true);
-
-	get_solution_service_ = nh_.advertiseService("get_solution", &Introspection::getSolution, this);
+Introspection::~Introspection()
+{
+	delete impl;
 }
 
 void Introspection::publishTaskDescription()
 {
 	::moveit_task_constructor::TaskDescription msg;
-	task_description_publisher_.publish(fillTaskDescription(msg));
+	impl->task_description_publisher_.publish(fillTaskDescription(msg));
 }
 
 void Introspection::publishTaskState()
 {
 	::moveit_task_constructor::TaskStatistics msg;
-	task_statistics_publisher_.publish(fillTaskStatistics(msg));
+	impl->task_statistics_publisher_.publish(fillTaskStatistics(msg));
 }
 
 void Introspection::reset()
 {
 	// send empty task description message to indicate reset
 	::moveit_task_constructor::TaskDescription msg;
-	msg.id = task_.id();
-	task_description_publisher_.publish(msg);
+	msg.id = impl->task_.id();
+	impl->task_description_publisher_.publish(msg);
 
-	// reset maps
-	stage_to_id_map_.clear();
-	stage_to_id_map_[&task_] = 0; // root is task having ID = 0
-
-	id_solution_bimap_.clear();
+	impl->resetMaps();
 }
 
 void Introspection::publishSolution(const SolutionBase &s)
 {
 	::moveit_task_constructor::Solution msg;
 	s.fillMessage(msg, this);
-	msg.task_id = task_.id();
+	msg.task_id = impl->task_.id();
 	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
-	solution_publisher_.publish(msg);
+	impl->solution_publisher_.publish(msg);
 }
 
 void Introspection::publishAllSolutions(bool wait) const
@@ -61,7 +95,7 @@ void Introspection::publishAllSolutions(bool wait) const
 	Task::SolutionProcessor processor
 	      = [this, wait](const ::moveit_task_constructor::Solution& msg, double cost) {
 		std::cout << "publishing solution with cost: " << cost << std::endl;
-		solution_publisher_.publish(msg);
+		impl->solution_publisher_.publish(msg);
 		if (wait) {
 			std::cout << "Press <Enter> to continue ..." << std::endl;
 			int ch = getchar();
@@ -71,14 +105,14 @@ void Introspection::publishAllSolutions(bool wait) const
 		return true;
 	};
 
-	task_.processSolutions(processor);
+	impl->task_.processSolutions(processor);
 }
 
 bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &req,
                                 moveit_task_constructor::GetSolution::Response &res)
 {
-	auto it = id_solution_bimap_.left.find(req.solution_id);
-	if (it == id_solution_bimap_.left.end())
+	auto it = impl->id_solution_bimap_.left.find(req.solution_id);
+	if (it == impl->id_solution_bimap_.left.end())
 		return false;
 
 	const SolutionBase& solution = *it->second;
@@ -88,19 +122,19 @@ bool Introspection::getSolution(moveit_task_constructor::GetSolution::Request  &
 
 uint32_t Introspection::stageId(const Stage* const s)
 {
-	return stage_to_id_map_.insert(std::make_pair(s, stage_to_id_map_.size())).first->second;
+	return impl->stage_to_id_map_.insert(std::make_pair(s, impl->stage_to_id_map_.size())).first->second;
 }
 uint32_t Introspection::stageId(const Stage* const s) const
 {
-	auto it = stage_to_id_map_.find(s);
-	if (it == stage_to_id_map_.end())
+	auto it = impl->stage_to_id_map_.find(s);
+	if (it == impl->stage_to_id_map_.end())
 		throw std::runtime_error("unknown stage");
 	return it->second;
 }
 
 uint32_t Introspection::solutionId(const SolutionBase& s)
 {
-	auto result = id_solution_bimap_.left.insert(std::make_pair(id_solution_bimap_.size(), &s));
+	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(impl->id_solution_bimap_.size(), &s));
 	return result.first->first;
 }
 
@@ -134,8 +168,8 @@ moveit_task_constructor::TaskDescription& Introspection::fillTaskDescription(mov
 		desc.flags = stage.pimpl()->interfaceFlags();
 		// TODO fill stage properties
 
-		auto it = stage_to_id_map_.find(stage.pimpl()->parent());
-		assert (it != stage_to_id_map_.cend());
+		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
+		assert (it != impl->stage_to_id_map_.cend());
 		desc.parent_id = stat.parent_id = it->second;
 
 		fillStageStatistics(stage, stat);
@@ -148,9 +182,9 @@ moveit_task_constructor::TaskDescription& Introspection::fillTaskDescription(mov
 
 	msg.description.clear();
 	msg.statistics.clear();
-	task_.stages()->traverseRecursively(stageProcessor);
+	impl->task_.stages()->traverseRecursively(stageProcessor);
 
-	msg.id = task_.id();
+	msg.id = impl->task_.id();
 	return msg;
 }
 
@@ -162,8 +196,8 @@ moveit_task_constructor::TaskStatistics& Introspection::fillTaskStatistics(movei
 		moveit_task_constructor::StageStatistics stat; // create new Stage msg
 		stat.id = stageId(&stage);
 
-		auto it = stage_to_id_map_.find(stage.pimpl()->parent());
-		assert (it != stage_to_id_map_.cend());
+		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
+		assert (it != impl->stage_to_id_map_.cend());
 		stat.parent_id = it->second;
 
 		fillStageStatistics(stage, stat);
@@ -174,9 +208,9 @@ moveit_task_constructor::TaskStatistics& Introspection::fillTaskStatistics(movei
 	};
 
 	msg.stages.clear();
-	task_.stages()->traverseRecursively(stageProcessor);
+	impl->task_.stages()->traverseRecursively(stageProcessor);
 
-	msg.id = task_.id();
+	msg.id = impl->task_.id();
 	return msg;
 }
 
