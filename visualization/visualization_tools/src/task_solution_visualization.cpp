@@ -61,6 +61,9 @@
 #include <rviz/window_manager_interface.h>
 #include <rviz/panel_dock_widget.h>
 
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
 namespace moveit_rviz_plugin
 {
 TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display)

@@ -39,7 +39,7 @@
 #include "remote_task_model.h"
 #include <moveit_task_constructor/container.h>
 #include <ros/console.h>
-#include <qflags.h>
+#include <qglobal.h>
 
 using namespace moveit::task_constructor;
 

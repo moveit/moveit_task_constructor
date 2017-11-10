@@ -40,6 +40,7 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor/Solution.h>
 #include <QObject>
+#include <QColor>
 #include <boost/thread/mutex.hpp>
 
 #ifndef Q_MOC_RUN
