@@ -71,7 +71,7 @@ public:
 	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
 	{}
 	/// append all subsolutions to solution
-	void fillMessage(::moveit_task_constructor::Solution &msg) const override;
+	void fillMessage(::moveit_task_constructor::Solution &msg, Introspection *introspection) const override;
 
 private:
 	/// series of sub solutions
@@ -123,8 +123,9 @@ public:
 	explicit WrappedSolution(StagePrivate* creator, SolutionBase* wrapped)
 	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
 	{}
-	void fillMessage(::moveit_task_constructor::Solution &solution) const override {
-		wrapped_->fillMessage(solution);
+	void fillMessage(::moveit_task_constructor::Solution &solution,
+                    Introspection* introspection = nullptr) const override {
+		wrapped_->fillMessage(solution, introspection);
 	}
 
 private:

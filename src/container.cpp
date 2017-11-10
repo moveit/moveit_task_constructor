@@ -1,5 +1,6 @@
 #include "container_p.h"
 
+#include <moveit_task_constructor/introspection.h>
 #include <ros/console.h>
 
 #include <memory>
@@ -414,23 +415,30 @@ bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcesso
 	return result;
 }
 
-void SerialSolution::fillMessage(::moveit_task_constructor::Solution &msg) const
+void SerialSolution::fillMessage(::moveit_task_constructor::Solution &msg,
+                                 Introspection* introspection = nullptr) const
 {
 	::moveit_task_constructor::SubSolution sub_msg;
-	sub_msg.id = this->id();
+	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
 	sub_msg.cost = this->cost();
+
+	const Introspection *ci = introspection;
+	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+
 	sub_msg.sub_solution_id.reserve(subsolutions_.size());
-	for (const SolutionBase* s : subsolutions_)
-		sub_msg.sub_solution_id.push_back(s->id());
-	msg.sub_solution.push_back(sub_msg);
+	if (introspection) {
+		for (const SolutionBase* s : subsolutions_)
+			sub_msg.sub_solution_id.push_back(introspection->solutionId(*s));
+		msg.sub_solution.push_back(sub_msg);
+	}
 
 	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
 	for (const SolutionBase* s : subsolutions_)
-		s->fillMessage(msg);
+		s->fillMessage(msg, introspection);
 }
 
 
-ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::__cxx11::string &name)
+ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::string &name)
    : ContainerBasePrivate(me, name)
 {
 	starts_.reset(new Interface([me](const Interface::iterator& external){

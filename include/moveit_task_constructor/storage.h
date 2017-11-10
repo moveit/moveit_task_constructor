@@ -27,43 +27,7 @@ MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
 typedef std::weak_ptr<Interface> InterfaceWeakPtr;
 MOVEIT_CLASS_FORWARD(Stage)
-
-
-/** singleton repository for pointers of T
- *
- *  Serves as an efficient mapping from IDs to the associated T instance.
- *  size() serves as the new ID after insertion of a new item,
- *  i.e. we have item IDs from 1 onwards. ID == 0 is invalid.
- */
-template <typename T>
-class Repository : private std::deque<const T*> {
-	typedef std::deque<const T*> base_type;
-
-	// non-copyable singleton
-	Repository() {}
-	Repository(const Repository&) = delete;
-	void operator=(const Repository&) = delete;
-
-public:
-	static Repository& instance() {
-		static Repository instance_;
-		return instance_;
-	}
-
-	size_t add(const T* item) {
-		this->push_back(item);
-		return this->size();
-	}
-
-	void remove(const T* item) {
-		// invalidate entry
-		this->base_type::at(item->id()-1) = nullptr;
-	}
-
-	const T& operator[](size_t id) const {
-		return *this->base_type::at(id-1);
-	}
-};
+MOVEIT_CLASS_FORWARD(Introspection)
 
 
 /** InterfaceState describes a potential start or goal state for a planning stage.
@@ -73,8 +37,6 @@ public:
 class InterfaceState {
 	friend class SolutionBase; // addIncoming() / addOutgoing() should be called only by SolutionBase
 public:
-	/// get ID of this state
-	size_t id() const { return id_; }
 	// TODO turn this into priority queue
 	typedef std::deque<SolutionBase*> Solutions;
 
@@ -83,8 +45,6 @@ public:
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& existing);
-
-	~InterfaceState();
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
@@ -96,9 +56,6 @@ private:
 	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
 
 private:
-	inline void registerID();
-
-	size_t id_;
 	planning_scene::PlanningSceneConstPtr scene_;
 	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
 	// TODO: add visualization_msgs::MarkerArray to allow for any complex visualization of the state
@@ -162,8 +119,6 @@ typedef std::vector<const SubTrajectory*> SolutionTrajectory;
 
 class SolutionBase {
 public:
-	// retrieve ID of this solution in repository
-	inline size_t id() const { return id_; }
 	// TODO: get rid of creator (only used in SerialContainer)
 	inline const StagePrivate* creator() const { return creator_; }
 	inline double cost() const { return cost_; }
@@ -185,22 +140,16 @@ public:
 	void setCost(double cost);
 
 	/// append this solution to Solution msg
-	virtual void fillMessage(::moveit_task_constructor::Solution &solution) const = 0;
+	virtual void fillMessage(::moveit_task_constructor::Solution &solution,
+	                         Introspection* introspection = nullptr) const = 0;
 
 protected:
 	SolutionBase(StagePrivate* creator, double cost)
 	   : creator_(creator), cost_(cost)
 	{
-		id_ = Repository<SolutionBase>::instance().add(this);
-	}
-	~SolutionBase() {
-		Repository<SolutionBase>::instance().remove(this);
-		id_ = 0; // invalidate ID
 	}
 
 private:
-	// unique ID of this solution
-	size_t id_;
 	// back-pointer to creating stage, allows to access sub-solutions
 	StagePrivate *creator_;
 	// associated cost
@@ -223,7 +172,8 @@ public:
 	const std::string& name() const { return name_; }
 	void setName(const std::string& name) { name_ = name; }
 
-	void fillMessage(::moveit_task_constructor::Solution &msg) const override;
+	void fillMessage(::moveit_task_constructor::Solution &msg,
+	                 Introspection* introspection = nullptr) const override;
 
 private:
 	// trajectories could have a name, e.g. a generator could name its solutions

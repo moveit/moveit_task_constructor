@@ -1,33 +1,21 @@
 #include "stage_p.h"
 #include <moveit_task_constructor/storage.h>
+#include <moveit_task_constructor/introspection.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit/robot_state/conversions.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit { namespace task_constructor {
 
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
    : scene_(ps)
 {
-	registerID();
 }
 
 InterfaceState::InterfaceState(const InterfaceState &existing)
    : scene_(existing.scene())
 {
-	registerID();
 }
-
-InterfaceState::~InterfaceState()
-{
-	Repository<InterfaceState>::instance().remove(this);
-	id_ = 0;
-}
-
-void InterfaceState::registerID()
-{
-	id_ = Repository<InterfaceState>::instance().add(this);
-}
-
 
 Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
@@ -64,15 +52,22 @@ void SolutionBase::setCost(double cost) {
 }
 
 
-void SubTrajectory::fillMessage(moveit_task_constructor::Solution &msg) const {
+void SubTrajectory::fillMessage(moveit_task_constructor::Solution &msg,
+                                Introspection *introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor::SubTrajectory& t = msg.sub_trajectory.back();
-	t.id = this->id();
+	t.id = introspection ? introspection->solutionId(*this) : 0;
 	t.cost = this->cost();
 	t.name = this->name();
+
+	const Introspection *ci = introspection;
+	t.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 	t.markers = this->markers();
+
+	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
 
