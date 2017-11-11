@@ -168,15 +168,18 @@ void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::
   // Save pointers for later use
   scene_node_ = scene_node;
   context_ = context;
+  scene_node_->setVisible(false);
 
   // Load trajectory robot
   robot_render_.reset(new RobotStateVisualization(scene_node_, context_, "Solution Trajectory", robot_property_));
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
-  robot_render_->setVisible(false);
+  changedRobotAlpha();
+  enabledRobotColor();
+  robot_render_->setVisible(true);
 
-  scene_render_.reset(new PlanningSceneRender(scene_node_, context_, robot_render_));
-  scene_render_->getGeometryNode()->setVisible(false);
+  scene_render_.reset(new PlanningSceneRender(scene_node_, context_, RobotStateVisualizationPtr()));
+  scene_render_->getGeometryNode()->setVisible(true);
 
   rviz::WindowManagerInterface* window_context = context_->getWindowManager();
   if (window_context)
@@ -221,19 +224,18 @@ void TaskSolutionVisualization::reset()
 
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
-  robot_render_->setVisible(false);
+  scene_node_->setVisible(false);
 }
 
 void TaskSolutionVisualization::clearTrail()
 {
-  for (std::size_t i = 0; i < trail_.size(); ++i)
-    delete trail_[i];
+  qDeleteAll(trail_);
   trail_.clear();
 }
 
 void TaskSolutionVisualization::changedLoopDisplay()
 {
-  robot_render_->setVisible(display_->isEnabled() && displaying_solution_ && animating_);
+  scene_node_->setVisible(display_->isEnabled() && displaying_solution_ && animating_);
   if (loop_display_property_->getBool() && slider_panel_)
     slider_panel_->pauseButton(false);
 }
@@ -244,7 +246,7 @@ void TaskSolutionVisualization::changedShowTrail()
 
   if (!trail_display_property_->getBool())
     return;
-  robot_trajectory::RobotTrajectoryPtr t = solution_to_display_;
+  DisplaySolutionPtr t = solution_to_display_;
   if (!t)
     t = displaying_solution_;
   if (!t)
@@ -264,7 +266,7 @@ void TaskSolutionVisualization::changedShowTrail()
     r->update(PlanningLinkUpdater(t->getWayPointPtr(waypoint_i)));
     if (enable_robot_color_property_->getBool())
       setRobotColor(r, robot_color_property_->getColor());
-    r->setVisible(display_->isEnabled() && (!animating_ || waypoint_i <= current_state_));
+    r->setVisible(waypoint_i <= current_state_);
     trail_[i] = r;
   }
 }
@@ -284,24 +286,16 @@ void TaskSolutionVisualization::changedRobotAlpha()
 
 void TaskSolutionVisualization::changedRobotVisualEnabled()
 {
-  if (display_->isEnabled())
-  {
-    robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
-    robot_render_->setVisible(display_->isEnabled() && displaying_solution_ && animating_);
-    for (std::size_t i = 0; i < trail_.size(); ++i)
-      trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
-  }
+  robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
+  for (std::size_t i = 0; i < trail_.size(); ++i)
+    trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::changedRobotCollisionEnabled()
 {
-  if (display_->isEnabled())
-  {
-    robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
-    robot_render_->setVisible(display_->isEnabled() && displaying_solution_ && animating_);
-    for (std::size_t i = 0; i < trail_.size(); ++i)
-      trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
-  }
+  robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
+  for (std::size_t i = 0; i < trail_.size(); ++i)
+    trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::changedStateDisplayTime()
@@ -310,28 +304,12 @@ void TaskSolutionVisualization::changedStateDisplayTime()
 
 void TaskSolutionVisualization::onEnable()
 {
-  changedRobotAlpha();  // set alpha property
-  changedSceneEnabled();  // show/hide planning scene
-
-  robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
-  robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
-  robot_render_->setVisible(displaying_solution_ && animating_);
-  for (std::size_t i = 0; i < trail_.size(); ++i)
-  {
-    trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
-    trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
-    trail_[i]->setVisible(true);
-  }
+  scene_node_->setVisible(displaying_solution_ && animating_);
 }
 
 void TaskSolutionVisualization::onDisable()
 {
-  if (scene_render_)
-    scene_render_->getGeometryNode()->setVisible(false);
-
-  robot_render_->setVisible(false);
-  for (std::size_t i = 0; i < trail_.size(); ++i)
-    trail_[i]->setVisible(false);
+  scene_node_->setVisible(false);
 
   displaying_solution_.reset();
   animating_ = false;
@@ -381,7 +359,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
   {
     animating_ = false;
     displaying_solution_.reset();
-    robot_render_->setVisible(false);
+    scene_node_->setVisible(false);
     slider_panel_->update(0);
     drop_displaying_solution_ = false;
   }
@@ -407,10 +385,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       else if (slider_panel_ && slider_panel_->isVisible())
       {
         if (slider_panel_->getSliderPosition() == (int)displaying_solution_->getWayPointCount() - 1)
-        {  // show the last waypoint if the slider is enabled
-          robot_render_->update(
-                displaying_solution_->getWayPointPtr(displaying_solution_->getWayPointCount() - 1));
-        }
+          return;  // nothing more to do
         else
           animating_ = true;
       }
@@ -421,10 +396,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     {
       current_state_ = -1;
       current_state_time_ = std::numeric_limits<float>::infinity();
-      robot_render_->update(displaying_solution_->getFirstWayPointPtr());
-      robot_render_->setVisible(display_->isEnabled());
-      if (slider_panel_)
-        slider_panel_->setSliderPosition(0);
+      scene_node_->setVisible(display_->isEnabled());
     }
   }
 
@@ -433,6 +405,8 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     float tm = getStateDisplayTime();
     if (tm < 0.0)  // if we should use realtime
       tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1);
+    int previous_state = current_state_;
+
     if (current_state_time_ > tm)
     {
       if (slider_panel_ && slider_panel_->isVisible() && slider_panel_->isPaused())
@@ -442,25 +416,50 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       int waypoint_count = displaying_solution_->getWayPointCount();
       if (current_state_ < waypoint_count)
       {
-        if (slider_panel_)
-          slider_panel_->setSliderPosition(current_state_);
-        robot_render_->update(displaying_solution_->getWayPointPtr(current_state_));
+        renderWayPoint(current_state_, previous_state);
         for (std::size_t i = 0; i < trail_.size(); ++i)
           trail_[i]->setVisible(
-                std::min(waypoint_count - 1, static_cast<int>(i) * trail_step_size_property_->getInt()) <=
-                current_state_);
+                std::min(waypoint_count - 1,
+                         static_cast<int>(i) * trail_step_size_property_->getInt()) <= current_state_);
       }
       else
       {
         animating_ = false;  // animation finished
-        robot_render_->setVisible(loop_display_property_->getBool());
+        scene_node_->setVisible(loop_display_property_->getBool() ||
+                                (slider_panel_ && slider_panel_->isVisible()));
         if (!loop_display_property_->getBool() && slider_panel_)
           slider_panel_->pauseButton(true);
+        // ensure to render last frame
+        renderWayPoint(displaying_solution_->getWayPointCount() - 1, previous_state);
       }
       current_state_time_ = 0.0f;
     }
     current_state_time_ += wall_dt;
   }
+}
+
+void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
+{
+  auto idx_pair = displaying_solution_->indexPair(index);
+  const planning_scene::PlanningSceneConstPtr &scene = displaying_solution_->scene(idx_pair);
+
+  if (previous_index < 0 ||
+      displaying_solution_->indexPair(previous_index).first != idx_pair.first)
+    renderPlanningScene (scene);
+
+  QColor attached_color = attached_body_color_property_->getColor();
+  std_msgs::ColorRGBA color;
+  color.r = attached_color.redF();
+  color.g = attached_color.greenF();
+  color.b = attached_color.blueF();
+  color.a = 1.0f;
+
+  planning_scene::ObjectColorMap color_map;
+  scene->getKnownObjectColors(color_map);
+  robot_render_->update(displaying_solution_->getWayPointPtr(idx_pair), color, color_map);
+
+  if (slider_panel_)
+    slider_panel_->setSliderPosition(index);
 }
 
 void TaskSolutionVisualization::renderPlanningScene(const planning_scene::PlanningSceneConstPtr &scene)
@@ -492,25 +491,13 @@ void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor::So
 
   scene_->setPlanningSceneMsg(msg.start_scene);
 
-  robot_trajectory::RobotTrajectoryPtr t(new robot_trajectory::RobotTrajectory(scene_->getRobotModel(), ""));
-  for (std::size_t i = 0; i < msg.sub_trajectory.size(); ++i)
-  {
-    if (t->empty())
-    {
-      t->setRobotTrajectoryMsg(scene_->getCurrentState(), msg.sub_trajectory[i].trajectory);
-    }
-    else
-    {
-      robot_trajectory::RobotTrajectory tmp(scene_->getRobotModel(), "");
-      tmp.setRobotTrajectoryMsg(t->getLastWayPoint(), msg.sub_trajectory[i].trajectory);
-      t->append(tmp, 0.0);
-    }
-  }
+  DisplaySolutionPtr s (new DisplaySolution);
+  s->setFromMessage(scene_, msg);
 
-  if (!t->empty())
+  if (!s->empty())
   {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
-    solution_to_display_.swap(t);
+    solution_to_display_.swap(s);
     if (interrupt_display_property_->getBool())
       interruptCurrentDisplay();
   }
@@ -556,6 +543,8 @@ void TaskSolutionVisualization::sliderPanelVisibilityChange(bool enable)
     slider_panel_->onEnable();
   else
     slider_panel_->onDisable();
+
+  scene_node_->setVisible(enable || animating_);
 }
 
 
@@ -567,6 +556,8 @@ void TaskSolutionVisualization::changedSceneEnabled()
 
 void TaskSolutionVisualization::renderCurrentScene()
 {
+  if (scene_render_ && scene_enabled_property_->getBool() && current_state_ >= 0)
+    renderPlanningScene(displaying_solution_->scene(current_state_));
 }
 
 }  // namespace moveit_rviz_plugin

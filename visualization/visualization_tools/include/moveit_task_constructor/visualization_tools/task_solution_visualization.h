@@ -65,7 +65,6 @@ class PanelDockWidget;
 
 namespace moveit { namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
-MOVEIT_CLASS_FORWARD(RobotState)
 } }
 namespace planning_scene { MOVEIT_CLASS_FORWARD(PlanningScene) }
 namespace robot_trajectory { MOVEIT_CLASS_FORWARD(RobotTrajectory) }
@@ -76,6 +75,7 @@ namespace moveit_rviz_plugin
 MOVEIT_CLASS_FORWARD(RobotStateVisualization)
 MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
 MOVEIT_CLASS_FORWARD(PlanningSceneRender)
+MOVEIT_CLASS_FORWARD(DisplaySolution)
 
 class TaskSolutionPanel;
 class TaskSolutionVisualization : public QObject
@@ -129,6 +129,7 @@ private Q_SLOTS:
 protected:
   float getStateDisplayTime();
   void clearTrail();
+  void renderWayPoint(size_t index, int previous_index);
   void renderPlanningScene(const planning_scene::PlanningSceneConstPtr &scene);
 
   // render the planning scene
@@ -140,8 +141,8 @@ protected:
   void setRobotColor(rviz::Robot* robot, const QColor& color);
   void unsetRobotColor(rviz::Robot* robot);
 
-  robot_trajectory::RobotTrajectoryPtr displaying_solution_;
-  robot_trajectory::RobotTrajectoryPtr solution_to_display_;
+  DisplaySolutionPtr displaying_solution_;
+  DisplaySolutionPtr solution_to_display_;
   std::vector<rviz::Robot*> trail_;
   bool animating_ = false;
   bool drop_displaying_solution_ = false;
