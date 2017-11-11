@@ -53,9 +53,9 @@ namespace moveit_rviz_plugin
 
 TaskDisplay::TaskDisplay() : Display()
 {
-	robot_description_property_ = new rviz::StringProperty(
-	                                 "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
-	                                 this, SLOT(changedRobotDescription()), this);
+	robot_description_property_ =
+	      new rviz::StringProperty("Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
+	                               this, SLOT(changedRobotDescription()), this);
 
 	task_solution_topic_property_ =
 	      new rviz::RosTopicProperty("Task Solution Topic", "",
