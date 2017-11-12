@@ -2,5 +2,4 @@
 string id
 
 # list of all stages, including the task stage itself
-StageDescription[] description
-StageStatistics[] statistics
+StageDescription[] stages

@@ -198,7 +198,7 @@ bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, i
 	return true;
 }
 
-void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_description_type &msg)
+void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg)
 {
 	// iterate over descriptions and create new / update existing nodes where needed
 	for (const auto &s : msg) {
@@ -251,7 +251,7 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 	}
 }
 
-void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs::TaskDescription::_statistics_type &msg)
+void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg)
 {
 	// iterate over statistics and update node's solutions where needed
 	for (const auto &s : msg) {

@@ -306,11 +306,11 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 	bool created = it_inserted.second;
 	RemoteTaskModel*& remote_task = it_inserted.first->second;
 
-	if (!msg.description.empty() && remote_task && remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)
+	if (!msg.stages.empty() && remote_task && remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)
 		created = true; // re-create remote task after it was destroyed beforehand
 
 	// empty list indicates, that this remote task is not available anymore
-	if (msg.description.empty()) {
+	if (msg.stages.empty()) {
 		if (!remote_task) { // task was already deleted locally
 			// we can now remove it from remote_tasks_
 			d->remote_tasks_.erase(it_inserted.first);
@@ -323,8 +323,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 	if (!remote_task)
 		return; // task is not in use anymore
 
-	remote_task->processStageDescriptions(msg.description);
-	remote_task->processStageStatistics(msg.statistics);
+	remote_task->processStageDescriptions(msg.stages);
 
 	// insert newly created model into this' model instance
 	if (created) {

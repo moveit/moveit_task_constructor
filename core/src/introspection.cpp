@@ -20,7 +20,7 @@ public:
 	{
 		resetMaps();
 		task_description_publisher_ = nh_.advertise<moveit_task_constructor_msgs::TaskDescription>(DESCRIPTION_TOPIC, 1, true);
-		task_statistics_publisher_ = nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1);
+		task_statistics_publisher_ = nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
 		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
 	}
 	void resetMaps () {
@@ -168,9 +168,7 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 	      [this, &msg](const Stage& stage, int) -> bool {
 		// this method is called for each child stage of a given parent
 		moveit_task_constructor_msgs::StageDescription desc;
-		moveit_task_constructor_msgs::StageStatistics stat;
-		desc.id = stat.id = stageId(&stage);
-
+		desc.id = stageId(&stage);
 		desc.name = stage.name();
 		desc.flags = stage.pimpl()->interfaceFlags();
 		// TODO fill stage properties
@@ -179,16 +177,12 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 		assert (it != impl->stage_to_id_map_.cend());
 		desc.parent_id = it->second;
 
-		fillStageStatistics(stage, stat);
-
 		// finally store in msg
-		msg.description.push_back(std::move(desc));
-		msg.statistics.push_back(std::move(stat));
+		msg.stages.push_back(std::move(desc));
 		return true;
 	};
 
-	msg.description.clear();
-	msg.statistics.clear();
+	msg.stages.clear();
 	impl->task_.stages()->traverseRecursively(stageProcessor);
 
 	msg.id = impl->task_.id();

@@ -68,8 +68,8 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
-	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_description_type &msg);
-	void processStageStatistics(const moveit_task_constructor_msgs::TaskDescription::_statistics_type &msg);
+	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg);
+	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg);
 };
 
 

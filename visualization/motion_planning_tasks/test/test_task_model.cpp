@@ -60,19 +60,16 @@ protected:
 		uint id = 0, root_id;
 
 		moveit_task_constructor_msgs::StageDescription desc;
-		moveit_task_constructor_msgs::StageStatistics stat;
 		desc.parent_id = id;
-		desc.id = stat.id = root_id = ++id;
+		desc.id = root_id = ++id;
 		desc.name = name;
-		t.description.push_back(desc);
-		t.statistics.push_back(stat);
+		t.stages.push_back(desc);
 
 		for (int i = 0; i != children; ++i) {
 			desc.parent_id = root_id;
-			desc.id = stat.id = ++id;
+			desc.id = ++id;
 			desc.name = std::to_string(i);
-			t.description.push_back(desc);
-			t.statistics.push_back(stat);
+			t.stages.push_back(desc);
 		}
 		return t;
 	}
@@ -160,7 +157,7 @@ protected:
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
 	moveit_rviz_plugin::RemoteTaskModel m;
-	m.processStageDescriptions(genMsg("first").description);
+	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
 	validate(m, {"first"});
 }
