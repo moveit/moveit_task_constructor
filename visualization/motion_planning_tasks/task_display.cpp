@@ -71,6 +71,8 @@ TaskDisplay::TaskDisplay() : Display()
 
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
+	tasks_property_ =
+	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
 
 void TaskDisplay::onInitialize()
@@ -149,11 +151,17 @@ void TaskDisplay::changedRobotDescription()
 
 void TaskDisplay::updateTaskListModel()
 {
-	task_model_ = TaskListModelCache::instance().getModel(
+	if (task_list_model_) {
+		disconnect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
+		disconnect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
+	}
+	tasks_property_->removeChildren();
+
+	task_list_model_ = TaskListModelCache::instance().getModel(
 	                 task_monitor_topic_property_->getString(),
 	                 task_solution_topic_property_->getString());
 
-	if (!task_model_) {
+	if (!task_list_model_) {
 		if (task_monitor_topic_property_->getString().isEmpty())
 			setStatus(rviz::StatusProperty::Warn, "Task Monitor", "invalid task monitor topic");
 		else if (task_solution_topic_property_->getString().isEmpty())
@@ -163,19 +171,25 @@ void TaskDisplay::updateTaskListModel()
 	} else {
 		boost::function<void(const moveit_task_constructor::TaskConstPtr &)> taskCB
 		      ([this](const moveit_task_constructor::TaskConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processTaskMessage(*msg); });
+			mainloop_jobs_.addJob([this, msg]() { task_list_model_->processTaskMessage(*msg); });
 		});
 		task_monitor_sub = update_nh_.subscribe(task_monitor_topic_property_->getStdString(), 2, taskCB);
 
 		boost::function<void(const moveit_task_constructor::SolutionConstPtr &)> solCB
 		      ([this](const moveit_task_constructor::SolutionConstPtr &msg){
-			mainloop_jobs_.addJob([this, msg]() { task_model_->processSolutionMessage(*msg); });
+			mainloop_jobs_.addJob([this, msg]() { task_list_model_->processSolutionMessage(*msg); });
 			// TODO: use already processed trajectory (e.g. by ID)
-			mainloop_jobs_.addJob([this, msg]() {trajectory_visual_->showTrajectory(*msg);});
+			mainloop_jobs_.addJob([this, msg]() {
+				trajectory_visual_->showTrajectory(*msg);
+			});
 		});
 		task_solution_sub = update_nh_.subscribe(task_solution_topic_property_->getStdString(), 2, solCB);
 
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
+
+		onTasksInserted(QModelIndex(), 0, task_list_model_->rowCount()-1);
+		connect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
+		connect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
 	}
 }
 
@@ -189,6 +203,27 @@ void TaskDisplay::changedTaskSolutionTopic()
 {
 	task_solution_sub.shutdown();
 	updateTaskListModel();
+}
+
+void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
+{
+	if (parent.isValid()) return;
+
+	TaskListModel* m = static_cast<TaskListModel*>(sender());
+	for (; first <= last; ++first) {
+		QModelIndex idx = m->index(first, 0, parent);
+		tasks_property_->addChild(new rviz::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()));
+	}
+}
+
+void TaskDisplay::onTasksRemoved(const QModelIndex &parent, int first, int last)
+{
+	if (parent.isValid()) return;
+
+	for (; first <= last; ++first) {
+		rviz::Property *child = tasks_property_->takeChildAt(first);
+		delete child;
+	}
 }
 
 }  // namespace moveit_rviz_plugin

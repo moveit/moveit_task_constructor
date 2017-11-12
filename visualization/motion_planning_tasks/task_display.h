@@ -86,6 +86,8 @@ private Q_SLOTS:
   void changedRobotDescription();
   void changedTaskMonitorTopic();
   void changedTaskSolutionTopic();
+  void onTasksInserted(const QModelIndex& parent, int first, int last);
+  void onTasksRemoved(const QModelIndex& parent, int first, int last);
 
 protected:
   void updateTaskListModel();
@@ -99,7 +101,7 @@ protected:
   // The trajectory playback component
   TaskSolutionVisualizationPtr trajectory_visual_;
   // The TaskListModel storing actual task and solution data
-  TaskListModelPtr task_model_;
+  TaskListModelPtr task_list_model_;
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;
@@ -109,6 +111,7 @@ protected:
   rviz::StringProperty* robot_description_property_;
   rviz::RosTopicProperty* task_monitor_topic_property_;
   rviz::RosTopicProperty* task_solution_topic_property_;
+  rviz::Property* tasks_property_;
 };
 
 }  // namespace moveit_rviz_plugin

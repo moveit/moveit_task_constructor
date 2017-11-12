@@ -93,7 +93,7 @@ TaskPanel::~TaskPanel()
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
    , task_list_model(TaskListModelCache::instance().getGlobalModel())
-   , settings(new rviz::PropertyTreeModel(new rviz::Property))
+   , settings(new rviz::PropertyTreeModel(new rviz::Property, q_ptr))
 {
 	setupUi(q_ptr);
 	initSettings(settings->getRoot());
