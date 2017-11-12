@@ -58,7 +58,6 @@ private:
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
 	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
-	// TODO: add visualization_msgs::MarkerArray to allow for any complex visualization of the state
 	Solutions incoming_trajectories_;
 	Solutions outgoing_trajectories_;
 };
@@ -119,7 +118,6 @@ typedef std::vector<const SubTrajectory*> SolutionTrajectory;
 
 class SolutionBase {
 public:
-	// TODO: get rid of creator (only used in SerialContainer)
 	inline const StagePrivate* creator() const { return creator_; }
 	inline double cost() const { return cost_; }
 

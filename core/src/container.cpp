@@ -201,7 +201,6 @@ void SerialContainer::onNewSolution(SolutionBase &current)
 	                    [creator](const Stage::pointer& stage) { return stage->pimpl() == creator; } )
 	       != children.end());
 
-	// TODO: can we get rid of this and use a temporary when calling traverse()?
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
 	// find all incoming trajectories connected to s
@@ -216,8 +215,6 @@ void SerialContainer::onNewSolution(SolutionBase &current)
 	traverse<FORWARD>(current, std::ref(outgoing), trace);
 	if (outgoing.solutions.empty())
 		return; // no connection to back()
-
-	std::cerr << "new solution for: " << name() << std::endl;
 
 	// add solutions for all combinations of incoming + s + outgoing
 	SerialContainer::solution_container solution;
