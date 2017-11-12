@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6.12)
+cmake_minimum_required(VERSION 3.1)
 project(moveit_task_constructor_core)
 
 find_package(catkin REQUIRED COMPONENTS

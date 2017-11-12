@@ -175,8 +175,12 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 void TaskDisplay::updateTaskListModel()
 {
 	if (task_list_model_) {
-		disconnect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
-		disconnect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
+		disconnect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+		           this, SLOT(onTasksInserted(QModelIndex,int,int)));
+		disconnect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+		           this, SLOT(onTasksRemoved(QModelIndex,int,int)));
+		disconnect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+		           this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
 	}
 	tasks_property_->removeChildren();
 
@@ -202,9 +206,12 @@ void TaskDisplay::updateTaskListModel()
 
 		// initialize task list
 		onTasksInserted(QModelIndex(), 0, task_list_model_->rowCount()-1);
-		connect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
-		connect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
-		connect(task_list_model_.get(), &TaskListModel::dataChanged, this, &TaskDisplay::onTaskDataChanged);
+		connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+		        this, SLOT(onTasksInserted(QModelIndex,int,int)));
+		connect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+		        this, SLOT(onTasksRemoved(QModelIndex,int,int)));
+		connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+		        this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
 	} else {
 		setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
 	}

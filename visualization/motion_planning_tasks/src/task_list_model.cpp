@@ -177,7 +177,11 @@ private:
 	void _q_sourceRowsAboutToBeMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destParent, int dest);
 	void _q_sourceRowsMoved(const QModelIndex &sourceParent, int sourceStart, int sourceEnd, const QModelIndex &destParent, int dest);
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	void _q_sourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles);
+#else
+	void _q_sourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
+#endif
 };
 
 
@@ -393,8 +397,13 @@ void TaskListModel::insertTask(BaseTaskModel* model, int row)
 	        this, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
 	connect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
 	        this, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
 	        this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
+#else
+	connect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+	        this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex)));
+#endif
 }
 
 bool TaskListModel::removeTask(BaseTaskModel* model)
@@ -473,7 +482,7 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 	return data->model_->dropMimeData(mime, action, row, column, src_parent);
 }
 
-Qt::DropActions TaskListModel::supportedDragActions() const
+Qt::DropActions TaskListModel::supportedDropActions() const
 {
 	return Qt::CopyAction | Qt::MoveAction;
 }
@@ -494,8 +503,13 @@ void TaskListModelPrivate::removeTask(BaseTaskModel *model)
 	                    q_ptr, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
 	QObject::disconnect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
 	                    q_ptr, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	QObject::disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
 	                    q_ptr, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
+#else
+	QObject::disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+	                    q_ptr, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex)));
+#endif
 
 	// delete model if we own it
 	if (model->parent() == q_ptr)
@@ -543,10 +557,17 @@ void TaskListModelPrivate::_q_sourceRowsRemoved(const QModelIndex &parent, int s
 	q_ptr->endRemoveRows();
 }
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 void TaskListModelPrivate::_q_sourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight, const QVector<int> &roles)
 {
 	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight), roles);
 }
+#else
+void TaskListModelPrivate::_q_sourceDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
+{
+	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight));
+}
+#endif
 
 
 TaskListView::TaskListView(QWidget *parent)

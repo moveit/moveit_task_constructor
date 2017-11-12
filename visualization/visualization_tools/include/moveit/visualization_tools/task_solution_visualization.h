@@ -41,6 +41,8 @@
 #include <QObject>
 #include <boost/thread/mutex.hpp>
 
+class QColor;
+
 namespace Ogre
 {
 class SceneNode;

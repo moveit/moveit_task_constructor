@@ -15,8 +15,10 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/introspection.h
 )
 target_include_directories(${PROJECT_NAME}
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 add_subdirectory(stages)
 

@@ -130,7 +130,7 @@ public:
 	void setStageFactory(const StageFactoryPtr &factory);
 	QStringList mimeTypes() const override;
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
-	Qt::DropActions supportedDragActions() const override;
+	Qt::DropActions supportedDropActions() const override;
 
 private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))
@@ -140,7 +140,11 @@ private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int))
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int))
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>))
+#else
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex))
+#endif
 };
 MOVEIT_CLASS_FORWARD(TaskListModel)
 typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;

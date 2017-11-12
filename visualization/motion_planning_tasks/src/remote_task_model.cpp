@@ -42,7 +42,7 @@
 
 #include <QApplication>
 #include <QPalette>
-#include <qflags.h>
+#include <qglobal.h>
 
 using namespace moveit::task_constructor;
 
@@ -300,11 +300,22 @@ bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids)
 		return false;
 
 	bool size_changed = (ids_.size() != ids.size());
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	QAbstractItemModel::LayoutChangeHint hint = size_changed ? QAbstractItemModel::NoLayoutChangeHint
 	                                                         : QAbstractItemModel::VerticalSortHint;
 	layoutAboutToBeChanged({QModelIndex()}, hint);
+#else
+	layoutAboutToBeChanged();
+#endif
+
 	ids_ = ids;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	layoutChanged({QModelIndex()}, hint);
+#else
+	layoutChanged();
+#endif
 
 	return size_changed;
 }

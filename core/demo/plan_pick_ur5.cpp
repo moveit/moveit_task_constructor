@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 		auto move = std::make_unique<stages::Gripper>("open gripper");
 		move->setEndEffector("gripper");
 		move->setTo("open");
-		t.add(std::move(std::move(move)));
+		t.add(std::move(move));
 	}
 
 	{
@@ -54,7 +54,7 @@ int main(int argc, char** argv){
 		move->setGroup("arm");
 		move->setPlannerId("RRTConnectkConfigDefault");
 		move->setTimeout(8.0);
-		t.add(std::move(std::move(move)));
+		t.add(std::move(move));
 	}
 
 	{
@@ -68,7 +68,7 @@ int main(int argc, char** argv){
 		geometry_msgs::PointStamped target;
 		target.header.frame_id= "object";
 		move->towards(target);
-		t.add(std::move(std::move(move)));
+		t.add(std::move(move));
 	}
 
 	{
@@ -80,7 +80,7 @@ int main(int argc, char** argv){
 		gengrasp->setGraspOffset(.03);
 		gengrasp->setAngleDelta(-.2);
 		gengrasp->setMaxIKSolutions(8);
-		t.add(std::move(std::move(gengrasp)));
+		t.add(std::move(gengrasp));
 	}
 
 	{
@@ -88,7 +88,7 @@ int main(int argc, char** argv){
 		move->setEndEffector("gripper");
 		move->setTo("closed");
 		move->graspObject("object");
-		t.add(std::move(std::move(move)));
+		t.add(std::move(move));
 	}
 
 	{
@@ -102,7 +102,7 @@ int main(int argc, char** argv){
 		direction.header.frame_id= "world";
 		direction.vector.z= 1.0;
 		move->along(direction);
-		t.add(std::move(std::move(move)));
+		t.add(std::move(move));
 	}
 
 	t.plan();

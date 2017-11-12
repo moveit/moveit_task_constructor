@@ -77,9 +77,9 @@ TaskPanel::TaskPanel(QWidget* parent)
 {
 	Q_D(TaskPanel);
 	// connect signals
-	connect(d->actionRemoveTaskTreeRows, &QAction::triggered, this, &TaskPanel::removeTaskTreeRows);
-	connect(d->actionAddLocalTask, &QAction::triggered, this, &TaskPanel::addTask);
-	connect(d->button_show_stage_dock_widget, &QToolButton::clicked, this, &TaskPanel::showStageDockWidget);
+	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeTaskTreeRows()));
+	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
+	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 }
 
 TaskPanel::~TaskPanel()

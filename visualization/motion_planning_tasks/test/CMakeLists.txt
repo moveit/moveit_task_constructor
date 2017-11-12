@@ -6,9 +6,12 @@
 if (CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
 
-	add_rostest_gtest(${PROJECT_NAME}-test-task_model test_task_model.launch test_task_model.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-task_model
-		motion_planning_tasks_rviz_plugin
-		${catkin_LIBRARIES}
-		gtest_main)
+	if(NOT rviz_QT_VERSION VERSION_LESS "5")
+		# This tests uses Qt5's generic function slots
+		add_rostest_gtest(${PROJECT_NAME}-test-task_model test_task_model.launch test_task_model.cpp)
+		target_link_libraries(${PROJECT_NAME}-test-task_model
+			motion_planning_tasks_rviz_plugin
+			${catkin_LIBRARIES}
+			gtest_main)
+	endif()
 endif()
