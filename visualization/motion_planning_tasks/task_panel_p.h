@@ -53,7 +53,7 @@ public:
 	void initSettings(rviz::Property *root);
 
 	TaskPanel* q_ptr;
-	TaskListModelPtr tasks_model;
+	TaskListModelPtr task_list_model;
 	rviz::PropertyTreeModel* settings;
 };
 

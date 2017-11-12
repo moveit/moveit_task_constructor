@@ -36,26 +36,47 @@
 
 #pragma once
 
+#include "pluginlib_factory.h"
+#include <moveit_task_constructor/stage.h>
+
 #include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor/TaskDescription.h>
 #include <moveit_task_constructor/TaskStatistics.h>
 #include <moveit_task_constructor/Solution.h>
 
 #include <QAbstractItemModel>
+#include <QTreeView>
 #include <memory>
 
 namespace moveit_rviz_plugin {
 
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
+	Q_OBJECT
+protected:
+	unsigned int flags_ = 0;
+
 public:
+	enum TaskModelFlag {
+		IS_DESTROYED   = 0x01,
+		IS_INITIALIZED = 0x02,
+		IS_RUNNING     = 0x04,
+	};
+
 	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
+	unsigned int taskFlags() const { return flags_; }
 };
+
+
+typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
+typedef std::shared_ptr<StageFactory> StageFactoryPtr;
+StageFactoryPtr getStageFactory();
+
 
 class TaskListModelPrivate;
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
@@ -102,7 +123,14 @@ public:
 
 	/// insert a TaskModel into our list
 	void insertTask(BaseTaskModel* model, int row = -1);
-	bool removeTask(BaseTaskModel* model, bool disconnect_signals = true);
+	bool removeTask(BaseTaskModel* model);
+	bool removeTasks(int row, int count);
+
+	/// providing a StageFactory makes the model accepting drops
+	void setStageFactory(const StageFactoryPtr &factory);
+	QStringList mimeTypes() const override;
+	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+	Qt::DropActions supportedDragActions() const override;
 
 private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))
@@ -116,5 +144,14 @@ private:
 };
 MOVEIT_CLASS_FORWARD(TaskListModel)
 typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
+
+
+class TaskListView : public QTreeView {
+	Q_OBJECT
+public:
+	TaskListView(QWidget *parent = nullptr);
+
+	void dropEvent(QDropEvent *event) override;
+};
 
 }

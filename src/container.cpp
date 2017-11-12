@@ -97,6 +97,13 @@ bool ContainerBase::insert(Stage::pointer &&stage, int before)
 	return true;
 }
 
+bool ContainerBase::remove(int pos)
+{
+	ContainerBasePrivate::const_iterator it = pimpl()->position(pos);
+	pimpl()->children_.erase(it);
+	return true;
+}
+
 void ContainerBase::clear()
 {
 	pimpl()->children_.clear();

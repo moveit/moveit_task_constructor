@@ -36,21 +36,24 @@
 
 #include "factory_model.h"
 #include <rviz/load_resource.h>
+#include <QMimeData>
+#include <QSet>
 
 namespace moveit_rviz_plugin {
 
-FactoryModel::FactoryModel(rviz::Factory *factory, QObject *parent)
+FactoryModel::FactoryModel(rviz::Factory &factory, const QString& mime_type, QObject *parent)
    : QStandardItemModel(parent)
+   , mime_type_(mime_type)
 {
 	setHorizontalHeaderLabels({tr("Name")});
 	fillTree(factory);
 }
 
-void FactoryModel::fillTree(rviz::Factory *factory)
+void FactoryModel::fillTree(rviz::Factory &factory)
 {
 	QIcon default_package_icon = rviz::loadPixmap( "package://rviz/icons/default_package_icon.png" );
 
-	QStringList classes = factory->getDeclaredClassIds();
+	QStringList classes = factory.getDeclaredClassIds();
 	classes.sort();
 
 	// Map from package names to the corresponding top-level tree widget items.
@@ -58,7 +61,7 @@ void FactoryModel::fillTree(rviz::Factory *factory)
 
 	for(const QString& lookup_name : classes)
 	{
-		QString package = factory->getClassPackage(lookup_name);
+		QString package = factory.getClassPackage(lookup_name);
 
 		QStandardItem* package_item;
 		auto mi = package_items.find(package);
@@ -72,13 +75,31 @@ void FactoryModel::fillTree(rviz::Factory *factory)
 		{
 			package_item = mi->second;
 		}
-		QStandardItem* class_item = new QStandardItem(factory->getIcon(lookup_name),
-		                                              factory->getClassName(lookup_name));
-		class_item->setWhatsThis(factory->getClassDescription(lookup_name));
-		class_item->setData(lookup_name);
+		QStandardItem* class_item = new QStandardItem(factory.getIcon(lookup_name),
+		                                              factory.getClassName(lookup_name));
+		class_item->setWhatsThis(factory.getClassDescription(lookup_name));
+		class_item->setData(lookup_name, Qt::UserRole);
 		class_item->setDragEnabled(true);
 		package_item->appendRow(class_item);
 	}
+}
+
+QStringList FactoryModel::mimeTypes() const
+{
+	return { mime_type_ };
+}
+
+QMimeData *FactoryModel::mimeData(const QModelIndexList &indexes) const
+{
+	QSet<int> rows_considered;
+	QMimeData* mime_data = new QMimeData();
+	for (const auto &index : indexes) {
+		if (rows_considered.contains(index.row()))
+			continue;
+		// mime data is lookup_name
+		mime_data->setData(mime_type_, index.data(Qt::UserRole).toByteArray());
+	}
+	return mime_data;
 }
 
 }

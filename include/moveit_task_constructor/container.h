@@ -20,6 +20,7 @@ public:
 	bool traverseRecursively(const StageCallback &processor) const;
 
 	virtual bool insert(Stage::pointer&& stage, int before = -1);
+	virtual bool remove(int pos);
 	virtual void clear();
 
 	void reset() override;

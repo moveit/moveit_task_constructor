@@ -39,6 +39,9 @@
 #include "remote_task_model.h"
 #include <moveit_task_constructor/container.h>
 #include <ros/console.h>
+
+#include <QApplication>
+#include <QPalette>
 #include <qflags.h>
 
 using namespace moveit::task_constructor;
@@ -47,6 +50,7 @@ namespace moveit_rviz_plugin {
 
 enum NodeFlag {
 	WAS_VISITED        = 0x01, // indicate that model should emit change notifications
+	NAME_CHANGED       = 0x02, // indicate that name was manually changed
 };
 typedef QFlags<NodeFlag> NodeFlags;
 
@@ -170,6 +174,10 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 		case 2: return 0;
 		}
 		break;
+	case Qt::ForegroundRole:
+		if (index.column() == 0 && !index.parent().isValid())
+			return (flags_ & IS_DESTROYED) ? QColor(Qt::red) : QApplication::palette().text().color();
+		break;
 	}
 	return QVariant();
 }
@@ -179,7 +187,10 @@ bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, i
 	Node *n = node(index);
 	if (!n || index.column() != 0 || role != Qt::EditRole)
 		return false;
-	return n->setName(value.toString());
+	n->setName(value.toString());
+	n->node_flags_ |= NAME_CHANGED;
+	dataChanged(index, index);
+	return true;
 }
 
 void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor::TaskDescription::_description_type &msg)
@@ -211,7 +222,9 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor::Ta
 		Q_ASSERT(n->parent_ == parent);
 
 		// set content of stage
-		bool changed = n->setName(QString::fromStdString(s.name));
+		bool changed = false;
+		if (!(n->node_flags_ & NAME_CHANGED)) // avoid overwriting a manually changed name
+			n->setName(QString::fromStdString(s.name));
 		InterfaceFlags old_flags = n->interface_flags_;
 		n->interface_flags_ = InterfaceFlags();
 		for (auto f : {READS_START, READS_END, WRITES_NEXT_START, WRITES_PREV_END}) {
@@ -223,8 +236,13 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor::Ta
 		// emit notify about model changes when node was already visited
 		if (changed && (n->node_flags_ & WAS_VISITED)) {
 			QModelIndex idx = index(n);
-			dataChanged(idx, idx);
+			dataChanged(idx, idx.sibling(idx.row(), 2));
 		}
+	}
+
+	if (msg.empty()) {
+		flags_ |= IS_DESTROYED;
+		dataChanged(index(0, 0), index(0, 2));
 	}
 }
 

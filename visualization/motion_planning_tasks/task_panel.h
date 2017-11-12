@@ -69,9 +69,9 @@ public:
 	void save(rviz::Config config) const override;
 
 public Q_SLOTS:
-	void onAddTask();
-	void onAddStage();
-	void onRemoveStages();
+	void addTask();
+	void showStageDockWidget();
+	void removeTaskTreeRows();
 };
 
 }

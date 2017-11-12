@@ -64,6 +64,8 @@ TaskDisplay::TaskDisplay() : Display()
 	                                 this, SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
+	tasks_property_ =
+	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
 
 void TaskDisplay::onInitialize()
@@ -146,7 +148,7 @@ void TaskDisplay::taskDescriptionCB(const ros::MessageEvent<const moveit_task_co
 	const moveit_task_constructor::TaskDescriptionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->id;
 	mainloop_jobs_.addJob([this, id, msg]() {
-		task_model_->processTaskDescriptionMessage(id, *msg);
+		task_list_model_->processTaskDescriptionMessage(id, *msg);
 	});
 }
 
@@ -155,7 +157,7 @@ void TaskDisplay::taskStatisticsCB(const ros::MessageEvent<const moveit_task_con
 	const moveit_task_constructor::TaskStatisticsConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->id;
 	mainloop_jobs_.addJob([this, id, msg]() {
-		task_model_->processTaskStatisticsMessage(id, *msg);
+		task_list_model_->processTaskStatisticsMessage(id, *msg);
 	});
 }
 
@@ -164,7 +166,7 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const moveit_task_constructor::SolutionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
-		if (task_model_) task_model_->processSolutionMessage(id, *msg);
+		if (task_list_model_) task_list_model_->processSolutionMessage(id, *msg);
 		// TODO: use already processed trajectory (e.g. by ID)
 		trajectory_visual_->showTrajectory(*msg);
 	});
@@ -172,29 +174,43 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 
 void TaskDisplay::updateTaskListModel()
 {
+	if (task_list_model_) {
+		disconnect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
+		disconnect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
+	}
+	tasks_property_->removeChildren();
+
 	// generate task monitoring topics from solution topic
 	std::string solution_topic = task_solution_topic_property_->getStdString();
 	auto last_sep = solution_topic.find_last_of('/');
-	if (last_sep == std::string::npos)
+	if (last_sep == std::string::npos) {
+		setStatus(rviz::StatusProperty::Error, "Task Monitor", "invalid topic");
 		return;
+	}
 
 	std::string base_ns = solution_topic.substr(0, last_sep+1);
-	task_model_ = TaskListModelCache::instance().getModel(base_ns);
+	task_list_model_ = TaskListModelCache::instance().getModel(base_ns);
 
-	if (task_model_) {
+	if (task_list_model_) {
 		// listen to task descriptions updates
 		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
 
 		// listen to task statistics updates
 		task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
+
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
+
+		// initialize task list
+		onTasksInserted(QModelIndex(), 0, task_list_model_->rowCount()-1);
+		connect(task_list_model_.get(), &TaskListModel::rowsInserted, this, &TaskDisplay::onTasksInserted);
+		connect(task_list_model_.get(), &TaskListModel::rowsAboutToBeRemoved, this, &TaskDisplay::onTasksRemoved);
+		connect(task_list_model_.get(), &TaskListModel::dataChanged, this, &TaskDisplay::onTaskDataChanged);
 	} else {
 		setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
 	}
 
 	// listen to task solutions
 	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
-
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
 }
 
 void TaskDisplay::changedTaskSolutionTopic()
@@ -203,6 +219,40 @@ void TaskDisplay::changedTaskSolutionTopic()
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
 	updateTaskListModel();
+}
+
+void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
+{
+	if (parent.isValid()) return; // only handle top-level items
+
+	TaskListModel* m = static_cast<TaskListModel*>(sender());
+	for (; first <= last; ++first) {
+		QModelIndex idx = m->index(first, 0, parent);
+		tasks_property_->addChild(new rviz::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()));
+	}
+}
+
+void TaskDisplay::onTasksRemoved(const QModelIndex &parent, int first, int last)
+{
+	if (parent.isValid()) return; // only handle top-level items
+
+	for (; first <= last; ++first) {
+		rviz::Property *child = tasks_property_->takeChildAt(first);
+		delete child;
+	}
+}
+
+void TaskDisplay::onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
+{
+	if (topLeft.parent().isValid()) return; // only handle top-level items
+
+	for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
+		rviz::Property *child = tasks_property_->childAt(row);
+		if (topLeft.column() <= 0 && 0 <= bottomRight.column()) // name changed
+			child->setName(topLeft.sibling(row, 0).data().toString());
+		if (topLeft.column() <= 1 && 1 <= bottomRight.column()) // #solutions changed
+			child->setValue(topLeft.sibling(row, 1).data());
+	}
 }
 
 }  // namespace moveit_rviz_plugin

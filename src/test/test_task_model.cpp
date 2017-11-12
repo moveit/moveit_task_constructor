@@ -43,6 +43,7 @@
 #include <ros/init.h>
 #include <gtest/gtest.h>
 #include <initializer_list>
+#include <qcoreapplication.h>
 
 using namespace moveit::task_constructor;
 
@@ -201,4 +202,19 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
 	EXPECT_EQ(num_updates, 0);
+}
+
+TEST_F(TaskListModelTest, deletion) {
+	children = 3;
+	model.processTaskDescriptionMessage("1", genMsg("first"));
+	moveit_rviz_plugin::BaseTaskModel *m = model.getTask(0);
+	int num_deletes = 0;
+	QObject::connect(m, &QObject::destroyed, [&num_deletes](){++num_deletes;});
+
+	model.removeTask(m);
+	// process deleteLater() events
+	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+	// as m is owned by model, m should be destroyed
+	// EXPECT_EQ(num_deletes, 1); // TODO: event is not processed, missing event loop?
+	EXPECT_EQ(model.rowCount(), 0);
 }
