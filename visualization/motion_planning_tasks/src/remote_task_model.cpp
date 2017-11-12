@@ -60,8 +60,13 @@ struct RemoteTaskModel::Node {
 	QString name_;
 	InterfaceFlags interface_flags_;
 	NodeFlags node_flags_;
+	std::unique_ptr<RemoteSolutionModel> solved_;
+	std::unique_ptr<RemoteSolutionModel> failed_;
 
-	inline Node(Node *parent) : parent_(parent) {}
+	inline Node(Node *parent) : parent_(parent) {
+		solved_.reset(new RemoteSolutionModel());
+		failed_.reset(new RemoteSolutionModel());
+	}
 
 	bool setName(const QString& name) {
 		if (name == name_) return false;
@@ -170,8 +175,8 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 	case Qt::DisplayRole:
 		switch (index.column()) {
 		case 0: return n->name_;
-		case 1: return 0;
-		case 2: return 0;
+		case 1: return n->solved_->rowCount();
+		case 2: return n->failed_->rowCount();
 		}
 		break;
 	case Qt::ForegroundRole:
@@ -248,6 +253,60 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 
 void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs::TaskDescription::_statistics_type &msg)
 {
+	// iterate over statistics and update node's solutions where needed
+	for (const auto &s : msg) {
+		// find node for stage s, this should always exist
+		auto it = id_to_stage_.find(s.id);
+		if (it == id_to_stage_.end()) {
+			ROS_ERROR_NAMED("TaskListModel", "No stage %d", s.id);
+			continue;
+		}
+		Node *n = it->second;
+
+		bool changed = n->solved_->processSolutionIDs(s.solved) ||
+		               n->failed_->processSolutionIDs(s.failed);
+		// emit notify about model changes when node was already visited
+		if (changed && (n->node_flags_ & WAS_VISITED)) {
+			QModelIndex idx = index(n);
+			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 2));
+		}
+	}
+}
+
+
+RemoteSolutionModel::RemoteSolutionModel(QObject *parent)
+    : QAbstractListModel(parent)
+{
+}
+
+int RemoteSolutionModel::rowCount(const QModelIndex &parent) const
+{
+	return ids_.size();
+}
+
+QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
+{
+	Q_ASSERT(index.isValid());
+	Q_ASSERT(!index.parent().isValid());
+
+	if (role == Qt::DisplayRole)
+		return index.row();
+	return QVariant();
+}
+
+bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids)
+{
+	if (ids_ == ids)
+		return false;
+
+	bool size_changed = (ids_.size() != ids.size());
+	QAbstractItemModel::LayoutChangeHint hint = size_changed ? QAbstractItemModel::NoLayoutChangeHint
+	                                                         : QAbstractItemModel::VerticalSortHint;
+	layoutAboutToBeChanged({QModelIndex()}, hint);
+	ids_ = ids;
+	layoutChanged({QModelIndex()}, hint);
+
+	return size_changed;
 }
 
 }

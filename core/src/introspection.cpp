@@ -177,7 +177,7 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 
 		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
 		assert (it != impl->stage_to_id_map_.cend());
-		desc.parent_id = stat.parent_id = it->second;
+		desc.parent_id = it->second;
 
 		fillStageStatistics(stage, stat);
 
@@ -202,11 +202,6 @@ moveit_task_constructor_msgs::TaskStatistics& Introspection::fillTaskStatistics(
 		// this method is called for each child stage of a given parent
 		moveit_task_constructor_msgs::StageStatistics stat; // create new Stage msg
 		stat.id = stageId(&stage);
-
-		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
-		assert (it != impl->stage_to_id_map_.cend());
-		stat.parent_id = it->second;
-
 		fillStageStatistics(stage, stat);
 
 		// finally store in msg.stages

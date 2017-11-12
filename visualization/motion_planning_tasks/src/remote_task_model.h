@@ -37,15 +37,21 @@
 #pragma once
 
 #include "task_list_model.h"
+#include <moveit/visualization_tools/display_solution.h>
 #include <memory>
 
 namespace moveit_rviz_plugin {
 
+/** Model representing a remote task
+ *
+ *  filled via TaskDescription + TaskStatistics messages
+ */
 class RemoteTaskModel : public BaseTaskModel {
 	Q_OBJECT
 	class Node;
 	Node* const root_;
 	std::map<uint32_t, Node*> id_to_stage_;
+	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
 
 	inline Node* node(const QModelIndex &index) const;
 	QModelIndex index(const Node* n) const;
@@ -64,6 +70,20 @@ public:
 
 	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_description_type &msg);
 	void processStageStatistics(const moveit_task_constructor_msgs::TaskDescription::_statistics_type &msg);
+};
+
+
+/** Model representing solutions of a remote task */
+class RemoteSolutionModel : public QAbstractListModel {
+	Q_OBJECT
+	std::vector<uint32_t> ids_;
+
+public:
+	RemoteSolutionModel(QObject *parent = nullptr);
+	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+
+	bool processSolutionIDs(const std::vector<uint32_t>& ids);
 };
 
 }

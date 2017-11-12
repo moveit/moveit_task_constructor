@@ -15,6 +15,8 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory)
 
 namespace moveit_rviz_plugin {
 
+MOVEIT_CLASS_FORWARD(DisplaySolution)
+
 /** Class representing a task solution for display */
 class DisplaySolution
 {

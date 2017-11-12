@@ -61,14 +61,14 @@ protected:
 
 		moveit_task_constructor_msgs::StageDescription desc;
 		moveit_task_constructor_msgs::StageStatistics stat;
-		desc.parent_id = stat.parent_id = id;
+		desc.parent_id = id;
 		desc.id = stat.id = root_id = ++id;
 		desc.name = name;
 		t.description.push_back(desc);
 		t.statistics.push_back(stat);
 
 		for (int i = 0; i != children; ++i) {
-			desc.parent_id = stat.parent_id = root_id;
+			desc.parent_id = root_id;
 			desc.id = stat.id = ++id;
 			desc.name = std::to_string(i);
 			t.description.push_back(desc);
