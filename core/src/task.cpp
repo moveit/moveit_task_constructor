@@ -205,12 +205,12 @@ void Task::onNewSolution(SolutionBase &s)
 		introspection_->publishSolution(s);
 }
 
-inline ContainerBase* Task::stages()
+ContainerBase* Task::stages()
 {
 	return static_cast<ContainerBase*>(WrapperBase::wrapped());
 }
 
-inline const ContainerBase* Task::stages() const
+const ContainerBase* Task::stages() const
 {
 	return const_cast<Task*>(this)->stages();
 }
