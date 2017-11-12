@@ -1,3 +1,13 @@
+cmake_minimum_required(VERSION 2.6.12)
+project(moveit_task_constructor_visualization)
+
+find_package(catkin REQUIRED COMPONENTS
+	moveit_task_constructor_msgs
+	moveit_task_constructor_core
+	moveit_ros_visualization
+	rviz
+)
+
 # definition needed for boost/math/constants/constants.hpp included by Ogre to compile
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
 
@@ -20,5 +30,17 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
+catkin_package(
+)
+
+set(CMAKE_CXX_STANDARD 14)
+
+include_directories(${catkin_INCLUDE_DIRS})
+
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)
+
+install(DIRECTORY include/ DESTINATION include)
+install(FILES
+	motion_planning_tasks_rviz_plugin_description.xml
+	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

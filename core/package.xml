@@ -1,0 +1,27 @@
+<package>
+	<name>moveit_task_constructor_core</name>
+	<version>0.0.0</version>
+	<description>MoveIt Task Pipeline</description>
+
+	<license>BSD</license>
+	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
+	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
+
+	<buildtool_depend>catkin</buildtool_depend>
+
+	<build_depend>moveit_core</build_depend>
+	<build_depend>moveit_ros_planning</build_depend>
+	<build_depend>moveit_ros_planning_interface</build_depend>
+	<build_depend>moveit_task_constructor_msgs</build_depend>
+
+	<run_depend>moveit_core</run_depend>
+	<run_depend>moveit_ros_planning</run_depend>
+	<run_depend>moveit_ros_planning_interface</run_depend>
+	<run_depend>moveit_task_constructor_msgs</run_depend>
+
+	<test_depend>rostest</test_depend>
+
+	<export>
+		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>
+	</export>
+</package>

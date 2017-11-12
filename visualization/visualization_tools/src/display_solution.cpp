@@ -1,4 +1,4 @@
-#include <moveit_task_constructor/visualization_tools/display_solution.h>
+#include <moveit/visualization_tools/display_solution.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 
@@ -39,7 +39,7 @@ const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 }
 
 void DisplaySolution::setFromMessage(const planning_scene::PlanningSceneConstPtr& parent,
-                                     const moveit_task_constructor::Solution &msg)
+                                     const moveit_task_constructor_msgs::Solution &msg)
 {
 	planning_scene::PlanningScenePtr ref_scene = parent->diff();
 

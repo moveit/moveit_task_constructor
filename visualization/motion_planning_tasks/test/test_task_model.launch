@@ -1,0 +1,7 @@
+<launch>
+	<include file="$(find moveit_resources)/fanuc_moveit_config/launch/planning_context.launch">
+		<arg name="load_robot_description" value="true"/>
+	</include>
+	<test pkg="moveit_task_constructor_visualization"
+	      type="moveit_task_constructor_visualization-test-task_model" test-name="test_task_model" />
+</launch>

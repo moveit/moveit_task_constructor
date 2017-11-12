@@ -1,9 +1,0 @@
-<library path="libmoveit_task_constructor_stages">
-  <class name="moveit_task_constructor/Serial Container"
-         type="moveit::task_constructor::SerialContainer"
-         base_class_type="moveit::task_constructor::Stage">
-    <description>
-      Container for a serial chain of manipulation stages.
-    </description>
-  </class>
-</library>

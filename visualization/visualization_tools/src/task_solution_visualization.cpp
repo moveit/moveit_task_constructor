@@ -34,9 +34,9 @@
 
 /* Author: Dave Coleman, Robert Haschke */
 
-#include <moveit_task_constructor/visualization_tools/display_solution.h>
-#include <moveit_task_constructor/visualization_tools/task_solution_visualization.h>
-#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
+#include <moveit/visualization_tools/display_solution.h>
+#include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit/visualization_tools/task_solution_panel.h>
 
 #include <moveit/rviz_plugin_render_tools/planning_scene_render.h>
 #include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
@@ -478,7 +478,7 @@ void TaskSolutionVisualization::renderPlanningScene(const planning_scene::Planni
                                      scene_alpha_property_->getFloat());
 }
 
-void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor::Solution& msg)
+void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msgs::Solution& msg)
 {
   // Error check
   if (!scene_)

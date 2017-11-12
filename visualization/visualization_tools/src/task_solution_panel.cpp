@@ -34,7 +34,7 @@
 
 /* Author: Yannick Jonetzko */
 
-#include <moveit_task_constructor/visualization_tools/task_solution_panel.h>
+#include <moveit/visualization_tools/task_solution_panel.h>
 #include <QHBoxLayout>
 
 namespace moveit_rviz_plugin

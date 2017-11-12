@@ -1,9 +1,11 @@
 set(MOVEIT_LIB_NAME moveit_task_visualization_tools)
 
+set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/visualization_tools)
+
 set(HEADERS
-	include/moveit_task_constructor/visualization_tools/display_solution.h
-	include/moveit_task_constructor/visualization_tools/task_solution_visualization.h
-	include/moveit_task_constructor/visualization_tools/task_solution_panel.h
+	${PROJECT_INCLUDE}/display_solution.h
+	${PROJECT_INCLUDE}/task_solution_visualization.h
+	${PROJECT_INCLUDE}/task_solution_panel.h
 )
 
 add_library(${MOVEIT_LIB_NAME}
