@@ -413,6 +413,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
         current_state_ = slider_panel_->getSliderPosition();
       else
         ++current_state_;
+
       int waypoint_count = displaying_solution_->getWayPointCount();
       if (current_state_ < waypoint_count)
       {
@@ -429,8 +430,9 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
                                 (slider_panel_ && slider_panel_->isVisible()));
         if (!loop_display_property_->getBool() && slider_panel_)
           slider_panel_->pauseButton(true);
-        // ensure to render last frame
-        renderWayPoint(displaying_solution_->getWayPointCount() - 1, previous_state);
+        // ensure to render end state
+        renderWayPoint(waypoint_count - 1, previous_state);
+        renderPlanningScene(displaying_solution_->scene(waypoint_count));
       }
       current_state_time_ = 0.0f;
     }

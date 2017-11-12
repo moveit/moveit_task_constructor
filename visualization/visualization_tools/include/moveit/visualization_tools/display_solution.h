@@ -20,9 +20,13 @@ MOVEIT_CLASS_FORWARD(DisplaySolution)
 /** Class representing a task solution for display */
 class DisplaySolution
 {
+	/// number of overall steps
 	size_t steps_;
+	/// end scenes for each sub trajectory
 	std::vector<planning_scene::PlanningSceneConstPtr> scene_;
+	/// sub trajectories, might be empty
 	std::vector<robot_trajectory::RobotTrajectoryPtr> trajectory_;
+	/// optional name of the trajectory
 	std::vector<std::string> name_;
 
 public:
@@ -43,6 +47,8 @@ public:
 	}
 	const planning_scene::PlanningSceneConstPtr& scene(const IndexPair& idx_pair) const;
 	const planning_scene::PlanningSceneConstPtr& scene(size_t index) const {
+		if (index == steps_)
+			return scene_.back();
 		return scene(indexPair(index));
 	}
 	const std::string& name(const IndexPair& idx_pair) const;

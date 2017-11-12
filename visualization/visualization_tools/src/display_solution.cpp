@@ -30,7 +30,8 @@ const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPai
 
 const planning_scene::PlanningSceneConstPtr &DisplaySolution::scene(const IndexPair &idx_pair) const
 {
-	return scene_[idx_pair.first];
+	// start scene is parent of end scene
+	return scene_[idx_pair.first]->getParent();
 }
 
 const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
@@ -50,16 +51,16 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningSceneConstPtr
 	steps_ = 0;
 	size_t i = 0;
 	for (const auto& sub : msg.sub_trajectory) {
-		scene_[i] = ref_scene;
 		trajectory_[i].reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
 		trajectory_[i]->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
-
 		name_[i] = sub.name;
 		steps_ += trajectory_[i]->getWayPointCount();
 
-		// create new reference scene based of diffs
-		ref_scene = ref_scene->diff();
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
+		scene_[i] = ref_scene;
+
+		// create new reference scene for next iteration
+		ref_scene = ref_scene->diff();
 		++i;
 	}
 }
