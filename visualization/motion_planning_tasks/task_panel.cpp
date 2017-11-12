@@ -81,9 +81,9 @@ TaskPanel::TaskPanel(QWidget* parent)
 {
 	Q_D(TaskPanel);
 	// connect signals
-	connect(d->actionNewTask, &QAction::triggered, this, &TaskPanel::onAddTask);
-	connect(d->actionNewStage, &QAction::triggered, this, &TaskPanel::onAddStage);
-	connect(d->actionRemoveStages, &QAction::triggered, this, &TaskPanel::onRemoveStages);
+	connect(d->actionNewTask, SIGNAL(triggered()), this, SLOT(onAddTask()));
+	connect(d->actionNewStage, SIGNAL(triggered()), this, SLOT(onAddStage()));
+	connect(d->actionRemoveStages, SIGNAL(triggered()), this, SLOT(onRemoveStages()));
 }
 
 TaskPanel::~TaskPanel()

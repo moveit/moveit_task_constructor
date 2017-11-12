@@ -64,10 +64,10 @@ TaskListModelPtr TaskListModelCache::getModel(const QString &task_monitor_topic,
 			model = result = TaskListModelPtr(new TaskListModel());
 
 			// connect newly created TaskListModel to global model
-			connect(result.get(), &TaskListModel::rowsInserted,
-			        this, &TaskListModelCache::onInsertTasks);
-			connect(result.get(), &TaskListModel::rowsAboutToBeRemoved,
-			        this, &TaskListModelCache::onRemoveTasks);
+			connect(result.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+			        this, SLOT(onInsertTasks(QModelIndex,int,int)));
+			connect(result.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+			        this, SLOT(onRemoveTasks(QModelIndex,int,int)));
 		} else
 			result = model.lock();
 

@@ -102,6 +102,8 @@ public:
 	bool removeTask(BaseTaskModel* model, bool disconnect_signals = true);
 
 private:
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceDestroyed(QObject*))
+
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsInserted(QModelIndex,int,int))
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeRemoved(QModelIndex,int,int))
@@ -109,7 +111,11 @@ private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int))
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int))
 
+#if Q_VERSION < 0x050000
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex))
+#else
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>))
+#endif
 };
 MOVEIT_CLASS_FORWARD(TaskListModel)
 typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
