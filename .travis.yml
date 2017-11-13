@@ -11,6 +11,7 @@ notifications:
   email:
     recipients:
       - rhaschke@techfak.uni-bielefeld.de
+      - me@v4hn.de
 env:
   matrix:
     - ROS_DISTRO=kinetic  ROS_REPO=ros

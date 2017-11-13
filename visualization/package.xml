@@ -5,6 +5,7 @@
 
 	<license>BSD</license>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
+	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
 
 	<buildtool_depend>catkin</buildtool_depend>
 
