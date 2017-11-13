@@ -81,12 +81,12 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
                                                   parent, SLOT(changedLoopDisplay()), this);
 
   trail_display_property_ = new rviz::BoolProperty("Show Trail", false, "Show a path trail",
-                                                   parent, SLOT(changedShowTrail()), this);
+                                                   parent, SLOT(changedTrail()), this);
 
   state_display_time_property_ = new rviz::EditableEnumProperty("State Display Time", "0.05 s",
                                                                 "The amount of wall-time to wait in between displaying "
                                                                 "states along a received trajectory path",
-                                                                parent, SLOT(changedStateDisplayTime()), this);
+                                                                parent);
   state_display_time_property_->addOptionStd("REALTIME");
   state_display_time_property_->addOptionStd("0.05 s");
   state_display_time_property_->addOptionStd("0.1 s");
@@ -94,7 +94,7 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 
   trail_step_size_property_ = new rviz::IntProperty("Trail Step Size", 1,
                                                     "Specifies the step size of the samples shown in the trajectory trail.",
-                                                    parent, SLOT(changedTrailStepSize()), this);
+                                                    parent, SLOT(changedTrail()), this);
   trail_step_size_property_->setMin(1);
 
 
@@ -243,7 +243,7 @@ void TaskSolutionVisualization::changedLoopDisplay()
     slider_panel_->pauseButton(false);
 }
 
-void TaskSolutionVisualization::changedShowTrail()
+void TaskSolutionVisualization::changedTrail()
 {
   clearTrail();
 
@@ -274,12 +274,6 @@ void TaskSolutionVisualization::changedShowTrail()
   }
 }
 
-void TaskSolutionVisualization::changedTrailStepSize()
-{
-  if (trail_display_property_->getBool())
-    changedShowTrail();
-}
-
 void TaskSolutionVisualization::changedRobotAlpha()
 {
   robot_render_->setAlpha(robot_alpha_property_->getFloat());
@@ -299,10 +293,6 @@ void TaskSolutionVisualization::changedRobotCollisionEnabled()
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
   for (std::size_t i = 0; i < trail_.size(); ++i)
     trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
-}
-
-void TaskSolutionVisualization::changedStateDisplayTime()
-{
 }
 
 void TaskSolutionVisualization::onEnable()
@@ -375,7 +365,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     {
       animating_ = true;
       displaying_solution_ = solution_to_display_;
-      changedShowTrail();
+      changedTrail();
       if (slider_panel_)
         slider_panel_->update(solution_to_display_->getWayPointCount());
     }
@@ -502,7 +492,7 @@ void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msg
   if (!s->empty())
   {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
-    solution_to_display_.swap(s);
+    solution_to_display_ = s;
     if (interrupt_display_property_->getBool())
       interruptCurrentDisplay();
   }

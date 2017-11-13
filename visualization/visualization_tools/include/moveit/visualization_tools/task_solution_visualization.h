@@ -92,7 +92,6 @@ public:
    * \return true on success
    */
   TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display);
-
   virtual ~TaskSolutionVisualization();
 
   virtual void update(float wall_dt, float ros_dt);
@@ -116,9 +115,7 @@ private Q_SLOTS:
   void changedRobotCollisionEnabled();
   void changedRobotAlpha();
   void changedLoopDisplay();
-  void changedShowTrail();
-  void changedTrailStepSize();
-  void changedStateDisplayTime();
+  void changedTrail();
   void changedRobotColor();
   void enabledRobotColor();
   void changedAttachedBodyColor();
