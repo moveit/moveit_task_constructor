@@ -126,6 +126,7 @@ private Q_SLOTS:
   void renderCurrentScene();
 
 protected:
+  void setVisibility(Ogre::SceneNode* node, Ogre::SceneNode* parent, bool visible);
   float getStateDisplayTime();
   void clearTrail();
   void renderWayPoint(size_t index, int previous_index);
@@ -153,7 +154,9 @@ protected:
 
   // Pointers from parent display that we save
   rviz::Display* display_;  // the parent display that this class populates
-  Ogre::SceneNode* scene_node_;
+  Ogre::SceneNode* parent_scene_node_;  // parent scene node provided by display
+  Ogre::SceneNode* main_scene_node_;  // to be added/removed to/from scene_node_
+  Ogre::SceneNode* trail_scene_node_;  // to be added/removed to/from scene_node_
   rviz::DisplayContext* context_;
   TaskSolutionPanel* slider_panel_ = nullptr;
   rviz::PanelDockWidget* slider_dock_panel_ = nullptr;
