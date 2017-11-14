@@ -303,6 +303,8 @@ void TaskSolutionVisualization::changedRobotCollisionEnabled()
 
 void TaskSolutionVisualization::onEnable()
 {
+  if (slider_panel_ && slider_panel_was_visible_)
+    slider_panel_->onEnable();
 }
 
 void TaskSolutionVisualization::onDisable()
@@ -313,8 +315,10 @@ void TaskSolutionVisualization::onDisable()
 
   displaying_solution_.reset();
   animating_ = false;
-  if (slider_panel_)
+  if (slider_panel_) {
+    slider_panel_was_visible_ = slider_panel_->isVisible();
     slider_panel_->onDisable();
+  }
 }
 
 void TaskSolutionVisualization::interruptCurrentDisplay()

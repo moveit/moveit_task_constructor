@@ -160,6 +160,7 @@ protected:
   rviz::DisplayContext* context_;
   TaskSolutionPanel* slider_panel_ = nullptr;
   rviz::PanelDockWidget* slider_dock_panel_ = nullptr;
+  bool slider_panel_was_visible_ = false;
 
   // Trajectory Properties
   rviz::Property* robot_property_;

@@ -81,13 +81,11 @@ void TaskSolutionPanel::onInitialize()
 
 void TaskSolutionPanel::onEnable()
 {
-  show();
   parentWidget()->show();
 }
 
 void TaskSolutionPanel::onDisable()
 {
-  hide();
   paused_ = false;
   parentWidget()->hide();
 }
