@@ -132,7 +132,7 @@ public:
 				if (task) *task = const_cast<BaseModelData*>(&t);
 				return t.model_->index(0, proxy_index.column());
 			}
-			// for all other levels, internal_pointer maps to source parent
+			// for all other levels, internal_pointer points to source parent
 			auto it = t.proxy_to_source_mapping_.constFind(internal_pointer);
 			if (it != t.proxy_to_source_mapping_.constEnd()) {
 				if (task) *task = const_cast<BaseModelData*>(&t);
@@ -158,13 +158,32 @@ public:
 			Q_ASSERT(false);
 		}
 
-		// store source index in mapping, currently only if task was provided (coming top-down)
-		// TODO: do we need to populate the mapping also when coming bottom-up?
-		// This would require climbing up the tree until we reach root
+		// store source index in mapping: easy, if we already know the correspondig task (coming top-down)
 		if (task) task->proxy_to_source_mapping_.insert(src_parent.internalPointer(), src_parent);
+		// coming bottom-up, we need to climb the tree until we reach root and lookup the task
+		else mapSourceIndexes(src, task);
 
 		// use internal pointer from parent
 		return q_ptr->createIndex(src.row(), src.column(), src_parent.internalPointer());
+	}
+
+	void mapSourceIndexes(const QModelIndex &src, BaseModelData*& task) const {
+		Q_ASSERT(src.isValid());
+		const QModelIndex &src_parent = src.parent();
+		if (!src_parent.isValid()) { // reached root
+			// figure out corresponding task
+			for (const BaseModelData& t : tasks_) {
+				if (t.model_->index(0, 0).internalPointer() == src.internalPointer()) {
+					task = const_cast<BaseModelData*>(&t);
+					return;
+				}
+			}
+			Q_ASSERT(false); // src should be part of our model!
+		}
+
+		mapSourceIndexes(src_parent, task);
+		// now task should be well-defined
+		task->proxy_to_source_mapping_.insert(src_parent.internalPointer(), src_parent);
 	}
 
 	void removeTask(BaseTaskModel *model);
