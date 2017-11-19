@@ -63,6 +63,7 @@ public:
 
 private:
 	void fillStageStatistics(const Stage &stage, moveit_task_constructor_msgs::StageStatistics &s);
+	void fillSolution(moveit_task_constructor_msgs::Solution &msg, const SolutionBase &s);
 	/// retrieve or set id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage * const s);
 };
