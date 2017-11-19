@@ -97,6 +97,8 @@ class TaskListModelPrivate {
 public:
 	Q_DECLARE_PUBLIC(TaskListModel)
 	TaskListModel* q_ptr;
+	// planning scene / robot model used by all tasks in this model
+	planning_scene::PlanningSceneConstPtr scene_;
 
 	struct BaseModelData {
 		BaseModelData(BaseTaskModel* m) : model_(m) {}
@@ -122,7 +124,8 @@ public:
 
 	// retrieve the source_index corresponding to proxy_index
 	QModelIndex mapToSource(const QModelIndex &proxy_index, BaseModelData **task = nullptr) const {
-		Q_ASSERT(proxy_index.isValid());
+		if (!proxy_index.isValid())
+			return QModelIndex();
 		Q_ASSERT(proxy_index.model() == q_ptr);
 
 		void* internal_pointer = proxy_index.internalPointer();
@@ -214,6 +217,11 @@ TaskListModel::TaskListModel(QObject *parent)
 TaskListModel::~TaskListModel() {
 	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
 	delete d_ptr;
+}
+
+void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	d_ptr->scene_ = scene;
 }
 
 int TaskListModel::rowCount(const QModelIndex &parent) const
@@ -341,7 +349,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		}
 	} else if (created) { // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(this);
+		remote_task = new RemoteTaskModel(d->scene_, this);
 	}
 	if (!remote_task)
 		return; // task is not in use anymore
@@ -372,10 +380,20 @@ void TaskListModel::processTaskStatisticsMessage(const std::string &id,
 	remote_task->processStageStatistics(msg.stages);
 }
 
-void TaskListModel::processSolutionMessage(const std::string &id,
-                                           const moveit_task_constructor_msgs::Solution &msg)
+DisplaySolutionPtr TaskListModel::processSolutionMessage(const std::string &id,
+                                                         const moveit_task_constructor_msgs::Solution &msg)
 {
-	// TODO
+    Q_D(TaskListModel);
+
+	auto it = d->remote_tasks_.find(id);
+	if (it == d->remote_tasks_.cend())
+		return DisplaySolutionPtr(); // unkown task
+
+	RemoteTaskModel* remote_task = it->second;
+	if (!remote_task)
+		return DisplaySolutionPtr(); // task is not in use anymore
+
+	return remote_task->processSolutionMessage(msg);
 }
 
 BaseTaskModel *TaskListModel::getTask(int row) const

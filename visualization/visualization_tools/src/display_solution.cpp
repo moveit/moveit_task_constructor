@@ -1,6 +1,7 @@
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
+#include <ros/console.h>
 
 namespace moveit_rviz_plugin {
 
@@ -39,10 +40,20 @@ const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 	return name_[idx_pair.first];
 }
 
-void DisplaySolution::setFromMessage(const planning_scene::PlanningSceneConstPtr& parent,
+void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
                                      const moveit_task_constructor_msgs::Solution &msg)
 {
-	planning_scene::PlanningScenePtr ref_scene = parent->diff();
+	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName()) {
+		ROS_ERROR("Solution for model '%s' but model '%s' was expected",
+		         msg.start_scene.robot_model_name .c_str(),
+		         start_scene->getRobotModel()->getName().c_str());
+		return;
+	}
+
+	// initialize parent scene from solution's start scene
+	start_scene->setPlanningSceneMsg(msg.start_scene);
+	start_scene_ = start_scene;
+	planning_scene::PlanningScenePtr ref_scene = start_scene_->diff();
 
 	scene_.resize(msg.sub_trajectory.size());
 	trajectory_.resize(msg.sub_trajectory.size());

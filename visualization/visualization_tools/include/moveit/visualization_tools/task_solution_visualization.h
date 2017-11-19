@@ -103,7 +103,9 @@ public:
   void onDisable();
   void setName(const QString& name);
 
+  planning_scene::PlanningSceneConstPtr getScene() const { return scene_; }
   void showTrajectory(const moveit_task_constructor_msgs::Solution& msg);
+  void showTrajectory(moveit_rviz_plugin::DisplaySolutionPtr s);
   void dropTrajectory();
 
 public Q_SLOTS:

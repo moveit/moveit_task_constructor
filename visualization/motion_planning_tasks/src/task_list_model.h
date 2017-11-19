@@ -50,6 +50,8 @@
 
 namespace moveit_rviz_plugin {
 
+MOVEIT_CLASS_FORWARD(DisplaySolution)
+
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
 	Q_OBJECT
@@ -96,6 +98,8 @@ public:
 	TaskListModel(QObject *parent = nullptr);
 	~TaskListModel();
 
+	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
+
 	static QString horizontalHeader(int column);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
@@ -116,7 +120,7 @@ public:
 	/// process an incoming task description message - only call in Qt's main loop
 	void processTaskStatisticsMessage(const std::string &id, const moveit_task_constructor_msgs::TaskStatistics &msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	void processSolutionMessage(const std::string &id, const moveit_task_constructor_msgs::Solution &msg);
+	DisplaySolutionPtr processSolutionMessage(const std::string &id, const moveit_task_constructor_msgs::Solution &msg);
 
 	/// retrieve TaskModel in given row
 	BaseTaskModel* getTask(int row) const;

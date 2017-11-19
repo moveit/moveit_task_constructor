@@ -489,22 +489,15 @@ void TaskSolutionVisualization::renderPlanningScene(const planning_scene::Planni
 
 void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msgs::Solution& msg)
 {
-  // Error check
-  if (!scene_)
-    return;
-
-  if (msg.start_scene.robot_model_name != scene_->getRobotModel()->getName())
-    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected",
-             msg.start_scene.robot_model_name .c_str(),
-             scene_->getRobotModel()->getName().c_str());
-
-  scene_->setPlanningSceneMsg(msg.start_scene);
 
   DisplaySolutionPtr s (new DisplaySolution);
   s->setFromMessage(scene_, msg);
+  showTrajectory(s);
+}
 
-  if (!s->empty())
-  {
+void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s)
+{
+  if (!s->empty()) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
     solution_to_display_ = s;
     if (interrupt_display_property_->getBool())

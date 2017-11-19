@@ -38,6 +38,7 @@
 
 #include "remote_task_model.h"
 #include <moveit/task_constructor/container.h>
+#include <moveit/planning_scene/planning_scene.h>
 #include <ros/console.h>
 
 #include <QApplication>
@@ -107,8 +108,8 @@ QModelIndex RemoteTaskModel::index(const Node *n) const
 	Q_ASSERT(false);
 }
 
-RemoteTaskModel::RemoteTaskModel(QObject *parent)
-   : BaseTaskModel(parent), root_(new Node(nullptr))
+RemoteTaskModel::RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent)
+   : BaseTaskModel(parent), root_(new Node(nullptr)), scene_(scene)
 {
 	id_to_stage_[0] = root_; // root node has ID 0
 }
@@ -271,6 +272,23 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 2));
 		}
 	}
+}
+
+DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_constructor_msgs::Solution &msg)
+{
+	DisplaySolutionPtr s(new DisplaySolution);
+	s->setFromMessage(scene_->diff(), msg);
+
+	// if this is not a top-level solution, we are done here
+	if (msg.sub_solution.empty() ||
+	    msg.sub_solution.front().stage_id != 1 ||
+	    msg.sub_solution.front().id == 0)
+		return s;
+
+	// cache top-level solution for future use
+	id_to_solution_[msg.sub_solution.front().id] = s;
+
+	return s;
 }
 
 

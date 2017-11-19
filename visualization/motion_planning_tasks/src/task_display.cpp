@@ -93,6 +93,10 @@ void TaskDisplay::loadRobotModel()
 	// Send to child class
 	trajectory_visual_->onRobotModelLoaded(robot_model_);
 	trajectory_visual_->onEnable();
+
+	// share the planning scene with task models
+	if (task_list_model_)
+		task_list_model_->setScene(trajectory_visual_->getScene());
 }
 
 void TaskDisplay::reset()
@@ -106,20 +110,12 @@ void TaskDisplay::onEnable()
 {
 	Display::onEnable();
 	loadRobotModel();
-
-	// (re)initialize task model
-	updateTaskListModel();
 }
 
 void TaskDisplay::onDisable()
 {
 	Display::onDisable();
 	trajectory_visual_->onDisable();
-
-	// don't monitor topics when disabled
-	task_description_sub.shutdown();
-	task_statistics_sub.shutdown();
-	task_solution_sub.shutdown();
 }
 
 void TaskDisplay::update(float wall_dt, float ros_dt)
@@ -166,8 +162,11 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const moveit_task_constructor_msgs::SolutionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
-		if (task_list_model_) task_list_model_->processSolutionMessage(id, *msg);
-		// TODO: use already processed trajectory (e.g. by ID)
+		if (task_list_model_) {
+			const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
+			trajectory_visual_->showTrajectory(s);
+			return;
+		}
 		trajectory_visual_->showTrajectory(*msg);
 	});
 }
@@ -196,6 +195,8 @@ void TaskDisplay::updateTaskListModel()
 	task_list_model_ = TaskListModelCache::instance().getModel(base_ns);
 
 	if (task_list_model_) {
+		task_list_model_->setScene(trajectory_visual_->getScene());
+
 		// listen to task descriptions updates
 		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
 

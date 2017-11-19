@@ -50,6 +50,7 @@ class RemoteTaskModel : public BaseTaskModel {
 	Q_OBJECT
 	class Node;
 	Node* const root_;
+	planning_scene::PlanningSceneConstPtr scene_;
 	std::map<uint32_t, Node*> id_to_stage_;
 	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
 
@@ -57,7 +58,7 @@ class RemoteTaskModel : public BaseTaskModel {
 	QModelIndex index(const Node* n) const;
 
 public:
-	RemoteTaskModel(QObject *parent = nullptr);
+	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent = nullptr);
 	~RemoteTaskModel();
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
@@ -70,6 +71,7 @@ public:
 
 	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg);
 	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg);
+	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution &msg);
 };
 
 

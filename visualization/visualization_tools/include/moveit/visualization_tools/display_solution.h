@@ -22,6 +22,8 @@ class DisplaySolution
 {
 	/// number of overall steps
 	size_t steps_;
+	/// start scene
+	planning_scene::PlanningSceneConstPtr start_scene_;
 	/// end scenes for each sub trajectory
 	std::vector<planning_scene::PlanningSceneConstPtr> scene_;
 	/// sub trajectories, might be empty
@@ -56,7 +58,7 @@ public:
 		return name(indexPair(index));
 	}
 
-	void setFromMessage(const planning_scene::PlanningSceneConstPtr &parent,
+	void setFromMessage(const planning_scene::PlanningScenePtr &start_scene,
 	                    const moveit_task_constructor_msgs::Solution& msg);
 };
 

@@ -156,7 +156,8 @@ protected:
 
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
-	moveit_rviz_plugin::RemoteTaskModel m;
+	planning_scene::PlanningSceneConstPtr scene;
+	moveit_rviz_plugin::RemoteTaskModel m(scene);
 	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
 	validate(m, {"first"});
