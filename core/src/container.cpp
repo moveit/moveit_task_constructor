@@ -549,7 +549,3 @@ Stage* WrapperBase::wrapped()
 }
 
 } }
-
-/// register plugins
-#include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::SerialContainer, moveit::task_constructor::Stage)
