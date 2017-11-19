@@ -146,7 +146,7 @@ uint32_t Introspection::stageId(const Stage* const s) const
 
 uint32_t Introspection::solutionId(const SolutionBase& s)
 {
-	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(impl->id_solution_bimap_.size(), &s));
+	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
 	return result.first->first;
 }
 
