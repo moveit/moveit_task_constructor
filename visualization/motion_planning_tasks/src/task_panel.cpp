@@ -89,15 +89,11 @@ TaskPanel::~TaskPanel()
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
-   , task_list_model(TaskListModelCache::instance().getGlobalModel())
    , settings(new rviz::PropertyTreeModel(new rviz::Property, q_ptr))
 {
 	setupUi(q_ptr);
 	// init tasks view
-	auto factory = getStageFactory();
-	if (!factory) button_show_stage_dock_widget->setDisabled(true);
-	task_list_model->setStageFactory(factory);
-	tasks_view->setModel(task_list_model.get());
+	tasks_view->setModel(&TaskListModelCache::instance());
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -136,7 +132,9 @@ void TaskPanel::addTask()
 {
 	Q_D(TaskPanel);
 	QModelIndex current = d->tasks_view->currentIndex();
-	d_ptr->task_list_model->insertTask(new LocalTaskModel(d_ptr->task_list_model.get()), current.row());
+	TaskListModel* task_list_model
+	      = static_cast<TaskListModel*>(TaskListModelCache::instance().getModel(current).first);
+	task_list_model->insertModel(new LocalTaskModel(task_list_model), current.row());
 }
 
 void TaskPanel::showStageDockWidget()
@@ -149,8 +147,9 @@ void TaskPanel::showStageDockWidget()
 void TaskPanel::removeTaskTreeRows()
 {
 	Q_D(TaskPanel);
+	auto *m = d_ptr->tasks_view->model();
 	for (const auto &range : d_ptr->tasks_view->selectionModel()->selection())
-		d_ptr->task_list_model->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
+		m->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
 }
 
 }

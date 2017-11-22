@@ -36,42 +36,55 @@
 
 #pragma once
 
-#include "task_list_model.h"
-#include <map>
+#include <utils/tree_merge_proxy_model.h>
+#include <moveit/macros/class_forward.h>
+#include <QVector>
 
 namespace moveit_rviz_plugin {
 
-/** TaskListModelCache maintains a global TaskListModel comprising all known TaskModels.
+MOVEIT_CLASS_FORWARD(BaseTaskModel)
+MOVEIT_CLASS_FORWARD(TaskListModel)
+MOVEIT_CLASS_FORWARD(TaskDisplay)
+
+/** TaskListModelCache maintains a model of multiple registered TaskListModels,
+ *  which are grouped in a hierarchical fashion according to the name of the
+ *  associated display.
  *
- *  This global model instance is used by TaskPanels and can be retrieved via getGlobalModel().
- *  Additionally, this instance maintains a cache for all TaskListModels used e.g. by TaskDisplays.
- *  Displays subscribing to the same topic namespace, will share the same model.
+ *  All TaskPanel instances use the singleton instance of this class
+ *  to show all tasks known to the system.
  *
  *  This is a singleton instance.
  */
-class TaskListModelCache : public QObject {
+class TaskListModelCache : public utils::TreeMergeProxyModel {
 	Q_OBJECT
 
-	TaskListModelPtr global_model_;
-	std::map<std::string, TaskListModelWeakPtr> cache_;
+	// 1:1 correspondence of displays to models
+	QVector<TaskDisplay*> display_;
 
 	/// class is singleton
 	TaskListModelCache();
 	TaskListModelCache(const TaskListModelCache&) = delete;
 	void operator=(const TaskListModelCache&) = delete;
 
-private Q_SLOTS:
-	void onInsertTasks(const QModelIndex &parent, int first, int last);
-	void onRemoveTasks(const QModelIndex &parent, int first, int last);
+	// hide this, as we want to offer another API
+	using utils::TreeMergeProxyModel::insertModel;
+
+	private Q_SLOTS:
+	void onRowsRemoved(const QModelIndex &parent, int first, int last);
+	void onDisplayNameChanged(const QString &name);
 
 public:
 	static TaskListModelCache& instance();
 
-	/// get TaskListModel for a TaskDisplay
-	TaskListModelPtr getModel(const std::string &ns);
+	/// insert a new TaskListModel together with it's associated display
+	bool insertModel(TaskListModel* model, TaskDisplay* display);
 
-	/// get global TaskListModel instance used for panels
-	TaskListModelPtr getGlobalModel();
+	bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+
+	/// retrieve TaskListModel and TaskDisplay corresponding to given index
+	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex &index) const;
+	/// retrieve TaskModel and its source index corresponding to given proxy index
+	std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 };
 
 }

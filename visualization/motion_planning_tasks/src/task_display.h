@@ -82,6 +82,8 @@ public:
   virtual void onDisable();
   void setName(const QString& name);
 
+  TaskListModelPtr getTaskListModel() const { return task_list_model_; }
+
 private Q_SLOTS:
   /**
    * \brief Slot Event Functions
@@ -95,9 +97,6 @@ private Q_SLOTS:
   void taskDescriptionCB(const ros::MessageEvent<moveit_task_constructor_msgs::TaskDescription const>& event);
   void taskStatisticsCB(const ros::MessageEvent<const moveit_task_constructor_msgs::TaskStatistics> &event);
   void taskSolutionCB(const ros::MessageEvent<moveit_task_constructor_msgs::Solution const>& event);
-
-protected:
-  void updateTaskListModel();
 
 protected:
   ros::Subscriber task_solution_sub;

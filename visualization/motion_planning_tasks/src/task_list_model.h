@@ -38,6 +38,7 @@
 
 #include "pluginlib_factory.h"
 #include <moveit/task_constructor/stage.h>
+#include <utils/flat_merge_proxy_model.h>
 
 #include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor_msgs/TaskDescription.h>
@@ -51,6 +52,7 @@
 namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
+MOVEIT_CLASS_FORWARD(RemoteTaskModel)
 
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
@@ -80,19 +82,29 @@ typedef std::shared_ptr<StageFactory> StageFactoryPtr;
 StageFactoryPtr getStageFactory();
 
 
-class TaskListModelPrivate;
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
  *
- *  This class is used e.g. by TaskDisplay to maintain the list of tasks published on
+ *  Each TaskDisplay owns a TaskListModel to maintain the list of tasks published on
  *  a monitoring topic.
  *
  *  Local instances are created by insertLocalTask().
  *  Remote instances are discovered via processTaskMessage() / processSolutionMessage().
  */
-class TaskListModel : public QAbstractItemModel {
+class TaskListModel : public utils::FlatMergeProxyModel {
 	Q_OBJECT
-	Q_DECLARE_PRIVATE(TaskListModel)
-	TaskListModelPrivate* d_ptr;
+
+	// planning scene / robot model used by all tasks in this model
+	planning_scene::PlanningSceneConstPtr scene_;
+
+	// map from remote task IDs to tasks
+	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
+	// if task is removed locally from tasks vector, it is marked with a nullptr
+	std::map<std::string, RemoteTaskModel*> remote_tasks_;
+
+	// factory used to create stages
+	StageFactoryPtr stage_factory_;
+
+	void onRemoveModel(QAbstractItemModel *model) override;
 
 public:
 	TaskListModel(QObject *parent = nullptr);
@@ -100,20 +112,9 @@ public:
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 
+	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	static QString horizontalHeader(int column);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
-
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-	QModelIndex parent(const QModelIndex &index) const override;
-
-	Qt::ItemFlags flags(const QModelIndex & index) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
-
-	bool removeRows(int row, int count, const QModelIndex &parent) override;
 
 	/// process an incoming task description message - only call in Qt's main loop
 	void processTaskDescriptionMessage(const std::string &id, const moveit_task_constructor_msgs::TaskDescription &msg);
@@ -122,36 +123,20 @@ public:
 	/// process an incoming solution message - only call in Qt's main loop
 	DisplaySolutionPtr processSolutionMessage(const std::string &id, const moveit_task_constructor_msgs::Solution &msg);
 
-	/// retrieve TaskModel in given row
-	BaseTaskModel* getTask(int row) const;
-
-	/// insert a TaskModel into our list
-	void insertTask(BaseTaskModel* model, int row = -1);
-	bool removeTask(BaseTaskModel* model);
-	bool removeTasks(int row, int count);
+	/// insert a TaskModel, pos is relative to modelCount()
+	inline bool insertModel(BaseTaskModel* model, int pos = -1) {
+		Q_ASSERT(model && model->columnCount() == columnCount());
+		// just wrap the base class method to further constrain the model type
+		return FlatMergeProxyModel::insertModel(model, pos);
+	}
 
 	/// providing a StageFactory makes the model accepting drops
 	void setStageFactory(const StageFactoryPtr &factory);
 	QStringList mimeTypes() const override;
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 	Qt::DropActions supportedDropActions() const override;
-
-private:
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsInserted(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeRemoved(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsRemoved(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int))
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>))
-#else
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex))
-#endif
+	Qt::ItemFlags flags(const QModelIndex &index) const;
 };
-MOVEIT_CLASS_FORWARD(TaskListModel)
-typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
 
 
 class TaskListView : public QTreeView {

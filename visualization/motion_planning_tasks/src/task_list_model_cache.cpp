@@ -35,12 +35,15 @@
 /* Author: Robert Haschke */
 
 #include "task_list_model_cache.h"
+#include "task_list_model.h"
+#include "task_display.h"
 
 namespace moveit_rviz_plugin {
 
 TaskListModelCache::TaskListModelCache()
 {
-	global_model_.reset(new TaskListModel());
+	connect(this, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+	        this, SLOT(onRowsRemoved(QModelIndex,int,int)));
 }
 
 TaskListModelCache &TaskListModelCache::instance()
@@ -49,57 +52,74 @@ TaskListModelCache &TaskListModelCache::instance()
 	return instance_;
 }
 
-TaskListModelPtr TaskListModelCache::getModel(const std::string& ns)
+bool TaskListModelCache::insertModel(TaskListModel *model, TaskDisplay *display)
 {
-	if (ns.empty()) {
-		return TaskListModelPtr();
-	} else {
-		// retrieve existing model for given topic pair
-		TaskListModelWeakPtr& model = cache_[ns];
-		TaskListModelPtr result;
+	if (!model || !display)
+		return false;
+	if (display_.contains(display))
+		return false;
+	if (!TreeMergeProxyModel::insertModel(display->getName(), model))
+		return false;
 
-		if (model.expired()) {
-			// create new model, store in result (otherwise it would be released again)
-			model = result = TaskListModelPtr(new TaskListModel());
+	// keep display name in sync with model name
+	display_.push_back(display);
+	connect(display, SIGNAL(objectNameChanged(QString)), this, SLOT(onDisplayNameChanged(QString)));
+	return true;
+}
 
-			// connect newly created TaskListModel to global model
-			connect(result.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-			        this, SLOT(onInsertTasks(QModelIndex,int,int)));
-			connect(result.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-			        this, SLOT(onRemoveTasks(QModelIndex,int,int)));
-		} else
-			result = model.lock();
-
-		return result;
+void TaskListModelCache::onRowsRemoved(const QModelIndex &parent, int first, int last)
+{
+	if (!parent.isValid()) {
+		display_.remove(first, last-first+1);
 	}
 }
 
-TaskListModelPtr TaskListModelCache::getGlobalModel() {
-	return global_model_;
+void TaskListModelCache::onDisplayNameChanged(const QString &name)
+{
+	int row = display_.indexOf(static_cast<TaskDisplay*>(sender()));
+	if (row < 0) return;
+
+	QModelIndex idx = index(row, 0);
+	if (idx.data() == name)
+		return;
+
+	setData(idx, name, Qt::EditRole);
 }
 
-void TaskListModelCache::onInsertTasks(const QModelIndex &parent, int first, int last)
+bool TaskListModelCache::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-	if (parent.isValid())
-		return; // we are only interested in top-level insertions
-
-	TaskListModel *m = static_cast<TaskListModel*>(sender());
-	for(; first <= last; ++first) {
-		BaseTaskModel *t = m->getTask(first);
-		global_model_->insertTask(t);
+	bool result = TreeMergeProxyModel::setData(index, value, role);
+	if (result && isGroupItem(index)) {
+		display_.at(index.row())->setName(value.toString());
 	}
+	return result;
 }
 
-void TaskListModelCache::onRemoveTasks(const QModelIndex &parent, int first, int last)
+std::pair<TaskListModel*, TaskDisplay*>
+TaskListModelCache::getTaskListModel(const QModelIndex &index) const
 {
-	if (parent.isValid())
-		return; // we are only interested in top-level insertions
+	QAbstractItemModel *m = getModel(index).first;
+	if (!m) return std::make_pair(nullptr, nullptr);
 
-	TaskListModel *m = static_cast<TaskListModel*>(sender());
-	for(; first <= last; ++first) {
-		BaseTaskModel *t = m->getTask(first);
-		global_model_->removeTask(t);
-	}
+	Q_ASSERT(dynamic_cast<TaskListModel*>(m));
+	return std::make_pair(static_cast<TaskListModel*>(m), display_.at(getRow(m)));
+}
+
+std::pair<BaseTaskModel*, QModelIndex>
+TaskListModelCache::getTaskModel(const QModelIndex &index) const
+{
+	if (!index.isValid())
+		return std::make_pair(nullptr, QModelIndex());
+
+	auto result = getModel(index);
+	Q_ASSERT(result.first && dynamic_cast<TaskListModel*>(result.first));
+
+	if (!result.second.isValid())
+		return std::make_pair(nullptr, QModelIndex());
+
+	auto m = static_cast<TaskListModel*>(result.first)->getModel(result.second);
+	Q_ASSERT(dynamic_cast<BaseTaskModel*>(m.first));
+	return std::make_pair(static_cast<BaseTaskModel*>(m.first), m.second);
 }
 
 }

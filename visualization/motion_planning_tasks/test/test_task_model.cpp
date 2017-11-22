@@ -205,11 +205,11 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 TEST_F(TaskListModelTest, deletion) {
 	children = 3;
 	model.processTaskDescriptionMessage("1", genMsg("first"));
-	moveit_rviz_plugin::BaseTaskModel *m = model.getTask(0);
+	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
 	QObject::connect(m, &QObject::destroyed, [&num_deletes](){++num_deletes;});
 
-	model.removeTask(m);
+	model.removeModel(m);
 	// process deleteLater() events
 	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 	// as m is owned by model, m should be destroyed
