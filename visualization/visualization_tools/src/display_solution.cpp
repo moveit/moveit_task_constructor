@@ -19,6 +19,15 @@ std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const
 	return std::make_pair(part, index);
 }
 
+DisplaySolution::DisplaySolution(const DisplaySolution &master, uint32_t sub)
+   : start_scene_(sub == 0 ? master.start_scene_ : scene_[sub-1])
+   , scene_( { master.scene_[sub] } )
+   , trajectory_( { master.trajectory_[sub] } )
+   , name_( { master.name_[sub] } )
+{
+	steps_ = trajectory_.front()->getWayPointCount();
+}
+
 float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair &idx_pair) const
 {
 	return trajectory_[idx_pair.first]->getWayPointDurationFromPrevious(idx_pair.second);

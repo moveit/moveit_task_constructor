@@ -51,7 +51,7 @@ public:
 Introspection::Introspection(const Task &task)
    : impl(new IntrospectionPrivate(task))
 {
-	impl->get_solution_service_ = impl->nh_.advertiseService("get_solution", &Introspection::getSolution, this);
+	impl->get_solution_service_ = impl->nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, this);
 }
 
 Introspection::~Introspection()

@@ -40,6 +40,8 @@
 #include "factory_model.h"
 
 #include <ros/console.h>
+#include <ros/service_client.h>
+
 #include <QMimeData>
 #include <QHeaderView>
 #include <QScrollBar>
@@ -142,11 +144,27 @@ TaskListModel::TaskListModel(QObject *parent)
 
 TaskListModel::~TaskListModel() {
 	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
+	// inform TaskListModelCache that we will remove our stuff
+	removeRows(0, rowCount());
 }
 
 void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	scene_ = scene;
+}
+
+void TaskListModel::setSolutionClient(ros::ServiceClient *client)
+{
+	if (!client || get_solution_client_ != client ||
+	    get_solution_client_->getService() != client->getService()) {
+		// service client's address changed: invalidate existing client pointers
+		for (int row=0, end = rowCount(); row != end; ++row) {
+			RemoteTaskModel* task = dynamic_cast<RemoteTaskModel*>(getModel(index(row, 0)).first);
+			if (!task) continue;
+			task->setSolutionClient(nullptr);
+		}
+	}
+	get_solution_client_ = client;
 }
 
 void TaskListModel::setStageFactory(const StageFactoryPtr &factory)
@@ -206,7 +224,8 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		}
 	} else if (created) { // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(scene_, this);
+		remote_task = new RemoteTaskModel(scene_);
+		remote_task->setSolutionClient(get_solution_client_);
 	}
 	if (!remote_task)
 		return; // task is not in use anymore

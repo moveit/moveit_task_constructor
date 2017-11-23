@@ -49,6 +49,8 @@
 #include <QTreeView>
 #include <memory>
 
+namespace ros { class ServiceClient; }
+
 namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
@@ -105,6 +107,7 @@ class TaskListModel : public utils::FlatMergeProxyModel {
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
 	// if task is removed locally from tasks vector, it is marked with a nullptr
 	std::map<std::string, RemoteTaskModel*> remote_tasks_;
+	ros::ServiceClient* get_solution_client_ = nullptr;
 
 	// factory used to create stages
 	StageFactoryPtr stage_factory_;
@@ -116,6 +119,7 @@ public:
 	~TaskListModel();
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
+	void setSolutionClient(ros::ServiceClient* client);
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	static QVariant horizontalHeader(int column, int role);

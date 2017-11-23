@@ -9,6 +9,7 @@
 #define DESCRIPTION_TOPIC "description"
 #define STATISTICS_TOPIC  "statistics"
 #define SOLUTION_TOPIC    "solution"
+#define GET_SOLUTION_SERVICE "get_solution"
 
 namespace moveit { namespace task_constructor {
 

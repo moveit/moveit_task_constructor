@@ -39,7 +39,9 @@
 #include "remote_task_model.h"
 #include <moveit/task_constructor/container.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit_task_constructor_msgs/GetSolution.h>
 #include <ros/console.h>
+#include <ros/service_client.h>
 
 #include <QApplication>
 #include <QPalette>
@@ -61,12 +63,10 @@ struct RemoteTaskModel::Node {
 	QString name_;
 	InterfaceFlags interface_flags_;
 	NodeFlags node_flags_;
-	std::unique_ptr<RemoteSolutionModel> solved_;
-	std::unique_ptr<RemoteSolutionModel> failed_;
+	std::unique_ptr<RemoteSolutionModel> solutions_;
 
 	inline Node(Node *parent) : parent_(parent) {
-		solved_.reset(new RemoteSolutionModel());
-		failed_.reset(new RemoteSolutionModel());
+		solutions_.reset(new RemoteSolutionModel());
 	}
 
 	bool setName(const QString& name) {
@@ -91,6 +91,13 @@ RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex &index) const
 	Node *parent = static_cast<Node*>(index.internalPointer());
 	Q_ASSERT(index.row() >= 0 && (size_t)index.row() < parent->children_.size());
 	return parent->children_.at(index.row()).get();
+}
+
+// return Node* corresponding to stage_id
+RemoteTaskModel::Node* RemoteTaskModel::node(uint32_t stage_id) const
+{
+	auto it = id_to_stage_.find(stage_id);
+	return (it == id_to_stage_.end()) ? nullptr : it->second;
 }
 
 // return QModelIndex corresponding to Node*
@@ -119,6 +126,11 @@ RemoteTaskModel::~RemoteTaskModel()
 	delete root_;
 }
 
+void RemoteTaskModel::setSolutionClient(ros::ServiceClient *client)
+{
+	get_solution_client_ = client;
+}
+
 int RemoteTaskModel::rowCount(const QModelIndex &parent) const
 {
 	if (parent.column() > 0)
@@ -127,7 +139,6 @@ int RemoteTaskModel::rowCount(const QModelIndex &parent) const
 	Node *n = node(parent);
 	if (!n) return 0; // invalid model in parent
 
-	n->node_flags_ |= WAS_VISITED;
 	return n->children_.size();
 }
 
@@ -140,6 +151,7 @@ QModelIndex RemoteTaskModel::index(int row, int column, const QModelIndex &paren
 	if (!p || row < 0 || (size_t)row >= p->children_.size())
 		return QModelIndex();
 
+	p->children_[row]->node_flags_ |= WAS_VISITED;
 	// the internal pointer refers to the parent node
 	return createIndex(row, column, p);
 }
@@ -176,8 +188,8 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 	case Qt::DisplayRole:
 		switch (index.column()) {
 		case 0: return n->name_;
-		case 1: return n->solved_->rowCount();
-		case 2: return n->failed_->rowCount();
+		case 1: return n->solutions_->numSuccessful();
+		case 2: return n->solutions_->numFailed();
 		}
 		break;
 	case Qt::ForegroundRole:
@@ -231,7 +243,8 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 		// set content of stage
 		bool changed = false;
 		if (!(n->node_flags_ & NAME_CHANGED)) // avoid overwriting a manually changed name
-			n->setName(QString::fromStdString(s.name));
+			changed |= n->setName(QString::fromStdString(s.name));
+
 		InterfaceFlags old_flags = n->interface_flags_;
 		n->interface_flags_ = InterfaceFlags();
 		for (auto f : {READS_START, READS_END, WRITES_NEXT_START, WRITES_PREV_END}) {
@@ -265,8 +278,8 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 		}
 		Node *n = it->second;
 
-		bool changed = n->solved_->processSolutionIDs(s.solved) ||
-		               n->failed_->processSolutionIDs(s.failed);
+		bool changed = n->solutions_->processSolutionIDs(s.solved, std::numeric_limits<float>::quiet_NaN()) ||
+		               n->solutions_->processSolutionIDs(s.failed, std::numeric_limits<float>::infinity());
 		// emit notify about model changes when node was already visited
 		if (changed && (n->node_flags_ & WAS_VISITED)) {
 			QModelIndex idx = index(n);
@@ -288,15 +301,40 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 
 	// cache top-level solution for future use
 	id_to_solution_[msg.sub_solution.front().id] = s;
+	// store sub solution data
+	for (const auto& sub : msg.sub_solution) {
+		Node *n = node(sub.stage_id);
+		if (!n) continue;
+		n->solutions_->setData(sub.id, sub.cost, QString());
+	}
+
+	// for top-level solutions, create DisplaySolutions for all individual sub trajectories
+	uint i=0;
+	for (const auto &t : msg.sub_trajectory) {
+		if (t.id == 0) continue;  // invalid id
+
+		DisplaySolutionPtr &sub = id_to_solution_.insert(std::make_pair(t.id, DisplaySolutionPtr())).first->second;
+		if (!sub) {
+			sub.reset(new DisplaySolution(*s, i));
+			if (RemoteSolutionModel *m = getSolutionModel(t.stage_id))
+				m->setData(t.id, t.cost, QString::fromStdString(t.name));
+		}
+	}
 
 	return s;
+}
+
+RemoteSolutionModel* RemoteTaskModel::getSolutionModel(uint32_t stage_id) const
+{
+	Node *n = node(stage_id);
+	return n ? n->solutions_.get() : nullptr;
 }
 
 QAbstractItemModel* RemoteTaskModel::getSolutionModel(const QModelIndex &index)
 {
 	Node *n = node(index);
 	if (!n) return nullptr;
-	return n->solved_.get();
+	return n->solutions_.get();
 }
 
 DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
@@ -306,21 +344,68 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 	uint32_t id = index.sibling(index.row(), 0).data(Qt::UserRole).toUInt();
 	auto it = id_to_solution_.find(id);
 	if (it == id_to_solution_.cend()) {
-		// TODO: request solution via service
-		return DisplaySolutionPtr();
+		// TODO: try to assemble (and cache) the solution from known leaves
+		// to avoid some communication overhead
+
+		DisplaySolutionPtr result;
+		if (get_solution_client_) {
+			// request solution via service
+			moveit_task_constructor_msgs::GetSolution srv;
+			srv.request.solution_id = id;
+			if (get_solution_client_->call(srv)) {
+				result = processSolutionMessage(srv.response.solution);
+			}
+		}
+		return result;
 	}
 	return it->second;
 }
 
+namespace detail {
+template <class T>
+auto id(const typename T::value_type &item) -> decltype(item.id) { return item.id; }
+template <class T>
+auto id(const typename T::value_type &item) -> decltype(item->id) { return item->id; }
+
+template <class T>
+typename T::iterator findById(T& c, uint32_t id)
+{
+	return std::find_if(c.begin(), c.end(), [id](const typename T::value_type& item) {
+		return detail::id<T>(item) == id;
+	});
+}
+}
 
 RemoteSolutionModel::RemoteSolutionModel(QObject *parent)
-    : QAbstractListModel(parent)
+   : QAbstractTableModel(parent)
 {
 }
 
 int RemoteSolutionModel::rowCount(const QModelIndex &parent) const
 {
-	return ids_.size();
+	return sorted_.size();
+}
+
+int RemoteSolutionModel::columnCount(const QModelIndex &parent) const
+{
+	return 3;
+}
+
+QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+	if (orientation == Qt::Horizontal) {
+		switch (role) {
+		case Qt::DisplayRole:
+			switch (section) {
+			case 0: return tr("#");
+			case 1: return tr("cost");
+			case 2: return tr("name");
+			}
+		case Qt::TextAlignmentRole:
+			return section == 2 ? Qt::AlignLeft : Qt::AlignRight;
+		}
+	}
+	return QAbstractItemModel::headerData(section, orientation, role);
 }
 
 QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
@@ -328,35 +413,149 @@ QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
 	Q_ASSERT(index.isValid());
 	Q_ASSERT(!index.parent().isValid());
 
-	if (role == Qt::DisplayRole)
-		return index.row();
+	const Data &item = *sorted_[index.row()];
+
+	switch (role) {
+	case Qt::UserRole:
+	case Qt::ToolTipRole:
+		return item.id;
+
+	case Qt::DisplayRole:
+		switch(index.column()) {
+		case 0: return item.creation_rank;
+		case 1:
+			if (std::isinf(item.cost)) return tr(u8"∞");
+			if (std::isnan(item.cost)) return QVariant();
+			return item.cost;
+		case 2: return item.name;
+		}
+
+	case Qt::ForegroundRole:
+		if (std::isinf(item.cost))
+			return QColor(Qt::red);
+		break;
+
+	case Qt::TextAlignmentRole:
+		return index.column() == 2 ? Qt::AlignLeft : Qt::AlignRight;
+	}
 	return QVariant();
 }
 
-bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids)
+void RemoteSolutionModel::setData(uint32_t id, float cost, const QString &name)
 {
-	if (ids_ == ids)
-		return false;
+	auto it = detail::findById(data_, id);
+	if (it == data_.end()) return;
 
-	bool size_changed = (ids_.size() != ids.size());
+	QModelIndex tl, br;
+	int row = detail::findById(sorted_, id) - sorted_.begin();
+	if (row >= rowCount()) row = -1;  // hidden
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	QAbstractItemModel::LayoutChangeHint hint = size_changed ? QAbstractItemModel::NoLayoutChangeHint
-	                                                         : QAbstractItemModel::VerticalSortHint;
-	layoutAboutToBeChanged({QModelIndex()}, hint);
-#else
-	layoutAboutToBeChanged();
-#endif
+	Data &item = *it;
+	if (item.cost != cost) {
+		item.cost = cost;
+		tl = br = index(row, 1);
+	}
+	if (item.name != name) {
+		item.name = name;
+		br = index(row, 2);
+		if (!tl.isValid())
+			tl = br;
+	}
+	if (tl.isValid())
+		Q_EMIT dataChanged(tl, br);
+}
 
-	ids_ = ids;
+void RemoteSolutionModel::sort(int column, Qt::SortOrder order)
+{
+	if (sort_column_ == column && sort_order_ == order)
+		return; // nothing to do
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	layoutChanged({QModelIndex()}, hint);
-#else
-	layoutChanged();
-#endif
+	sort_column_ = column;
+	sort_order_ = order;
 
+	sortInternal();
+}
+
+void RemoteSolutionModel::sortInternal()
+{
+	Q_EMIT layoutAboutToBeChanged();
+	QModelIndexList old_indexes = persistentIndexList();
+	std::vector<DataList::iterator> old_sorted_; std::swap(sorted_, old_sorted_);
+
+	// create new order in sorted_
+	for (auto it = data_.begin(), end = data_.end(); it != end; ++it)
+		if (isVisible(*it)) sorted_.push_back(it);
+
+	if (sort_column_ >= 0) {
+		std::sort(sorted_.begin(), sorted_.end(), [this](const DataList::iterator& left, const DataList::iterator& right) {
+			int comp = 0;
+			switch (sort_column_) {
+			case 1:  // cost order
+				if (left->cost_rank < right->cost_rank) comp = -1;
+				else if (left->cost_rank > right->cost_rank) comp = 1;
+				break;
+			case 2:  // name
+				comp = left->name.compare(right->name);
+				break;
+			}
+			if (comp == 0)
+				comp = (left->creation_rank < right->creation_rank ? -1 : 1);
+			return (sort_order_ == Qt::AscendingOrder) ? (comp < 0) : (comp >= 0);
+		});
+	}
+
+	// map old indexes to new ones
+	std::map<int, int> old_to_new_row;
+	QModelIndexList new_indexes;
+	for (int i = 0, end = old_indexes.count(); i != end; ++i) {
+		int old_row = old_indexes[i].row();
+		auto it_inserted = old_to_new_row.insert(std::make_pair(old_row, -1));
+		if (it_inserted.second) { // newly inserted: find new row index
+			auto it = detail::findById(sorted_, old_sorted_[old_row]->id);
+			if (it != sorted_.cend())
+				it_inserted.first->second = it - sorted_.begin();
+		}
+		new_indexes.append(index(it_inserted.first->second, old_indexes[i].column()));
+	}
+
+	changePersistentIndexList(old_indexes, new_indexes);
+	Q_EMIT layoutChanged();
+}
+
+// process solution ids received in stage statistics
+bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, float default_cost)
+{
+	// ids are originally ordered by cost, order them by creation order here
+	std::vector<std::pair<uint32_t, uint32_t>> ids_by_creation;
+	uint32_t rank = 0;
+	for (uint32_t id : ids)
+		ids_by_creation.push_back(std::make_pair(id, ++rank));
+	std::sort(ids_by_creation.begin(), ids_by_creation.end(),
+	          [](const auto& left, const auto& right) { return left.first < right.first; });
+
+	bool size_changed = false;
+	for (const auto &p : ids_by_creation) {
+		if (data_.empty() || p.first > data_.back().id) {  // new item
+			data_.emplace_back(Data(p.first, default_cost, 1+data_.size(), p.second));
+			size_changed |= isVisible(data_.back());
+		} else {
+			// find id in available data_
+			auto data_it = detail::findById(data_, p.first);
+			Q_ASSERT(data_it != data_.end());
+			bool was_visible = isVisible(*data_it);
+			// and update cost rank
+			data_it->cost_rank = p.second;
+			size_changed |= (isVisible(*data_it) != was_visible);
+		}
+	}
+
+	sortInternal();
 	return size_changed;
+}
+
+bool RemoteSolutionModel::isVisible(const RemoteSolutionModel::Data &item) const
+{
+	return std::isnan(item.cost) || item.cost < max_cost_;
 }
 
 }

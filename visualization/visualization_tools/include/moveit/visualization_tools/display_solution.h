@@ -32,6 +32,10 @@ class DisplaySolution
 	std::vector<std::string> name_;
 
 public:
+	DisplaySolution() = default;
+	/// create DisplaySolution for given sub trajectory of master
+	DisplaySolution(const DisplaySolution& master, uint32_t sub);
+
 	size_t getWayPointCount() const { return steps_; }
 	bool empty() const { return steps_ == 0; }
 

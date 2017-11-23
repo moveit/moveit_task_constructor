@@ -183,6 +183,7 @@ void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIn
 	auto *view = d_ptr->solutions_view;
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
+	view->sortByColumn(-1);
 	view->setModel(m);
 	delete sm;  // we don't store the selection model
 
@@ -193,6 +194,22 @@ void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIn
 
 void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
 {
+	if (!current.isValid())
+		return;
+
+	TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
+	Q_ASSERT(display);
+
+	BaseTaskModel *task;
+	QModelIndex task_index;
+	std::tie(task, task_index) = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex());
+	Q_ASSERT(task);
+
+	const DisplaySolutionPtr &solution = task->getSolution(current);
+	if (!solution)
+		return;
+
+	display->showTrajectory(solution);
 }
 
 }

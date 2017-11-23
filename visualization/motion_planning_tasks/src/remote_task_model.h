@@ -39,9 +39,13 @@
 #include "task_list_model.h"
 #include <moveit/visualization_tools/display_solution.h>
 #include <memory>
+#include <limits>
+
+namespace ros { class ServiceClient; }
 
 namespace moveit_rviz_plugin {
 
+class RemoteSolutionModel;
 /** Model representing a remote task
  *
  *  filled via TaskDescription + TaskStatistics messages
@@ -51,15 +55,23 @@ class RemoteTaskModel : public BaseTaskModel {
 	class Node;
 	Node* const root_;
 	planning_scene::PlanningSceneConstPtr scene_;
+	ros::ServiceClient* get_solution_client_ = nullptr;
+
 	std::map<uint32_t, Node*> id_to_stage_;
 	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
 
 	inline Node* node(const QModelIndex &index) const;
 	QModelIndex index(const Node* n) const;
 
+	Node* node(uint32_t stage_id) const;
+	inline RemoteSolutionModel* getSolutionModel(uint32_t stage_id) const;
+
 public:
 	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent = nullptr);
 	~RemoteTaskModel();
+
+	void setSolutionClient(ros::ServiceClient *client);
+
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
 	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
@@ -79,16 +91,46 @@ public:
 
 
 /** Model representing solutions of a remote task */
-class RemoteSolutionModel : public QAbstractListModel {
+class RemoteSolutionModel : public QAbstractTableModel {
 	Q_OBJECT
-	std::vector<uint32_t> ids_;
+	struct Data {
+		uint32_t id;
+		float cost;  // nan if unknown, inf if failed
+		QString name;
+		uint32_t creation_rank;  // rank, ordered by creation
+		uint32_t cost_rank;  // rank, ordering by cost
+
+		Data(uint32_t id, float cost, uint32_t creation_rank, uint32_t cost_rank)
+		   : id(id), cost(cost), creation_rank(creation_rank), cost_rank(cost_rank) {}
+	};
+	// successful and failed solutions ordered by id / creation
+	typedef std::list<Data> DataList;
+	DataList data_;
+	size_t num_failed_ = 0;  // number of failed solutions in data_
+
+	// solutions ordered (by default according to cost)
+	int sort_column_ = -1;
+	Qt::SortOrder sort_order_ = Qt::AscendingOrder;
+	float max_cost_ = std::numeric_limits<float>::max();
+	std::vector<DataList::iterator> sorted_;
+
+	inline bool isVisible (const Data& item) const;
+	void sortInternal();
 
 public:
 	RemoteSolutionModel(QObject *parent = nullptr);
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-	bool processSolutionIDs(const std::vector<uint32_t>& ids);
+	uint numSuccessful() const { return data_.size() - num_failed_; }
+	uint numFailed() const { return num_failed_; }
+
+	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+	int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+	void sort(int column, Qt::SortOrder order);
+
+	void setData(uint32_t id, float cost, const QString &name);
+	bool processSolutionIDs(const std::vector<uint32_t>& ids, float default_cost);
 };
 
 }

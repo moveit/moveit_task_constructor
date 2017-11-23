@@ -41,6 +41,7 @@
 #include "task_list_model_cache.h"
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit_task_constructor_msgs/GetSolution.h>
 
 #include <moveit/rdf_loader/rdf_loader.h>
 #include <moveit/robot_model/robot_model.h>
@@ -179,11 +180,17 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	});
 }
 
+void TaskDisplay::showTrajectory(const DisplaySolutionPtr &s) const {
+	trajectory_visual_->interruptCurrentDisplay();
+	trajectory_visual_->showTrajectory(s);
+}
+
 void TaskDisplay::changedTaskSolutionTopic()
 {
 	task_description_sub.shutdown();
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
+	get_solution_client.shutdown();
 
 	tasks_property_->removeChildren();
 
@@ -205,6 +212,10 @@ void TaskDisplay::changedTaskSolutionTopic()
 
 	// listen to task solutions
 	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
+
+	// service to request solutions
+	get_solution_client = update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
+	task_list_model_->setSolutionClient(&get_solution_client);
 
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
 }
