@@ -185,7 +185,8 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 			return (flags_ & IS_DESTROYED) ? QColor(Qt::red) : QApplication::palette().text().color();
 		break;
 	}
-	return QVariant();
+
+	return BaseTaskModel::data(index, role);
 }
 
 bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, int role)
@@ -289,6 +290,26 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 	id_to_solution_[msg.sub_solution.front().id] = s;
 
 	return s;
+}
+
+QAbstractItemModel* RemoteTaskModel::getSolutionModel(const QModelIndex &index)
+{
+	Node *n = node(index);
+	if (!n) return nullptr;
+	return n->solved_.get();
+}
+
+DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
+{
+	Q_ASSERT(index.isValid());
+
+	uint32_t id = index.sibling(index.row(), 0).data(Qt::UserRole).toUInt();
+	auto it = id_to_solution_.find(id);
+	if (it == id_to_solution_.cend()) {
+		// TODO: request solution via service
+		return DisplaySolutionPtr();
+	}
+	return it->second;
 }
 
 

@@ -46,11 +46,23 @@
 
 namespace moveit_rviz_plugin {
 
+class BaseTaskModel;
+class TaskListModel;
+class TaskDisplay;
+
 class TaskPanelPrivate : public Ui_TaskPanel {
 public:
 	TaskPanelPrivate(TaskPanel *q_ptr);
 
 	void initSettings(rviz::Property *root);
+
+	/// retrieve TaskListModel corresponding to given index
+	inline std::pair<TaskListModel*, TaskDisplay*>
+	getTaskListModel(const QModelIndex &index) const;
+
+	/// retrieve TaskModel corresponding to given index
+	inline std::pair<BaseTaskModel*, QModelIndex>
+	getTaskModel(const QModelIndex& index) const;
 
 	TaskPanel* q_ptr;
 	rviz::PropertyTreeModel* settings;

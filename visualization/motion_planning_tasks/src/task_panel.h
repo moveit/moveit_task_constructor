@@ -71,7 +71,11 @@ public:
 public Q_SLOTS:
 	void addTask();
 	void showStageDockWidget();
-	void removeTaskTreeRows();
+
+protected Q_SLOTS:
+	void removeSelectedStages();
+	void onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous);
+	void onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous);
 };
 
 }

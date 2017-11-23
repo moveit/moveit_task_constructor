@@ -43,6 +43,7 @@
 #include "local_task_model.h"
 #include "factory_model.h"
 #include "pluginlib_factory.h"
+#include "task_display.h"
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
@@ -77,9 +78,12 @@ TaskPanel::TaskPanel(QWidget* parent)
 {
 	Q_D(TaskPanel);
 	// connect signals
-	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeTaskTreeRows()));
+	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
 	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
 	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
+
+	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
 }
 
 TaskPanel::~TaskPanel()
@@ -101,6 +105,9 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 	tasks_view->setDropIndicatorShown(true);
 	tasks_view->setDragEnabled(true);
 
+	solutions_view->setAutoHideSections({1, 2});
+	solutions_view->setStretchSection(2);
+
 	// init actions
 	tasks_view->addActions({actionRemoveTaskTreeRows, actionAddLocalTask});
 
@@ -110,6 +117,20 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 
 void TaskPanelPrivate::initSettings(rviz::Property* root)
 {
+}
+
+std::pair<TaskListModel*, TaskDisplay*>
+TaskPanelPrivate::getTaskListModel(const QModelIndex &index) const
+{
+	auto *meta_model = static_cast<TaskListModelCache*>(tasks_view->model());
+	return meta_model->getTaskListModel(index);
+}
+
+std::pair<BaseTaskModel*, QModelIndex>
+TaskPanelPrivate::getTaskModel(const QModelIndex &index) const
+{
+	auto *meta_model = static_cast<TaskListModelCache*>(tasks_view->model());
+	return meta_model->getTaskModel(index);
 }
 
 void TaskPanel::onInitialize()
@@ -130,26 +151,48 @@ void TaskPanel::load(const rviz::Config& config)
 
 void TaskPanel::addTask()
 {
-	Q_D(TaskPanel);
-	QModelIndex current = d->tasks_view->currentIndex();
-	TaskListModel* task_list_model
-	      = static_cast<TaskListModel*>(TaskListModelCache::instance().getModel(current).first);
+	QModelIndex current = d_ptr->tasks_view->currentIndex();
+	if (!current.isValid())
+		Q_ASSERT(false); // TODO: insert new display?
+
+	TaskListModel* task_list_model = d_ptr->getTaskListModel(current).first;
+	Q_ASSERT(task_list_model);
 	task_list_model->insertModel(new LocalTaskModel(task_list_model), current.row());
 }
 
 void TaskPanel::showStageDockWidget()
 {
-	Q_D(TaskPanel);
 	rviz::PanelDockWidget *dock = getStageDockWidget(vis_manager_->getWindowManager());
 	if (dock) dock->show();
 }
 
-void TaskPanel::removeTaskTreeRows()
+void TaskPanel::removeSelectedStages()
 {
-	Q_D(TaskPanel);
 	auto *m = d_ptr->tasks_view->model();
 	for (const auto &range : d_ptr->tasks_view->selectionModel()->selection())
 		m->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
+}
+
+void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+	BaseTaskModel *task;
+	QModelIndex task_index;
+	std::tie(task, task_index) = d_ptr->getTaskModel(current);
+	d_ptr->actionRemoveTaskTreeRows->setEnabled(task != nullptr);
+
+	auto *view = d_ptr->solutions_view;
+	QItemSelectionModel *sm = view->selectionModel();
+	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
+	view->setModel(m);
+	delete sm;  // we don't store the selection model
+
+	if (m)
+		connect(view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+		        this, SLOT(onCurrentSolutionChanged(QModelIndex,QModelIndex)));
+}
+
+void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
+{
 }
 
 }

@@ -15,6 +15,7 @@ add_library(${MOVEIT_LIB_NAME}
 	factory_model.cpp
 	plugin_init.cpp
 	${UIC_FILES}
+	resources.qrc
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION})
 target_link_libraries(${MOVEIT_LIB_NAME}

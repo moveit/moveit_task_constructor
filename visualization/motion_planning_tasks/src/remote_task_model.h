@@ -72,6 +72,9 @@ public:
 	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg);
 	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg);
 	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution &msg);
+
+	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
+	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
 };
 
 

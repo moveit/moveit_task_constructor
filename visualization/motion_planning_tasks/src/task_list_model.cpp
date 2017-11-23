@@ -41,27 +41,61 @@
 
 #include <ros/console.h>
 #include <QMimeData>
+#include <QHeaderView>
+#include <QScrollBar>
 #include <qevent.h>
 
 namespace moveit_rviz_plugin {
 
 static const std::string LOGNAME("TaskListModel");
 
-QString TaskListModel::horizontalHeader(int column)
+QVariant TaskListModel::horizontalHeader(int column, int role)
 {
-	switch (column) {
-	case 0: return tr("Name");
-	case 1: return tr("# solved");
-	case 2: return tr("# failed");
+	switch (role) {
+	case Qt::DisplayRole:
+		switch (column) {
+		case 0: return tr("Name");
+		case 1: return tr(u8"✓");
+		case 2: return tr(u8"✗");
+		}
+		break;
+
+	case Qt::ForegroundRole:
+		switch (column) {
+		case 1: return QColor(Qt::darkGreen);
+		case 2: return QColor(Qt::red);
+		}
+		break;
+
+	case Qt::TextAlignmentRole:
+		return column == 0 ? Qt::AlignLeft : Qt::AlignRight;
+
+	case Qt::ToolTipRole:
+		switch (column) {
+		case 1: return tr("successful solutions");
+		case 2: return tr("failed solution attempts");
+		case 3: return tr("pending");
+		}
+		break;
 	}
-	return QString();
+
+	return QVariant();
 }
 
 QVariant BaseTaskModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-	if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-		return TaskListModel::horizontalHeader(section);
+	if (orientation == Qt::Horizontal)
+		return TaskListModel::horizontalHeader(section, role);
 	return QAbstractItemModel::headerData(section, orientation, role);
+}
+
+QVariant BaseTaskModel::data(const QModelIndex &index, int role) const
+{
+	switch (role) {
+	case Qt::TextAlignmentRole:
+		return index.column() == 0 ? Qt::AlignLeft : Qt::AlignRight;
+	}
+	return QVariant();
 }
 
 Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
@@ -144,8 +178,8 @@ QStringList TaskListModel::mimeTypes() const
 
 QVariant TaskListModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-	if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-		return TaskListModel::horizontalHeader(section);
+	if (orientation == Qt::Horizontal)
+		return TaskListModel::horizontalHeader(section, role);
 	else
 		return QAbstractItemModel::headerData(section, orientation, role);
 }
@@ -249,9 +283,104 @@ Qt::DropActions TaskListModel::supportedDropActions() const
 }
 
 
-TaskListView::TaskListView(QWidget *parent)
+AutoAdjustingTreeView::AutoAdjustingTreeView(QWidget *parent)
    : QTreeView(parent)
 {
+	// consider viewportSizeHint()
+	setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+}
+
+void AutoAdjustingTreeView::setStretchSection(int section)
+{
+	stretch_section_ = section;
+	updateGeometry();
+}
+
+void AutoAdjustingTreeView::setAutoHideSections(const QList<int> &sections)
+{
+	auto_hide_cols_ = sections;
+	updateGeometry();
+}
+
+void AutoAdjustingTreeView::setModel(QAbstractItemModel *model)
+{
+	size_hints_.clear();
+	QTreeView::setModel(model);
+
+	updateGeometry();
+}
+
+QSize AutoAdjustingTreeView::viewportSizeHint() const
+{
+	bool preferred = sizePolicy().horizontalPolicy() & QSizePolicy::ShrinkFlag;
+	auto m = model();
+	auto *h = header();
+	size_hints_.clear();
+
+	int width = 0;
+	for (int i=0, end = m ? m->columnCount() : 0; i < end; ++i) {
+		size_hints_.push_back(h->sectionSizeHint(i));
+		if (preferred || !auto_hide_cols_.contains(i))
+			width += size_hints_.back();
+	}
+
+	QSize main_size (width, sizeHintForRow(0) * ((!preferred || !m) ? 2 : m->rowCount()));
+
+	// add size for header
+	QSize header_size (0, header()->isVisible() ? header()->height() : 0);
+
+	// add size for scrollbars
+	QSize scrollbars (verticalScrollBar()->isVisible() ? verticalScrollBar()->width() : 0,
+	                  horizontalScrollBar()->isVisible() ? horizontalScrollBar()->height() : 0);
+
+	return main_size + header_size + scrollbars;
+}
+
+void AutoAdjustingTreeView::resizeEvent(QResizeEvent *event)
+{
+	auto *m = model();
+	int columns = m ? m->columnCount() : 0;
+	if ((int)size_hints_.size() != columns)
+		viewportSizeHint();
+
+	// auto hide/show columns > 0, stretch last column to width
+	int available_width = event->size().width();
+
+	int required_width = std::accumulate(size_hints_.begin(), size_hints_.end(), 0);
+	std::vector<int> width = size_hints_;
+
+	// if required is larger than available width, try to hide some columns
+	QListIterator<int> it(auto_hide_cols_);
+	for (it.toBack(); it.hasPrevious() && required_width > available_width;) {
+		int section = it.previous();
+		required_width -= size_hints_[section];
+		width[section] = 0;
+	}
+
+	// extend width to current column width if possible
+	for (int i=0; i < columns; ++i) {
+		if (i == stretch_section_) continue;  // ignore auto-stretch section for now
+		int delta = columnWidth(i) > 0 ? columnWidth(i) - width[i] : 0;
+		if (delta < 0 || required_width + delta <= available_width) {
+			width[i] += delta;
+			required_width += delta;
+		}
+	}
+
+	// stretch section if there is still space available
+	if (stretch_section_ >= 0 && stretch_section_ < (int)width.size() &&
+	    width[stretch_section_] > 0 && available_width > required_width)
+		width[stretch_section_] += available_width - required_width;
+
+	// apply stuff
+	for (int i=0; i < columns; ++i)
+		setColumnWidth(i, width[i]);
+}
+
+
+TaskListView::TaskListView(QWidget *parent) : AutoAdjustingTreeView(parent)
+{
+	setStretchSection(0);
 }
 
 // dropping onto an item, should expand this item

@@ -62,18 +62,23 @@ protected:
 
 public:
 	enum TaskModelFlag {
-		IS_DESTROYED   = 0x01,
-		IS_INITIALIZED = 0x02,
-		IS_RUNNING     = 0x04,
+		LOCAL_MODEL    = 0x01,
+		IS_DESTROYED   = 0x02,
+		IS_INITIALIZED = 0x04,
+		IS_RUNNING     = 0x08,
 	};
 
 	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+	QVariant data(const QModelIndex &index, int role) const override;
 
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
+
+	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;
+	virtual DisplaySolutionPtr getSolution(const QModelIndex &index) = 0;
 };
 
 
@@ -113,7 +118,7 @@ public:
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
-	static QString horizontalHeader(int column);
+	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
@@ -139,7 +144,29 @@ public:
 };
 
 
-class TaskListView : public QTreeView {
+class AutoAdjustingTreeView : public QTreeView {
+	Q_OBJECT
+	Q_PROPERTY(int stretchSection MEMBER stretch_section_ READ stretchSection WRITE setStretchSection)
+
+	mutable std::vector<int> size_hints_;  // size hints for sections
+	QList<int> auto_hide_cols_;  // auto-hiding sections
+	int stretch_section_ = -1;
+
+public:
+	AutoAdjustingTreeView(QWidget *parent = nullptr);
+
+	int stretchSection() const { return stretch_section_; }
+	void setStretchSection(int section);
+
+	void setAutoHideSections(const QList<int> &sections);
+
+	void setModel(QAbstractItemModel *model);
+	QSize viewportSizeHint() const override;
+	void resizeEvent(QResizeEvent *event) override;
+};
+
+
+class TaskListView : public AutoAdjustingTreeView {
 	Q_OBJECT
 public:
 	TaskListView(QWidget *parent = nullptr);
