@@ -39,7 +39,7 @@
 #include <stdio.h>
 
 #include "task_panel_p.h"
-#include "task_list_model_cache.h"
+#include "meta_task_list_model.h"
 #include "local_task_model.h"
 #include "factory_model.h"
 #include "pluginlib_factory.h"
@@ -98,7 +98,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 {
 	setupUi(q_ptr);
 	// init tasks view
-	tasks_view->setModel(&TaskListModelCache::instance());
+	tasks_view->setModel(&MetaTaskListModel::instance());
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -123,14 +123,14 @@ void TaskPanelPrivate::initSettings(rviz::Property* root)
 std::pair<TaskListModel*, TaskDisplay*>
 TaskPanelPrivate::getTaskListModel(const QModelIndex &index) const
 {
-	auto *meta_model = static_cast<TaskListModelCache*>(tasks_view->model());
+	auto *meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskListModel(index);
 }
 
 std::pair<BaseTaskModel*, QModelIndex>
 TaskPanelPrivate::getTaskModel(const QModelIndex &index) const
 {
-	auto *meta_model = static_cast<TaskListModelCache*>(tasks_view->model());
+	auto *meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskModel(index);
 }
 

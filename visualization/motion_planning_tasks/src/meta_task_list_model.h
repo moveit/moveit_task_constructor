@@ -46,7 +46,7 @@ MOVEIT_CLASS_FORWARD(BaseTaskModel)
 MOVEIT_CLASS_FORWARD(TaskListModel)
 MOVEIT_CLASS_FORWARD(TaskDisplay)
 
-/** TaskListModelCache maintains a model of multiple registered TaskListModels,
+/** MetaTaskListModel maintains a model of multiple registered TaskListModels,
  *  which are grouped in a hierarchical fashion according to the name of the
  *  associated display.
  *
@@ -55,16 +55,16 @@ MOVEIT_CLASS_FORWARD(TaskDisplay)
  *
  *  This is a singleton instance.
  */
-class TaskListModelCache : public utils::TreeMergeProxyModel {
+class MetaTaskListModel : public utils::TreeMergeProxyModel {
 	Q_OBJECT
 
 	// 1:1 correspondence of displays to models
 	QVector<TaskDisplay*> display_;
 
 	/// class is singleton
-	TaskListModelCache();
-	TaskListModelCache(const TaskListModelCache&) = delete;
-	void operator=(const TaskListModelCache&) = delete;
+	MetaTaskListModel();
+	MetaTaskListModel(const MetaTaskListModel&) = delete;
+	void operator=(const MetaTaskListModel&) = delete;
 
 	// hide this, as we want to offer another API
 	using utils::TreeMergeProxyModel::insertModel;
@@ -74,7 +74,7 @@ class TaskListModelCache : public utils::TreeMergeProxyModel {
 	void onDisplayNameChanged(const QString &name);
 
 public:
-	static TaskListModelCache& instance();
+	static MetaTaskListModel& instance();
 
 	/// insert a new TaskListModel together with it's associated display
 	bool insertModel(TaskListModel* model, TaskDisplay* display);

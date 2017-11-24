@@ -38,7 +38,7 @@
 
 #include "task_display.h"
 #include "task_list_model.h"
-#include "task_list_model_cache.h"
+#include "meta_task_list_model.h"
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
@@ -56,7 +56,7 @@ namespace moveit_rviz_plugin
 TaskDisplay::TaskDisplay() : Display()
 {
 	task_list_model_.reset(new TaskListModel);
-	TaskListModelCache::instance().insertModel(task_list_model_.get(), this);
+	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
 	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
 	        this, SLOT(onTasksInserted(QModelIndex,int,int)));

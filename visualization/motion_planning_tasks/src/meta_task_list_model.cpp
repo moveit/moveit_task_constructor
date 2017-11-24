@@ -34,25 +34,25 @@
 
 /* Author: Robert Haschke */
 
-#include "task_list_model_cache.h"
+#include "meta_task_list_model.h"
 #include "task_list_model.h"
 #include "task_display.h"
 
 namespace moveit_rviz_plugin {
 
-TaskListModelCache::TaskListModelCache()
+MetaTaskListModel::MetaTaskListModel()
 {
 	connect(this, SIGNAL(rowsRemoved(QModelIndex,int,int)),
 	        this, SLOT(onRowsRemoved(QModelIndex,int,int)));
 }
 
-TaskListModelCache &TaskListModelCache::instance()
+MetaTaskListModel &MetaTaskListModel::instance()
 {
-	static TaskListModelCache instance_;
+	static MetaTaskListModel instance_;
 	return instance_;
 }
 
-bool TaskListModelCache::insertModel(TaskListModel *model, TaskDisplay *display)
+bool MetaTaskListModel::insertModel(TaskListModel *model, TaskDisplay *display)
 {
 	if (!model || !display)
 		return false;
@@ -67,14 +67,14 @@ bool TaskListModelCache::insertModel(TaskListModel *model, TaskDisplay *display)
 	return true;
 }
 
-void TaskListModelCache::onRowsRemoved(const QModelIndex &parent, int first, int last)
+void MetaTaskListModel::onRowsRemoved(const QModelIndex &parent, int first, int last)
 {
 	if (!parent.isValid()) {
 		display_.remove(first, last-first+1);
 	}
 }
 
-void TaskListModelCache::onDisplayNameChanged(const QString &name)
+void MetaTaskListModel::onDisplayNameChanged(const QString &name)
 {
 	int row = display_.indexOf(static_cast<TaskDisplay*>(sender()));
 	if (row < 0) return;
@@ -86,7 +86,7 @@ void TaskListModelCache::onDisplayNameChanged(const QString &name)
 	setData(idx, name, Qt::EditRole);
 }
 
-bool TaskListModelCache::setData(const QModelIndex &index, const QVariant &value, int role)
+bool MetaTaskListModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
 	bool result = TreeMergeProxyModel::setData(index, value, role);
 	if (result && isGroupItem(index)) {
@@ -96,7 +96,7 @@ bool TaskListModelCache::setData(const QModelIndex &index, const QVariant &value
 }
 
 std::pair<TaskListModel*, TaskDisplay*>
-TaskListModelCache::getTaskListModel(const QModelIndex &index) const
+MetaTaskListModel::getTaskListModel(const QModelIndex &index) const
 {
 	QAbstractItemModel *m = getModel(index).first;
 	if (!m) return std::make_pair(nullptr, nullptr);
@@ -106,7 +106,7 @@ TaskListModelCache::getTaskListModel(const QModelIndex &index) const
 }
 
 std::pair<BaseTaskModel*, QModelIndex>
-TaskListModelCache::getTaskModel(const QModelIndex &index) const
+MetaTaskListModel::getTaskModel(const QModelIndex &index) const
 {
 	if (!index.isValid())
 		return std::make_pair(nullptr, QModelIndex());

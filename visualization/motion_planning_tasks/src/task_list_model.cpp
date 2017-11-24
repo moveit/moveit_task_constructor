@@ -144,7 +144,7 @@ TaskListModel::TaskListModel(QObject *parent)
 
 TaskListModel::~TaskListModel() {
 	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
-	// inform TaskListModelCache that we will remove our stuff
+	// inform MetaTaskListModel that we will remove our stuff
 	removeRows(0, rowCount());
 }
 

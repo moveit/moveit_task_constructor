@@ -7,7 +7,7 @@ add_library(${MOVEIT_LIB_NAME}
 	local_task_model.cpp
 	remote_task_model.cpp
 	task_list_model.cpp
-	task_list_model_cache.cpp
+	meta_task_list_model.cpp
 	task_panel.cpp
 	task_panel_p.h
 	task_display.cpp
