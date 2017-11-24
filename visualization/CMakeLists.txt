@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 2.8.12)
 project(moveit_task_constructor_visualization)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -33,7 +33,11 @@ add_definitions(-DQT_NO_KEYWORDS)
 catkin_package(
 )
 
-set(CMAKE_CXX_STANDARD 14)
+if (CMAKE_VERSION VERSION_LESS "3.1")
+	add_compile_options(-std=c++14)
+else ()
+	set(CMAKE_CXX_STANDARD 14)
+endif ()
 
 include_directories(${catkin_INCLUDE_DIRS})
 

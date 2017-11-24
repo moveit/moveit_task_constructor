@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6.12)
+cmake_minimum_required(VERSION 2.8.12)
 project(moveit_task_constructor_msgs)
 
 set(MSG_DEPS moveit_msgs visualization_msgs)
