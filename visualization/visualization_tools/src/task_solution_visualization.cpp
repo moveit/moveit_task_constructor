@@ -81,12 +81,12 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
                                                   parent, SLOT(changedLoopDisplay()), this);
 
   trail_display_property_ = new rviz::BoolProperty("Show Trail", false, "Show a path trail",
-                                                   parent, SLOT(changedShowTrail()), this);
+                                                   parent, SLOT(changedTrail()), this);
 
   state_display_time_property_ = new rviz::EditableEnumProperty("State Display Time", "0.05 s",
                                                                 "The amount of wall-time to wait in between displaying "
                                                                 "states along a received trajectory path",
-                                                                parent, SLOT(changedStateDisplayTime()), this);
+                                                                parent);
   state_display_time_property_->addOptionStd("REALTIME");
   state_display_time_property_->addOptionStd("0.05 s");
   state_display_time_property_->addOptionStd("0.1 s");
@@ -94,7 +94,7 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 
   trail_step_size_property_ = new rviz::IntProperty("Trail Step Size", 1,
                                                     "Specifies the step size of the samples shown in the trajectory trail.",
-                                                    parent, SLOT(changedTrailStepSize()), this);
+                                                    parent, SLOT(changedTrail()), this);
   trail_step_size_property_->setMin(1);
 
 
@@ -169,20 +169,21 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
 void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context)
 {
   // Save pointers for later use
-  scene_node_ = scene_node;
+  parent_scene_node_ = scene_node;
   context_ = context;
-  scene_node_->setVisible(false);
+  main_scene_node_ = parent_scene_node_->getCreator()->createSceneNode();
+  trail_scene_node_ = parent_scene_node_->getCreator()->createSceneNode();
 
   // Load trajectory robot
-  robot_render_.reset(new RobotStateVisualization(scene_node_, context_, "Solution Trajectory", robot_property_));
+  robot_render_.reset(new RobotStateVisualization(main_scene_node_, context_, "Solution Trajectory", robot_property_));
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
   changedRobotAlpha();
   enabledRobotColor();
   robot_render_->setVisible(true);
 
-  scene_render_.reset(new PlanningSceneRender(scene_node_, context_, RobotStateVisualizationPtr()));
-  scene_render_->getGeometryNode()->setVisible(true);
+  scene_render_.reset(new PlanningSceneRender(main_scene_node_, context_, RobotStateVisualizationPtr()));
+  scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
 
   rviz::WindowManagerInterface* window_context = context_->getWindowManager();
   if (window_context)
@@ -227,7 +228,10 @@ void TaskSolutionVisualization::reset()
 
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
-  scene_node_->setVisible(false);
+  scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
+
+  if (main_scene_node_->getParent())
+      parent_scene_node_->removeChild(main_scene_node_);
 }
 
 void TaskSolutionVisualization::clearTrail()
@@ -238,22 +242,24 @@ void TaskSolutionVisualization::clearTrail()
 
 void TaskSolutionVisualization::changedLoopDisplay()
 {
-  scene_node_->setVisible(display_->isEnabled() && displaying_solution_ && animating_);
   if (loop_display_property_->getBool() && slider_panel_)
     slider_panel_->pauseButton(false);
 }
 
-void TaskSolutionVisualization::changedShowTrail()
+void TaskSolutionVisualization::changedTrail()
 {
   clearTrail();
-
-  if (!trail_display_property_->getBool())
-    return;
   DisplaySolutionPtr t = solution_to_display_;
   if (!t)
     t = displaying_solution_;
-  if (!t)
+
+  if (!t || !trail_display_property_->getBool()) {
+    setVisibility(trail_scene_node_, main_scene_node_, false);
     return;
+  }
+
+  setVisibility(main_scene_node_, parent_scene_node_, true);
+  setVisibility(trail_scene_node_, main_scene_node_, true);
 
   int stepsize = trail_step_size_property_->getInt();
   // always include last trajectory point
@@ -261,7 +267,7 @@ void TaskSolutionVisualization::changedShowTrail()
   for (std::size_t i = 0; i < trail_.size(); i++)
   {
     int waypoint_i = std::min(i * stepsize, t->getWayPointCount() - 1);  // limit to last trajectory point
-    rviz::Robot* r = new rviz::Robot(scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), NULL);
+    rviz::Robot* r = new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), NULL);
     r->load(*scene_->getRobotModel()->getURDF());
     r->setVisualVisible(robot_visual_enabled_property_->getBool());
     r->setCollisionVisible(robot_collision_enabled_property_->getBool());
@@ -272,12 +278,6 @@ void TaskSolutionVisualization::changedShowTrail()
     r->setVisible(waypoint_i <= current_state_);
     trail_[i] = r;
   }
-}
-
-void TaskSolutionVisualization::changedTrailStepSize()
-{
-  if (trail_display_property_->getBool())
-    changedShowTrail();
 }
 
 void TaskSolutionVisualization::changedRobotAlpha()
@@ -301,23 +301,24 @@ void TaskSolutionVisualization::changedRobotCollisionEnabled()
     trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
 }
 
-void TaskSolutionVisualization::changedStateDisplayTime()
-{
-}
-
 void TaskSolutionVisualization::onEnable()
 {
-  scene_node_->setVisible(displaying_solution_ && animating_);
+  if (slider_panel_ && slider_panel_was_visible_)
+    slider_panel_->onEnable();
 }
 
 void TaskSolutionVisualization::onDisable()
 {
-  scene_node_->setVisible(false);
+  // make all scene nodes invisible
+  if (main_scene_node_->getParent())
+    parent_scene_node_->removeChild(main_scene_node_);
 
   displaying_solution_.reset();
   animating_ = false;
-  if (slider_panel_)
+  if (slider_panel_) {
+    slider_panel_was_visible_ = slider_panel_->isVisible();
     slider_panel_->onDisable();
+  }
 }
 
 void TaskSolutionVisualization::interruptCurrentDisplay()
@@ -362,12 +363,11 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
   {
     animating_ = false;
     displaying_solution_.reset();
-    scene_node_->setVisible(false);
     slider_panel_->update(0);
     drop_displaying_solution_ = false;
   }
   if (!animating_)
-  {  // finished last animation?
+  {  // finished last animation
     boost::mutex::scoped_lock lock(display_solution_mutex_);
 
     // new trajectory available to display?
@@ -375,17 +375,15 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     {
       animating_ = true;
       displaying_solution_ = solution_to_display_;
-      changedShowTrail();
+      changedTrail();
       if (slider_panel_)
         slider_panel_->update(solution_to_display_->getWayPointCount());
     }
     else if (displaying_solution_)
     {
-      if (loop_display_property_->getBool())
-      {  // do loop? -> start over too
+      if (loop_display_property_->getBool()) {
         animating_ = true;
-      }
-      else if (slider_panel_ && slider_panel_->isVisible())
+      } else if (slider_panel_ && slider_panel_->isVisible())
       {
         if (slider_panel_->getSliderPosition() == (int)displaying_solution_->getWayPointCount() - 1)
           return;  // nothing more to do
@@ -397,9 +395,10 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
 
     if (animating_)
     {
+      // restart animation
       current_state_ = -1;
       current_state_time_ = std::numeric_limits<float>::infinity();
-      scene_node_->setVisible(display_->isEnabled());
+      trail_scene_node_->setVisible(false);
     }
   }
 
@@ -421,16 +420,15 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       if (current_state_ < waypoint_count)
       {
         renderWayPoint(current_state_, previous_state);
-        for (std::size_t i = 0; i < trail_.size(); ++i)
-          trail_[i]->setVisible(
-                std::min(waypoint_count - 1,
-                         static_cast<int>(i) * trail_step_size_property_->getInt()) <= current_state_);
+
+        int stepsize = trail_step_size_property_->getInt();
+        for (int i = std::max(0, previous_state / stepsize),
+             end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
+          trail_[i]->setVisible(true);
       }
       else
       {
         animating_ = false;  // animation finished
-        scene_node_->setVisible(loop_display_property_->getBool() ||
-                                (slider_panel_ && slider_panel_->isVisible()));
         if (!loop_display_property_->getBool() && slider_panel_)
           slider_panel_->pauseButton(true);
         // ensure to render end state
@@ -441,6 +439,12 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     }
     current_state_time_ += wall_dt;
   }
+
+  // main scene node is visible if: animation, trail, or panel is shown
+  setVisibility(main_scene_node_, parent_scene_node_,
+                display_->isEnabled() && displaying_solution_ &&
+                (animating_ || trail_scene_node_->getParent() ||
+                 (slider_panel_ && slider_panel_->isVisible())));
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
@@ -485,24 +489,17 @@ void TaskSolutionVisualization::renderPlanningScene(const planning_scene::Planni
 
 void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msgs::Solution& msg)
 {
-  // Error check
-  if (!scene_)
-    return;
-
-  if (msg.start_scene.robot_model_name != scene_->getRobotModel()->getName())
-    ROS_WARN("Received a trajectory to display for model '%s' but model '%s' was expected",
-             msg.start_scene.robot_model_name .c_str(),
-             scene_->getRobotModel()->getName().c_str());
-
-  scene_->setPlanningSceneMsg(msg.start_scene);
 
   DisplaySolutionPtr s (new DisplaySolution);
   s->setFromMessage(scene_, msg);
+  showTrajectory(s);
+}
 
-  if (!s->empty())
-  {
+void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s)
+{
+  if (!s->empty()) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
-    solution_to_display_.swap(s);
+    solution_to_display_ = s;
     if (interrupt_display_property_->getBool())
       interruptCurrentDisplay();
   }
@@ -544,25 +541,48 @@ void TaskSolutionVisualization::sliderPanelVisibilityChange(bool enable)
   if (!slider_panel_)
     return;
 
-  if (enable)
+  if (enable) {
+    // also enable display
+      display_->setEnabled(true);
     slider_panel_->onEnable();
-  else
+  } else
     slider_panel_->onDisable();
 
-  scene_node_->setVisible(enable || animating_);
+  setVisibility(main_scene_node_, parent_scene_node_,
+                display_->isEnabled() && displaying_solution_ && enable);
 }
 
 
 void TaskSolutionVisualization::changedSceneEnabled()
 {
-  if (scene_render_)
-    scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
+  if (!scene_render_)
+    return;
+  setVisibility(scene_render_->getGeometryNode(), main_scene_node_,
+                scene_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::renderCurrentScene()
 {
   if (scene_render_ && scene_enabled_property_->getBool() && current_state_ >= 0)
-    renderPlanningScene(displaying_solution_->scene(current_state_));
+      renderPlanningScene(displaying_solution_->scene(current_state_));
+}
+
+void TaskSolutionVisualization::setVisibility(Ogre::SceneNode *node, Ogre::SceneNode *parent, bool visible)
+{
+  if (node != main_scene_node_ && !main_scene_node_->getParent())
+    return;  // main scene node is detached
+
+  if (visible && node->getParent() != parent) {
+    parent->addChild(node);
+    // if main scene node became attached, also update visibility of other nodes
+    if (node == main_scene_node_) {
+        if (scene_render_)
+            setVisibility(scene_render_->getGeometryNode(), main_scene_node_,
+                          scene_enabled_property_->getBool());
+        setVisibility(trail_scene_node_, main_scene_node_, loop_display_property_->getBool());
+    }
+  } else if (!visible && node->getParent())
+    node->getParent()->removeChild(node);
 }
 
 }  // namespace moveit_rviz_plugin

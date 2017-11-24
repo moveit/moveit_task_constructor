@@ -37,9 +37,11 @@
 */
 
 #include "task_display.h"
-#include "task_list_model_cache.h"
+#include "task_list_model.h"
+#include "meta_task_list_model.h"
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit_task_constructor_msgs/GetSolution.h>
 
 #include <moveit/rdf_loader/rdf_loader.h>
 #include <moveit/robot_model/robot_model.h>
@@ -53,6 +55,16 @@ namespace moveit_rviz_plugin
 
 TaskDisplay::TaskDisplay() : Display()
 {
+	task_list_model_.reset(new TaskListModel);
+	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
+
+	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
+	        this, SLOT(onTasksInserted(QModelIndex,int,int)));
+	connect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+	        this, SLOT(onTasksRemoved(QModelIndex,int,int)));
+	connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+	        this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
+
 	robot_description_property_ =
 	      new rviz::StringProperty("Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
 	                               this, SLOT(changedRobotDescription()), this);
@@ -64,6 +76,7 @@ TaskDisplay::TaskDisplay() : Display()
 	                                 this, SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
+
 	tasks_property_ =
 	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
@@ -93,6 +106,9 @@ void TaskDisplay::loadRobotModel()
 	// Send to child class
 	trajectory_visual_->onRobotModelLoaded(robot_model_);
 	trajectory_visual_->onEnable();
+
+	// share the planning scene with task models
+	task_list_model_->setScene(trajectory_visual_->getScene());
 }
 
 void TaskDisplay::reset()
@@ -106,20 +122,12 @@ void TaskDisplay::onEnable()
 {
 	Display::onEnable();
 	loadRobotModel();
-
-	// (re)initialize task model
-	updateTaskListModel();
 }
 
 void TaskDisplay::onDisable()
 {
 	Display::onDisable();
 	trajectory_visual_->onDisable();
-
-	// don't monitor topics when disabled
-	task_description_sub.shutdown();
-	task_statistics_sub.shutdown();
-	task_solution_sub.shutdown();
 }
 
 void TaskDisplay::update(float wall_dt, float ros_dt)
@@ -166,22 +174,24 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const moveit_task_constructor_msgs::SolutionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
-		if (task_list_model_) task_list_model_->processSolutionMessage(id, *msg);
-		// TODO: use already processed trajectory (e.g. by ID)
-		trajectory_visual_->showTrajectory(*msg);
+		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
+		trajectory_visual_->showTrajectory(s);
+		return;
 	});
 }
 
-void TaskDisplay::updateTaskListModel()
+void TaskDisplay::showTrajectory(const DisplaySolutionPtr &s) const {
+	trajectory_visual_->interruptCurrentDisplay();
+	trajectory_visual_->showTrajectory(s);
+}
+
+void TaskDisplay::changedTaskSolutionTopic()
 {
-	if (task_list_model_) {
-		disconnect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-		           this, SLOT(onTasksInserted(QModelIndex,int,int)));
-		disconnect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-		           this, SLOT(onTasksRemoved(QModelIndex,int,int)));
-		disconnect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-		           this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
-	}
+	task_description_sub.shutdown();
+	task_statistics_sub.shutdown();
+	task_solution_sub.shutdown();
+	get_solution_client.shutdown();
+
 	tasks_property_->removeChildren();
 
 	// generate task monitoring topics from solution topic
@@ -193,39 +203,21 @@ void TaskDisplay::updateTaskListModel()
 	}
 
 	std::string base_ns = solution_topic.substr(0, last_sep+1);
-	task_list_model_ = TaskListModelCache::instance().getModel(base_ns);
 
-	if (task_list_model_) {
-		// listen to task descriptions updates
-		task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
+	// listen to task descriptions updates
+	task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
 
-		// listen to task statistics updates
-		task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
-
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
-
-		// initialize task list
-		onTasksInserted(QModelIndex(), 0, task_list_model_->rowCount()-1);
-		connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-		        this, SLOT(onTasksInserted(QModelIndex,int,int)));
-		connect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-		        this, SLOT(onTasksRemoved(QModelIndex,int,int)));
-		connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-		        this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
-	} else {
-		setStatus(rviz::StatusProperty::Error, "Task Monitor", "failed to create TaskListModel");
-	}
+	// listen to task statistics updates
+	task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
 
 	// listen to task solutions
 	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
-}
 
-void TaskDisplay::changedTaskSolutionTopic()
-{
-	task_description_sub.shutdown();
-	task_statistics_sub.shutdown();
-	task_solution_sub.shutdown();
-	updateTaskListModel();
+	// service to request solutions
+	get_solution_client = update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
+	task_list_model_->setSolutionClient(&get_solution_client);
+
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
 }
 
 void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)

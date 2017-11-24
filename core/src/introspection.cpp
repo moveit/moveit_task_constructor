@@ -51,7 +51,7 @@ public:
 Introspection::Introspection(const Task &task)
    : impl(new IntrospectionPrivate(task))
 {
-	impl->get_solution_service_ = impl->nh_.advertiseService("get_solution", &Introspection::getSolution, this);
+	impl->get_solution_service_ = impl->nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, this);
 }
 
 Introspection::~Introspection()
@@ -81,12 +81,18 @@ void Introspection::reset()
 	impl->resetMaps();
 }
 
-void Introspection::publishSolution(const SolutionBase &s)
+void Introspection::fillSolution(moveit_task_constructor_msgs::Solution &msg,
+                                 const SolutionBase &s)
 {
-	moveit_task_constructor_msgs::Solution msg;
 	s.fillMessage(msg, this);
 	msg.task_id = impl->task_.id();
 	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
+}
+
+void Introspection::publishSolution(const SolutionBase &s)
+{
+	moveit_task_constructor_msgs::Solution msg;
+	fillSolution(msg, s);
 	impl->solution_publisher_.publish(msg);
 }
 
@@ -122,8 +128,7 @@ bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Reque
 	if (it == impl->id_solution_bimap_.left.end())
 		return false;
 
-	const SolutionBase& solution = *it->second;
-	solution.fillMessage(res.solution, this);
+	fillSolution(res.solution, *it->second);
 	return true;
 }
 
@@ -141,7 +146,7 @@ uint32_t Introspection::stageId(const Stage* const s) const
 
 uint32_t Introspection::solutionId(const SolutionBase& s)
 {
-	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(impl->id_solution_bimap_.size(), &s));
+	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
 	return result.first->first;
 }
 

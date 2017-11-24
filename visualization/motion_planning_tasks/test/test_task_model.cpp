@@ -156,7 +156,8 @@ protected:
 
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
-	moveit_rviz_plugin::RemoteTaskModel m;
+	planning_scene::PlanningSceneConstPtr scene;
+	moveit_rviz_plugin::RemoteTaskModel m(scene);
 	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
 	validate(m, {"first"});
@@ -204,11 +205,11 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 TEST_F(TaskListModelTest, deletion) {
 	children = 3;
 	model.processTaskDescriptionMessage("1", genMsg("first"));
-	moveit_rviz_plugin::BaseTaskModel *m = model.getTask(0);
+	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
 	QObject::connect(m, &QObject::destroyed, [&num_deletes](){++num_deletes;});
 
-	model.removeTask(m);
+	model.removeModel(m);
 	// process deleteLater() events
 	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 	// as m is owned by model, m should be destroyed

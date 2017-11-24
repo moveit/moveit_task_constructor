@@ -1,6 +1,7 @@
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
+#include <ros/console.h>
 
 namespace moveit_rviz_plugin {
 
@@ -16,6 +17,15 @@ std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const
 	assert(part < trajectory_.size());
 	assert(index < trajectory_[part]->getWayPointCount());
 	return std::make_pair(part, index);
+}
+
+DisplaySolution::DisplaySolution(const DisplaySolution &master, uint32_t sub)
+   : start_scene_(sub == 0 ? master.start_scene_ : scene_[sub-1])
+   , scene_( { master.scene_[sub] } )
+   , trajectory_( { master.trajectory_[sub] } )
+   , name_( { master.name_[sub] } )
+{
+	steps_ = trajectory_.front()->getWayPointCount();
 }
 
 float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair &idx_pair) const
@@ -39,10 +49,20 @@ const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 	return name_[idx_pair.first];
 }
 
-void DisplaySolution::setFromMessage(const planning_scene::PlanningSceneConstPtr& parent,
+void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
                                      const moveit_task_constructor_msgs::Solution &msg)
 {
-	planning_scene::PlanningScenePtr ref_scene = parent->diff();
+	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName()) {
+		ROS_ERROR("Solution for model '%s' but model '%s' was expected",
+		         msg.start_scene.robot_model_name .c_str(),
+		         start_scene->getRobotModel()->getName().c_str());
+		return;
+	}
+
+	// initialize parent scene from solution's start scene
+	start_scene->setPlanningSceneMsg(msg.start_scene);
+	start_scene_ = start_scene;
+	planning_scene::PlanningScenePtr ref_scene = start_scene_->diff();
 
 	scene_.resize(msg.sub_trajectory.size());
 	trajectory_.resize(msg.sub_trajectory.size());

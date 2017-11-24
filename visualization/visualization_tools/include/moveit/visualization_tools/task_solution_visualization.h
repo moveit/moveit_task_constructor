@@ -92,7 +92,6 @@ public:
    * \return true on success
    */
   TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display);
-
   virtual ~TaskSolutionVisualization();
 
   virtual void update(float wall_dt, float ros_dt);
@@ -104,7 +103,9 @@ public:
   void onDisable();
   void setName(const QString& name);
 
+  planning_scene::PlanningSceneConstPtr getScene() const { return scene_; }
   void showTrajectory(const moveit_task_constructor_msgs::Solution& msg);
+  void showTrajectory(moveit_rviz_plugin::DisplaySolutionPtr s);
   void dropTrajectory();
 
 public Q_SLOTS:
@@ -116,9 +117,7 @@ private Q_SLOTS:
   void changedRobotCollisionEnabled();
   void changedRobotAlpha();
   void changedLoopDisplay();
-  void changedShowTrail();
-  void changedTrailStepSize();
-  void changedStateDisplayTime();
+  void changedTrail();
   void changedRobotColor();
   void enabledRobotColor();
   void changedAttachedBodyColor();
@@ -129,6 +128,7 @@ private Q_SLOTS:
   void renderCurrentScene();
 
 protected:
+  void setVisibility(Ogre::SceneNode* node, Ogre::SceneNode* parent, bool visible);
   float getStateDisplayTime();
   void clearTrail();
   void renderWayPoint(size_t index, int previous_index);
@@ -156,10 +156,13 @@ protected:
 
   // Pointers from parent display that we save
   rviz::Display* display_;  // the parent display that this class populates
-  Ogre::SceneNode* scene_node_;
+  Ogre::SceneNode* parent_scene_node_;  // parent scene node provided by display
+  Ogre::SceneNode* main_scene_node_;  // to be added/removed to/from scene_node_
+  Ogre::SceneNode* trail_scene_node_;  // to be added/removed to/from scene_node_
   rviz::DisplayContext* context_;
   TaskSolutionPanel* slider_panel_ = nullptr;
   rviz::PanelDockWidget* slider_dock_panel_ = nullptr;
+  bool slider_panel_was_visible_ = false;
 
   // Trajectory Properties
   rviz::Property* robot_property_;

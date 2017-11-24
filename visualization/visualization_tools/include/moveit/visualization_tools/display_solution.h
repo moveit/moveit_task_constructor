@@ -22,6 +22,8 @@ class DisplaySolution
 {
 	/// number of overall steps
 	size_t steps_;
+	/// start scene
+	planning_scene::PlanningSceneConstPtr start_scene_;
 	/// end scenes for each sub trajectory
 	std::vector<planning_scene::PlanningSceneConstPtr> scene_;
 	/// sub trajectories, might be empty
@@ -30,6 +32,10 @@ class DisplaySolution
 	std::vector<std::string> name_;
 
 public:
+	DisplaySolution() = default;
+	/// create DisplaySolution for given sub trajectory of master
+	DisplaySolution(const DisplaySolution& master, uint32_t sub);
+
 	size_t getWayPointCount() const { return steps_; }
 	bool empty() const { return steps_ == 0; }
 
@@ -56,7 +62,7 @@ public:
 		return name(indexPair(index));
 	}
 
-	void setFromMessage(const planning_scene::PlanningSceneConstPtr &parent,
+	void setFromMessage(const planning_scene::PlanningScenePtr &start_scene,
 	                    const moveit_task_constructor_msgs::Solution& msg);
 };
 

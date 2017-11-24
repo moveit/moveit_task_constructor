@@ -34,72 +34,57 @@
 
 /* Author: Robert Haschke */
 
-#include "task_list_model_cache.h"
+#pragma once
+
+#include <utils/tree_merge_proxy_model.h>
+#include <moveit/macros/class_forward.h>
+#include <QVector>
 
 namespace moveit_rviz_plugin {
 
-TaskListModelCache::TaskListModelCache()
-{
-	global_model_.reset(new TaskListModel());
-}
+MOVEIT_CLASS_FORWARD(BaseTaskModel)
+MOVEIT_CLASS_FORWARD(TaskListModel)
+MOVEIT_CLASS_FORWARD(TaskDisplay)
 
-TaskListModelCache &TaskListModelCache::instance()
-{
-	static TaskListModelCache instance_;
-	return instance_;
-}
+/** MetaTaskListModel maintains a model of multiple registered TaskListModels,
+ *  which are grouped in a hierarchical fashion according to the name of the
+ *  associated display.
+ *
+ *  All TaskPanel instances use the singleton instance of this class
+ *  to show all tasks known to the system.
+ *
+ *  This is a singleton instance.
+ */
+class MetaTaskListModel : public utils::TreeMergeProxyModel {
+	Q_OBJECT
 
-TaskListModelPtr TaskListModelCache::getModel(const std::string& ns)
-{
-	if (ns.empty()) {
-		return TaskListModelPtr();
-	} else {
-		// retrieve existing model for given topic pair
-		TaskListModelWeakPtr& model = cache_[ns];
-		TaskListModelPtr result;
+	// 1:1 correspondence of displays to models
+	QVector<TaskDisplay*> display_;
 
-		if (model.expired()) {
-			// create new model, store in result (otherwise it would be released again)
-			model = result = TaskListModelPtr(new TaskListModel());
+	/// class is singleton
+	MetaTaskListModel();
+	MetaTaskListModel(const MetaTaskListModel&) = delete;
+	void operator=(const MetaTaskListModel&) = delete;
 
-			// connect newly created TaskListModel to global model
-			connect(result.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-			        this, SLOT(onInsertTasks(QModelIndex,int,int)));
-			connect(result.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-			        this, SLOT(onRemoveTasks(QModelIndex,int,int)));
-		} else
-			result = model.lock();
+	// hide this, as we want to offer another API
+	using utils::TreeMergeProxyModel::insertModel;
 
-		return result;
-	}
-}
+	private Q_SLOTS:
+	void onRowsRemoved(const QModelIndex &parent, int first, int last);
+	void onDisplayNameChanged(const QString &name);
 
-TaskListModelPtr TaskListModelCache::getGlobalModel() {
-	return global_model_;
-}
+public:
+	static MetaTaskListModel& instance();
 
-void TaskListModelCache::onInsertTasks(const QModelIndex &parent, int first, int last)
-{
-	if (parent.isValid())
-		return; // we are only interested in top-level insertions
+	/// insert a new TaskListModel together with it's associated display
+	bool insertModel(TaskListModel* model, TaskDisplay* display);
 
-	TaskListModel *m = static_cast<TaskListModel*>(sender());
-	for(; first <= last; ++first) {
-		BaseTaskModel *t = m->getTask(first);
-		global_model_->insertTask(t);
-	}
-}
+	bool setData(const QModelIndex &index, const QVariant &value, int role) override;
 
-void TaskListModelCache::onRemoveTasks(const QModelIndex &parent, int first, int last)
-{
-	if (parent.isValid())
-		return; // we are only interested in top-level insertions
-
-	TaskListModel *m = static_cast<TaskListModel*>(sender());
-	for(; first <= last; ++first) {
-		BaseTaskModel *t = m->getTask(first);
-		global_model_->removeTask(t);
-	}
-}
+	/// retrieve TaskListModel and TaskDisplay corresponding to given index
+	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex &index) const;
+	/// retrieve TaskModel and its source index corresponding to given proxy index
+	std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
+};
 
 }

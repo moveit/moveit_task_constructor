@@ -9,6 +9,7 @@
 #define DESCRIPTION_TOPIC "description"
 #define STATISTICS_TOPIC  "statistics"
 #define SOLUTION_TOPIC    "solution"
+#define GET_SOLUTION_SERVICE "get_solution"
 
 namespace moveit { namespace task_constructor {
 
@@ -63,6 +64,7 @@ public:
 
 private:
 	void fillStageStatistics(const Stage &stage, moveit_task_constructor_msgs::StageStatistics &s);
+	void fillSolution(moveit_task_constructor_msgs::Solution &msg, const SolutionBase &s);
 	/// retrieve or set id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage * const s);
 };

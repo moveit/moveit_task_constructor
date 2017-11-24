@@ -80,6 +80,7 @@ LocalTaskModel::LocalTaskModel(QObject *parent)
    , Task()
 {
 	root_ = pimpl();
+	flags_ |= LOCAL_MODEL;
 }
 
 LocalTaskModel::LocalTaskModel(Stage::pointer &&container, QObject *parent)
@@ -151,7 +152,7 @@ QVariant LocalTaskModel::data(const QModelIndex &index, int role) const
 		}
 		break;
 	}
-	return QVariant();
+	return BaseTaskModel::data(index, role);
 }
 
 bool LocalTaskModel::setData(const QModelIndex &index, const QVariant &value, int role)
@@ -217,6 +218,18 @@ bool LocalTaskModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, 
 	static_cast<ContainerBase*>(c->me())->insert(moveit::task_constructor::Stage::pointer(stage), row);
 	endInsertRows();
 	return true;
+}
+
+QAbstractItemModel *LocalTaskModel::getSolutionModel(const QModelIndex &index)
+{
+	// TODO implement
+	return nullptr;
+}
+
+DisplaySolutionPtr LocalTaskModel::getSolution(const QModelIndex &index)
+{
+	// TODO implement
+	return DisplaySolutionPtr();
 }
 
 }

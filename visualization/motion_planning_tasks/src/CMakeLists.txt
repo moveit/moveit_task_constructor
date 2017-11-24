@@ -7,7 +7,7 @@ add_library(${MOVEIT_LIB_NAME}
 	local_task_model.cpp
 	remote_task_model.cpp
 	task_list_model.cpp
-	task_list_model_cache.cpp
+	meta_task_list_model.cpp
 	task_panel.cpp
 	task_panel_p.h
 	task_display.cpp
@@ -15,10 +15,11 @@ add_library(${MOVEIT_LIB_NAME}
 	factory_model.cpp
 	plugin_init.cpp
 	${UIC_FILES}
+	resources.qrc
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION})
 target_link_libraries(${MOVEIT_LIB_NAME}
-	moveit_task_visualization_tools
+	motion_planning_tasks_utils moveit_task_visualization_tools
 	${catkin_LIBRARIES} ${QT_LIBRARIES}
 )
 target_include_directories(${MOVEIT_LIB_NAME}

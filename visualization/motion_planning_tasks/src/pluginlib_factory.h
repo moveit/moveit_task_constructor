@@ -158,7 +158,7 @@ public:
   template <class Derived>
   void addBuiltInClass(const QString& name, const QString& description)
   {
-    addBuiltInClass(ROS_PACKAGE_NAME, name, description, [](){return new Derived();});
+    addBuiltInClass("Built Ins", name, description, [](){return new Derived();});
   }
 
   /** @brief Instantiate and return a instance of a subclass of Type using our
