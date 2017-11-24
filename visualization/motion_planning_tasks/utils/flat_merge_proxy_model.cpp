@@ -35,6 +35,8 @@
 /* Author: Robert Haschke */
 
 #include "flat_merge_proxy_model.h"
+#include <vector>
+#include <numeric>
 
 namespace moveit_rviz_plugin {
 namespace utils {

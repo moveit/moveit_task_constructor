@@ -46,6 +46,7 @@
 #include <QHeaderView>
 #include <QScrollBar>
 #include <qevent.h>
+#include <numeric>
 
 namespace moveit_rviz_plugin {
 
@@ -306,7 +307,9 @@ AutoAdjustingTreeView::AutoAdjustingTreeView(QWidget *parent)
    : QTreeView(parent)
 {
 	// consider viewportSizeHint()
+#if QT_VERSION >= QT_VERSION_CHECK(5, 2, 0)
 	setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+#endif
 }
 
 void AutoAdjustingTreeView::setStretchSection(int section)

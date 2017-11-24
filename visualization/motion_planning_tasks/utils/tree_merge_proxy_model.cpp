@@ -35,6 +35,7 @@
 /* Author: Robert Haschke */
 
 #include "tree_merge_proxy_model.h"
+#include <vector>
 
 namespace moveit_rviz_plugin {
 namespace utils {

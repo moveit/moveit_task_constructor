@@ -150,7 +150,7 @@ public:
 
 class AutoAdjustingTreeView : public QTreeView {
 	Q_OBJECT
-	Q_PROPERTY(int stretchSection MEMBER stretch_section_ READ stretchSection WRITE setStretchSection)
+	Q_PROPERTY(int stretchSection READ stretchSection WRITE setStretchSection)
 
 	mutable std::vector<int> size_hints_;  // size hints for sections
 	QList<int> auto_hide_cols_;  // auto-hiding sections
@@ -165,7 +165,7 @@ public:
 	void setAutoHideSections(const QList<int> &sections);
 
 	void setModel(QAbstractItemModel *model);
-	QSize viewportSizeHint() const override;
+	QSize viewportSizeHint() const;
 	void resizeEvent(QResizeEvent *event) override;
 };
 

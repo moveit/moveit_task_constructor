@@ -40,6 +40,7 @@
 
 #include <rviz/panel.h>
 #include <moveit/macros/class_forward.h>
+#include <QModelIndex>
 
 namespace moveit_rviz_plugin {
 
