@@ -81,6 +81,10 @@ TaskDisplay::TaskDisplay() : Display()
 	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
 
+TaskDisplay::~TaskDisplay()
+{
+}
+
 void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();

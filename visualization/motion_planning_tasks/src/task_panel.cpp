@@ -162,7 +162,7 @@ void TaskPanel::addTask()
 		display->initialize(vis_manager_);
 		display->setEnabled(true);
 
-		task_list_model = display->getTaskListModel().get();
+		task_list_model = &display->getTaskListModel();
 	} else
 		task_list_model = d_ptr->getTaskListModel(current).first;
 

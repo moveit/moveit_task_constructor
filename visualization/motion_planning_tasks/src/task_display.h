@@ -63,8 +63,8 @@ namespace moveit_rviz_plugin
 {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
-MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
-MOVEIT_CLASS_FORWARD(TaskListModel)
+class TaskSolutionVisualization;
+class TaskListModel;
 
 class TaskDisplay : public rviz::Display
 {
@@ -72,6 +72,7 @@ class TaskDisplay : public rviz::Display
 
 public:
   TaskDisplay();
+  ~TaskDisplay();
 
   void loadRobotModel();
 
@@ -84,7 +85,7 @@ public:
   virtual void onDisable();
   void setName(const QString& name);
 
-  TaskListModelPtr getTaskListModel() const { return task_list_model_; }
+  TaskListModel& getTaskListModel() { return *task_list_model_; }
   void showTrajectory(const DisplaySolutionPtr& s) const;
 
 private Q_SLOTS:
@@ -111,9 +112,9 @@ protected:
   moveit::tools::JobQueue mainloop_jobs_;
 
   // The trajectory playback component
-  TaskSolutionVisualizationPtr trajectory_visual_;
+  std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
   // The TaskListModel storing actual task and solution data
-  TaskListModelPtr task_list_model_;
+  std::unique_ptr<TaskListModel> task_list_model_;
 
   // Load robot model
   rdf_loader::RDFLoaderPtr rdf_loader_;
