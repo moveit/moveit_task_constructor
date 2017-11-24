@@ -47,6 +47,7 @@
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
+#include <rviz/display_group.h>
 #include <rviz/visualization_manager.h>
 #include <rviz/window_manager_interface.h>
 #include <rviz/panel_dock_widget.h>
@@ -151,12 +152,20 @@ void TaskPanel::load(const rviz::Config& config)
 
 void TaskPanel::addTask()
 {
+	TaskListModel* task_list_model = nullptr;
 	QModelIndex current = d_ptr->tasks_view->currentIndex();
-	if (!current.isValid())
-		Q_ASSERT(false); // TODO: insert new display?
+	if (!current.isValid()) {
+		// create new TaskDisplay
+		TaskDisplay *display = new TaskDisplay();
+		display->setName("Motion Planning Task");
+		vis_manager_->getRootDisplayGroup()->addDisplay(display);
+		display->initialize(vis_manager_);
+		display->setEnabled(true);
 
-	TaskListModel* task_list_model = d_ptr->getTaskListModel(current).first;
-	Q_ASSERT(task_list_model);
+		task_list_model = display->getTaskListModel().get();
+	} else
+		task_list_model = d_ptr->getTaskListModel(current).first;
+
 	task_list_model->insertModel(new LocalTaskModel(task_list_model), current.row());
 }
 
