@@ -110,8 +110,16 @@ int main(int argc, char** argv){
 		t.add(std::move(move));
 	}
 
-	t.plan();
-	t.publishAllSolutions();
+	try {
+		t.plan();
+		std::cout << "waiting for <enter>\n";
+		char ch;
+		std::cin >> ch;
+	}
+	catch (const InitStageException &e) {
+		std::cerr << e;
+		return EINVAL;
+	}
 
 	return 0;
 }

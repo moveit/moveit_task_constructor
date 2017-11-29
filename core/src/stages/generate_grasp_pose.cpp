@@ -35,6 +35,9 @@
 /* Authors: Robert Haschke, Michael Goerner */
 
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/marker_tools.h>
+#include <rviz_marker_tools/marker_creation.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -143,7 +146,34 @@ bool GenerateGraspPose::compute(){
 		tf::poseEigenToMsg(link_pose, goal_pose_msg.pose);
 		state.properties().set("target_pose", goal_pose_msg);
 
-		spawn(std::move(state), 0.0);
+		SubTrajectory trajectory;
+		trajectory.setCost(0.0);
+		trajectory.setName(std::to_string(current_angle_));
+
+		// add an arrow marker
+		visualization_msgs::Marker m;
+		m.header.frame_id = scene_->getPlanningFrame();
+		m.ns = "grasp pose";
+		rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+		double scale = 0.1;
+		rviz_marker_tools::makeArrow(m, scale);
+		tf::poseEigenToMsg(grasp_pose * grasp2tool *
+		                   // arrow should point along z (instead of x)
+		                   Eigen::AngleAxisd(-M_PI / 2.0, Eigen::Vector3d::UnitY()) *
+		                   // arrow tip at goal_pose
+		                   Eigen::Translation3d(-scale, 0, 0), m.pose);
+		trajectory.markers().push_back(m);
+
+		// add end-effector marker
+		robot_state.updateStateWithLinkAt(link_name, link_pose);
+		auto appender = [&trajectory](visualization_msgs::Marker& marker, const std::string& name) {
+			marker.ns = "grasp eef";
+			marker.color.a *= 0.5;
+			trajectory.markers().push_back(marker);
+		};
+		generateVisualMarkers(robot_state, appender, jmg->getLinkModelNames());
+
+		spawn(std::move(state), std::move(trajectory));
 		return true;
 	}
 

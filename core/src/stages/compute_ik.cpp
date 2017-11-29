@@ -3,6 +3,9 @@
 //
 
 #include <moveit/task_constructor/stages/compute_ik.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/marker_tools.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/robot_state/robot_state.h>
@@ -11,6 +14,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <chrono>
 #include <functional>
+#include <iterator>
 #include <ros/console.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -213,14 +217,39 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 
-		if (succeeded) {
-			// create a new scene for each solution as they will have different robot states
-			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
-			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+		planning_scene::PlanningSceneConstPtr scene = s.start()->scene();
+		std::unique_ptr<SolutionBase> solution(new SubTrajectory());
 
-			spawn(InterfaceState(scene), s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
-		} else if (max_ik_solutions == 1)
+		// include markers from original solution
+		std::copy(s.markers().begin(), s.markers().end(), std::back_inserter(solution->markers()));
+
+		// frame at target pose
+		target_pose_msg.header.frame_id = scene->getPlanningFrame();
+		rviz_marker_tools::appendFrame(solution->markers(), target_pose_msg, 0.1, "ik frame");
+
+		if (succeeded) {
+			solution->setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+			// create a new scene for each solution as they will have different robot states
+			planning_scene::PlanningScenePtr new_scene = s.start()->scene()->diff();
+			robot_state::RobotState& robot_state = new_scene->getCurrentStateNonConst();
+			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+			scene = new_scene;
+
+			// robot model
+			robot_state.updateLinkTransforms();
+			auto appender = [&solution](visualization_msgs::Marker& marker, const std::string& name) {
+				marker.ns = "ik solution";
+				marker.color.a *= 0.5;
+				solution->markers().push_back(marker);
+			};
+			generateVisualMarkers(robot_state, appender, jmg->getLinkModelNames());
+		} else {
+			solution->setCost(std::numeric_limits<double>::infinity());
+		}
+
+		spawn(InterfaceState(scene), std::move(solution));
+
+		if (!succeeded && max_ik_solutions == 1)
 			break; // first and only attempt failed
 	}
 }

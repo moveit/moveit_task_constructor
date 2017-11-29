@@ -82,7 +82,7 @@ int main(int argc, char** argv){
 		gengrasp->setToolToGraspTF(Eigen::Translation3d(0,0,.05)*
 		                           Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
 		                           "lh_tool_frame");
-		gengrasp->setAngleDelta(-.2);
+		gengrasp->setAngleDelta(M_PI / 10.);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
 		ik->properties().configureInitFrom(Stage::PARENT);
@@ -113,7 +113,9 @@ int main(int argc, char** argv){
 
 	try {
 		t.plan();
-		t.publishAllSolutions();
+		std::cout << "waiting for <enter>\n";
+		char ch;
+		std::cin >> ch;
 	}
 	catch (const InitStageException &e) {
 		std::cerr << e;
