@@ -41,6 +41,8 @@
 #include "meta_task_list_model.h"
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit/visualization_tools/marker_visualization.h>
+#include <moveit/visualization_tools/display_solution.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
 
 #include <moveit/rdf_loader/rdf_loader.h>
@@ -77,6 +79,8 @@ TaskDisplay::TaskDisplay() : Display()
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
 
+	marker_visual_ = new MarkerVisualizationProperty("Markers", this);
+
 	tasks_property_ =
 	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
@@ -89,6 +93,7 @@ void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
+	marker_visual_->onInitialize(scene_node_, context_);
 }
 
 void TaskDisplay::loadRobotModel()
@@ -179,7 +184,7 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		trajectory_visual_->showTrajectory(s);
+		if (s) trajectory_visual_->showTrajectory(s);
 		return;
 	});
 }
@@ -187,6 +192,17 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 void TaskDisplay::showTrajectory(const DisplaySolutionPtr &s) const {
 	trajectory_visual_->interruptCurrentDisplay();
 	trajectory_visual_->showTrajectory(s);
+}
+
+void TaskDisplay::clearMarkers() {
+	marker_visual_->clearMarkers();
+}
+
+void TaskDisplay::showMarkers(const DisplaySolutionPtr &s) {
+	if (!s) return;
+	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
+		marker_visual_->showMarkers(s->markersOfSubTrajectory(i));
+	}
 }
 
 void TaskDisplay::changedTaskSolutionTopic()

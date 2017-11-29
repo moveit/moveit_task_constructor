@@ -219,6 +219,8 @@ void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QMode
 		return;
 
 	display->showTrajectory(solution);
+	display->clearMarkers();
+	display->showMarkers(solution);
 }
 
 }

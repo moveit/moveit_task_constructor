@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Dave Coleman, Robert Haschke */
+/* Author: Robert Haschke */
 
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
@@ -164,6 +164,9 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
   robot_render_.reset();
   if (slider_dock_panel_)
     delete slider_dock_panel_;
+
+  if (main_scene_node_)
+    main_scene_node_->getCreator()->destroySceneNode(main_scene_node_);
 }
 
 void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context)
