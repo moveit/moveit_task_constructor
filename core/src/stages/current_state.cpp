@@ -58,7 +58,7 @@ bool CurrentState::canCompute() const{
 
 bool CurrentState::compute(){
 	ran_= true;
-	spawn(InterfaceState(scene_));
+	spawn(InterfaceState(scene_), 0.0);
 
 	return true;
 }

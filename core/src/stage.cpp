@@ -43,11 +43,6 @@
 
 namespace moveit { namespace task_constructor {
 
-SubTrajectory::SubTrajectory(StagePrivate *creator, const robot_trajectory::RobotTrajectoryPtr &traj, double cost)
-   : SolutionBase(creator, cost), trajectory_(traj)
-{}
-
-
 void InitStageException::push_back(const Stage &stage, const std::string &msg)
 {
 	errors_.emplace_back(std::make_pair(&stage, msg));
@@ -217,9 +212,11 @@ ComputeBase::ComputeBase(ComputeBasePrivate *impl)
 {
 }
 
-SubTrajectory& ComputeBase::addTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost){
-	auto &trajs = pimpl()->trajectories_;
-	trajs.emplace_back(SubTrajectory(pimpl(), trajectory, cost));
+SubTrajectory& ComputeBase::addTrajectory(SubTrajectory&& trajectory){
+	auto impl = pimpl();
+	auto &trajs = impl->trajectories_;
+	trajectory.setCreator(impl);
+	trajs.emplace_back(trajectory);
 	return trajs.back();
 }
 
@@ -400,11 +397,10 @@ void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &sce
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        InterfaceState&& to,
-                                       const robot_trajectory::RobotTrajectoryPtr& t,
-                                       double cost){
+                                       SubTrajectory&& t) {
 	auto impl = pimpl();
 	std::cout << "sending state forward" << std::endl;
-	SubTrajectory &trajectory = addTrajectory(t, cost);
+	SubTrajectory &trajectory = addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
 	impl->newSolution(trajectory);
@@ -412,11 +408,10 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
 
 void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         const InterfaceState& to,
-                                        const robot_trajectory::RobotTrajectoryPtr& t,
-                                        double cost){
+                                        SubTrajectory&& t) {
 	auto impl = pimpl();
 	std::cout << "sending state backward" << std::endl;
-	SubTrajectory& trajectory = addTrajectory(t, cost);
+	SubTrajectory& trajectory = addTrajectory(std::move(t));
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
 	impl->newSolution(trajectory);
@@ -487,16 +482,15 @@ Generator::Generator(const std::string &name)
    : ComputeBase(new GeneratorPrivate(this, name))
 {}
 
-void Generator::spawn(InterfaceState&& state, double cost)
+void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 {
 	std::cout << "spawning state forwards and backwards" << std::endl;
 	assert(state.incomingTrajectories().empty() &&
 	       state.outgoingTrajectories().empty());
+	assert(!t.trajectory());
 
 	auto impl = pimpl();
-	// empty trajectory ref -> this node only produces states
-	robot_trajectory::RobotTrajectoryPtr dummy;
-	SubTrajectory& trajectory = addTrajectory(dummy, cost);
+	SubTrajectory& trajectory = addTrajectory(std::move(t));
 	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
 	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
 	impl->newSolution(trajectory);
@@ -554,9 +548,9 @@ Connecting::Connecting(const std::string &name)
 }
 
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
-                         const robot_trajectory::RobotTrajectoryPtr& t, double cost) {
+                         SubTrajectory&& t) {
 	auto impl = pimpl();
-	SubTrajectory& trajectory = addTrajectory(t, cost);
+	SubTrajectory& trajectory = addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
 	impl->newSolution(trajectory);

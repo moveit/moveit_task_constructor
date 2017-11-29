@@ -41,6 +41,7 @@
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <assert.h>
 
 namespace moveit { namespace task_constructor {
 
@@ -84,9 +85,17 @@ Interface::iterator Interface::clone(const InterfaceState &state)
 }
 
 
+void SolutionBase::setCreator(StagePrivate *creator)
+{
+	assert(creator_ == nullptr || creator_ == creator);  // creator must only set once
+	creator_ = creator;
+}
+
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
+
+
 
 
 void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,

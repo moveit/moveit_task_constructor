@@ -234,7 +234,7 @@ bool GenerateGraspPose::compute(){
 		if(succeeded) {
 			previous_solutions_.emplace_back();
 			grasp_state.copyJointGroupPositions(jmg_active, previous_solutions_.back());
-			spawn(InterfaceState(grasp_scene));
+			spawn(InterfaceState(grasp_scene), 0.0);
 			return true;
 		}
 	}
