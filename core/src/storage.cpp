@@ -65,7 +65,10 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
-	t.markers = this->markers();
+
+	const auto& markers = this->markers();
+	t.markers.clear();
+	std::copy(markers.begin(), markers.end(), std::back_inserter(t.markers));
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }

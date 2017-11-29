@@ -24,12 +24,16 @@ class DisplaySolution
 	size_t steps_;
 	/// start scene
 	planning_scene::PlanningSceneConstPtr start_scene_;
-	/// end scenes for each sub trajectory
-	std::vector<planning_scene::PlanningSceneConstPtr> scene_;
-	/// sub trajectories, might be empty
-	std::vector<robot_trajectory::RobotTrajectoryPtr> trajectory_;
-	/// optional name of the trajectory
-	std::vector<std::string> name_;
+
+	struct Data {
+		/// end scene for each sub trajectory
+		planning_scene::PlanningSceneConstPtr scene_;
+		/// sub trajectories, might be empty
+		robot_trajectory::RobotTrajectoryPtr trajectory_;
+		/// optional name of the trajectory
+		std::string name_;
+	};
+	std::vector<Data> data_;
 
 public:
 	DisplaySolution() = default;
@@ -54,7 +58,7 @@ public:
 	const planning_scene::PlanningSceneConstPtr& scene(const IndexPair& idx_pair) const;
 	const planning_scene::PlanningSceneConstPtr& scene(size_t index) const {
 		if (index == steps_)
-			return scene_.back();
+			return data_.back().scene_;
 		return scene(indexPair(index));
 	}
 	const std::string& name(const IndexPair& idx_pair) const;

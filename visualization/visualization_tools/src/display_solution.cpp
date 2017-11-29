@@ -8,45 +8,43 @@ namespace moveit_rviz_plugin {
 std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const
 {
 	size_t part = 0;
-	for (const auto& t : trajectory_) {
-		if (index < t->getWayPointCount())
+	for (const auto& d : data_) {
+		if (index < d.trajectory_->getWayPointCount())
 			break;
-		index -= t->getWayPointCount();
+		index -= d.trajectory_->getWayPointCount();
 		++part;
 	}
-	assert(part < trajectory_.size());
-	assert(index < trajectory_[part]->getWayPointCount());
+	assert(part < data_.size());
+	assert(index < data_[part].trajectory_->getWayPointCount());
 	return std::make_pair(part, index);
 }
 
 DisplaySolution::DisplaySolution(const DisplaySolution &master, uint32_t sub)
-   : start_scene_(sub == 0 ? master.start_scene_ : scene_[sub-1])
-   , scene_( { master.scene_[sub] } )
-   , trajectory_( { master.trajectory_[sub] } )
-   , name_( { master.name_[sub] } )
+   : start_scene_(sub == 0 ? master.start_scene_ : master.data_[sub-1].scene_)
+   , data_( { master.data_[sub] } )
 {
-	steps_ = trajectory_.front()->getWayPointCount();
+	steps_ = data_.front().trajectory_->getWayPointCount();
 }
 
 float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair &idx_pair) const
 {
-	return trajectory_[idx_pair.first]->getWayPointDurationFromPrevious(idx_pair.second);
+	return data_[idx_pair.first].trajectory_->getWayPointDurationFromPrevious(idx_pair.second);
 }
 
 const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair &idx_pair) const
 {
-	return trajectory_[idx_pair.first]->getWayPointPtr(idx_pair.second);
+	return data_[idx_pair.first].trajectory_->getWayPointPtr(idx_pair.second);
 }
 
 const planning_scene::PlanningSceneConstPtr &DisplaySolution::scene(const IndexPair &idx_pair) const
 {
 	// start scene is parent of end scene
-	return scene_[idx_pair.first]->getParent();
+	return data_[idx_pair.first].scene_->getParent();
 }
 
 const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 {
-	return name_[idx_pair.first];
+	return data_[idx_pair.first].name_;
 }
 
 void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
@@ -64,20 +62,18 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	start_scene_ = start_scene;
 	planning_scene::PlanningScenePtr ref_scene = start_scene_->diff();
 
-	scene_.resize(msg.sub_trajectory.size());
-	trajectory_.resize(msg.sub_trajectory.size());
-	name_.resize(msg.sub_trajectory.size());
+	data_.resize(msg.sub_trajectory.size());
 
 	steps_ = 0;
 	size_t i = 0;
 	for (const auto& sub : msg.sub_trajectory) {
-		trajectory_[i].reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
-		trajectory_[i]->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
-		name_[i] = sub.name;
-		steps_ += trajectory_[i]->getWayPointCount();
+		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
+		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
+		data_[i].name_ = sub.name;
+		steps_ += data_[i].trajectory_->getWayPointCount();
 
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
-		scene_[i] = ref_scene;
+		data_[i].scene_ = ref_scene;
 
 		// create new reference scene for next iteration
 		ref_scene = ref_scene->diff();

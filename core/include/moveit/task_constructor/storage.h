@@ -165,7 +165,7 @@ public:
 	explicit SubTrajectory(StagePrivate* creator, const robot_trajectory::RobotTrajectoryPtr& traj, double cost);
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
-	const visualization_msgs::MarkerArray& markers() const { return markers_; }
+	const auto& markers() const { return markers_; }
 
 	const std::string& name() const { return name_; }
 	void setName(const std::string& name) { name_ = name; }
@@ -179,7 +179,7 @@ private:
 	// actual trajectory, might be empty
 	const robot_trajectory::RobotTrajectoryPtr trajectory_;
 	// additional markers
-	visualization_msgs::MarkerArray markers_;
+	std::deque<visualization_msgs::Marker> markers_;
 };
 
 
