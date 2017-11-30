@@ -44,6 +44,7 @@ class TreeMergeProxyModelPrivate {
 public:
 	Q_DECLARE_PUBLIC(TreeMergeProxyModel)
 	TreeMergeProxyModel* q_ptr;
+	QStringList mime_types_;
 
 	struct ModelData {
 		ModelData(const QString& name, QAbstractItemModel* m)
@@ -248,16 +249,15 @@ Qt::ItemFlags TreeMergeProxyModel::flags(const QModelIndex &index) const
 	if (!index.isValid())
 		return QAbstractItemModel::flags(index);
 
-	if (isGroupItem(index)) {  // top-level item
-		auto f = QAbstractItemModel::flags(index);
-		if (index.column() == 0)
-			f |= Qt::ItemIsEditable | Qt::ItemIsSelectable;
-		return f;
-	}
-
 	TreeMergeProxyModelPrivate::ModelData *data = nullptr;
 	QModelIndex src_index = d_ptr->mapToSource(index, data);
-	return data->model_ ->flags(src_index);
+	auto f = data->model_ ->flags(src_index);
+
+	if (isGroupItem(index)) {  // top-level item
+		if (index.column() == 0)
+			f |= Qt::ItemIsEnabled | Qt::ItemIsEditable | Qt::ItemIsSelectable;
+	}
+	return f;
 }
 
 QVariant TreeMergeProxyModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -300,6 +300,16 @@ bool TreeMergeProxyModel::setData(const QModelIndex &index, const QVariant &valu
 	QModelIndex src_index = d_ptr->mapToSource(index, data);
 	Q_ASSERT(data->model_ == src_index.model());
 	return data->model_->setData(src_index, value, role);
+}
+
+void TreeMergeProxyModel::setMimeTypes(const QStringList &mime_types)
+{
+	d_ptr->mime_types_ = mime_types;
+}
+
+QStringList TreeMergeProxyModel::mimeTypes() const
+{
+	return d_ptr->mime_types_;
 }
 
 bool TreeMergeProxyModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent)

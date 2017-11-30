@@ -79,6 +79,8 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
+	void setMimeTypes(const QStringList& mime_types);
+	QStringList mimeTypes() const override;
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent);
 
 	bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;

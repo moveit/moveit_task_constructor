@@ -98,7 +98,11 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 {
 	setupUi(q_ptr);
 	// init tasks view
-	tasks_view->setModel(&MetaTaskListModel::instance());
+	MetaTaskListModel *meta_model = &MetaTaskListModel::instance();
+	StageFactoryPtr factory = getStageFactory();
+	if (factory) meta_model->setMimeTypes( { factory->mimeType() } );
+	else button_show_stage_dock_widget->setEnabled(false);
+	tasks_view->setModel(meta_model);
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);

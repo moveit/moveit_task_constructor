@@ -141,7 +141,6 @@ public:
 
 	/// providing a StageFactory makes the model accepting drops
 	void setStageFactory(const StageFactoryPtr &factory);
-	QStringList mimeTypes() const override;
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 	Qt::DropActions supportedDropActions() const override;
 	Qt::ItemFlags flags(const QModelIndex &index) const;

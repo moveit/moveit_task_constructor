@@ -141,6 +141,7 @@ TaskListModel::TaskListModel(QObject *parent)
    : FlatMergeProxyModel(parent)
 {
 	ROS_DEBUG_NAMED(LOGNAME, "created TaskListModel: %p", this);
+	setStageFactory(getStageFactory());
 }
 
 TaskListModel::~TaskListModel() {
@@ -171,28 +172,21 @@ void TaskListModel::setSolutionClient(ros::ServiceClient *client)
 void TaskListModel::setStageFactory(const StageFactoryPtr &factory)
 {
 	stage_factory_ = factory;
+	if (stage_factory_)
+		setMimeTypes({ stage_factory_->mimeType() });
 }
 
 // re-implemented from base class to allow dropping
 Qt::ItemFlags TaskListModel::flags(const QModelIndex &index) const
 {
+	auto f = FlatMergeProxyModel::flags(index);
+
 	if (!index.isValid()) {
-		Qt::ItemFlags f = QAbstractItemModel::flags(index);
 		// dropping at root will create a new local task
 		if (stage_factory_)
 			f |= Qt::ItemIsDropEnabled;
-		return f;
 	}
-
-	return FlatMergeProxyModel::flags(index);
-}
-
-QStringList TaskListModel::mimeTypes() const
-{
-	QStringList result;
-	if (stage_factory_)
-		result << stage_factory_->mimeType();
-	return result;
+	return f;
 }
 
 QVariant TaskListModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -290,7 +284,9 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 		}
 
 		// create a new local task using the given container as root
-		insertModel(new LocalTaskModel(std::move(container), this), row);
+		auto *m = new LocalTaskModel(std::move(container), this);
+		m->setStageFactory(stage_factory_);
+		insertModel(m, row);
 		return true;
 	}
 
