@@ -40,3 +40,6 @@ add_subdirectory(demo)
 add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
+install(FILES
+	motion_planning_stages_plugin_description.xml
+	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
