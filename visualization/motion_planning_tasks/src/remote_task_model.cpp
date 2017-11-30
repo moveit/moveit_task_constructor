@@ -293,31 +293,33 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 	DisplaySolutionPtr s(new DisplaySolution);
 	s->setFromMessage(scene_->diff(), msg);
 
-	// if this is not a top-level solution, we are done here
-	if (msg.sub_solution.empty() ||
-	    msg.sub_solution.front().stage_id != 1 ||
-	    msg.sub_solution.front().id == 0)
-		return s;
-
-	// cache top-level solution for future use
-	id_to_solution_[msg.sub_solution.front().id] = s;
-	// store sub solution data
+	// store sub solution data in model
 	for (const auto& sub : msg.sub_solution) {
-		Node *n = node(sub.stage_id);
-		if (!n) continue;
-		n->solutions_->setData(sub.id, sub.cost, QString());
+		if (sub.id == 0) continue;
+		if (RemoteSolutionModel *m = getSolutionModel(sub.stage_id))
+			m->setData(sub.id, sub.cost, QString());
+	}
+	for (const auto& sub : msg.sub_trajectory) {
+		if (sub.id == 0) continue;
+		if (RemoteSolutionModel *m = getSolutionModel(sub.stage_id))
+			m->setData(sub.id, sub.cost, QString::fromStdString(sub.name));
 	}
 
-	// for top-level solutions, create DisplaySolutions for all individual sub trajectories
-	uint i=0;
-	for (const auto &t : msg.sub_trajectory) {
-		if (t.id == 0) continue;  // invalid id
+	// caching is only enabled for top-level solutions (stage_id == 1)
+	// otherwise we would store PlanningScenes over and over
+	if (!msg.sub_solution.empty() &&
+	    msg.sub_solution.front().stage_id == 1 &&
+	    msg.sub_solution.front().id != 0) {
+		// cache solution for future use
+		id_to_solution_[msg.sub_solution.front().id] = s;
 
-		DisplaySolutionPtr &sub = id_to_solution_.insert(std::make_pair(t.id, DisplaySolutionPtr())).first->second;
-		if (!sub) {
-			sub.reset(new DisplaySolution(*s, i));
-			if (RemoteSolutionModel *m = getSolutionModel(t.stage_id))
-				m->setData(t.id, t.cost, QString::fromStdString(t.name));
+		// cache DisplaySolutions for all individual sub trajectories
+		uint i=0;
+		for (const auto &t : msg.sub_trajectory) {
+			if (t.id == 0) continue;  // invalid id
+			DisplaySolutionPtr &sub = id_to_solution_.insert(std::make_pair(t.id, DisplaySolutionPtr())).first->second;
+			if (!sub) sub.reset(new DisplaySolution(*s, i));
+			i++;
 		}
 	}
 
