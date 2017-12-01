@@ -54,9 +54,11 @@ void StagePrivate::validate() const {
 	InitStageException errors;
 
 	InterfaceFlags f = interfaceFlags();
+	// validate that sendForward() will succeed
 	if (!implies(f & WRITES_NEXT_START, bool(nextStarts())))
 		errors.push_back(*me_, "sends forward, but next stage cannot receive");
 
+	// validate that sendBackward() will succeed
 	if (!implies(f & WRITES_PREV_END, bool(prevEnds())))
 		errors.push_back(*me_, "sends backward, but previous stage cannot receive");
 
@@ -122,6 +124,15 @@ Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionC
 void Stage::erase(SolutionCallbackList::const_iterator which)
 {
 	pimpl()->solution_cbs_.erase(which);
+}
+
+PropertyMap &Stage::properties()
+{
+	return pimpl()->properties_;
+}
+
+void Stage::setProperty(const std::string& name, const boost::any& value) {
+	pimpl()->properties_.set(name, value);
 }
 
 template<InterfaceFlag own, InterfaceFlag other>
@@ -226,6 +237,13 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 	return state;
 }
 
+void PropagatingEitherWayPrivate::initProperties(const InterfaceState& state)
+{
+	properties_.reset();
+	properties_.initFrom(PARENT, parent()->properties());
+	properties_.initFrom(INTERFACE, state.properties());
+}
+
 bool PropagatingEitherWayPrivate::canCompute() const
 {
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState())
@@ -241,11 +259,15 @@ bool PropagatingEitherWayPrivate::compute()
 
 	bool result = false;
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
-		if (me->computeForward(fetchStartState()))
+		const InterfaceState& state = fetchStartState();
+		initProperties(state);
+		if (me->computeForward(state))
 			result |= true;
 	}
 	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
-		if (me->computeBackward(fetchEndState()))
+		const InterfaceState& state = fetchEndState();
+		initProperties(state);
+		if (me->computeBackward(state))
 			result |= true;
 	}
 	return result;
@@ -404,7 +426,14 @@ bool GeneratorPrivate::canCompute() const {
 }
 
 bool GeneratorPrivate::compute() {
+	initProperties();
 	return static_cast<Generator*>(me_)->compute();
+}
+
+void GeneratorPrivate::initProperties()
+{
+	properties_.reset();
+	properties_.initFrom(PARENT, parent()->properties());
 }
 
 
@@ -450,6 +479,15 @@ void ConnectingPrivate::newEndState(const Interface::iterator& it)
 		--it_pairs_.second;
 }
 
+void ConnectingPrivate::initProperties(const InterfaceState &start, const InterfaceState &end)
+{
+	properties_.reset();
+	properties_.initFrom(PARENT, parent()->properties());
+	// properties from start/end states need to be consistent to each other
+	properties_.initFrom(INTERFACE, start.properties());
+	properties_.initFrom(INTERFACE, end.properties(), true);
+}
+
 bool ConnectingPrivate::canCompute() const{
 	// TODO: implement this properly
 	return it_pairs_.first != starts_->end() &&
@@ -460,6 +498,7 @@ bool ConnectingPrivate::compute() {
 	// TODO: implement this properly
 	const InterfaceState& from = *it_pairs_.first;
 	const InterfaceState& to = *(it_pairs_.second++);
+	initProperties(from, to);
 	return static_cast<Connecting*>(me_)->compute(from, to);
 }
 

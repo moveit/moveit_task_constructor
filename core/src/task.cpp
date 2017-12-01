@@ -215,6 +215,18 @@ const ContainerBase* Task::stages() const
 	return const_cast<Task*>(this)->stages();
 }
 
+PropertyMap &Task::properties()
+{
+	// forward to wrapped() stage
+	return wrapped()->properties();
+}
+
+void Task::setProperty(const std::string &name, const boost::any &value)
+{
+	// forward to wrapped() stage
+	wrapped()->setProperty(name, value);
+}
+
 std::string Task::id() const
 {
 	return id_;
