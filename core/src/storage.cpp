@@ -13,7 +13,7 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
 }
 
 InterfaceState::InterfaceState(const InterfaceState &existing)
-   : scene_(existing.scene())
+   : scene_(existing.scene_), properties_(existing.properties_)
 {
 }
 

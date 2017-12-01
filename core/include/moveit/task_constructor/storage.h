@@ -3,6 +3,7 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
+#include <moveit/task_constructor/properties.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -50,6 +51,9 @@ public:
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
 	inline const Solutions& outgoingTrajectories() const { return outgoing_trajectories_; }
 
+	PropertyMap& properties() { return properties_; }
+	const PropertyMap& properties() const { return properties_; }
+
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
@@ -57,7 +61,7 @@ private:
 
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
-	// TODO: add PropertyMap: std::map<std::string, std::any> to allow passing of parameters or attributes
+	PropertyMap properties_;
 	Solutions incoming_trajectories_;
 	Solutions outgoing_trajectories_;
 };
