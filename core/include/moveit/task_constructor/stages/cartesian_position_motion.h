@@ -34,22 +34,10 @@ public:
 	void setCartesianStepSize(double distance);
 
 protected:
-	std::string group_;
-
-	std::string link_;
-
-	double min_distance_;
-	double max_distance_;
-
 	enum {
 		MODE_ALONG= 1,
 		MODE_TOWARDS= 2
 	} mode_;
-
-	geometry_msgs::PointStamped towards_;
-	geometry_msgs::Vector3Stamped along_;
-
-	double step_size_;
 };
 
 } } }

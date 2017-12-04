@@ -13,44 +13,51 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 CartesianPositionMotion::CartesianPositionMotion(std::string name)
-: PropagatingEitherWay(name),
-  step_size_(0.005)
+: PropagatingEitherWay(name)
 {
+	auto& p = properties();
+	p.declare<std::string>("group", "name of planning group");
+	p.declare<std::string>("link", "", "name of link used for IK");
+	p.declare<double>("min_distance", "minimum distance to move");
+	p.declare<double>("max_distance", "maximum distance to move");
+	p.declare<double>("step_size", 0.005);
+	p.declare<geometry_msgs::PointStamped>("towards", "target point of motion");
+	p.declare<geometry_msgs::Vector3Stamped>("along", "vector along which to move");
 }
 
 void CartesianPositionMotion::setGroup(std::string group){
-	group_= group;
+	setProperty("group", group);
 }
 
 void CartesianPositionMotion::setLink(std::string link){
-	link_= link;
+	setProperty("link", link);
 }
 
 void CartesianPositionMotion::setMinDistance(double distance){
-	min_distance_= distance;
+	setProperty("min_distance", distance);
 }
 
 void CartesianPositionMotion::setMaxDistance(double distance){
-	max_distance_= distance;
+	setProperty("max_distance", distance);
 }
 
 void CartesianPositionMotion::setMinMaxDistance(double min_distance, double max_distance){
-	setMinDistance(min_distance);
-	setMaxDistance(max_distance);
+	setProperty("min_distance", min_distance);
+	setProperty("max_distance", max_distance);
 }
 
 void CartesianPositionMotion::towards(geometry_msgs::PointStamped towards){
 	mode_= CartesianPositionMotion::MODE_TOWARDS;
-	towards_= towards;
+	setProperty("towards", towards);
 }
 
 void CartesianPositionMotion::along(geometry_msgs::Vector3Stamped along){
 	mode_= CartesianPositionMotion::MODE_ALONG;
-	along_= along;
+	setProperty("along", along);
 }
 
 void CartesianPositionMotion::setCartesianStepSize(double distance){
-	step_size_= distance;
+	setProperty("step_size", distance);
 }
 
 namespace {
@@ -68,8 +75,12 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 	planning_scene::PlanningScenePtr result_scene = from.scene()->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
-	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
-	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link_);
+	const auto& props = properties();
+	const std::string& group = props.get<std::string>("group");
+	const std::string& link = props.get<std::string>("link");
+
+	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group);
+	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link);
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(
@@ -83,12 +94,12 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 	bool succeeded= false;
 
 	if( mode_ == CartesianPositionMotion::MODE_TOWARDS ){
-		const Eigen::Affine3d& frame= from.scene()->getFrameTransform(towards_.header.frame_id);
-
-		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
+		const geometry_msgs::PointStamped& towards = props.get<geometry_msgs::PointStamped>("towards");
+		const Eigen::Affine3d& frame= from.scene()->getFrameTransform(towards.header.frame_id);
+		const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link);
 
 		Eigen::Vector3d target_point;
-		tf::pointMsgToEigen(towards_.point, target_point);
+		tf::pointMsgToEigen(towards.point, target_point);
 		target_point= frame*target_point;
 
 		// retain orientation of link
@@ -101,7 +112,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 			link_model,
 			target,
 			true, /* global frame */
-			step_size_, /* cartesian step size */
+			props.get<double>("step_size"), /* cartesian step size */
 			1.5, /* jump threshold */
 			is_valid);
 
@@ -109,12 +120,13 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 
 		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
 
-		succeeded= achieved_distance >= min_distance_;
+		succeeded= achieved_distance >= props.get<double>("min_distance");
 	}
 	else if( mode_ == CartesianPositionMotion::MODE_ALONG ){
-		const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
+		const geometry_msgs::Vector3Stamped& along = props.get<geometry_msgs::Vector3Stamped>("along");
+		const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along.header.frame_id);
 		Eigen::Vector3d direction;
-		tf::vectorMsgToEigen(along_.vector, direction);
+		tf::vectorMsgToEigen(along.vector, direction);
 		direction= frame.linear()*direction;
 
 		double achieved_distance= robot_state.computeCartesianPath(
@@ -123,14 +135,14 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 			link_model,
 			direction,
 			true, /* global frame */
-			max_distance_, /* distance */
-			step_size_, /* cartesian step size */
+			props.get<double>("max_distance"),
+			props.get<double>("step_size"), /* cartesian step size */
 			1.5, /* jump threshold */
 			is_valid);
 
 		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
 
-		succeeded= achieved_distance >= min_distance_;
+		succeeded= achieved_distance >= props.get<double>("min_distance");
 	}
 	else
 		throw std::runtime_error("position motion has neither a goal nor a direction");
@@ -151,8 +163,12 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 	planning_scene::PlanningScenePtr result_scene = to.scene()->diff();
 	robot_state::RobotState &robot_state = result_scene->getCurrentStateNonConst();
 
-	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group_);
-	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link_);
+	const auto& props = properties();
+	const std::string& group = props.get<std::string>("group");
+	const std::string& link = props.get<std::string>("link");
+
+	const moveit::core::JointModelGroup* jmg= robot_state.getJointModelGroup(group);
+	const moveit::core::LinkModel* link_model= robot_state.getRobotModel()->getLinkModel(link);
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(
@@ -167,14 +183,15 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 	switch(mode_){
 	case(CartesianPositionMotion::MODE_TOWARDS):
 		{
-			const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link_);
+			const Eigen::Affine3d& link_pose= robot_state.getGlobalLinkTransform(link);
 			direction= link_pose.linear()*Eigen::Vector3d(-1,0,0);
 		}
 		break;
 	case(CartesianPositionMotion::MODE_ALONG):
 		{
-			const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along_.header.frame_id);
-			tf::vectorMsgToEigen(along_.vector, direction);
+			const geometry_msgs::Vector3Stamped& along = props.get<geometry_msgs::Vector3Stamped>("along");
+			const Eigen::Affine3d& frame= robot_state.getGlobalLinkTransform(along.header.frame_id);
+			tf::vectorMsgToEigen(along.vector, direction);
 			direction= frame.linear()*direction;
 		}
 		break;
@@ -190,14 +207,14 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 		link_model,
 		direction,
 		true, /* global frame */
-		max_distance_, /* distance */
-		step_size_, /* cartesian step size */
+		props.get<double>("max_distance"),
+		props.get<double>("step_size"), /* cartesian step size */
 		1.5, /* jump threshold */
 		is_valid);
 
 	std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
 
-	bool succeeded= achieved_distance >= min_distance_;
+	bool succeeded= achieved_distance >= props.get<double>("min_distance");
 
 	if(succeeded){
 		robot_trajectory::RobotTrajectoryPtr traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
