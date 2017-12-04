@@ -39,29 +39,32 @@ int main(int argc, char** argv){
 	spawnObject();
 
 	Task t;
+	// define global properties used by most stages
+	t.setProperty("group", std::string("arm"));
+	t.setProperty("eef", std::string("gripper"));
+	t.setProperty("planner", std::string("RRTConnectkConfigDefault"));
+	t.setProperty("link", std::string("s_model_tool0"));
 
 	t.add(std::make_unique<stages::CurrentState>("current state"));
 
 	{
 		auto move = std::make_unique<stages::Gripper>("open gripper");
-		move->setEndEffector("gripper");
+		move->properties().initFrom(PARENT);
 		move->setTo("open");
 		t.add(std::move(move));
 	}
 
 	{
 		auto move = std::make_unique<stages::Move>("move to pre-grasp");
-		move->setGroup("arm");
-		move->setPlannerId("RRTConnectkConfigDefault");
+		move->properties().initFrom(PARENT);
 		move->setTimeout(8.0);
 		t.add(std::move(move));
 	}
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		move->addSolutionCallback(std::ref(t.introspection()));
-		move->setGroup("arm");
-		move->setLink("s_model_tool0");
+		// move->addSolutionCallback(std::ref(t.introspection()));
+		move->properties().initFrom(PARENT);
 		move->setMinMaxDistance(.03, 0.1);
 		move->setCartesianStepSize(0.02);
 
@@ -73,8 +76,7 @@ int main(int argc, char** argv){
 
 	{
 		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
-		gengrasp->setEndEffector("gripper");
-		//gengrasp->setGroup("arm");
+		gengrasp->properties().initFrom(PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setGraspOffset(.03);
@@ -85,7 +87,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::Gripper>("grasp");
-		move->setEndEffector("gripper");
+		move->properties().initFrom(PARENT);
 		move->setTo("closed");
 		move->graspObject("object");
 		t.add(std::move(move));
@@ -93,8 +95,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->setGroup("arm");
-		move->setLink("s_model_tool0");
+		move->properties().initFrom(PARENT);
 		move->setMinMaxDistance(0.03, 0.05);
 		move->setCartesianStepSize(0.01);
 

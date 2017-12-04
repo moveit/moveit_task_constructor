@@ -31,11 +31,6 @@ protected:
 	             robot_trajectory::RobotTrajectoryPtr &trajectory, double &cost, Direction dir);
 
 protected:
-	std::string eef_;
-	std::string named_target_;
-	std::string grasp_object_;
-	std::string attach_link_;
-
 	planning_pipeline::PlanningPipelinePtr planner_;
 	moveit::planning_interface::MoveGroupInterfacePtr mgi_;
 };

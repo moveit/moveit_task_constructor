@@ -14,9 +14,13 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 Move::Move(std::string name)
-   : Connecting(name),
-     timeout_(5.0)
-{}
+   : Connecting(name)
+{
+	auto& p = properties();
+	p.declare<double>("timeout", 5.0, "planning timeout");
+	p.declare<std::string>("group", "name of planning group");
+	p.declare<std::string>("planner", "", "planner id");
+}
 
 void Move::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
@@ -24,27 +28,30 @@ void Move::init(const planning_scene::PlanningSceneConstPtr &scene)
 	planner_ = Task::createPlanner(scene->getRobotModel());
 }
 
-void Move::setGroup(std::string group){
-	group_= group;
-	mgi_= std::make_shared<moveit::planning_interface::MoveGroupInterface>(group_);
+void Move::setGroup(const std::string& group){
+	setProperty("group", group);
 }
 
-void Move::setPlannerId(std::string planner){
-	planner_id_= planner;
+void Move::setPlannerId(const std::string& planner){
+	setProperty("planner", planner);
 }
 
 void Move::setTimeout(double timeout){
-	timeout_= timeout;
+	setProperty("timeout", timeout);
 }
 
 bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
-	mgi_->setJointValueTarget(to.scene()->getCurrentState());
-	if( !planner_id_.empty() )
-		mgi_->setPlannerId(planner_id_);
-	mgi_->setPlanningTime(timeout_);
+	const auto& props = properties();
+	moveit::planning_interface::MoveGroupInterface mgi(props.get<std::string>("group"));
+	mgi.setJointValueTarget(to.scene()->getCurrentState());
+
+	const std::string planner_id = props.get<std::string>("planner");
+	if( !planner_id.empty() )
+		mgi.setPlannerId(planner_id);
+	mgi.setPlanningTime(props.get<double>("timeout"));
 
 	::planning_interface::MotionPlanRequest req;
-	mgi_->constructMotionPlanRequest(req);
+	mgi.constructMotionPlanRequest(req);
 
 	ros::Duration(4.0).sleep();
 	::planning_interface::MotionPlanResponse res;
