@@ -4,17 +4,18 @@ set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/visualization_too
 
 set(HEADERS
 	${PROJECT_INCLUDE}/display_solution.h
-	${PROJECT_INCLUDE}/task_solution_visualization.h
 	${PROJECT_INCLUDE}/task_solution_panel.h
+	${PROJECT_INCLUDE}/task_solution_visualization.h
 )
 
 add_library(${MOVEIT_LIB_NAME}
-	src/display_solution.cpp
-	src/task_solution_visualization.cpp
-	src/task_solution_panel.cpp
 	${HEADERS}
+
+	src/display_solution.cpp
+	src/task_solution_panel.cpp
+	src/task_solution_visualization.cpp
 )
-set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION})
+set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
 
 target_link_libraries(${MOVEIT_LIB_NAME}
 	${catkin_LIBRARIES}
@@ -25,7 +26,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
 add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
 
-install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
 
 install(TARGETS ${MOVEIT_LIB_NAME}
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
