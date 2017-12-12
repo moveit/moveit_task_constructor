@@ -43,7 +43,7 @@ int main(int argc, char** argv){
 	st->setObject("object");
 	st->setTimeout(0.5);
 	st->setAngleDelta(0.1);
-	st->setGraspOffset(0.03);
+	st->setGraspFrame(Eigen::Translation3d(.03,0,0));
 
 	t.add(std::move(st));
 
