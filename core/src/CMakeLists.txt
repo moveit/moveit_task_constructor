@@ -1,20 +1,20 @@
 add_library(${PROJECT_NAME}
-	properties.cpp
-	storage.cpp
-	stage.cpp
-	container.cpp
-	task.cpp
-	introspection.cpp
-
-	${PROJECT_INCLUDE}/utils.h
-	${PROJECT_INCLUDE}/properties.h
-	${PROJECT_INCLUDE}/storage.h
-	${PROJECT_INCLUDE}/stage.h
-	${PROJECT_INCLUDE}/stage_p.h
 	${PROJECT_INCLUDE}/container.h
 	${PROJECT_INCLUDE}/container_p.h
-	${PROJECT_INCLUDE}/task.h
 	${PROJECT_INCLUDE}/introspection.h
+	${PROJECT_INCLUDE}/properties.h
+	${PROJECT_INCLUDE}/stage.h
+	${PROJECT_INCLUDE}/stage_p.h
+	${PROJECT_INCLUDE}/storage.h
+	${PROJECT_INCLUDE}/task.h
+	${PROJECT_INCLUDE}/utils.h
+
+	container.cpp
+	introspection.cpp
+	properties.cpp
+	stage.cpp
+	storage.cpp
+	task.cpp
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 target_include_directories(${PROJECT_NAME}

@@ -2,23 +2,30 @@ cmake_minimum_required(VERSION 2.8.12)
 project(moveit_task_constructor_core)
 
 find_package(catkin REQUIRED COMPONENTS
-	roscpp
+	eigen_conversions
+	geometry_msgs
 	moveit_core
 	moveit_ros_planning
 	moveit_ros_planning_interface
 	moveit_task_constructor_msgs
-	eigen_conversions
+	roscpp
+	visualization_msgs
 )
 
 catkin_package(
 	LIBRARIES
-		moveit_task_constructor_core
-		moveit_task_constructor_core_stages
+		${PROJECT_NAME}
+		${PROJECT_NAME}_stages
 	INCLUDE_DIRS
 		include
+	CATKIN_DEPENDS
+		geometry_msgs
+		moveit_core
+		moveit_task_constructor_msgs
+		visualization_msgs
 )
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
+if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
 	add_compile_options(-std=c++14)
 else ()
 	set(CMAKE_CXX_STANDARD 14)
@@ -32,7 +39,4 @@ add_subdirectory(src)
 add_subdirectory(demo)
 add_subdirectory(test)
 
-install(DIRECTORY include/ DESTINATION include)
-install(FILES
-	motion_planning_stages_plugin_description.xml
-	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})

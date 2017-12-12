@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 2.8.12)
 project(moveit_task_constructor_visualization)
 
 find_package(catkin REQUIRED COMPONENTS
-	moveit_task_constructor_msgs
-	moveit_task_constructor_core
+	moveit_core
 	moveit_ros_visualization
+	moveit_task_constructor_core
+	moveit_task_constructor_msgs
+	roscpp
 	rviz
 )
 
@@ -12,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
 
 # Qt Stuff
-if(rviz_QT_VERSION VERSION_LESS "5")
+if("${rviz_QT_VERSION}" VERSION_LESS "5")
 	find_package(Qt4 ${rviz_QT_VERSION} REQUIRED QtCore QtGui)
 	include(${QT_USE_FILE})
 	macro(qt_wrap_ui)
@@ -32,9 +34,14 @@ set(CMAKE_AUTORCC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
 catkin_package(
+	CATKIN_DEPENDS
+		moveit_core
+		moveit_task_constructor_msgs
+		roscpp
+		rviz
 )
 
-if (CMAKE_VERSION VERSION_LESS "3.1")
+if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
 	add_compile_options(-std=c++14)
 else ()
 	set(CMAKE_CXX_STANDARD 14)
