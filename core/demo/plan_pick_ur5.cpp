@@ -79,7 +79,7 @@ int main(int argc, char** argv){
 		gengrasp->properties().initFrom(PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspOffset(.03);
+		gengrasp->setGraspFrame(Eigen::Translation3d(.03,0,0));
 		gengrasp->setAngleDelta(-.2);
 		gengrasp->setMaxIKSolutions(8);
 		t.add(std::move(gengrasp));
