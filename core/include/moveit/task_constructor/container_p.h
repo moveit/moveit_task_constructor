@@ -53,7 +53,7 @@ namespace moveit { namespace task_constructor {
  * Solutions found by the children, then need to be connected to the
  * container's interface states. To this end, we remember the mapping
  * from internal to external states.
- * Note, that there might be many solutions connecting a signle start-end pair.
+ * Note, that there might be many solutions connecting a single start-end pair.
  * These solutions might origin from different children (ParallelContainer)
  * or from different solution paths in a SerialContainer.
  */
@@ -85,6 +85,7 @@ protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name)
 	   : StagePrivate(me, name)
 	{}
+
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(InterfaceState &external_state, Stage &child, bool to_start);
 
@@ -151,36 +152,37 @@ private:
 PIMPL_FUNCTIONS(SerialContainer)
 
 
-/** Representation of a single solution of a ParallelContainer.
- *
- * This essentially wraps a solution of a child and thus allows
- * for new new clones of start / end states, which in turn will
- * have separate incoming/outgoing trajectories */
-class WrappedSolution : public SolutionBase {
-public:
-	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
-	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
-	{}
-	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
-                    Introspection* introspection = nullptr) const override {
-		wrapped_->fillMessage(solution, introspection);
-	}
-
-private:
-	const SolutionBase* wrapped_;
-};
-
-
 class ParallelContainerBasePrivate : public ContainerBasePrivate {
 	friend class ParallelContainerBase;
 
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
-	const std::list<WrappedSolution>& solutions() const { return solutions_; }
-
-private:
-	std::list<WrappedSolution> solutions_;
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
+
+
+class WrapperBasePrivate : public ContainerBasePrivate {
+	friend class WrapperBase;
+
+public:
+	WrapperBasePrivate(WrapperBase* me, const std::string& name);
+
+private:
+	InterfacePtr dummy_starts_;
+	InterfacePtr dummy_ends_;
+};
+PIMPL_FUNCTIONS(WrapperBase)
+
+
+class WrapperPrivate : public WrapperBasePrivate {
+	friend class Wrapper;
+
+public:
+	WrapperPrivate(Wrapper* me, const std::string& name);
+
+private:
+	std::list<std::unique_ptr<SolutionBase>> solutions_;
+};
+PIMPL_FUNCTIONS(Wrapper)
 
 } }

@@ -53,12 +53,8 @@
 namespace moveit { namespace task_constructor {
 
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
-   : WrapperBase(std::string()), id_(id)
+   : WrapperBase(std::string(), std::move(container)), id_(id)
 {
-	task_starts_.reset(new Interface(Interface::NotifyFunction()));
-	task_ends_.reset(new Interface(Interface::NotifyFunction()));
-
-	insert(std::move(container));
 	initModel();
 
 	// monitor state on commandline
@@ -172,14 +168,7 @@ void Task::reset()
 	if (introspection_)
 		introspection_->reset();
 
-	task_starts_->clear();
-	task_ends_->clear();
 	WrapperBase::reset();
-
-	// connect my prevEnds() / nextStarts as WrapperBase will refer to them
-	auto impl = pimpl();
-	impl->setPrevEnds(task_ends_);
-	impl->setNextStarts(task_starts_);
 }
 
 void Task::init(const planning_scene::PlanningSceneConstPtr &scene)

@@ -472,18 +472,6 @@ ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase
 	}));
 }
 
-void ParallelContainerBase::onNewSolution(const SolutionBase &s)
-{
-	auto impl = pimpl();
-	WrappedSolution wrapped(impl, &s);
-	// TODO: correctly clone start/end states from s to wrapped
-
-	// store solution in our own list
-	impl->solutions_.emplace_back(std::move(wrapped));
-	// perform default stage action on new solution
-	impl->newSolution(impl->solutions_.back());
-}
-
 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate *impl)
    : ContainerBase(impl)
@@ -494,9 +482,6 @@ ParallelContainerBase::ParallelContainerBase(const std::string &name)
 
 void ParallelContainerBase::reset()
 {
-	// clear solutions
-	pimpl()->solutions_.clear();
-
 	// recursively reset children
 	ContainerBase::reset();
 }
@@ -506,7 +491,7 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 	InitStageException errors;
 	auto impl = pimpl();
 
-	// connect children such that they directly send this' prevEnds() / nextStarts()
+	// connect children such that they directly send to this' prevEnds() / nextStarts()
 	for (const Stage::pointer& stage : impl->children()) {
 		StagePrivate *child = stage->pimpl();
 		child->setPrevEnds(impl->prevEnds());
@@ -522,27 +507,21 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 }
 
 
-size_t ParallelContainerBase::numSolutions() const
+WrapperBasePrivate::WrapperBasePrivate(WrapperBase *me, const std::string &name)
+   : ContainerBasePrivate(me, name)
 {
-	return pimpl()->solutions_.size();
+	dummy_starts_.reset(new Interface(Interface::NotifyFunction()));
+	dummy_ends_.reset(new Interface(Interface::NotifyFunction()));
 }
-
-void ParallelContainerBase::processSolutions(const ContainerBase::SolutionProcessor &processor) const
-{
-	for(const SolutionBase& s : pimpl()->solutions())
-		if (!processor(s))
-			break;
-}
-
 
 WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
-   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name))
+   : WrapperBase(new WrapperBasePrivate(this, name), std::move(child))
+{}
+
+WrapperBase::WrapperBase(WrapperBasePrivate *impl, Stage::pointer &&child)
+   : ContainerBase(impl)
 {
-	auto impl = pimpl();
 	if (child) insert(std::move(child));
-	// as a generator-like stage, we don't accept inputs
-	impl->starts().reset();
-	impl->ends().reset();
 }
 
 bool WrapperBase::insert(Stage::pointer &&stage, int before)
@@ -550,21 +529,98 @@ bool WrapperBase::insert(Stage::pointer &&stage, int before)
 	// restrict num of children to one
 	if (numChildren() > 0)
 		return false;
-	return ParallelContainerBase::insert(std::move(stage), before);
+	return ContainerBase::insert(std::move(stage), before);
+}
+
+void WrapperBase::reset()
+{
+	pimpl()->dummy_starts_->clear();
+	pimpl()->dummy_ends_->clear();
 }
 
 void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	auto impl = pimpl();
+
 	if (numChildren() != 1)
 		throw InitStageException(*this, "no wrapped child");
 
+	// as a generator-like stage, we don't accept inputs
+	assert(!impl->starts());
+	assert(!impl->ends());
+
+	// provide a dummy interface to receive interface states of wrapped child
+	wrapped()->pimpl()->setPrevEnds(impl->dummy_ends_);
+	wrapped()->pimpl()->setNextStarts(impl->dummy_starts_);
+
 	// init + validate children
-	ParallelContainerBase::init(scene);
+	ContainerBase::init(scene);
+}
+
+size_t WrapperBase::numSolutions() const
+{
+	// dummy implementation needed to allow insert() in constructor
+	return 0;
 }
 
 Stage* WrapperBase::wrapped()
 {
 	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
+}
+
+
+WrapperPrivate::WrapperPrivate(Wrapper *me, const std::string &name)
+   : WrapperBasePrivate(me, name)
+{}
+
+Wrapper::Wrapper(WrapperPrivate *impl, Stage::pointer &&child)
+   : WrapperBase(impl, std::move(child))
+{}
+Wrapper::Wrapper(const std::string &name, Stage::pointer &&child)
+   : Wrapper(new WrapperPrivate(this, name), std::move(child))
+{}
+
+void Wrapper::reset()
+{
+	WrapperBase::reset();
+	pimpl()->solutions_.clear();
+}
+
+bool Wrapper::canCompute() const
+{
+	return wrapped()->pimpl()->canCompute();
+}
+
+bool Wrapper::compute()
+{
+	return wrapped()->pimpl()->compute();
+}
+
+size_t Wrapper::numSolutions() const
+{
+	return pimpl()->solutions_.size();
+}
+
+void Wrapper::processSolutions(const Stage::SolutionProcessor &processor) const
+{
+	for(const auto& s : pimpl()->solutions_)
+		if (!processor(*s))
+			break;
+}
+
+// TODO: allow stages to directly execute this code
+// This requires that SolutionBase::creator_ is a Stage* (not StagePrivate*)
+void Wrapper::spawn(InterfaceState &&state, double cost)
+{
+	auto impl = pimpl();
+	robot_trajectory::RobotTrajectoryPtr dummy;
+	SubTrajectory* trajectory = new SubTrajectory(impl, dummy, cost);
+	impl->solutions_.emplace_back(std::unique_ptr<SubTrajectory>(trajectory));
+
+	impl->prevEnds()->add(InterfaceState(state), NULL, trajectory);
+	impl->nextStarts()->add(std::move(state), trajectory, NULL);
+
+	impl->newSolution(*trajectory);
 }
 
 } }
