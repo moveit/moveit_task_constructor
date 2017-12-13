@@ -7,8 +7,11 @@ if (CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}-test-container test_container.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-container
 		${PROJECT_NAME}
-		${catkin_LIBRARIES}
 		gtest_main)
+
+	catkin_add_gtest(${PROJECT_NAME}-test-properties test_properties.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-properties
+		${PROJECT_NAME} gtest_main)
 endif()
 
 add_executable(test_plan_current_state test_plan_current_state.cpp)

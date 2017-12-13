@@ -57,6 +57,16 @@ namespace moveit { namespace task_constructor { namespace stages {
 GenerateGraspPose::GenerateGraspPose(std::string name)
 : Generator(name)
 {
+	auto& p = properties();
+	p.declare<std::string>("group", "name of planning group");
+	p.declare<std::string>("eef", "name of end-effector group");
+	p.declare<std::string>("object");
+	p.declare<std::string>("eef_grasp_pose");
+	p.declare<double>("timeout", 0.1);
+	p.declare<uint32_t>("max_ik_solutions", 1);
+	p.declare<geometry_msgs::TransformStamped>("grasp_frame", geometry_msgs::TransformStamped(), "robot frame to use for grasping");
+	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
+	p.declare<bool>("ignore_collisions", false);
 }
 
 void GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -66,40 +76,47 @@ void GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
 }
 
 void GenerateGraspPose::setGroup(std::string group){
-	group_= group;
-}
-
-void GenerateGraspPose::setLink(std::string ik_link){
-	ik_link_= ik_link;
+	setProperty("group", group);
 }
 
 void GenerateGraspPose::setEndEffector(std::string eef){
-	eef_= eef;
+	setProperty("eef", eef);
 }
 
 void GenerateGraspPose::setGripperGraspPose(std::string pose_name){
-	gripper_grasp_pose_= pose_name;
+	setProperty("eef_grasp_pose", pose_name);
 }
 
 void GenerateGraspPose::setObject(std::string object){
-	object_= object;
+	setProperty("object", object);
 }
 
-void GenerateGraspPose::setGraspOffset(double offset){
-	grasp_offset_= offset;
+void GenerateGraspPose::setGraspFrame(const geometry_msgs::TransformStamped &frame){
+	setProperty("grasp_frame", frame);
+}
+void GenerateGraspPose::setGraspFrame(const Eigen::Affine3d &transform, const std::string &link)
+{
+	geometry_msgs::TransformStamped frame;
+	frame.header.frame_id = link;
+	tf::transformEigenToMsg(transform, frame.transform);
+	setGraspFrame(frame);
 }
 
 void GenerateGraspPose::setTimeout(double timeout){
-	timeout_= timeout;
-	remaining_time_= timeout;
+	setProperty("timeout", timeout);
 }
 
 void GenerateGraspPose::setAngleDelta(double delta){
-	angle_delta_= delta;
+	setProperty("angle_delta", delta);
 }
 
 void GenerateGraspPose::setMaxIKSolutions(uint32_t n){
-	max_ik_solutions_= n;
+	setProperty("max_ik_solutions", n);
+}
+
+void GenerateGraspPose::setIgnoreCollisions(bool flag)
+{
+	setProperty("ignore_collisions", flag);
 }
 
 bool GenerateGraspPose::canCompute() const{
@@ -134,66 +151,85 @@ namespace {
 }
 
 bool GenerateGraspPose::compute(){
-	assert(scene_->getRobotModel()->hasEndEffector(eef_) && "The specified end effector is not defined in the srdf");
+	const auto& props = properties();
+	double remaining_time = props.get<double>("timeout");
+
+	const std::string& eef = props.get<std::string>("eef");
+	const std::string& group = props.get<std::string>("group");
+
+	assert(scene_->getRobotModel()->hasEndEffector(eef) && "The specified end effector is not defined in the srdf");
 
 	planning_scene::PlanningScenePtr grasp_scene = scene_->diff();
 	robot_state::RobotState &grasp_state = grasp_scene->getCurrentStateNonConst();
 
-	const moveit::core::JointModelGroup* jmg_eef= grasp_state.getRobotModel()->getEndEffector(eef_);
+	const moveit::core::JointModelGroup* jmg_eef= grasp_state.getRobotModel()->getEndEffector(eef);
 
-	const moveit::core::JointModelGroup* jmg_active= group_.empty()
+	const moveit::core::JointModelGroup* jmg_active= group.empty()
 		? grasp_state.getJointModelGroup(jmg_eef->getEndEffectorParentGroup().first)
-		: grasp_state.getJointModelGroup(group_);
+		: grasp_state.getJointModelGroup(group);
 
-	const std::string ik_link= ik_link_.empty() ? jmg_eef->getEndEffectorParentGroup().second : ik_link_;
+	geometry_msgs::TransformStamped grasp_frame = props.get<geometry_msgs::TransformStamped>("grasp_frame");
+	const std::string &link_name = jmg_eef->getEndEffectorParentGroup().second;
+	if (grasp_frame.header.frame_id.empty())
+		grasp_frame.header.frame_id = link_name;
+	Eigen::Affine3d grasp_pose;
+	tf::transformMsgToEigen(grasp_frame.transform, grasp_pose);
 
-	if(!gripper_grasp_pose_.empty()){
-		grasp_state.setToDefaultValues(jmg_eef, gripper_grasp_pose_);
+	if (grasp_frame.header.frame_id != link_name) {
+		// convert grasp_pose to transform relative to link (instead of frame_id)
+		const Eigen::Affine3d link_pose = scene_->getFrameTransform(link_name);
+		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+			throw std::runtime_error("requested link does not exist or could not be retrieved");
+		const Eigen::Affine3d frame_pose = scene_->getFrameTransform(grasp_frame.header.frame_id);
+		if(frame_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+			throw std::runtime_error("requested frame does not exist or could not be retrieved");
+		grasp_pose = link_pose.inverse() * frame_pose * grasp_pose;
+	}
+	grasp_pose = grasp_pose.inverse(); // invert once
+
+	const std::string& eef_grasp_pose = props.get<std::string>("eef_grasp_pose");
+	if(!eef_grasp_pose.empty()){
+		grasp_state.setToDefaultValues(jmg_eef, eef_grasp_pose);
 	}
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid=
 		std::bind(
 			&isValid,
 			scene_,
-			ignore_collisions_,
+			props.get<bool>("ignore_collisions"),
 			&previous_solutions_,
 			std::placeholders::_1,
 			std::placeholders::_2,
 			std::placeholders::_3);
 
-	geometry_msgs::Pose object_pose, grasp_pose;
-	const Eigen::Affine3d object_pose_eigen= scene_->getFrameTransform(object_);
-	if(object_pose_eigen.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+	const Eigen::Affine3d object_pose = scene_->getFrameTransform(props.get<std::string>("object"));
+	if(object_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
 
-	tf::poseEigenToMsg(object_pose_eigen, object_pose);
-
+	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
 	while( canCompute() ){
-		if( remaining_time_ <= 0.0 || (max_ik_solutions_ != 0 && previous_solutions_.size() >= max_ik_solutions_)){
+		if( remaining_time <= 0.0 || (max_ik_solutions != 0 && previous_solutions_.size() >= max_ik_solutions)){
 			std::cout << "computed angle " << current_angle_
 			          << " with " << previous_solutions_.size()
 			          << " cached ik solutions"
-			          << " and " << remaining_time_ << "s left" << std::endl;
-			current_angle_+= angle_delta_;
-			remaining_time_= timeout_;
+			          << " and " << remaining_time << "s left" << std::endl;
+			current_angle_+= props.get<double>("angle_delta");
+			remaining_time = props.get<double>("timeout");
 			tried_current_state_as_seed_= false;
 			previous_solutions_.clear();
 			continue;
 		}
 
-		grasp_pose= object_pose;
-
-		grasp_pose.position.x-= grasp_offset_*cos(current_angle_);
-		grasp_pose.position.y-= grasp_offset_*sin(current_angle_);
-		grasp_pose.orientation= tf::createQuaternionMsgFromRollPitchYaw(M_PI, 0.0, current_angle_);
+		// rotate object pose about z-axis
+		Eigen::Affine3d goal_pose = object_pose * Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()) * grasp_pose;
 
 		if(tried_current_state_as_seed_)
 			grasp_state.setToRandomPositions(jmg_active);
 		tried_current_state_as_seed_= true;
 
 		auto now= std::chrono::steady_clock::now();
-		bool succeeded= grasp_state.setFromIK(jmg_active, grasp_pose, ik_link, 1, remaining_time_, is_valid);
-		remaining_time_-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
+		bool succeeded= grasp_state.setFromIK(jmg_active, goal_pose, link_name, 1, remaining_time, is_valid);
+		remaining_time-= std::chrono::duration<double>(std::chrono::steady_clock::now()- now).count();
 
 		if(succeeded) {
 			previous_solutions_.emplace_back();

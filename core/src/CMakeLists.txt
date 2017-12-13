@@ -2,6 +2,7 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/container.h
 	${PROJECT_INCLUDE}/container_p.h
 	${PROJECT_INCLUDE}/introspection.h
+	${PROJECT_INCLUDE}/properties.h
 	${PROJECT_INCLUDE}/stage.h
 	${PROJECT_INCLUDE}/stage_p.h
 	${PROJECT_INCLUDE}/storage.h
@@ -10,10 +11,12 @@ add_library(${PROJECT_NAME}
 
 	container.cpp
 	introspection.cpp
+	properties.cpp
 	stage.cpp
 	storage.cpp
 	task.cpp
 )
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 target_include_directories(${PROJECT_NAME}
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

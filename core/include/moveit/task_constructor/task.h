@@ -108,6 +108,13 @@ public:
 	ContainerBase *stages();
 	const ContainerBase *stages() const;
 
+	/// properties access
+	PropertyMap& properties();
+	const PropertyMap& properties() const {
+		return const_cast<Task*>(this)->properties();
+	}
+	void setProperty(const std::string& name, const boost::any& value);
+
 protected:
 	void initModel();
 	void initScene();

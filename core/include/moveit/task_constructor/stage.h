@@ -143,6 +143,12 @@ public:
 	/// remove function callback
 	void erase(SolutionCallbackList::const_iterator which);
 
+	PropertyMap& properties();
+	const PropertyMap& properties() const {
+		return const_cast<Stage*>(this)->properties();
+	}
+	void setProperty(const std::string& name, const boost::any& value);
+
 protected:
 	/// Stage can only be instantiated through derived classes
 	Stage(StagePrivate *impl);
