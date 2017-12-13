@@ -188,22 +188,6 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 		}
 	}
 
-	// validate connectivity of children
-	for (auto& child : children) {
-		try {
-			child->pimpl()->validate();
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
-	}
-
-	// validate connectivity of this
-	try {
-		pimpl()->validate();
-	} catch (InitStageException &e) {
-		errors.append(e);
-	}
-
 	if (errors)
 		throw errors;
 }
@@ -344,63 +328,56 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	// if there are no children, there is nothing to connect
 	if (!impl->children().empty()) {
+		/*** connect children ***/
+		// first stage sends backward to pending_backward_
+		auto start = impl->children().begin();
+		(*start)->pimpl()->setPrevEnds(impl->pending_backward_);
 
-	// initialize starts_ and ends_ interfaces
-	auto cur = impl->children().begin();
-	Stage* child = cur->get();
-	if (child->pimpl()->starts())
-		impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
-			// new external state in our starts_ interface is copied to first child
-			impl->copyState(*external, *child, true);
-		}));
+		// last stage sends forward to pending_forward_
+		auto last = --impl->children().end();
+		(*last)->pimpl()->setNextStarts(impl->pending_forward_);
 
-	auto last = --impl->children().end();
-	child = last->get();
-	if (child->pimpl()->ends())
-		impl->ends_.reset(new Interface([impl, child](const Interface::iterator& external){
-			// new external state in our ends_ interface is copied to last child
-			impl->copyState(*external, *child, false);
-		}));
-
-	/*** connect children ***/
-	// first stage sends backward to pending_backward_
-	(*cur)->pimpl()->setPrevEnds(impl->pending_backward_);
-
-	// last stage sends forward to pending_forward_
-	(*last)->pimpl()->setNextStarts(impl->pending_forward_);
-
-	auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage
-	if (prev != last) {// we have more than one children
-		auto next = cur; ++next; // next points to 3rd stage (or end)
-		for (; cur != last; ++prev, ++cur, ++next) {
+		auto cur = start;
+		auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage
+		if (prev != last) {// we have more than one children
+			auto next = cur; ++next; // next points to 3rd stage (or end)
+			for (; cur != last; ++prev, ++cur, ++next) {
+				impl->connect(**prev, **cur);
+				impl->connect(**cur, **next);
+			}
+			// finally connect last == cur and prev stage
 			impl->connect(**prev, **cur);
-			impl->connect(**cur, **next);
 		}
-		// finally connect last == cur and prev stage
-		impl->connect(**prev, **cur);
-	}
 
-	// recursively init + validate all children
-	// this needs to be done *after* initializing the connections
-	ContainerBase::init(scene);
+		// recursively init + validate all children
+		// this needs to be done *after* initializing the connections
+		ContainerBase::init(scene);
 
-	// after initializing children, they might have changed their mind about reading...
-	if (!impl->children().front()->pimpl()->starts())
-		impl->starts_.reset();
-	if (!impl->children().back()->pimpl()->ends())
-		impl->ends_.reset();
+		// initialize starts_ and ends_ interfaces
+		Stage* child = start->get();
+		if (child->pimpl()->starts())
+			impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
+				// new external state in our starts_ interface is copied to first child
+				impl->copyState(*external, *child, true);
+			}));
 
+		child = last->get();
+		if (child->pimpl()->ends())
+			impl->ends_.reset(new Interface([impl, child](const Interface::iterator& external){
+				// new external state in our ends_ interface is copied to last child
+				impl->copyState(*external, *child, false);
+			}));
+
+		// validate connectivity of this
+		if (!impl->nextStarts())
+			errors.push_back(*this, "cannot sendForward()");
+		if (!impl->prevEnds())
+			errors.push_back(*this, "cannot sendBackward()");
 	} else {
+		errors.push_back(*this, "no children");
 		// no children -> no reading
 		impl->starts_.reset();
 		impl->ends_.reset();
-
-		// validate connectivity of this (would have been done in ContainerBase::init)
-		try {
-			pimpl()->validate();
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
 	}
 
 	if (errors)

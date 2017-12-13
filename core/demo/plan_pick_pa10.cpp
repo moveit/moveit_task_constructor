@@ -107,8 +107,14 @@ int main(int argc, char** argv){
 		t.add(std::move(move));
 	}
 
-	t.plan();
-	t.publishAllSolutions();
+	try {
+		t.plan();
+		t.publishAllSolutions();
+	}
+	catch (const InitStageException &e) {
+		std::cerr << e;
+		return EINVAL;
+	}
 
 	return 0;
 }

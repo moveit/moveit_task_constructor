@@ -79,10 +79,6 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// validate correct configuration of this stage
-	/// should be only called by containers' init() method
-	void validate() const;
-
 	/// the following methods should be called only by a container
 	/// to setup the connection structure of their children
 	inline void setHierarchy(ContainerBase* parent, container_type::iterator it) {

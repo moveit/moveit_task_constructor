@@ -82,24 +82,8 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	if (starts())  f |= READS_START;
 	if (ends()) f |= READS_END;
 	if (prevEnds()) f |= WRITES_PREV_END;
-	if (nextStarts())  f |= WRITES_NEXT_START;
+	if (nextStarts()) f |= WRITES_NEXT_START;
 	return f;
-}
-
-inline bool implies(bool p, bool q) { return !p || q; }
-void StagePrivate::validate() const {
-	InitStageException errors;
-
-	InterfaceFlags f = interfaceFlags();
-	// validate that sendForward() will succeed
-	if (!implies(f & WRITES_NEXT_START, bool(nextStarts())))
-		errors.push_back(*me_, "sends forward, but next stage cannot receive");
-
-	// validate that sendBackward() will succeed
-	if (!implies(f & WRITES_PREV_END, bool(prevEnds())))
-		errors.push_back(*me_, "sends backward, but previous stage cannot receive");
-
-	if (errors) throw errors;
 }
 
 void StagePrivate::newSolution(const SolutionBase &solution)
