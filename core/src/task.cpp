@@ -235,7 +235,7 @@ void Task::publishAllSolutions(bool wait)
 	introspection_->publishAllSolutions(wait);
 }
 
-void Task::onNewSolution(SolutionBase &s)
+void Task::onNewSolution(const SolutionBase &s)
 {
 	pimpl()->newSolution(s);
 	if (introspection_)

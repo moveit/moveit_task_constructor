@@ -233,7 +233,7 @@ struct SolutionCollector {
 	const StagePrivate* const stopping_stage;
 };
 
-void SerialContainer::onNewSolution(SolutionBase &current)
+void SerialContainer::onNewSolution(const SolutionBase &current)
 {
 	const StagePrivate *creator = current.creator();
 	auto& children = pimpl()->children();
@@ -495,7 +495,7 @@ ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase
 	}));
 }
 
-void ParallelContainerBase::onNewSolution(SolutionBase &s)
+void ParallelContainerBase::onNewSolution(const SolutionBase &s)
 {
 	auto impl = pimpl();
 	WrappedSolution wrapped(impl, &s);

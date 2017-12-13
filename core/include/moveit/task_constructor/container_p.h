@@ -158,7 +158,7 @@ PIMPL_FUNCTIONS(SerialContainer)
  * have separate incoming/outgoing trajectories */
 class WrappedSolution : public SolutionBase {
 public:
-	explicit WrappedSolution(StagePrivate* creator, SolutionBase* wrapped)
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
 	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
 	{}
 	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
@@ -167,7 +167,7 @@ public:
 	}
 
 private:
-	SolutionBase* wrapped_;
+	const SolutionBase* wrapped_;
 };
 
 

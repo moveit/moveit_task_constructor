@@ -120,7 +120,7 @@ protected:
 	void initScene();
 	bool canCompute() const override;
 	bool compute() override;
-	void onNewSolution(SolutionBase &s) override;
+	void onNewSolution(const SolutionBase &s) override;
 
 private:
 	std::string id_;

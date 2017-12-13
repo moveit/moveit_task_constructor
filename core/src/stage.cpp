@@ -102,7 +102,7 @@ void StagePrivate::validate() const {
 	if (errors) throw errors;
 }
 
-void StagePrivate::newSolution(SolutionBase &solution)
+void StagePrivate::newSolution(const SolutionBase &solution)
 {
 	for (const auto& cb : solution_cbs_)
 		cb(solution);

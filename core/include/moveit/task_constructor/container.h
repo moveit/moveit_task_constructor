@@ -68,7 +68,7 @@ public:
 	virtual bool compute() = 0;
 
 	/// called by a (direct) child when a new solution becomes available
-	virtual void onNewSolution(SolutionBase& t) = 0;
+	virtual void onNewSolution(const SolutionBase& s) = 0;
 
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
@@ -96,7 +96,7 @@ public:
 
 protected:
 	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(SolutionBase &s) override;
+	void onNewSolution(const SolutionBase &s) override;
 
 	/// function type used for traversing solutions
 	/// For each sub solution (current), the trace from the start as well as the
@@ -142,7 +142,7 @@ protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
 	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(SolutionBase &s) override;
+	void onNewSolution(const SolutionBase &s) override;
 
 	/// callback for new start states (received externally)
 	virtual void onNewStartState(const InterfaceState &external) = 0;

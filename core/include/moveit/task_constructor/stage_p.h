@@ -92,7 +92,7 @@ public:
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
 
-	void newSolution(SolutionBase &current);
+	void newSolution(const SolutionBase &current);
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
