@@ -51,21 +51,11 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
-	void setEndEffector(std::string eef);
-
-	void setGroup(std::string group_name);
-
-	void setGripperGraspPose(std::string pose_name);
-
-	void setObject(std::string object);
-
 	void setTimeout(double timeout);
 
-	void setAngleDelta(double delta);
-
-	void setMaxIKSolutions(uint32_t n);
-
-	void setIgnoreCollisions(bool flag);
+	void setEndEffector(const std::string &eef);
+	void setGripperGraspPose(const std::string &pose_name);
+	void setObject(const std::string &object);
 
 	void setGraspFrame(const geometry_msgs::TransformStamped &transform);
 	void setGraspFrame(const Eigen::Affine3d& transform, const std::string& link = "");
@@ -74,17 +64,11 @@ public:
 		Eigen::Affine3d transform; transform = t;
 		setGraspFrame(transform, link);
 	}
+	void setAngleDelta(double delta);
 
 protected:
-	planning_scene::PlanningSceneConstPtr scene_;
-
-	/* temp values */
-
+	planning_scene::PlanningScenePtr scene_;
 	double current_angle_ = 0.0;
-
-	bool tried_current_state_as_seed_ = false;
-
-	std::vector< std::vector<double> > previous_solutions_;
 };
 
 } } }

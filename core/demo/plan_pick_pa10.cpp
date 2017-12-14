@@ -5,6 +5,7 @@
 #include <moveit/task_constructor/stages/move.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 #include <moveit/task_constructor/stages/cartesian_position_motion.h>
+#include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <ros/ros.h>
 
@@ -82,8 +83,11 @@ int main(int argc, char** argv){
 		                        Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
 		                        "lh_tool_frame");
 		gengrasp->setAngleDelta(-.2);
-		gengrasp->setMaxIKSolutions(1);
-		t.add(std::move(gengrasp));
+
+		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
+		ik->properties().configureInitFrom(Stage::PARENT);
+		ik->setMaxIKSolutions(1);
+		t.add(std::move(ik));
 	}
 
 	{
