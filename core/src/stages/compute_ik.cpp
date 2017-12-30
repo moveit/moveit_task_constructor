@@ -83,6 +83,53 @@ bool isValid(planning_scene::PlanningSceneConstPtr scene,
 	return ignore_collisions || !scene->isStateColliding(*state, jmg->getName());
 }
 
+bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
+                           const robot_model::JointModelGroup* jmg,
+                           const Eigen::Affine3d &pose,
+                           const std::string &link_name)
+{
+	planning_scene::PlanningScenePtr sandbox_scene = scene->diff();
+	robot_state::RobotState& robot_state = sandbox_scene->getCurrentStateNonConst();
+	robot_state.updateStateWithLinkAt(link_name, pose, true);
+
+	// disable collision checking for parent links (except fixed links)
+	auto& acm = sandbox_scene->getAllowedCollisionMatrixNonConst();
+	const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
+	const robot_model::LinkModel* parent_link = link->getParentLinkModel();
+	const robot_model::JointModel* joint = link->getParentJointModel();
+
+	// keep links rigidly attached to link_name
+	std::vector<const std::string*> fixed_eef_links;
+	while (parent_link && joint->getType() == robot_model::JointModel::FIXED) {
+		fixed_eef_links.push_back(&parent_link->getName());
+		link = parent_link;
+		joint = link->getParentJointModel();
+		parent_link = joint->getParentLinkModel();
+	}
+	// now parent_link is the first link that is not rigidly attached to link_name
+
+	std::vector<const std::string*> pending_links;
+	while (parent_link) {
+		pending_links.push_back(&parent_link->getName());
+		link = parent_link;
+		joint = link->getParentJointModel();
+		parent_link = joint->getParentLinkModel();
+
+		if (joint->getType() != robot_model::JointModel::FIXED) {
+			for (const std::string* name : pending_links)
+				acm.setDefaultEntry(*name, true);
+			pending_links.clear();
+		}
+	}
+
+	// check collision with the world using the padded version
+	collision_detection::CollisionRequest req;
+	req.group_name = jmg->getName();
+	collision_detection::CollisionResult res;
+	scene->getCollisionWorld()->checkRobotCollision(req, res, *scene->getCollisionRobot(), robot_state, acm);
+	return res.collision;
+}
+
 } // anonymous namespace
 
 void ComputeIK::onNewSolution(const SolutionBase &s)
@@ -120,6 +167,12 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 		// transform target pose such that the link frame will reach there
 		target_pose = target_pose * ref_pose.inverse() * link_pose;
+	}
+
+	// validate ee group for collision
+	if (isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link_name)) {
+		ROS_ERROR("eeg in collision");
+		return;
 	}
 
 	// determine joint values of robot pose to compare IK solution with for costs
