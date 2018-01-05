@@ -34,6 +34,11 @@ set(CMAKE_AUTORCC ON)
 add_definitions(-DQT_NO_KEYWORDS)
 
 catkin_package(
+	LIBRARIES
+		moveit_task_visualization_tools
+		motion_planning_tasks_utils
+	INCLUDE_DIRS
+		visualization_tools/include
 	CATKIN_DEPENDS
 		moveit_core
 		moveit_task_constructor_msgs
