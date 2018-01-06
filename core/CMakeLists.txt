@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_task_constructor_msgs
 	roscpp
 	visualization_msgs
+	rviz_marker_tools
 )
 
 catkin_package(
