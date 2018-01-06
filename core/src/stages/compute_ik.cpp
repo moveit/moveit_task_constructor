@@ -113,19 +113,19 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	                    : robot_model->getJointModelGroup(group);
 
 	// compute target pose w.r.t. link_name
-	geometry_msgs::PoseStamped target_pose = props.get<geometry_msgs::PoseStamped>("target_pose");
-	Eigen::Affine3d target_pose_eigen;
-	tf::poseMsgToEigen(target_pose.pose, target_pose_eigen);
-	if (!target_pose.header.frame_id.empty() && target_pose.header.frame_id != link_name) {
-		const Eigen::Affine3d& ref_pose = scene->getFrameTransform(props.get<std::string>(target_pose.header.frame_id));
+	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
+	Eigen::Affine3d target_pose;
+	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
+	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
+		const Eigen::Affine3d& ref_pose = scene->getFrameTransform(props.get<std::string>(target_pose_msg.header.frame_id));
 		if(ref_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
-			ROS_WARN("requested reference frame '%s' for target pose does not exist", target_pose.header.frame_id.c_str());
+			ROS_WARN("requested reference frame '%s' for target pose does not exist", target_pose_msg.header.frame_id.c_str());
 		const Eigen::Affine3d& link_pose = scene->getFrameTransform(link_name);
 		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 			ROS_WARN("requested link frame '%s' does not exist", link_name.c_str());
 
 		// transform target pose such that the link frame will reach there
-		target_pose_eigen = target_pose_eigen * ref_pose.inverse() * link_pose;
+		target_pose = target_pose * ref_pose.inverse() * link_pose;
 	}
 
 	// determine joint values of robot pose to compare IK solution with for costs
@@ -158,7 +158,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			robot_state.setToRandomPositions(jmg);
 		tried_current_state_as_seed_= true;
 
-		bool succeeded = robot_state.setFromIK(jmg, target_pose_eigen, link_name, 1, remaining_time, is_valid);
+		bool succeeded = robot_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, is_valid);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();

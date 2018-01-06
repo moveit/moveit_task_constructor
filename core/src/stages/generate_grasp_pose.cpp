@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2017, Bielefeld + Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner */
+/* Authors: Robert Haschke, Michael Goerner */
 
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 
@@ -105,24 +105,27 @@ bool GenerateGraspPose::compute(){
 		robot_state.setToDefaultValues(jmg , eef_named_pose);
 	}
 
-	geometry_msgs::TransformStamped grasp_frame = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
+	geometry_msgs::TransformStamped tool2grasp_msg = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
 	const std::string &link_name = jmg ->getEndEffectorParentGroup().second;
-	if (grasp_frame.header.frame_id.empty()) // if no frame_id is given
-		grasp_frame.header.frame_id = link_name; // interpret the transform w.r.t. eef link frame
-	Eigen::Affine3d grasp_pose;
-	tf::transformMsgToEigen(grasp_frame.transform, grasp_pose);
+	if (tool2grasp_msg.header.frame_id.empty()) // if no frame_id is given
+		tool2grasp_msg.header.frame_id = link_name; // interpret the transform w.r.t. eef link frame
+	Eigen::Affine3d to_grasp;
+	Eigen::Affine3d grasp2tool, grasp2link;
+	tf::transformMsgToEigen(tool2grasp_msg.transform, to_grasp);
+	grasp2tool = to_grasp.inverse();
 
-	if (grasp_frame.header.frame_id != link_name) {
-		// convert grasp_pose into transform w.r.t. link (instead of frame_id)
+	if (tool2grasp_msg.header.frame_id != link_name) {
+		// convert to_grasp into transform w.r.t. link (instead of tool frame_id)
 		const Eigen::Affine3d link_pose = scene_->getFrameTransform(link_name);
 		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 			throw std::runtime_error("requested link does not exist or could not be retrieved");
-		const Eigen::Affine3d frame_pose = scene_->getFrameTransform(grasp_frame.header.frame_id);
-		if(frame_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+		const Eigen::Affine3d tool_pose = scene_->getFrameTransform(tool2grasp_msg.header.frame_id);
+		if(tool_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 			throw std::runtime_error("requested frame does not exist or could not be retrieved");
-		grasp_pose = link_pose.inverse() * frame_pose * grasp_pose;
-	}
-	grasp_pose = grasp_pose.inverse(); // invert once
+		to_grasp = link_pose.inverse() * tool_pose * to_grasp;
+		grasp2link = to_grasp.inverse();
+	} else
+		grasp2link = grasp2tool;
 
 	const Eigen::Affine3d object_pose = scene_->getFrameTransform(props.get<std::string>("object"));
 	if(object_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
@@ -130,13 +133,14 @@ bool GenerateGraspPose::compute(){
 
 	while( canCompute() ){
 		// rotate object pose about z-axis
-		Eigen::Affine3d goal_pose = object_pose * Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()) * grasp_pose;
+		Eigen::Affine3d grasp_pose = object_pose * Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ());
+		Eigen::Affine3d link_pose = grasp_pose * grasp2link;
 		current_angle_ += props.get<double>("angle_delta");
 
 		InterfaceState state(scene_);
 		geometry_msgs::PoseStamped goal_pose_msg;
 		goal_pose_msg.header.frame_id = link_name;
-		tf::poseEigenToMsg(goal_pose, goal_pose_msg.pose);
+		tf::poseEigenToMsg(link_pose, goal_pose_msg.pose);
 		state.properties().set("target_pose", goal_pose_msg);
 
 		spawn(std::move(state));
