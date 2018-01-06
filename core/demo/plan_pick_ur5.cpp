@@ -80,7 +80,7 @@ int main(int argc, char** argv){
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
+		gengrasp->setToolToGraspTF(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 		gengrasp->setAngleDelta(-.2);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));

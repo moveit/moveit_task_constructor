@@ -79,7 +79,7 @@ int main(int argc, char** argv){
 		gengrasp->setEndEffector("left_gripper");
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(), "l_gripper_tool_frame");
+		gengrasp->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
 		gengrasp->setAngleDelta(.2);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));

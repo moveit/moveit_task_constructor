@@ -79,9 +79,9 @@ int main(int argc, char** argv){
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(0,0,.05)*
-		                        Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
-		                        "lh_tool_frame");
+		gengrasp->setToolToGraspTF(Eigen::Translation3d(0,0,.05)*
+		                           Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
+		                           "lh_tool_frame");
 		gengrasp->setAngleDelta(-.2);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));

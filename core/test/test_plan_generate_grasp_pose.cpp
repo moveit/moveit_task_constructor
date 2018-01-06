@@ -41,7 +41,7 @@ int main(int argc, char** argv){
 	st->setEndEffector("gripper");
 	st->setObject("object");
 	st->setAngleDelta(0.1);
-	st->setGraspFrame(Eigen::Translation3d(.03,0,0));
+	st->setToolToGraspTF(Eigen::Translation3d(.03,0,0));
 
 	t.add(std::move(st));
 

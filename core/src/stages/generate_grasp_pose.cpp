@@ -50,7 +50,7 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 	p.declare<std::string>("eef", "name of end-effector group");
 	p.declare<std::string>("eef_named_pose");
 	p.declare<std::string>("object");
-	p.declare<geometry_msgs::TransformStamped>("grasp_frame", geometry_msgs::TransformStamped(), "robot frame to use for grasping");
+	p.declare<geometry_msgs::TransformStamped>("tool_to_grasp_tf", geometry_msgs::TransformStamped(), "transform from robot tool frame to grasp frame");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
 }
 
@@ -72,17 +72,16 @@ void GenerateGraspPose::setObject(const std::string &object){
 	setProperty("object", object);
 }
 
-void GenerateGraspPose::setGraspFrame(const geometry_msgs::TransformStamped &frame){
-	setProperty("grasp_frame", frame);
+void GenerateGraspPose::setToolToGraspTF(const geometry_msgs::TransformStamped &transform){
+	setProperty("tool_to_grasp_tf", transform);
 }
 
-void GenerateGraspPose::setGraspFrame(const Eigen::Affine3d &transform, const std::string &link)
-{
-	geometry_msgs::TransformStamped frame;
-	frame.header.frame_id = link;
-	frame.child_frame_id = "grasp_frame";
-	tf::transformEigenToMsg(transform, frame.transform);
-	setGraspFrame(frame);
+void GenerateGraspPose::setToolToGraspTF(const Eigen::Affine3d &transform, const std::string &link){
+	geometry_msgs::TransformStamped stamped;
+	stamped.header.frame_id = link;
+	stamped.child_frame_id = "grasp_frame";
+	tf::transformEigenToMsg(transform, stamped.transform);
+	setToolToGraspTF(stamped);
 }
 
 void GenerateGraspPose::setAngleDelta(double delta){
@@ -106,7 +105,7 @@ bool GenerateGraspPose::compute(){
 		robot_state.setToDefaultValues(jmg , eef_named_pose);
 	}
 
-	geometry_msgs::TransformStamped grasp_frame = props.get<geometry_msgs::TransformStamped>("grasp_frame");
+	geometry_msgs::TransformStamped grasp_frame = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
 	const std::string &link_name = jmg ->getEndEffectorParentGroup().second;
 	if (grasp_frame.header.frame_id.empty()) // if no frame_id is given
 		grasp_frame.header.frame_id = link_name; // interpret the transform w.r.t. eef link frame

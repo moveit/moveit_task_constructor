@@ -51,18 +51,16 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
-	void setTimeout(double timeout);
-
 	void setEndEffector(const std::string &eef);
 	void setGripperGraspPose(const std::string &pose_name);
 	void setObject(const std::string &object);
 
-	void setGraspFrame(const geometry_msgs::TransformStamped &transform);
-	void setGraspFrame(const Eigen::Affine3d& transform, const std::string& link = "");
+	void setToolToGraspTF(const geometry_msgs::TransformStamped &transform);
+	void setToolToGraspTF(const Eigen::Affine3d& transform, const std::string& link = "");
 	template <typename T>
-	void setGraspFrame(const T& t, const std::string& link = "") {
+	void setToolToGraspTF(const T& t, const std::string& link = "") {
 		Eigen::Affine3d transform; transform = t;
-		setGraspFrame(transform, link);
+		setToolToGraspTF(transform, link);
 	}
 	void setAngleDelta(double delta);
 
