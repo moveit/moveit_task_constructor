@@ -95,7 +95,7 @@ class RemoteSolutionModel : public QAbstractTableModel {
 	Q_OBJECT
 	struct Data {
 		uint32_t id;
-		float cost;  // nan if unknown, inf if failed
+		double cost;  // nan if unknown, inf if failed
 		QString name;
 		uint32_t creation_rank;  // rank, ordered by creation
 		uint32_t cost_rank;  // rank, ordering by cost
@@ -130,7 +130,7 @@ public:
 	void sort(int column, Qt::SortOrder order);
 
 	void setData(uint32_t id, float cost, const QString &name);
-	bool processSolutionIDs(const std::vector<uint32_t>& ids, float default_cost);
+	bool processSolutionIDs(const std::vector<uint32_t>& ids, double default_cost);
 };
 
 }

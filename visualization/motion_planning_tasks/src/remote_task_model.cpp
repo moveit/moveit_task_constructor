@@ -278,8 +278,8 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 		}
 		Node *n = it->second;
 
-		bool changed = n->solutions_->processSolutionIDs(s.solved, std::numeric_limits<float>::quiet_NaN()) ||
-		               n->solutions_->processSolutionIDs(s.failed, std::numeric_limits<float>::infinity());
+		bool changed = n->solutions_->processSolutionIDs(s.solved, std::numeric_limits<double>::quiet_NaN()) ||
+		               n->solutions_->processSolutionIDs(s.failed, std::numeric_limits<double>::infinity());
 		// emit notify about model changes when node was already visited
 		if (changed && (n->node_flags_ & WAS_VISITED)) {
 			QModelIndex idx = index(n);
@@ -525,7 +525,7 @@ void RemoteSolutionModel::sortInternal()
 }
 
 // process solution ids received in stage statistics
-bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, float default_cost)
+bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, double default_cost)
 {
 	// ids are originally ordered by cost, order them by creation order here
 	std::vector<std::pair<uint32_t, uint32_t>> ids_by_creation;
