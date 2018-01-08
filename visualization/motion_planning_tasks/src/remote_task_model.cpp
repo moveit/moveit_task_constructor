@@ -355,7 +355,9 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;
 			if (get_solution_client_->call(srv)) {
-				result = processSolutionMessage(srv.response.solution);
+				id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
+			} else { // on failure mark remote task as destroyed: don't retrieve more solutions
+				flags_ |= IS_DESTROYED;
 			}
 		}
 		return result;

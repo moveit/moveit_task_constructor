@@ -184,14 +184,9 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		if (s) trajectory_visual_->showTrajectory(s);
+		if (s) trajectory_visual_->showTrajectory(s, false);
 		return;
 	});
-}
-
-void TaskDisplay::showTrajectory(const DisplaySolutionPtr &s) const {
-	trajectory_visual_->interruptCurrentDisplay();
-	trajectory_visual_->showTrajectory(s);
 }
 
 void TaskDisplay::clearMarkers() {

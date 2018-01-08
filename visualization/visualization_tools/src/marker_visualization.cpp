@@ -65,8 +65,10 @@ MarkerVisualization::MarkerVisualization(const std::vector<visualization_msgs::M
 
 MarkerVisualization::~MarkerVisualization()
 {
-	for (const auto& pair : namespaces_)
-		pair.second->getCreator()->destroySceneNode(pair.second);
+	for (const auto& pair : namespaces_) {
+		if (pair.second)
+			pair.second->getCreator()->destroySceneNode(pair.second);
+	}
 }
 
 void setVisibility(Ogre::SceneNode *node, Ogre::SceneNode *parent, bool visible)

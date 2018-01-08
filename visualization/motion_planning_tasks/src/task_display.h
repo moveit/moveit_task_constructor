@@ -87,7 +87,7 @@ public:
   void setName(const QString& name);
 
   TaskListModel& getTaskListModel() { return *task_list_model_; }
-  void showTrajectory(const DisplaySolutionPtr& s) const;
+  TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
   void clearMarkers();
   void showMarkers(const DisplaySolutionPtr &s);
 
