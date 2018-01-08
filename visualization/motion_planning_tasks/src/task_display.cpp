@@ -198,8 +198,6 @@ void TaskDisplay::changedTaskSolutionTopic()
 	task_solution_sub.shutdown();
 	get_solution_client.shutdown();
 
-	tasks_property_->removeChildren();
-
 	// generate task monitoring topics from solution topic
 	std::string solution_topic = task_solution_topic_property_->getStdString();
 	auto last_sep = solution_topic.find_last_of('/');
@@ -253,6 +251,8 @@ void TaskDisplay::onTaskDataChanged(const QModelIndex &topLeft, const QModelInde
 
 	for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
 		rviz::Property *child = tasks_property_->childAt(row);
+		assert(child);
+
 		if (topLeft.column() <= 0 && 0 <= bottomRight.column()) // name changed
 			child->setName(topLeft.sibling(row, 0).data().toString());
 		if (topLeft.column() <= 1 && 1 <= bottomRight.column()) // #solutions changed
