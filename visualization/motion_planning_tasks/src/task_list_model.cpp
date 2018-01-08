@@ -147,6 +147,10 @@ TaskListModel::~TaskListModel() {
 	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
 	// inform MetaTaskListModel that we will remove our stuff
 	removeRows(0, rowCount());
+	// free RemoteTaskModels
+	for (auto& pair : remote_tasks_) {
+		if (pair.second) delete pair.second;
+	}
 }
 
 void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
