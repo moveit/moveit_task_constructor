@@ -156,15 +156,6 @@ void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
 
 void TaskListModel::setSolutionClient(ros::ServiceClient *client)
 {
-	if (!client || get_solution_client_ != client ||
-	    get_solution_client_->getService() != client->getService()) {
-		// service client's address changed: invalidate existing client pointers
-		for (int row=0, end = rowCount(); row != end; ++row) {
-			RemoteTaskModel* task = dynamic_cast<RemoteTaskModel*>(getModel(index(row, 0)).first);
-			if (!task) continue;
-			task->setSolutionClient(nullptr);
-		}
-	}
 	get_solution_client_ = client;
 }
 

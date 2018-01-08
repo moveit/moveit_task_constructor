@@ -85,6 +85,7 @@ public:
   virtual void onEnable();
   virtual void onDisable();
   void setName(const QString& name);
+  void setSolutionStatus(bool ok);
 
   TaskListModel& getTaskListModel() { return *task_list_model_; }
   TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }

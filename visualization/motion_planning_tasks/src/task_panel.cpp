@@ -231,8 +231,10 @@ void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QMode
 
 	d_ptr->locked_display_ = display;
 	TaskSolutionVisualization* vis = display->visualization();
+	const DisplaySolutionPtr& solution = task->getSolution(current);
+	display->setSolutionStatus(bool(solution));
 	vis->interruptCurrentDisplay();
-	vis->showTrajectory(task->getSolution(current), true);
+	vis->showTrajectory(solution, true);
 }
 
 void TaskPanel::onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
@@ -248,6 +250,7 @@ void TaskPanel::onSolutionSelectionChanged(const QItemSelection &selected, const
 	display->clearMarkers();
 	for (const auto& index : selected_rows) {
 		const DisplaySolutionPtr &solution = task->getSolution(index);
+		display->setSolutionStatus(bool(solution));
 		display->showMarkers(solution);
 	}
 }

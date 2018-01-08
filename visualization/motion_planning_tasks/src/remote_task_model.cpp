@@ -350,7 +350,7 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 		// to avoid some communication overhead
 
 		DisplaySolutionPtr result;
-		if (get_solution_client_) {
+		if (!(flags_ & IS_DESTROYED) && get_solution_client_) {
 			// request solution via service
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;

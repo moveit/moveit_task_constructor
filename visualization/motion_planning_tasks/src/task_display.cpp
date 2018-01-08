@@ -58,6 +58,8 @@ namespace moveit_rviz_plugin
 TaskDisplay::TaskDisplay() : Display()
 {
 	task_list_model_.reset(new TaskListModel);
+	task_list_model_->setSolutionClient(&get_solution_client);
+
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
 	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
@@ -165,6 +167,7 @@ void TaskDisplay::taskDescriptionCB(const ros::MessageEvent<const moveit_task_co
 	const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->id;
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		task_list_model_->processTaskDescriptionMessage(id, *msg);
 	});
 }
@@ -174,6 +177,7 @@ void TaskDisplay::taskStatisticsCB(const ros::MessageEvent<const moveit_task_con
 	const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->id;
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		task_list_model_->processTaskStatisticsMessage(id, *msg);
 	});
 }
@@ -183,6 +187,7 @@ void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_const
 	const moveit_task_constructor_msgs::SolutionConstPtr& msg = event.getMessage();
 	const std::string id = event.getPublisherName() + "/" + msg->task_id;
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
 		if (s) trajectory_visual_->showTrajectory(s, false);
 		return;
@@ -210,14 +215,14 @@ void TaskDisplay::changedTaskSolutionTopic()
 	tasks_property_->removeChildren();
 
 	// generate task monitoring topics from solution topic
-	std::string solution_topic = task_solution_topic_property_->getStdString();
-	auto last_sep = solution_topic.find_last_of('/');
-	if (last_sep == std::string::npos) {
-		setStatus(rviz::StatusProperty::Error, "Task Monitor", "invalid topic");
+	const QString& solution_topic = task_solution_topic_property_->getString();
+	if (!solution_topic.endsWith(QString("/").append(SOLUTION_TOPIC))) {
+		setStatus(rviz::StatusProperty::Error, "Task Monitor",
+		          QString("Invalid topic. Expecting a name ending on \"/%1\"").arg(SOLUTION_TOPIC));
 		return;
 	}
 
-	std::string base_ns = solution_topic.substr(0, last_sep+1);
+	std::string base_ns = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
 	// listen to task descriptions updates
 	task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
@@ -226,13 +231,18 @@ void TaskDisplay::changedTaskSolutionTopic()
 	task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
 
 	// listen to task solutions
-	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
+	task_solution_sub = update_nh_.subscribe(base_ns + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
 
 	// service to request solutions
 	get_solution_client = update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
-	task_list_model_->setSolutionClient(&get_solution_client);
 
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
+	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
+}
+
+void TaskDisplay::setSolutionStatus(bool ok)
+{
+	if (ok) setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
+	else setStatus(rviz::StatusProperty::Warn, "Solution", "Retrieval failed");
 }
 
 void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
