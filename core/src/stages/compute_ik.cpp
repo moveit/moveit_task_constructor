@@ -62,30 +62,25 @@ void ComputeIK::setIgnoreCollisions(bool flag)
 	setProperty("ignore_collisions", flag);
 }
 
+// found IK solutions with a flag indicating validity
+typedef std::vector<std::vector<double>> IKSolutions;
+
 namespace {
 bool isValid(planning_scene::PlanningSceneConstPtr scene,
              bool ignore_collisions,
-             std::vector< std::vector<double> >* found_solutions,
+             IKSolutions* ik_solutions,
              robot_state::RobotState* state,
              const robot_model::JointModelGroup* jmg,
              const double* joint_positions){
-	for(const auto& sol : *found_solutions ){
-		if( jmg->distance(joint_positions, sol.data()) < 0.1 )
-			return false; // to close at already found solutions
+	for (const auto& sol : *ik_solutions){
+		if (jmg->distance(joint_positions, sol.data()) < 0.1)
+			return false; // to close to already found solution
 	}
-
 	state->setJointGroupPositions(jmg, joint_positions);
-	state->update();
-	found_solutions->emplace_back();
-	state->copyJointGroupPositions(jmg, found_solutions->back());
+	ik_solutions->emplace_back();
+	state->copyJointGroupPositions(jmg, ik_solutions->back());
 
-	if (ignore_collisions)
-		return true;
-
-	if (scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()))
-		return false;
-
-	return true;
+	return ignore_collisions || !scene->isStateColliding(*state, jmg->getName());
 }
 
 } // anonymous namespace
@@ -94,33 +89,32 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 {
 	assert(s.start() && s.end());
 	assert(s.start()->scene() == s.end()->scene()); // wrapped child should be a generator
-	planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+	planning_scene::PlanningScenePtr sandbox_scene = s.start()->scene()->diff();
 
 	// enforced initialization from interface ensures that new target_pose is read
 	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
 	const auto& props = properties();
 
 	const std::string& eef = props.get<std::string>("eef");
-	assert(scene->getRobotModel()->hasEndEffector(eef) && "The specified end effector is not defined in the srdf");
+	assert(sandbox_scene->getRobotModel()->hasEndEffector(eef) && "The specified end effector is not defined in the srdf");
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	const auto& robot_model = robot_state.getRobotModel();
+	const auto& robot_model = sandbox_scene->getRobotModel();
+	const moveit::core::JointModelGroup* eef_jmg = robot_model->getEndEffector(eef);
+	const std::string& link_name = eef_jmg->getEndEffectorParentGroup().second;
 
-	const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-	const std::string& link_name = jmg->getEndEffectorParentGroup().second;
 	const std::string& group = props.get<std::string>("group");
-	jmg = group.empty() ? robot_model->getJointModelGroup(jmg->getEndEffectorParentGroup().first)
-	                    : robot_model->getJointModelGroup(group);
+	const moveit::core::JointModelGroup* jmg = group.empty() ? robot_model->getJointModelGroup(eef_jmg->getEndEffectorParentGroup().first)
+	                                                         : robot_model->getJointModelGroup(group);
 
 	// compute target pose w.r.t. link_name
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
 	Eigen::Affine3d target_pose;
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
 	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
-		const Eigen::Affine3d& ref_pose = scene->getFrameTransform(props.get<std::string>(target_pose_msg.header.frame_id));
+		const Eigen::Affine3d& ref_pose = sandbox_scene->getFrameTransform(props.get<std::string>(target_pose_msg.header.frame_id));
 		if(ref_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 			ROS_WARN("requested reference frame '%s' for target pose does not exist", target_pose_msg.header.frame_id.c_str());
-		const Eigen::Affine3d& link_pose = scene->getFrameTransform(link_name);
+		const Eigen::Affine3d& link_pose = sandbox_scene->getFrameTransform(link_name);
 		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
 			ROS_WARN("requested link frame '%s' does not exist", link_name.c_str());
 
@@ -132,41 +126,48 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	std::vector<double> compare_pose;
 	const std::string &compare_pose_name = props.get<std::string>("default_pose");
 	if (!compare_pose_name.empty()) {
-		robot_state::RobotState compare_state(robot_state);
+		robot_state::RobotState compare_state(robot_model);
 		compare_state.setToDefaultValues(jmg, compare_pose_name);
 		compare_state.copyJointGroupPositions(jmg, compare_pose);
 	} else
-		robot_state.copyJointGroupPositions(jmg, compare_pose);
+		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
+
+	IKSolutions ik_solutions;
+	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	const moveit::core::GroupStateValidityCallbackFn is_valid =
 		std::bind(&isValid,
-	             scene,
+	             sandbox_scene,
 	             props.get<bool>("ignore_collisions"),
-	             &previous_solutions_,
+	             &ik_solutions,
 	             std::placeholders::_1,
 	             std::placeholders::_2,
 	             std::placeholders::_3);
 
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
-	tried_current_state_as_seed_= false;
-	previous_solutions_.clear();
+	bool tried_current_state_as_seed = false;
 
 	double remaining_time = props.get<double>("timeout");
 	auto start_time = std::chrono::steady_clock::now();
-	while (previous_solutions_.size() < max_ik_solutions && remaining_time > 0) {
-		if(tried_current_state_as_seed_)
-			robot_state.setToRandomPositions(jmg);
-		tried_current_state_as_seed_= true;
+	while (ik_solutions.size() < max_ik_solutions && remaining_time > 0) {
+		if(tried_current_state_as_seed)
+			sandbox_state.setToRandomPositions(jmg);
+		tried_current_state_as_seed= true;
 
-		bool succeeded = robot_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, is_valid);
+		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, is_valid);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 
-		if (succeeded)
-			spawn(InterfaceState(scene), s.cost() + jmg->distance(previous_solutions_.back().data(), compare_pose.data()));
-		else if (max_ik_solutions == 1)
+		if (succeeded) {
+			// create a new scene for each solution as they will have different robot states
+			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+
+			spawn(InterfaceState(scene), s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+		} else if (max_ik_solutions == 1)
 			break; // first and only attempt failed
 	}
 }

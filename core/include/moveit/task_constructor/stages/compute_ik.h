@@ -33,10 +33,6 @@ public:
 	}
 	void setMaxIKSolutions(uint32_t n);
 	void setIgnoreCollisions(bool flag);
-
-protected:
-	bool tried_current_state_as_seed_ = false;
-	std::vector< std::vector<double> > previous_solutions_;
 };
 
 } } }
