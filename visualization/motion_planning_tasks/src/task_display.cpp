@@ -155,28 +155,30 @@ void TaskDisplay::changedRobotDescription()
 		loadRobotModel();
 }
 
-void TaskDisplay::taskDescriptionCB(const ros::MessageEvent<const moveit_task_constructor_msgs::TaskDescription> &event)
+inline std::string getUniqueId(const std::string& process_id, const std::string& task_id)
 {
-	const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg = event.getMessage();
-	const std::string id = event.getPublisherName() + "/" + msg->id;
+	return process_id + "/" + task_id;
+}
+
+void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg)
+{
+	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		task_list_model_->processTaskDescriptionMessage(id, *msg);
 	});
 }
 
-void TaskDisplay::taskStatisticsCB(const ros::MessageEvent<const moveit_task_constructor_msgs::TaskStatistics> &event)
+void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg)
 {
-	const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg = event.getMessage();
-	const std::string id = event.getPublisherName() + "/" + msg->id;
+	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		task_list_model_->processTaskStatisticsMessage(id, *msg);
 	});
 }
 
-void TaskDisplay::taskSolutionCB(const ros::MessageEvent<const moveit_task_constructor_msgs::Solution> &event)
+void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg)
 {
-	const moveit_task_constructor_msgs::SolutionConstPtr& msg = event.getMessage();
-	const std::string id = event.getPublisherName() + "/" + msg->task_id;
+	const std::string id = getUniqueId(msg->process_id, msg->task_id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
 		trajectory_visual_->showTrajectory(s);

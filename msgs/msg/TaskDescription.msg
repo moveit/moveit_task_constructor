@@ -1,3 +1,6 @@
+# id of generating process
+string process_id
+
 # unique ID of this task
 string id
 

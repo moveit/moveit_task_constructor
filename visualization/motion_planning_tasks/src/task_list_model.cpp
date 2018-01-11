@@ -213,8 +213,11 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 	bool created = it_inserted.second;
 	RemoteTaskModel*& remote_task = it_inserted.first->second;
 
-	if (!msg.stages.empty() && remote_task && remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)
+	if (!msg.stages.empty() && remote_task && (remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)) {
+		removeModel(remote_task);
+		delete remote_task;
 		created = true; // re-create remote task after it was destroyed beforehand
+	}
 
 	// empty list indicates, that this remote task is not available anymore
 	if (msg.stages.empty()) {
@@ -245,11 +248,13 @@ void TaskListModel::processTaskStatisticsMessage(const std::string &id,
                                                  const moveit_task_constructor_msgs::TaskStatistics &msg)
 {
 	auto it = remote_tasks_.find(id);
-	if (it == remote_tasks_.cend())
-		return; // unkown task
+	if (it == remote_tasks_.cend()) {
+		ROS_WARN("unknown task: %s", id.c_str());
+		return;
+	}
 
 	RemoteTaskModel* remote_task = it->second;
-	if (!remote_task)
+	if (!remote_task || (remote_task->taskFlags() & RemoteTaskModel::IS_DESTROYED))
 		return; // task is not in use anymore
 
 	remote_task->processStageStatistics(msg.stages);

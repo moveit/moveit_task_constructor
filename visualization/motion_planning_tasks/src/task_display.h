@@ -98,9 +98,9 @@ private Q_SLOTS:
   void onTasksRemoved(const QModelIndex& parent, int first, int last);
   void onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
 
-  void taskDescriptionCB(const ros::MessageEvent<moveit_task_constructor_msgs::TaskDescription const>& event);
-  void taskStatisticsCB(const ros::MessageEvent<const moveit_task_constructor_msgs::TaskStatistics> &event);
-  void taskSolutionCB(const ros::MessageEvent<moveit_task_constructor_msgs::Solution const>& event);
+  void taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg);
+  void taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg);
+  void taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg);
 
 protected:
   ros::Subscriber task_solution_sub;

@@ -1,3 +1,6 @@
+# id of generating process
+string process_id
+
 # id of associated task
 string task_id
 
