@@ -186,8 +186,6 @@ public:
 protected:
 	/// ComputeBase can only be instantiated by derived classes in stage.cpp
 	ComputeBase(ComputeBasePrivate* impl);
-
-	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
 };
 
 

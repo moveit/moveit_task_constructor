@@ -123,6 +123,9 @@ public:
 	   : StagePrivate(me, name)
 	{}
 
+	// store trajectory in internal trajectories_ list
+	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
+
 private:
 	std::list<SubTrajectory> trajectories_;
 };

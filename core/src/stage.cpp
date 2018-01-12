@@ -190,18 +190,16 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	return os;
 }
 
+SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory){
+	trajectory.setCreator(this);
+	trajectories_.emplace_back(trajectory);
+	return trajectories_.back();
+}
+
 
 ComputeBase::ComputeBase(ComputeBasePrivate *impl)
    : Stage(impl)
 {
-}
-
-SubTrajectory& ComputeBase::addTrajectory(SubTrajectory&& trajectory){
-	auto impl = pimpl();
-	auto &trajs = impl->trajectories_;
-	trajectory.setCreator(impl);
-	trajs.emplace_back(trajectory);
-	return trajs.back();
 }
 
 size_t ComputeBase::numSolutions() const {
@@ -384,7 +382,7 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        SubTrajectory&& t) {
 	auto impl = pimpl();
 	std::cout << "sending state forward" << std::endl;
-	SubTrajectory &trajectory = addTrajectory(std::move(t));
+	SubTrajectory &trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
 	impl->newSolution(trajectory);
@@ -395,7 +393,7 @@ void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         SubTrajectory&& t) {
 	auto impl = pimpl();
 	std::cout << "sending state backward" << std::endl;
-	SubTrajectory& trajectory = addTrajectory(std::move(t));
+	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
 	impl->newSolution(trajectory);
@@ -474,7 +472,7 @@ void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 	assert(!t.trajectory());
 
 	auto impl = pimpl();
-	SubTrajectory& trajectory = addTrajectory(std::move(t));
+	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
 	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
 	impl->newSolution(trajectory);
@@ -534,7 +532,7 @@ Connecting::Connecting(const std::string &name)
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
                          SubTrajectory&& t) {
 	auto impl = pimpl();
-	SubTrajectory& trajectory = addTrajectory(std::move(t));
+	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
 	impl->newSolution(trajectory);
