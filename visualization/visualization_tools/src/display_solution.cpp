@@ -96,7 +96,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		ROS_ERROR("Solution for model '%s' but model '%s' was expected",
 		         msg.start_scene.robot_model_name .c_str(),
 		         start_scene->getRobotModel()->getName().c_str());
-		return;
+		throw std::runtime_error("invalid robot model");
 	}
 
 	// initialize parent scene from solution's start scene

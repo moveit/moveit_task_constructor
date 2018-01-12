@@ -141,8 +141,15 @@ void Task::enableIntrospection(bool enable)
 {
 	if (enable && !introspection_)
 		introspection_.reset(new Introspection(*this));
-	else if (!enable && introspection_)
+	else if (!enable && introspection_) {
+		// reset introspection instance of all stages
+		pimpl()->setIntrospection(nullptr);
+		pimpl()->traverseStages([this](Stage& stage, int) {
+			stage.pimpl()->setIntrospection(nullptr);
+			return true;
+		}, 1, UINT_MAX);
 		introspection_.reset();
+	}
 }
 
 Introspection &Task::introspection()
@@ -174,8 +181,15 @@ void Task::reset()
 void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	WrapperBase::init(scene);
-	if (introspection_)
-		introspection_->publishTaskDescription();
+	// provide introspection instance to all stages
+	pimpl()->setIntrospection(introspection_.get());
+	pimpl()->traverseStages([this](Stage& stage, int) {
+		stage.pimpl()->setIntrospection(introspection_.get());
+		return true;
+	}, 1, UINT_MAX);
+
+	// first time publish task
+	introspection_->publishTaskDescription();
 }
 
 bool Task::canCompute() const

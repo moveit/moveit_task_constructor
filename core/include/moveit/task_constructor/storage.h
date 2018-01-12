@@ -179,6 +179,7 @@ public:
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
+	inline bool isFailure() const { return !std::isfinite(cost_); }
 
 	const std::string& name() const { return name_; }
 	void setName(const std::string& name) { name_ = name; }

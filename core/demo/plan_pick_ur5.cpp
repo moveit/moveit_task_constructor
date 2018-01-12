@@ -64,7 +64,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		// move->addSolutionCallback(std::ref(t.introspection()));
+		// move->addSolutionCallback(std::bind(&Introspection::publishSolution, &t.introspection(), std::placeholders::_1));
 		move->properties().configureInitFrom(Stage::PARENT);
 		move->setMinMaxDistance(.03, 0.1);
 		move->setCartesianStepSize(0.02);

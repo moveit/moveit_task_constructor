@@ -87,6 +87,7 @@ public:
 	}
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
+	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
 
 	void newSolution(const SolutionBase &current);
 
@@ -108,6 +109,8 @@ private:
 
 	InterfaceWeakPtr prev_ends_;    // interface to be used for sendBackward()
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
+
+	Introspection* introspection_;  // task's introspection instance
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
@@ -127,7 +130,8 @@ public:
 	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
 
 private:
-	std::list<SubTrajectory> trajectories_;
+	std::list<SubTrajectory> solutions_;
+	std::list<SubTrajectory> failures_;
 };
 PIMPL_FUNCTIONS(ComputeBase)
 

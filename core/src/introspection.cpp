@@ -128,6 +128,11 @@ void Introspection::reset()
 	impl->resetMaps();
 }
 
+void Introspection::registerSolution(const SolutionBase &s)
+{
+	solutionId(s);
+}
+
 void Introspection::fillSolution(moveit_task_constructor_msgs::Solution &msg,
                                  const SolutionBase &s)
 {

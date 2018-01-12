@@ -100,8 +100,12 @@ class RemoteSolutionModel : public QAbstractTableModel {
 		uint32_t creation_rank;  // rank, ordered by creation
 		uint32_t cost_rank;  // rank, ordering by cost
 
-		Data(uint32_t id, float cost, uint32_t creation_rank, uint32_t cost_rank)
-		   : id(id), cost(cost), creation_rank(creation_rank), cost_rank(cost_rank) {}
+		Data(uint32_t id, float cost, uint32_t cost_rank)
+		   : id(id), cost(cost), creation_rank(0), cost_rank(cost_rank) {}
+
+		bool operator<(const Data& other) const {
+			return this->id < other.id;
+		}
 	};
 	// successful and failed solutions ordered by id / creation
 	typedef std::list<Data> DataList;
@@ -111,10 +115,11 @@ class RemoteSolutionModel : public QAbstractTableModel {
 	// solutions ordered (by default according to cost)
 	int sort_column_ = -1;
 	Qt::SortOrder sort_order_ = Qt::AscendingOrder;
-	float max_cost_ = std::numeric_limits<float>::max();
+	double max_cost_ = std::numeric_limits<double>::infinity();
 	std::vector<DataList::iterator> sorted_;
 
 	inline bool isVisible (const Data& item) const;
+	void processSolutionIDs(const std::vector<uint32_t>& ids, bool successful);
 	void sortInternal();
 
 public:
@@ -130,7 +135,7 @@ public:
 	void sort(int column, Qt::SortOrder order);
 
 	void setData(uint32_t id, float cost, const QString &name);
-	bool processSolutionIDs(const std::vector<uint32_t>& ids, double default_cost);
+	bool processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed);
 };
 
 }

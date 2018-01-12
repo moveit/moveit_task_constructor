@@ -82,10 +82,11 @@ public:
 	/// indicate that this task was reset
 	void reset();
 
+	/// register the given solution, assigning a unique ID
+	void registerSolution(const SolutionBase &s);
+
 	/// publish the given solution
 	void publishSolution(const SolutionBase &s);
-	/// operator version for use in stage callbacks
-	void operator()(const SolutionBase &s) { publishSolution(s); }
 
 	/// publish all top-level solutions of task
 	void publishAllSolutions(bool wait = true);

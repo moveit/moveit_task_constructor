@@ -65,6 +65,7 @@ public:
 	typedef StagePrivate::container_type container_type;
 	typedef container_type::iterator iterator;
 	typedef container_type::const_iterator const_iterator;
+	typedef std::function<bool(Stage&, int depth)> NonConstStageCallback;
 
 	inline const container_type& children() const { return children_; }
 
@@ -73,9 +74,18 @@ public:
 	 * Contrary to std::advance(), iterator limits are considered. */
 	const_iterator position(int index) const;
 
-	/// traversing all stages upto max_depth
+	/// traversing all stages up to max_depth
 	bool traverseStages(const ContainerBase::StageCallback &processor,
 	                    unsigned int cur_depth, unsigned int max_depth) const;
+
+	/// non-const version
+	bool traverseStages(const NonConstStageCallback &processor,
+	                    unsigned int cur_depth, unsigned int max_depth) {
+		const auto& const_processor = [&processor](const Stage& stage, unsigned int depth) {
+			return processor(const_cast<Stage&>(stage), depth);
+		};
+		return const_cast<const ContainerBasePrivate*>(this)->traverseStages(const_processor, cur_depth, max_depth);
+	}
 
 	// forward these methods to the public interface for containers
 	bool canCompute() const override;
@@ -182,6 +192,8 @@ public:
 
 private:
 	std::list<std::unique_ptr<SolutionBase>> solutions_;
+	std::list<std::unique_ptr<SolutionBase>> failures_;
+	std::list<InterfaceState> failure_states_;
 };
 PIMPL_FUNCTIONS(Wrapper)
 

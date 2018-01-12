@@ -278,8 +278,7 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 		}
 		Node *n = it->second;
 
-		bool changed = n->solutions_->processSolutionIDs(s.solved, std::numeric_limits<double>::quiet_NaN()) ||
-		               n->solutions_->processSolutionIDs(s.failed, std::numeric_limits<double>::infinity());
+		bool changed = n->solutions_->processSolutionIDs(s.solved, s.failed);
 		// emit notify about model changes when node was already visited
 		if (changed && (n->node_flags_ & WAS_VISITED)) {
 			QModelIndex idx = index(n);
@@ -354,10 +353,15 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 			// request solution via service
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;
-			if (get_solution_client_->call(srv)) {
-				id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
-			} else { // on failure mark remote task as destroyed: don't retrieve more solutions
-				flags_ |= IS_DESTROYED;
+			try {
+				if (get_solution_client_->call(srv)) {
+					id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
+					return result;
+				} else { // on failure mark remote task as destroyed: don't retrieve more solutions
+					flags_ |= IS_DESTROYED;
+				}
+			} catch (const std::exception& e) {
+				ROS_ERROR("exception: %s", e.what());
 			}
 		}
 		return result;
@@ -502,8 +506,8 @@ void RemoteSolutionModel::sortInternal()
 				comp = left->name.compare(right->name);
 				break;
 			}
-			if (comp == 0)
-				comp = (left->creation_rank < right->creation_rank ? -1 : 1);
+			if (comp == 0)  // if still undecided, id decides
+				comp = (left->id < right->id ? -1 : 1);
 			return (sort_order_ == Qt::AscendingOrder) ? (comp < 0) : (comp >= 0);
 		});
 	}
@@ -527,39 +531,49 @@ void RemoteSolutionModel::sortInternal()
 }
 
 // process solution ids received in stage statistics
-bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, double default_cost)
+bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &successful,
+                                             const std::vector<uint32_t> &failed)
 {
-	// ids are originally ordered by cost, order them by creation order here
-	std::vector<std::pair<uint32_t, uint32_t>> ids_by_creation;
-	uint32_t rank = 0;
-	for (uint32_t id : ids)
-		ids_by_creation.push_back(std::make_pair(id, ++rank));
-	std::sort(ids_by_creation.begin(), ids_by_creation.end(),
-	          [](const auto& left, const auto& right) { return left.first < right.first; });
+	// are there any new items?
+	bool changed = (successful.size() + failed.size() != data_.size());
+	bool was_empty = data_.empty();
 
-	bool size_changed = false;
-	for (const auto &p : ids_by_creation) {
-		if (data_.empty() || p.first > data_.back().id) {  // new item
-			data_.emplace_back(Data(p.first, default_cost, 1+data_.size(), p.second));
-			size_changed |= isVisible(data_.back());
-		} else {
-			// find id in available data_
-			auto data_it = detail::findById(data_, p.first);
-			Q_ASSERT(data_it != data_.end());
-			bool was_visible = isVisible(*data_it);
-			// and update cost rank
-			data_it->cost_rank = p.second;
-			size_changed |= (isVisible(*data_it) != was_visible);
-		}
-	}
+	auto last = --data_.end();
+	// append new items to the end of data_
+	processSolutionIDs(successful, true);
+	processSolutionIDs(failed, false);
+
+	// assign creation rank to new items
+	uint32_t rank = was_empty ? 0 : last->creation_rank;
+	for (auto it = was_empty ? data_.begin() : ++last, end = data_.end(); it != end; ++it)
+		it->creation_rank = ++rank;
 
 	sortInternal();
-	return size_changed;
+	return changed;
+}
+
+void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, bool successful)
+{
+	// ids are ordered by cost, insert them into data_ list sorted by id
+	double default_cost = successful ? std::numeric_limits<double>::quiet_NaN()
+	                                 : std::numeric_limits<double>::infinity();
+	uint32_t cost_rank = 0;
+	for (const uint32_t id : ids) {
+		Data item(id, default_cost, successful ? ++cost_rank : std::numeric_limits<uint32_t>::max());
+		// find id in available data_
+		auto p = std::equal_range(data_.begin(), data_.end(), item);
+		if (p.first == p.second) {  // new item
+			data_.insert(p.second, std::move(item));
+		} else {  // existing item: update cost rank
+			Q_ASSERT(p.first->id == id);
+			p.first->cost_rank = item.cost_rank;
+		}
+	}
 }
 
 bool RemoteSolutionModel::isVisible(const RemoteSolutionModel::Data &item) const
 {
-	return std::isnan(item.cost) || item.cost < max_cost_;
+	return std::isnan(item.cost) || item.cost <= max_cost_;
 }
 
 }

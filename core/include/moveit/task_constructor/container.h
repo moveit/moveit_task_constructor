@@ -90,6 +90,7 @@ public:
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override {}
 
 	/// container used to represent a serial solution
 	typedef std::vector<const SolutionBase*> solution_container;
@@ -181,6 +182,7 @@ public:
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 	size_t numSolutions() const override;
+	void processFailures(const SolutionProcessor &processor) const override {}
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
@@ -215,6 +217,7 @@ public:
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override;
 
 	void spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s);
 	void spawn(InterfaceState &&state, double cost) {

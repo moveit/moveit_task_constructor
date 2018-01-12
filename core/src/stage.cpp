@@ -37,6 +37,7 @@
 
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
+#include <moveit/task_constructor/introspection.h>
 #include <iostream>
 #include <iomanip>
 #include <ros/console.h>
@@ -68,7 +69,7 @@ std::ostream& operator<<(std::ostream &os, const InitStageException& e) {
 
 
 StagePrivate::StagePrivate(Stage *me, const std::string &name)
-   : me_(me), name_(name), parent_(nullptr)
+   : me_(me), name_(name), parent_(nullptr), introspection_(nullptr)
 {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const
@@ -83,8 +84,17 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 
 void StagePrivate::newSolution(const SolutionBase &solution)
 {
+	if (introspection_)
+		introspection_->registerSolution(solution);
+
+	// ignore invalid / failure solutions
+	if (solution.isFailure())
+		return;
+
+	// call solution callbacks for both, valid solutions and failures
 	for (const auto& cb : solution_cbs_)
 		cb(solution);
+
 	if (parent())
 		parent()->onNewSolution(solution);
 }
@@ -134,14 +144,18 @@ void Stage::setName(const std::string& name)
 	pimpl_->name_ = name;
 }
 
+bool Stage::storeFailures() const
+{
+	return pimpl_->introspection_ != nullptr;
+}
+
 Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionCallback &&cb)
 {
 	auto impl = pimpl();
 	impl->solution_cbs_.emplace_back(std::move(cb));
 	return --impl->solution_cbs_.cend();
 }
-
-void Stage::erase(SolutionCallbackList::const_iterator which)
+void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which)
 {
 	pimpl()->solution_cbs_.erase(which);
 }
@@ -190,10 +204,17 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 	return os;
 }
 
-SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory){
+SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
 	trajectory.setCreator(this);
-	trajectories_.emplace_back(trajectory);
-	return trajectories_.back();
+	if (!trajectory.isFailure()) {
+		solutions_.emplace_back(std::move(trajectory));
+		return solutions_.back();
+	} else if (me()->storeFailures()) {
+		// only store failures when introspection is enabled
+		failures_.emplace_back(std::move(trajectory));
+		return failures_.back();
+	} else
+		return trajectory;
 }
 
 
@@ -203,23 +224,26 @@ ComputeBase::ComputeBase(ComputeBasePrivate *impl)
 }
 
 size_t ComputeBase::numSolutions() const {
-	return pimpl()->trajectories_.size();
+	return pimpl()->solutions_.size();
 }
 
 void ComputeBase::processSolutions(const Stage::SolutionProcessor &processor) const
 {
-	for (const auto& s : pimpl()->trajectories_)
+	for (const auto& s : pimpl()->solutions_)
 		if (!processor(s))
 			return;
 }
 
 void ComputeBase::processFailures(const Stage::SolutionProcessor &processor) const
 {
-	// TODO
+	for (const auto& s : pimpl()->failures_)
+		if (!processor(s))
+			return;
 }
 
 void ComputeBase::reset() {
-	pimpl()->trajectories_.clear();
+	pimpl()->solutions_.clear();
+	pimpl()->failures_.clear();
 	Stage::reset();
 }
 

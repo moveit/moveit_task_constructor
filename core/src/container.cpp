@@ -68,7 +68,7 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &pr
 	for (auto &stage : children_) {
 		if (!processor(*stage, cur_depth))
 			continue;
-		ContainerBasePrivate *container = dynamic_cast<ContainerBasePrivate*>(stage->pimpl());
+		const ContainerBasePrivate *container = dynamic_cast<const ContainerBasePrivate*>(stage->pimpl());
 		if (container)
 			container->traverseStages(processor, cur_depth+1, max_depth);
 	}
@@ -292,7 +292,7 @@ void SerialContainerPrivate::storeNewSolution(SerialContainer::solution_containe
 	}
 
 	// perform default stage action on new solution
-	newSolution(solutions_.back());
+	newSolution(solution);
 }
 
 
@@ -610,6 +610,13 @@ void Wrapper::processSolutions(const Stage::SolutionProcessor &processor) const
 			break;
 }
 
+void Wrapper::processFailures(const Stage::SolutionProcessor &processor) const
+{
+	for(const auto& s : pimpl()->failures_)
+		if (!processor(*s))
+			break;
+}
+
 // TODO: allow stages to directly execute this code
 // This requires that SolutionBase::creator_ is a Stage* (not StagePrivate*)
 void Wrapper::spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s)
@@ -617,11 +624,16 @@ void Wrapper::spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s)
 	auto impl = pimpl();
 	s->setCreator(impl);
 	SolutionBase* solution = s.get();
-	impl->solutions_.emplace_back(std::move(s));
-
-	impl->prevEnds()->add(InterfaceState(state), NULL, solution);
-	impl->nextStarts()->add(std::move(state), solution, NULL);
-
+	if (s->isFailure()) {
+		impl->failure_states_.emplace_back(std::move(state));
+		s->setStartState(impl->failure_states_.back());
+		s->setEndState(impl->failure_states_.back());
+		impl->failures_.emplace_back(std::move(s));
+	} else {
+		impl->solutions_.emplace_back(std::move(s));
+		impl->prevEnds()->add(InterfaceState(state), NULL, solution);
+		impl->nextStarts()->add(std::move(state), solution, NULL);
+	}
 	impl->newSolution(*solution);
 }
 

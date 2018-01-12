@@ -144,17 +144,20 @@ public:
 	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
 
+	bool storeFailures() const;
+
 	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
-	/// process all solutions, calling the callback for each of them
+	/// process all solutions in cost order, calling the callback for each of them
 	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
-	virtual void processFailures(const SolutionProcessor &processor) const {}
+	/// process all failures, calling the callback for each of them
+	virtual void processFailures(const SolutionProcessor &processor) const = 0;
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
-	/// add function to be called for every newly found solution
+	/// add function to be called for every newly found solution or failure
 	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
 	/// remove function callback
-	void erase(SolutionCallbackList::const_iterator which);
+	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
 	PropertyMap& properties();
 	const PropertyMap& properties() const {
