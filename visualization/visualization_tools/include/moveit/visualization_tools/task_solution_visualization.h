@@ -128,6 +128,7 @@ private Q_SLOTS:
   void renderCurrentScene();
 
 protected:
+  void setVisibility(); // set visibility of main scene node
   void setVisibility(Ogre::SceneNode* node, Ogre::SceneNode* parent, bool visible);
   float getStateDisplayTime();
   void clearTrail();

@@ -377,7 +377,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       if (loop_display_property_->getBool()) {
         animating_ = true;
       } else if (slider_panel_ && slider_panel_->isVisible()) {
-        if (slider_panel_->getSliderPosition() == (int)displaying_solution_->getWayPointCount() - 1)
+        if (slider_panel_->getSliderPosition() >= (int)displaying_solution_->getWayPointCount() - 1)
           return;  // nothing more to do
         else
           animating_ = true;
@@ -390,53 +390,55 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     {
       // restart animation
       current_state_ = -1;
-      current_state_time_ = std::numeric_limits<float>::infinity();
       trail_scene_node_->setVisible(false);
     }
   }
 
   if (animating_)
   {
-    float tm = getStateDisplayTime();
-    if (tm < 0.0)  // if we should use realtime
-      tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1);
     int previous_state = current_state_;
-
-    if (current_state_time_ > tm)
-    {
-      if (slider_panel_ && slider_panel_->isVisible() && slider_panel_->isPaused())
-        current_state_ = slider_panel_->getSliderPosition();
-      else
-        ++current_state_;
-
-      int waypoint_count = displaying_solution_->getWayPointCount();
-      if (current_state_ < waypoint_count)
-      {
-        renderWayPoint(current_state_, previous_state);
-
-        int stepsize = trail_step_size_property_->getInt();
-        for (int i = std::max(0, previous_state / stepsize),
-             end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
-          trail_[i]->setVisible(true);
-      }
-      else
-      {
-        animating_ = false;  // animation finished
-        if (!loop_display_property_->getBool() && slider_panel_)
-          slider_panel_->pauseButton(true);
-        // ensure to render end state
-        renderWayPoint(waypoint_count, previous_state);
-      }
-      current_state_time_ = 0.0f;
-    }
+    int waypoint_count = displaying_solution_->getWayPointCount();
     current_state_time_ += wall_dt;
-  }
 
-  // main scene node is visible if animation, trail, or panel is shown, or if display is locked
-  setVisibility(main_scene_node_, parent_scene_node_,
-                display_->isEnabled() && displaying_solution_ &&
-                (animating_ || locked_ || trail_scene_node_->getParent() ||
-                 (slider_panel_ && slider_panel_->isVisible())));
+    float tm = getStateDisplayTime();
+    if (slider_panel_ && slider_panel_->isVisible() && slider_panel_->isPaused())
+      current_state_ = slider_panel_->getSliderPosition();
+    else if (current_state_ < 0) {  // special case indicating restart of animation
+      current_state_ = 0;
+      current_state_time_ = 0.0;
+    } else if (tm < 0.0) {  // using realtime: skip to next waypoint based on elapsed display time
+      while (current_state_ < waypoint_count &&
+             (tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1)) < current_state_time_) {
+          current_state_time_ -= tm;
+          ++current_state_;
+      }
+    } else if (current_state_time_ > tm) {  // fixed display time per state
+      current_state_time_ = 0.0;
+      ++current_state_;
+    }
+
+    if (current_state_ == previous_state)
+      return;
+
+    if (current_state_ < waypoint_count)
+    {
+      renderWayPoint(current_state_, previous_state);
+
+      int stepsize = trail_step_size_property_->getInt();
+      for (int i = std::max(0, previous_state / stepsize),
+           end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
+        trail_[i]->setVisible(true);
+    }
+    else
+    {
+      animating_ = false;  // animation finished
+      if (!loop_display_property_->getBool() && slider_panel_)
+        slider_panel_->pauseButton(true);
+      // ensure to render end state
+      renderWayPoint(waypoint_count, previous_state);
+    }
+  }
+  setVisibility();
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
@@ -551,13 +553,12 @@ void TaskSolutionVisualization::sliderPanelVisibilityChange(bool enable)
 
   if (enable) {
     // also enable display
-      display_->setEnabled(true);
+    display_->setEnabled(true);
     slider_panel_->onEnable();
   } else
     slider_panel_->onDisable();
 
-  setVisibility(main_scene_node_, parent_scene_node_,
-                display_->isEnabled() && displaying_solution_ && enable);
+  setVisibility();
 }
 
 
@@ -591,6 +592,15 @@ void TaskSolutionVisualization::setVisibility(Ogre::SceneNode *node, Ogre::Scene
     }
   } else if (!visible && node->getParent())
     node->getParent()->removeChild(node);
+}
+
+void TaskSolutionVisualization::setVisibility()
+{
+  // main scene node is visible if animation, trail, or panel is shown, or if display is locked
+  setVisibility(main_scene_node_, parent_scene_node_,
+                display_->isEnabled() && displaying_solution_ &&
+                (animating_ || locked_ || trail_scene_node_->getParent() ||
+                 (slider_panel_ && slider_panel_->isVisible())));
 }
 
 }  // namespace moveit_rviz_plugin
