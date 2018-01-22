@@ -593,7 +593,9 @@ bool Wrapper::canCompute() const
 
 bool Wrapper::compute()
 {
-	return wrapped()->pimpl()->compute();
+	size_t num_before = numSolutions();
+	wrapped()->pimpl()->compute();
+	return numSolutions() > num_before;
 }
 
 size_t Wrapper::numSolutions() const
