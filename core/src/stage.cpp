@@ -227,6 +227,11 @@ size_t ComputeBase::numSolutions() const {
 	return pimpl()->solutions_.size();
 }
 
+size_t ComputeBase::numFailures() const
+{
+	return pimpl()->num_failures_;
+}
+
 void ComputeBase::processSolutions(const Stage::SolutionProcessor &processor) const
 {
 	for (const auto& s : pimpl()->solutions_)
@@ -317,7 +322,7 @@ bool PropagatingEitherWayPrivate::compute()
 		if (me->computeBackward(state))
 			result |= true;
 	}
-	return result;
+	return countFailures(result);
 }
 
 void PropagatingEitherWayPrivate::newStartState(const Interface::iterator &it)
@@ -472,7 +477,7 @@ bool GeneratorPrivate::canCompute() const {
 
 bool GeneratorPrivate::compute() {
 	initProperties();
-	return static_cast<Generator*>(me_)->compute();
+	return countFailures(static_cast<Generator*>(me_)->compute());
 }
 
 void GeneratorPrivate::initProperties()
@@ -544,7 +549,7 @@ bool ConnectingPrivate::compute() {
 	const InterfaceState& from = *it_pairs_.first;
 	const InterfaceState& to = *(it_pairs_.second++);
 	initProperties(from, to);
-	return static_cast<Connecting*>(me_)->compute(from, to);
+	return countFailures(static_cast<Connecting*>(me_)->compute(from, to));
 }
 
 

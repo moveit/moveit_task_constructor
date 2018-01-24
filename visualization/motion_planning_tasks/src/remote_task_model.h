@@ -110,7 +110,8 @@ class RemoteSolutionModel : public QAbstractTableModel {
 	// successful and failed solutions ordered by id / creation
 	typedef std::list<Data> DataList;
 	DataList data_;
-	size_t num_failed_ = 0;  // number of failed solutions in data_
+	size_t num_failed_data_ = 0;  // number of failed solutions in data_
+	size_t num_failed_ = 0;  // number of reported failures
 
 	// solutions ordered (by default according to cost)
 	int sort_column_ = -1;
@@ -125,7 +126,7 @@ class RemoteSolutionModel : public QAbstractTableModel {
 public:
 	RemoteSolutionModel(QObject *parent = nullptr);
 
-	uint numSuccessful() const { return data_.size() - num_failed_; }
+	uint numSuccessful() const { return data_.size() - num_failed_data_; }
 	uint numFailed() const { return num_failed_; }
 
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -135,7 +136,7 @@ public:
 	void sort(int column, Qt::SortOrder order);
 
 	void setData(uint32_t id, float cost, const QString &name);
-	bool processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed);
+	bool processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
 };
 
 }

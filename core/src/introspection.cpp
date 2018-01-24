@@ -216,6 +216,7 @@ void Introspection::fillStageStatistics(const Stage& stage, moveit_task_construc
 		return true;
 	};
 	stage.processFailures(solutionProcessor);
+	s.num_failed = stage.numFailures();
 }
 
 moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription &msg)

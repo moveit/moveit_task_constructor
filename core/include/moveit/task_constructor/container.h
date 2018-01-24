@@ -67,6 +67,9 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
 
+	size_t numFailures() const override { return 0; }
+	void processFailures(const SolutionProcessor&) const override {}
+
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;
 
@@ -90,7 +93,6 @@ public:
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
-	void processFailures(const SolutionProcessor &processor) const override {}
 
 	/// container used to represent a serial solution
 	typedef std::vector<const SolutionBase*> solution_container;
@@ -182,7 +184,6 @@ public:
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 	size_t numSolutions() const override;
-	void processFailures(const SolutionProcessor &processor) const override {}
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
@@ -216,6 +217,7 @@ public:
 	bool compute() override;
 
 	size_t numSolutions() const override;
+	size_t numFailures() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
 	void processFailures(const SolutionProcessor &processor) const override;
 

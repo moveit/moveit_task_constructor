@@ -143,6 +143,7 @@ public:
 	const std::string& name() const;
 	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
+	virtual size_t numFailures() const = 0;
 
 	bool storeFailures() const;
 
@@ -183,6 +184,7 @@ public:
 	PRIVATE_CLASS(ComputeBase)
 	void reset() override;
 	virtual size_t numSolutions() const override;
+	virtual size_t numFailures() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
 	void processFailures(const SolutionProcessor &processor) const override;
 

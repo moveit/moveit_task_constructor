@@ -603,6 +603,11 @@ size_t Wrapper::numSolutions() const
 	return pimpl()->solutions_.size();
 }
 
+size_t Wrapper::numFailures() const
+{
+	return pimpl()->failures_.size();
+}
+
 void Wrapper::processSolutions(const Stage::SolutionProcessor &processor) const
 {
 	for(const auto& s : pimpl()->solutions_)

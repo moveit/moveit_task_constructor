@@ -129,9 +129,16 @@ public:
 	// store trajectory in internal trajectories_ list
 	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
 
+	// countFailures() serves as a filter before returning the result of compute()
+	inline bool countFailures(bool success) {
+		if (!success) ++num_failures_;
+		return success;
+	}
+
 private:
 	std::list<SubTrajectory> solutions_;
 	std::list<SubTrajectory> failures_;
+	size_t num_failures_ = 0;  // num of failures if not stored
 };
 PIMPL_FUNCTIONS(ComputeBase)
 
