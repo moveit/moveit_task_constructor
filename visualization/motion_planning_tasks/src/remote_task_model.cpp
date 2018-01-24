@@ -277,11 +277,10 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 			continue;
 		}
 		Node *n = it->second;
-
-		bool changed = n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed);
+		n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed);
 
 		// emit notify about model changes when node was already visited
-		if (changed && (n->node_flags_ & WAS_VISITED)) {
+		if (n->node_flags_ & WAS_VISITED) {
 			QModelIndex idx = index(n);
 			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 2));
 		}
@@ -532,15 +531,13 @@ void RemoteSolutionModel::sortInternal()
 }
 
 // process solution ids received in stage statistics
-bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &successful,
+void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &successful,
                                              const std::vector<uint32_t> &failed,
                                              size_t num_failed)
 {
-	// are there any new items?
-	bool changed = (successful.size() + failed.size() != data_.size());
 	bool was_empty = data_.empty();
-
 	auto last = --data_.end();
+
 	// append new items to the end of data_
 	processSolutionIDs(successful, true);
 	processSolutionIDs(failed, false);
@@ -553,13 +550,9 @@ bool RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &succes
 	// the task may not report failure ids (in failed),
 	// but it may report the overall number of failures
 	num_failed_data_ = failed.size(); // needed to compute number of successes
-	if (num_failed_data_ > num_failed)
-		num_failed = num_failed_data_;
-	changed |= (num_failed != num_failed_);
-	num_failed_ = num_failed;
+	num_failed_ = std::max(num_failed, num_failed_data_);
 
 	sortInternal();
-	return changed;
 }
 
 void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, bool successful)

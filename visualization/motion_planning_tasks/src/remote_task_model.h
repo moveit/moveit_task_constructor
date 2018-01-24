@@ -136,7 +136,7 @@ public:
 	void sort(int column, Qt::SortOrder order);
 
 	void setData(uint32_t id, float cost, const QString &name);
-	bool processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
+	void processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
 };
 
 }
