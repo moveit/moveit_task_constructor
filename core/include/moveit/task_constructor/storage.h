@@ -191,6 +191,11 @@ public:
 	virtual void fillMessage(moveit_task_constructor_msgs::Solution &solution,
 	                         Introspection* introspection = nullptr) const = 0;
 
+	/// order solutions by their cost
+	bool operator<(const SolutionBase& other) const {
+		return this->cost_ < other.cost_;
+	}
+
 protected:
 	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0)
 	   : creator_(creator), cost_(cost)

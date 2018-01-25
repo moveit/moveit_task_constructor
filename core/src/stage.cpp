@@ -207,8 +207,7 @@ std::ostream& operator<<(std::ostream &os, const Stage& stage) {
 SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
 	trajectory.setCreator(this);
 	if (!trajectory.isFailure()) {
-		solutions_.emplace_back(std::move(trajectory));
-		return solutions_.back();
+		return *solutions_.insert(std::move(trajectory));
 	} else if (me()->storeFailures()) {
 		// only store failures when introspection is enabled
 		failures_.emplace_back(std::move(trajectory));

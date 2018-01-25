@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
+#include "utils.h"
 #include "stage_p.h"
 
 #include <map>
@@ -146,7 +147,7 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 	void storeNewSolution(SerialContainer::solution_container &&s, double cost);
-	const std::list<SerialSolution>& solutions() const { return solutions_; }
+	const ordered<SerialSolution>& solutions() const { return solutions_; }
 
 private:
 	void connect(StagePrivate *prev, StagePrivate *next);
@@ -157,7 +158,7 @@ private:
 	InterfacePtr pending_forward_;
 
 	// set of all solutions
-	std::list<SerialSolution> solutions_;
+	ordered<SerialSolution> solutions_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
@@ -191,7 +192,7 @@ public:
 	WrapperPrivate(Wrapper* me, const std::string& name);
 
 private:
-	std::list<std::unique_ptr<SolutionBase>> solutions_;
+	ordered<std::unique_ptr<SolutionBase>, pointerLessThan<std::unique_ptr<SolutionBase>>> solutions_;
 	std::list<std::unique_ptr<SolutionBase>> failures_;
 	std::list<InterfaceState> failure_states_;
 };

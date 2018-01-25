@@ -268,8 +268,7 @@ void SerialContainerPrivate::storeNewSolution(SerialContainer::solution_containe
 	const InterfaceState *internal_to = s.back()->end();
 
 	// create new solution directly in solutions_ and get a reference to it
-	solutions_.emplace_back(SerialSolution(this, std::move(s), cost));
-	SerialSolution& solution = solutions_.back();
+	SerialSolution& solution = *solutions_.insert(SerialSolution(this, std::move(s), cost));
 
 	// add solution to existing or new start state
 	auto it = internal_to_my_starts_.find(internal_from);
@@ -635,7 +634,7 @@ void Wrapper::spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s)
 		s->setEndState(impl->failure_states_.back());
 		impl->failures_.emplace_back(std::move(s));
 	} else {
-		impl->solutions_.emplace_back(std::move(s));
+		impl->solutions_.insert(std::move(s));
 		impl->prevEnds()->add(InterfaceState(state), NULL, solution);
 		impl->nextStarts()->add(std::move(state), solution, NULL);
 	}

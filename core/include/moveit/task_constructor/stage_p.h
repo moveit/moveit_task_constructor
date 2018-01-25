@@ -40,6 +40,7 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/cost_queue.h>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
 #define PIMPL_FUNCTIONS(Class) \
@@ -136,7 +137,7 @@ public:
 	}
 
 private:
-	std::list<SubTrajectory> solutions_;
+	ordered<SubTrajectory> solutions_;
 	std::list<SubTrajectory> failures_;
 	size_t num_failures_ = 0;  // num of failures if not stored
 };
