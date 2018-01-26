@@ -103,7 +103,7 @@ class RemoteSolutionModel : public QAbstractTableModel {
 		Data(uint32_t id, float cost, uint32_t cost_rank)
 		   : id(id), cost(cost), creation_rank(0), cost_rank(cost_rank) {}
 
-		bool operator<(const Data& other) const {
+		inline bool operator<(const Data& other) const {
 			return this->id < other.id;
 		}
 	};

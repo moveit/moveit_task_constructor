@@ -370,17 +370,27 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 }
 
 namespace detail {
-template <class T>
-auto id(const typename T::value_type &item) -> decltype(item.id) { return item.id; }
-template <class T>
-auto id(const typename T::value_type &item) -> decltype(item->id) { return item->id; }
+// SFINAE magic selects matching template: http://en.cppreference.com/w/cpp/language/sfinae
 
+// method used for sorted_ container, requiring an additional dereference to access id
 template <class T>
-typename T::iterator findById(T& c, uint32_t id)
+typename T::iterator findById(T& c, decltype((*c.cbegin())->id) id)
 {
 	return std::find_if(c.begin(), c.end(), [id](const typename T::value_type& item) {
-		return detail::id<T>(item) == id;
+		return item->id == id;
 	});
+}
+
+// method used for data_ container, allowing for binary search
+template <class T>
+typename T::iterator findById(T& c, decltype((*c.cbegin()).id) id)
+{
+	typedef decltype((*c.cbegin()).id) val_type;
+	auto p = std::__equal_range(c.begin(), c.end(), id,
+	                            [](typename T::iterator it, val_type val){ return it->id < val; },
+	                            [](val_type val, typename T::iterator it){ return val < it->id; });
+	if (p.first == p.second) return c.end();  // id not found
+	return p.first;
 }
 }
 
@@ -451,13 +461,16 @@ QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
 
 void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString &name)
 {
-	auto it = detail::findById(data_, id);
-	if (it == data_.end()) return;
+	// retrieve iterator and row corresponding to id
+	auto sit = detail::findById(sorted_, id);
+	int row = (sit != sorted_.end()) ? sit - sorted_.begin() : -1;
+	auto it = (sit != sorted_.end()) ? *sit : detail::findById(data_, id);
+	if (it == data_.end()) {
+		ROS_WARN("solution id not found: %d", id);
+		return;
+	}
 
 	QModelIndex tl, br;
-	int row = detail::findById(sorted_, id) - sorted_.begin();
-	if (row >= rowCount()) row = -1;  // hidden
-
 	Data &item = *it;
 	if (item.cost != cost) {
 		item.cost = cost;
