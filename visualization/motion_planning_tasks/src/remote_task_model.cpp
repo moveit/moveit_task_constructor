@@ -370,9 +370,7 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 }
 
 namespace detail {
-// SFINAE magic selects matching template: http://en.cppreference.com/w/cpp/language/sfinae
-
-// method used for sorted_ container, requiring an additional dereference to access id
+// method used by sorted_ container (requiring an additional dereference to access id)
 template <class T>
 typename T::iterator findById(T& c, decltype((*c.cbegin())->id) id)
 {
@@ -381,16 +379,15 @@ typename T::iterator findById(T& c, decltype((*c.cbegin())->id) id)
 	});
 }
 
-// method used for data_ container, allowing for binary search
+// insert new Data item into data_ container
 template <class T>
-typename T::iterator findById(T& c, decltype((*c.cbegin()).id) id)
+typename T::iterator insert(T& c, typename T::value_type&& item)
 {
-	typedef decltype((*c.cbegin()).id) val_type;
-	auto p = std::__equal_range(c.begin(), c.end(), id,
-	                            [](typename T::iterator it, val_type val){ return it->id < val; },
-	                            [](val_type val, typename T::iterator it){ return val < it->id; });
-	if (p.first == p.second) return c.end();  // id not found
-	return p.first;
+	auto p = std::equal_range(c.begin(), c.end(), item);
+	if (p.first == p.second)  // new item
+		return c.insert(p.second, std::move(item));
+	else
+		return p.first;
 }
 }
 
@@ -464,11 +461,7 @@ void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString
 	// retrieve iterator and row corresponding to id
 	auto sit = detail::findById(sorted_, id);
 	int row = (sit != sorted_.end()) ? sit - sorted_.begin() : -1;
-	auto it = (sit != sorted_.end()) ? *sit : detail::findById(data_, id);
-	if (it == data_.end()) {
-		ROS_WARN("solution id not found: %d", id);
-		return;
-	}
+	auto it = (sit != sorted_.end()) ? *sit : detail::insert(data_, Data(id, cost, 0, name));
 
 	QModelIndex tl, br;
 	Data &item = *it;
@@ -484,6 +477,9 @@ void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString
 	}
 	if (tl.isValid())
 		Q_EMIT dataChanged(tl, br);
+
+	if (row < 0 && isVisible(*it)) // item was newly created: inform views
+		sortInternal();
 }
 
 void RemoteSolutionModel::sort(int column, Qt::SortOrder order)
@@ -548,17 +544,14 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &succes
                                              const std::vector<uint32_t> &failed,
                                              size_t num_failed)
 {
-	bool was_empty = data_.empty();
-	auto last = --data_.end();
-
 	// append new items to the end of data_
 	processSolutionIDs(successful, true);
 	processSolutionIDs(failed, false);
 
-	// assign creation rank to new items
-	uint32_t rank = was_empty ? 0 : last->creation_rank;
-	for (auto it = was_empty ? data_.begin() : ++last, end = data_.end(); it != end; ++it)
-		it->creation_rank = ++rank;
+	// assign consecutive creation ranks
+	uint32_t rank = 0;
+	for (auto& item: data_)
+		item.creation_rank = ++rank;
 
 	// the task may not report failure ids (in failed),
 	// but it may report the overall number of failures
@@ -575,15 +568,10 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t> &ids, b
 	                                 : std::numeric_limits<double>::infinity();
 	uint32_t cost_rank = 0;
 	for (const uint32_t id : ids) {
-		Data item(id, default_cost, successful ? ++cost_rank : std::numeric_limits<uint32_t>::max());
-		// find id in available data_
-		auto p = std::equal_range(data_.begin(), data_.end(), item);
-		if (p.first == p.second) {  // new item
-			data_.insert(p.second, std::move(item));
-		} else {  // existing item: update cost rank
-			Q_ASSERT(p.first->id == id);
-			p.first->cost_rank = item.cost_rank;
-		}
+		uint32_t rank = successful ? ++cost_rank : std::numeric_limits<uint32_t>::max();
+		auto it = detail::insert(data_, Data(id, default_cost, rank));
+		Q_ASSERT(it->id == id);
+		it->cost_rank = rank;
 	}
 }
 

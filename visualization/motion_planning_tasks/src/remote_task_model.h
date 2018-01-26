@@ -100,8 +100,8 @@ class RemoteSolutionModel : public QAbstractTableModel {
 		uint32_t creation_rank;  // rank, ordered by creation
 		uint32_t cost_rank;  // rank, ordering by cost
 
-		Data(uint32_t id, float cost, uint32_t cost_rank)
-		   : id(id), cost(cost), creation_rank(0), cost_rank(cost_rank) {}
+		Data(uint32_t id, float cost, uint32_t cost_rank, const QString& name=QString())
+		   : id(id), cost(cost), name(name), creation_rank(0), cost_rank(cost_rank) {}
 
 		inline bool operator<(const Data& other) const {
 			return this->id < other.id;
