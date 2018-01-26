@@ -296,12 +296,12 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 	for (const auto& sub : msg.sub_solution) {
 		if (sub.id == 0) continue;
 		if (RemoteSolutionModel *m = getSolutionModel(sub.stage_id))
-			m->setData(sub.id, sub.cost, QString());
+			m->setSolutionData(sub.id, sub.cost, QString());
 	}
 	for (const auto& sub : msg.sub_trajectory) {
 		if (sub.id == 0) continue;
 		if (RemoteSolutionModel *m = getSolutionModel(sub.stage_id))
-			m->setData(sub.id, sub.cost, QString::fromStdString(sub.name));
+			m->setSolutionData(sub.id, sub.cost, QString::fromStdString(sub.name));
 	}
 
 	// caching is only enabled for top-level solutions (stage_id == 1)
@@ -449,7 +449,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
 	return QVariant();
 }
 
-void RemoteSolutionModel::setData(uint32_t id, float cost, const QString &name)
+void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString &name)
 {
 	auto it = detail::findById(data_, id);
 	if (it == data_.end()) return;

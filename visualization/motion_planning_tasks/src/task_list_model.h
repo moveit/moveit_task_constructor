@@ -145,7 +145,7 @@ public:
 	void setStageFactory(const StageFactoryPtr &factory);
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 	Qt::DropActions supportedDropActions() const override;
-	Qt::ItemFlags flags(const QModelIndex &index) const;
+	Qt::ItemFlags flags(const QModelIndex &index) const override;
 };
 
 
@@ -165,8 +165,8 @@ public:
 
 	void setAutoHideSections(const QList<int> &sections);
 
-	void setModel(QAbstractItemModel *model);
-	QSize viewportSizeHint() const;
+	void setModel(QAbstractItemModel *model) override;
+	QSize viewportSizeHint() const override;
 	void resizeEvent(QResizeEvent *event) override;
 };
 

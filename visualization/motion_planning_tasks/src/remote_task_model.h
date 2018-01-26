@@ -52,7 +52,7 @@ class RemoteSolutionModel;
  */
 class RemoteTaskModel : public BaseTaskModel {
 	Q_OBJECT
-	class Node;
+	struct Node;
 	Node* const root_;
 	planning_scene::PlanningSceneConstPtr scene_;
 	ros::ServiceClient* get_solution_client_ = nullptr;
@@ -133,9 +133,9 @@ public:
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	void sort(int column, Qt::SortOrder order);
+	void sort(int column, Qt::SortOrder order) override;
 
-	void setData(uint32_t id, float cost, const QString &name);
+	void setSolutionData(uint32_t id, float cost, const QString &name);
 	void processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
 };
 

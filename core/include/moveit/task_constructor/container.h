@@ -232,7 +232,7 @@ protected:
 	Wrapper(WrapperPrivate* impl, pointer &&child = Stage::pointer());
 
 	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(const SolutionBase &s) = 0;
+	void onNewSolution(const SolutionBase &s) override = 0;
 };
 
 } }

@@ -80,7 +80,7 @@ public:
 
 	void setMimeTypes(const QStringList& mime_types);
 	QStringList mimeTypes() const override;
-	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent);
+	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 
 	bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
