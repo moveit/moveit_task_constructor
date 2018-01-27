@@ -87,14 +87,14 @@ bool ContainerBasePrivate::compute()
 	return static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::copyState(InterfaceState &external_state,
+void ContainerBasePrivate::copyState(InterfaceState &external,
                                      Stage &child, bool to_start) {
 	if (to_start) {
-		auto internal = child.pimpl()->starts()->clone(external_state);
-		internal_to_my_starts_.insert(std::make_pair(&*internal, &external_state));
+		InterfaceState& internal = *child.pimpl()->starts()->clone(external);
+		internal_to_external_.insert(std::make_pair(&internal, &external));
 	} else {
-		auto internal = child.pimpl()->ends()->clone(external_state);
-		internal_to_my_ends_.insert(std::make_pair(&*internal, &external_state));
+		InterfaceState& internal = *child.pimpl()->ends()->clone(external);
+		internal_to_external_.insert(std::make_pair(&internal, &external));
 	}
 }
 
@@ -154,8 +154,7 @@ void ContainerBase::reset()
 		child->reset();
 
 	// clear mapping
-	impl->internal_to_my_starts_.clear();
-	impl->internal_to_my_ends_.clear();
+	impl->internal_to_external_.clear();
 
 	Stage::reset();
 }
@@ -278,23 +277,25 @@ void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
 	SerialSolution& solution = *solutions_.insert(std::move(s));
 
 	// add solution to existing or new start state
-	auto it = internal_to_my_starts_.find(internal_from);
-	if (it != internal_to_my_starts_.end()) {
+	auto it = internal_to_external_.find(internal_from);
+	if (it != internal_to_external_.end()) {
 		// connect solution to existing start state
 		solution.setStartState(*it->second);
 	} else {
 		// spawn a new state in previous stage
-		prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		InterfaceState& external = *prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		internal_to_external_.insert(std::make_pair(internal_from, &external));
 	}
 
 	// add solution to existing or new end state
-	it = internal_to_my_ends_.find(internal_to);
-	if (it != internal_to_my_ends_.end()) {
+	it = internal_to_external_.find(internal_to);
+	if (it != internal_to_external_.end()) {
 		// connect solution to existing start state
 		solution.setEndState(*it->second);
 	} else {
 		// spawn a new state in next stage
-		nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		InterfaceState& external = *nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		internal_to_external_.insert(std::make_pair(internal_to, &external));
 	}
 
 	// perform default stage action on new solution
