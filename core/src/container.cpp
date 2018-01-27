@@ -43,6 +43,9 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
+#include <functional>
+
+using namespace std::placeholders;
 
 namespace moveit { namespace task_constructor {
 
@@ -87,14 +90,14 @@ bool ContainerBasePrivate::compute()
 	return static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::copyState(InterfaceState &external,
-                                     Stage &child, bool to_start) {
+void ContainerBasePrivate::copyState(Interface::iterator external,
+                                     Stage &child, bool to_start, bool updated) {
 	if (to_start) {
-		InterfaceState& internal = *child.pimpl()->starts()->clone(external);
-		internal_to_external_.insert(std::make_pair(&internal, &external));
+		InterfaceState& internal = *child.pimpl()->starts()->clone(*external);
+		internal_to_external_.insert(std::make_pair(&internal, external));
 	} else {
-		InterfaceState& internal = *child.pimpl()->ends()->clone(external);
-		internal_to_external_.insert(std::make_pair(&internal, &external));
+		InterfaceState& internal = *child.pimpl()->ends()->clone(*external);
+		internal_to_external_.insert(std::make_pair(&internal, external));
 	}
 }
 
@@ -283,8 +286,8 @@ void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
 		solution.setStartState(*it->second);
 	} else {
 		// spawn a new state in previous stage
-		InterfaceState& external = *prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
-		internal_to_external_.insert(std::make_pair(internal_from, &external));
+		Interface::iterator external = prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		internal_to_external_.insert(std::make_pair(internal_from, external));
 	}
 
 	// add solution to existing or new end state
@@ -294,8 +297,8 @@ void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
 		solution.setEndState(*it->second);
 	} else {
 		// spawn a new state in next stage
-		InterfaceState& external = *nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
-		internal_to_external_.insert(std::make_pair(internal_to, &external));
+		Interface::iterator external = nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		internal_to_external_.insert(std::make_pair(internal_to, external));
 	}
 
 	// perform default stage action on new solution
@@ -363,16 +366,16 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		// initialize starts_ and ends_ interfaces
 		Stage* child = start->get();
 		if (child->pimpl()->starts())
-			impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
+			impl->starts_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
 				// new external state in our starts_ interface is copied to first child
-				impl->copyState(*external, *child, true);
+				impl->copyState(external, *child, true, updated);
 			}));
 
 		child = last->get();
 		if (child->pimpl()->ends())
-			impl->ends_.reset(new Interface([impl, child](const Interface::iterator& external){
+			impl->ends_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
 				// new external state in our ends_ interface is copied to last child
-				impl->copyState(*external, *child, false);
+				impl->copyState(external, *child, false, updated);
 			}));
 
 		// validate connectivity of this
@@ -466,12 +469,8 @@ void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::string &name)
    : ContainerBasePrivate(me, name)
 {
-	starts_.reset(new Interface([me](const Interface::iterator& external){
-		me->onNewStartState(*external);
-	}));
-	ends_.reset(new Interface([me](const Interface::iterator& external){
-		me->onNewEndState(*external);
-	}));
+	starts_.reset(new Interface(std::bind(&ParallelContainerBase::onNewStartState, me, _1, _2)));
+	ends_.reset(new Interface(std::bind(&ParallelContainerBase::onNewEndState, me, _1, _2)));
 }
 
 

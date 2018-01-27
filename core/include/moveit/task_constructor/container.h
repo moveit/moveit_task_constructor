@@ -139,9 +139,9 @@ protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
 	/// callback for new start states (received externally)
-	virtual void onNewStartState(const InterfaceState &external) = 0;
+	virtual void onNewStartState(Interface::iterator external, bool updated) = 0;
 	/// callback for new end states (received externally)
-	virtual void onNewEndState(const InterfaceState &external) = 0;
+	virtual void onNewEndState(Interface::iterator external, bool updated) = 0;
 };
 
 

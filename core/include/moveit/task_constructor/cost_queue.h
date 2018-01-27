@@ -50,6 +50,8 @@ public:
 
 	reference top() { return c.front(); }
 	const_reference top() const { return c.front(); }
+	reference pop() { reference result = top(); c.pop_front(); return result; }
+
 	reference front() { return c.front(); }
 	const_reference front() const { return c.front(); }
 	reference back() { return c.back(); }
@@ -68,6 +70,9 @@ public:
 	const_reverse_iterator crbegin() const { return c.rbegin(); }
 	const_reverse_iterator crend() const { return c.rend(); }
 
+	/// explicitly sort container, useful if many items have changed their value
+	void sort() { c.sort(comp); }
+
 	iterator insert(const value_type& item) {
 		iterator at = std::upper_bound(c.begin(), c.end(), item, comp);
 		return c.insert(at, item);
@@ -79,7 +84,7 @@ public:
 
 	iterator erase(const_iterator pos) { return c.erase(pos); }
 
-	/// update sort position of iterator after changes
+	/// update sort position of a single item after changes
 	iterator update(iterator &it) {
 		container_type temp;
 		temp.splice(temp.end(), c, it);  // move it from c to temp
@@ -87,12 +92,26 @@ public:
 		c.splice(at, temp, it);
 		return it;
 	}
+
+	/// move element pos from this to other container, inserting before other_pos
+	iterator moveTo(iterator pos, container_type& other, iterator other_pos) {
+		other.splice(other_pos, c, pos);
+		return pos;
+	}
+	/// move element pos from other container into this one (sorted)
+	iterator moveFrom(iterator pos, container_type& other) {
+		iterator at = std::upper_bound(begin(), end(), *pos, comp);
+		c.splice(at, other, pos);
+		return pos;
+	}
 };
 
 namespace detail {
 
 template <typename ValueType, typename CostType>
 struct ItemCostPair : std::pair<ValueType, CostType> {
+	typedef CostType cost_type;
+
 	ItemCostPair(const std::pair<ValueType, CostType>& other)
 	   : std::pair<ValueType, CostType>(other) {}
 	ItemCostPair(std::pair<ValueType, CostType>&& other)
@@ -101,7 +120,7 @@ struct ItemCostPair : std::pair<ValueType, CostType> {
 	inline ValueType& value() { return this->first; }
 	inline const ValueType& value() const { return this->first; }
 
-	inline const CostType& cost() const { return this->second; }
+	inline CostType cost() const { return this->second; }
 
 	// comparison only considers cost
 	constexpr bool operator<(const ItemCostPair& other) const {
@@ -109,7 +128,7 @@ struct ItemCostPair : std::pair<ValueType, CostType> {
 	}
 };
 
-}
+}  // namespace detail
 
 template <typename ValueType, typename CostType = double,
           typename Compare = std::less<detail::ItemCostPair<ValueType, CostType>>>
@@ -117,7 +136,10 @@ class cost_ordered : public ordered<detail::ItemCostPair<ValueType, CostType>, C
 {
 	typedef ordered<detail::ItemCostPair<ValueType, CostType>, Compare> base_type;
 public:
-	auto insert(const ValueType& value, const CostType& cost) {
+	auto insert(const ValueType& value, const CostType cost) {
 		return base_type::insert(std::make_pair(value, cost));
+	}
+	auto insert(ValueType&& value, const CostType cost) {
+		return base_type::insert(std::make_pair(std::move(value), cost));
 	}
 };

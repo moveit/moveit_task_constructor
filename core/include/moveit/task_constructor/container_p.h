@@ -98,13 +98,13 @@ protected:
 	{}
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
-	void copyState(InterfaceState &external, Stage &child, bool to_start);
+	void copyState(Interface::iterator external, Stage &child, bool to_start, bool updated);
 
 protected:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
-	std::map<const InterfaceState*, InterfaceState*> internal_to_external_;
+	std::map<const InterfaceState*, Interface::iterator> internal_to_external_;
 };
 PIMPL_FUNCTIONS(ContainerBase)
 
