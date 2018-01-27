@@ -123,6 +123,9 @@ public:
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution &msg, Introspection *introspection) const override;
 
+	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
+	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
+
 private:
 	/// series of sub solutions
 	SerialContainer::solution_container subsolutions_;
@@ -146,7 +149,7 @@ class SerialContainerPrivate : public ContainerBasePrivate {
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
-	void storeNewSolution(SerialContainer::solution_container &&s, double cost);
+	void storeNewSolution(SerialSolution&& s);
 	const ordered<SerialSolution>& solutions() const { return solutions_; }
 
 private:

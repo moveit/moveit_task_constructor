@@ -219,8 +219,9 @@ struct SolutionCollector {
 
 void SerialContainer::onNewSolution(const SolutionBase &current)
 {
+	auto impl = pimpl();
 	const StagePrivate *creator = current.creator();
-	auto& children = pimpl()->children();
+	auto& children = impl->children();
 
 	// s.creator() should be one of our children
 	assert(std::find_if(children.begin(), children.end(),
@@ -229,20 +230,21 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
-	// find all incoming trajectories connected to s
+	// find all incoming trajectories connected to current solution
 	SolutionCollector incoming(children.front());
 	traverse<BACKWARD>(current, std::ref(incoming), trace);
 	if (incoming.solutions.empty())
 		return; // no connection to front()
 
 
-	// find all outgoing trajectories connected to s
+	// find all outgoing trajectories connected to current solution
 	SolutionCollector outgoing(children.back());
 	traverse<FORWARD>(current, std::ref(outgoing), trace);
 	if (outgoing.solutions.empty())
 		return; // no connection to back()
 
-	// add solutions for all combinations of incoming + s + outgoing
+	// collect (and sort) all solutions for all combinations of incoming + current + outgoing
+	ordered<SerialSolution> sorted;
 	SerialContainer::solution_container solution;
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
@@ -255,20 +257,22 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 			// insert outgoing solutions in normal order
 			solution.insert(solution.end(), out.first.begin(), out.first.end());
 
-			// TODO: store/announce solutions sorted by cost
-			pimpl()->storeNewSolution(std::move(solution), in.second + current.cost() + out.second);
+			sorted.insert(SerialSolution(impl, std::move(solution), in.second + current.cost() + out.second));
 		}
 	}
+
+	// store new solutions
+	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it)
+		impl->storeNewSolution(std::move(*it));
 }
 
-void SerialContainerPrivate::storeNewSolution(SerialContainer::solution_container &&s, double cost)
+void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
 {
-	assert(!s.empty());
-	const InterfaceState *internal_from = s.front()->start();
-	const InterfaceState *internal_to = s.back()->end();
+	const InterfaceState *internal_from = s.internalStart();
+	const InterfaceState *internal_to = s.internalEnd();
 
-	// create new solution directly in solutions_ and get a reference to it
-	SerialSolution& solution = *solutions_.insert(SerialSolution(this, std::move(s), cost));
+	// create new SerialSolution and get a reference to it
+	SerialSolution& solution = *solutions_.insert(std::move(s));
 
 	// add solution to existing or new start state
 	auto it = internal_to_my_starts_.find(internal_from);
@@ -621,8 +625,6 @@ void Wrapper::processFailures(const Stage::SolutionProcessor &processor) const
 			break;
 }
 
-// TODO: allow stages to directly execute this code
-// This requires that SolutionBase::creator_ is a Stage* (not StagePrivate*)
 void Wrapper::spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s)
 {
 	auto impl = pimpl();
