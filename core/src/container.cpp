@@ -203,18 +203,18 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 
 
 struct SolutionCollector {
-	SolutionCollector(const Stage::pointer& stage) : stopping_stage(stage->pimpl()) {}
+	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
 
-	bool operator()(const SolutionBase& current, const SerialContainer::solution_container& trace, double cost) {
-		if (current.creator() != stopping_stage)
-			return true; // not yet traversed to stopping_stage
+	void operator()(const SerialContainer::solution_container& trace, double cost) {
+		// traced path should not extend past container boundaries
+		assert(trace.size() <= max_depth);
 
-		solutions.emplace_back(std::make_pair(trace, cost));
-		return false; // we are done
+		if (trace.size() == max_depth) // reached max depth
+			solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
 	std::list<std::pair<SerialContainer::solution_container, double>> solutions;
-	const StagePrivate* const stopping_stage;
+	const size_t max_depth;
 };
 
 void SerialContainer::onNewSolution(const SolutionBase &current)
@@ -223,22 +223,25 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	const StagePrivate *creator = current.creator();
 	auto& children = impl->children();
 
-	// s.creator() should be one of our children
-	assert(std::find_if(children.begin(), children.end(),
-	                    [creator](const Stage::pointer& stage) { return stage->pimpl() == creator; } )
-	       != children.end());
+	// find number of stages before and after creator stage
+	size_t num_before = 0, num_after = 0;
+	for (auto it = children.begin(), end = children.end(); it != end; ++it, ++num_before)
+		if ((*it)->pimpl() == creator)
+			break;
+	assert(num_before < children.size());  // creator should be one of our children
+	num_after = children.size()-1 - num_before;
 
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
 	// find all incoming trajectories connected to current solution
-	SolutionCollector incoming(children.front());
+	SolutionCollector incoming(num_before);
 	traverse<BACKWARD>(current, std::ref(incoming), trace);
 	if (incoming.solutions.empty())
 		return; // no connection to front()
 
 
 	// find all outgoing trajectories connected to current solution
-	SolutionCollector outgoing(children.back());
+	SolutionCollector outgoing(num_after);
 	traverse<FORWARD>(current, std::ref(outgoing), trace);
 	if (outgoing.solutions.empty())
 		return; // no connection to back()
@@ -419,26 +422,21 @@ void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &p
 }
 
 template <TraverseDirection dir>
-bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
+void SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
                                solution_container &trace, double trace_cost)
 {
-	if (!cb(start, trace, trace_cost))
-		// stopping criterium met: stop traversal along dir
-		return true; // but continue traversal of further trajectories
-
-	bool result = false; // if no trajectory traversed, return false
-	for (SolutionBase* successor : trajectories<dir>(start)) {
+	const InterfaceState::Solutions& solutions = trajectories<dir>(start);
+	if (solutions.empty())  // if we reached the end, call the callback
+		cb(trace, trace_cost);
+	else for (SolutionBase* successor : solutions) {
 		trace.push_back(successor);
 		trace_cost += successor->cost();
 
-		result = traverse<dir>(*successor, cb, trace, trace_cost);
+		traverse<dir>(*successor, cb, trace, trace_cost);
 
 		trace_cost -= successor->cost();
 		trace.pop_back();
-
-		if (!result) break;
 	}
-	return result;
 }
 
 void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
