@@ -69,6 +69,9 @@ Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incomin
 	// move state to a list node
 	std::list<InterfaceState> container;
 	auto it = container.insert(container.end(), std::move(state));
+	assert(it->owner_ == nullptr);
+	it->owner_ = this;
+
 	// configure state: inherit priority from other end's state and add current solution's cost
 	assert(bool(incoming) ^ bool(outgoing)); // either incoming or outgoing is set
 	if (incoming) {
@@ -88,10 +91,20 @@ Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incomin
 Interface::iterator Interface::clone(const InterfaceState &state)
 {
 	iterator it = insert(InterfaceState(state));
+	it->owner_ = this;
 	if (notify_) notify_(it, false);
 	return it;
 }
 
+void Interface::updatePriority(InterfaceState &state, const InterfaceState::Priority& priority)
+{
+	if (priority < state.priority()) {
+		auto it = std::find_if(begin(), end(), [&state](const InterfaceState& other) { return &state == &other; });
+		assert(it != end());  // state should be part of this interface
+		state.priority_ = priority;
+		if (notify_) notify_(it, true);
+	}
+}
 
 void SolutionBase::setCreator(StagePrivate *creator)
 {

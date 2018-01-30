@@ -240,7 +240,7 @@ void Task::publishAllSolutions(bool wait)
 
 void Task::onNewSolution(const SolutionBase &s)
 {
-	pimpl()->newSolution(s);
+	WrapperBase::onNewSolution(s);
 	if (introspection_)
 		introspection_->publishSolution(s);
 }

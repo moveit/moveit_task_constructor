@@ -138,6 +138,8 @@ public:
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
+	virtual void onNewSolution(const SolutionBase& s) override;
+
 	/// callback for new start states (received externally)
 	virtual void onNewStartState(Interface::iterator external, bool updated) = 0;
 	/// callback for new end states (received externally)
@@ -192,6 +194,8 @@ public:
 	}
 
 protected:
+	virtual void onNewSolution(const SolutionBase& s) = 0;
+
 	WrapperBase(WrapperBasePrivate *impl, pointer &&child = Stage::pointer());
 };
 

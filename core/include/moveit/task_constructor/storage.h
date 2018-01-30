@@ -75,7 +75,7 @@ MOVEIT_CLASS_FORWARD(Introspection)
  */
 class InterfaceState {
 	friend class SolutionBase; // addIncoming() / addOutgoing() should be called only by SolutionBase
-	friend class Interface; // Interface is allowed to change priority
+	friend class Interface; // allow Interface to set owner_ and priority_
 public:
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
@@ -120,6 +120,7 @@ public:
 		return this->priority_ < other.priority_;
 	}
 	inline const Priority& priority() const { return priority_; }
+	Interface* owner() const { return owner_; }
 
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
@@ -131,7 +132,10 @@ private:
 	PropertyMap properties_;
 	Solutions incoming_trajectories_;
 	Solutions outgoing_trajectories_;
+
+	// members needed for priority scheduling in Interface list
 	Priority priority_;
+	Interface* owner_ = nullptr;  // allow update of priority
 };
 
 
@@ -141,11 +145,14 @@ public:
 	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
 	Interface(const NotifyFunction &notify = NotifyFunction());
 
-	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
+	/// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
 
-	// clone an existing InterfaceState, but without its incoming/outgoing connections
+	/// clone an existing InterfaceState, but without its incoming/outgoing connections
 	iterator clone(const InterfaceState &state);
+
+	/// update state's priority if new priority is smaller and call notify_
+	void updatePriority(InterfaceState &state, const InterfaceState::Priority &priority);
 
 private:
 	const NotifyFunction notify_;
@@ -164,13 +171,13 @@ public:
 	inline const InterfaceState* end() const { return end_; }
 
 	inline void setStartState(const InterfaceState& state){
-		assert(start_ == NULL);
+		assert(start_ == NULL);  // only allow setting once (by Stage)
 		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
-		assert(end_ == NULL);
+		assert(end_ == NULL);  // only allow setting once (by Stage)
 		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}

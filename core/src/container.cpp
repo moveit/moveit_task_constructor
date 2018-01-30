@@ -235,38 +235,44 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
-	// find all incoming trajectories connected to current solution
+	// find all incoming solution pathes ending at current solution
 	SolutionCollector incoming(num_before);
 	traverse<BACKWARD>(current, std::ref(incoming), trace);
-	if (incoming.solutions.empty())
-		return; // no connection to front()
 
-
-	// find all outgoing trajectories connected to current solution
+	// find all outgoing solution pathes starting at current solution
 	SolutionCollector outgoing(num_after);
 	traverse<FORWARD>(current, std::ref(outgoing), trace);
-	if (outgoing.solutions.empty())
-		return; // no connection to back()
 
-	// collect (and sort) all solutions for all combinations of incoming + current + outgoing
+	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SerialSolution> sorted;
 	SerialContainer::solution_container solution;
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			assert(solution.empty());
-			// insert incoming solutions in reverse order
-			solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
-			// insert current solution
-			solution.push_back(&current);
-			// insert outgoing solutions in normal order
-			solution.insert(solution.end(), out.first.begin(), out.first.end());
-
-			sorted.insert(SerialSolution(impl, std::move(solution), in.second + current.cost() + out.second));
+			InterfaceState::Priority prio(in.first.size() + 1 + out.first.size(),
+			                              in.second + current.cost() + out.second);
+			// found a complete solution path connecting start to end?
+			if (prio.depth() == children.size()) {
+				assert(solution.empty());
+				// insert incoming solutions in reverse order
+				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
+				// insert current solution
+				solution.push_back(&current);
+				// insert outgoing solutions in normal order
+				solution.insert(solution.end(), out.first.begin(), out.first.end());
+				// store solution in sorted list
+				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
+			} else {
+				// update state costs
+				const InterfaceState* start = (in.first.empty() ? current : *in.first.back()).start();
+				start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
+				const InterfaceState* end = (out.first.empty() ? current : *out.first.back()).end();
+				end->owner()->updatePriority(*const_cast<InterfaceState*>(end), prio);
+			}
 		}
 	}
 
-	// store new solutions
+	// store new solutions (in sorted)
 	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it)
 		impl->storeNewSolution(std::move(*it));
 }
@@ -507,6 +513,18 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 		throw errors;
 }
 
+void ParallelContainerBase::onNewSolution(const SolutionBase &s)
+{
+	// update state priorities
+	InterfaceState::Priority prio(1, s.cost());
+	InterfaceState* start = const_cast<InterfaceState*>(s.start());
+	start->owner()->updatePriority(*start, prio);
+	InterfaceState* end = const_cast<InterfaceState*>(s.end());
+	end->owner()->updatePriority(*end, prio);
+
+	pimpl()->newSolution(s);
+}
+
 
 WrapperBasePrivate::WrapperBasePrivate(WrapperBase *me, const std::string &name)
    : ContainerBasePrivate(me, name)
@@ -567,6 +585,18 @@ size_t WrapperBase::numSolutions() const
 Stage* WrapperBase::wrapped()
 {
 	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
+}
+
+void WrapperBase::onNewSolution(const SolutionBase &s)
+{
+	// update state priorities
+	InterfaceState::Priority prio(1, s.cost());
+	InterfaceState* start = const_cast<InterfaceState*>(s.start());
+	start->owner()->updatePriority(*start, prio);
+	InterfaceState* end = const_cast<InterfaceState*>(s.end());
+	end->owner()->updatePriority(*end, prio);
+
+	pimpl()->newSolution(s);
 }
 
 
