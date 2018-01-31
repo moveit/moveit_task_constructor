@@ -135,6 +135,9 @@ public:
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
+	size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
@@ -202,16 +205,11 @@ class WrapperBasePrivate;
  * WrapperBase ensures that only a single child is wrapped in a container.
  * This child can be accessed via wrapped().
  */
-class WrapperBase : public ContainerBase
+class WrapperBase : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(WrapperBase)
 	WrapperBase(const std::string &name, pointer &&child = Stage::pointer());
-
-	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
-
-	size_t numSolutions() const override;
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
@@ -223,8 +221,6 @@ public:
 	}
 
 protected:
-	virtual void onNewSolution(const SolutionBase& s) = 0;
-
 	WrapperBase(WrapperBasePrivate *impl, pointer &&child = Stage::pointer());
 };
 

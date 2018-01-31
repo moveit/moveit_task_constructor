@@ -62,9 +62,9 @@ MOVEIT_CLASS_FORWARD(Task)
 
 /** A Task is the root of a tree of stages.
  *
- * Actually a tasks wraps a single container, which serves as the root of all stages.
- * The wrapped container spawns its solutions into the prevEnds(), nextStarts() interfaces,
- * which are provided by the wrappers end_ and start_ and interfaces respectively. */
+ * Actually a tasks wraps a single container (by default a SerialContainer),
+ * which serves as the root of all stages.
+ */
 class Task : protected WrapperBase {
 public:
 	Task(const std::string& id = "",

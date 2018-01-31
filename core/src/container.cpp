@@ -525,6 +525,18 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 		throw errors;
 }
 
+size_t ParallelContainerBase::numSolutions() const
+{
+	return pimpl()->solutions_.size();
+}
+
+void ParallelContainerBase::processSolutions(const Stage::SolutionProcessor &processor) const
+{
+	for(const SolutionBase& s : pimpl()->solutions_)
+		if (!processor(s))
+			break;
+}
+
 void ParallelContainerBase::onNewSolution(const SolutionBase &s)
 {
 	auto impl = pimpl();
@@ -538,7 +550,7 @@ WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
 {}
 
 WrapperBase::WrapperBase(WrapperBasePrivate *impl, Stage::pointer &&child)
-   : ContainerBase(impl)
+   : ParallelContainerBase(impl)
 {
 	if (child) insert(std::move(child));
 }
@@ -548,37 +560,7 @@ bool WrapperBase::insert(Stage::pointer &&stage, int before)
 	// restrict num of children to one
 	if (numChildren() > 0)
 		return false;
-	return ContainerBase::insert(std::move(stage), before);
-}
-
-void WrapperBase::reset()
-{
-	ContainerBase::reset();
-}
-
-void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
-{
-	auto impl = pimpl();
-
-	if (numChildren() != 1)
-		throw InitStageException(*this, "no wrapped child");
-
-	// as a generator-like stage, we don't accept inputs
-	assert(!impl->starts());
-	assert(!impl->ends());
-
-	// provide a dummy interface to receive interface states of wrapped child
-	wrapped()->pimpl()->setPrevEnds(impl->getPushBackwardInterface());
-	wrapped()->pimpl()->setNextStarts(impl->getPushForwardInterface());
-
-	// init + validate children
-	ContainerBase::init(scene);
-}
-
-size_t WrapperBase::numSolutions() const
-{
-	// dummy implementation needed to allow insert() in constructor
-	return 0;
+	return ParallelContainerBase::insert(std::move(stage), before);
 }
 
 Stage* WrapperBase::wrapped()
@@ -586,23 +568,11 @@ Stage* WrapperBase::wrapped()
 	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
 }
 
-void WrapperBase::onNewSolution(const SolutionBase &s)
-{
-	// TODO replace with liftSolution()
-	// update state priorities
-	InterfaceState::Priority prio(1, s.cost());
-	InterfaceState* start = const_cast<InterfaceState*>(s.start());
-	start->owner()->updatePriority(*start, prio);
-	InterfaceState* end = const_cast<InterfaceState*>(s.end());
-	end->owner()->updatePriority(*end, prio);
-
-	pimpl()->newSolution(s);
-}
-
 
 WrapperPrivate::WrapperPrivate(Wrapper *me, const std::string &name)
    : WrapperBasePrivate(me, name)
 {}
+
 
 Wrapper::Wrapper(WrapperPrivate *impl, Stage::pointer &&child)
    : WrapperBase(impl, std::move(child))

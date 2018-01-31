@@ -95,6 +95,9 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
+	InterfacePtr pendingBackward() const { return pending_backward_; }
+	InterfacePtr pendingForward() const { return pending_forward_; }
+
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
@@ -187,12 +190,12 @@ private:
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
 
-class WrapperBasePrivate : public ContainerBasePrivate {
+class WrapperBasePrivate : public ParallelContainerBasePrivate {
 	friend class WrapperBase;
 
 public:
 WrapperBasePrivate(WrapperBase* me, const std::string& name)
-   : ContainerBasePrivate(me, name)
+   : ParallelContainerBasePrivate(me, name)
 {}
 
 };
