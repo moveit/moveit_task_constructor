@@ -231,11 +231,11 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 
 	// find all incoming solution pathes ending at current solution
 	SolutionCollector incoming(num_before);
-	traverse<BACKWARD>(current, std::ref(incoming), trace);
+	traverse<Interface::BACKWARD>(current, std::ref(incoming), trace);
 
 	// find all outgoing solution pathes starting at current solution
 	SolutionCollector outgoing(num_after);
-	traverse<FORWARD>(current, std::ref(outgoing), trace);
+	traverse<Interface::FORWARD>(current, std::ref(outgoing), trace);
 
 	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SerialSolution> sorted;
@@ -414,11 +414,11 @@ void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &p
 			break;
 }
 
-template <TraverseDirection dir>
+template <Interface::Direction dir>
 void SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
                                solution_container &trace, double trace_cost)
 {
-	const InterfaceState::Solutions& solutions = trajectories<dir>(start);
+	const InterfaceState::Solutions& solutions = start.trajectories<dir>();
 	if (solutions.empty())  // if we reached the end, call the callback
 		cb(trace, trace_cost);
 	else for (SolutionBase* successor : solutions) {
@@ -491,6 +491,25 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 	// recursively init + validate all children
 	// this needs to be done *after* initializing the connections
 	ContainerBase::init(scene);
+
+	bool pulls[2];
+	for (const Stage::pointer& stage : impl->children()) {
+		StagePrivate *child = stage->pimpl();
+		// is there any child reading from starts() or ends() ?
+		pulls[Interface::START] |= bool(child->pullInterface(Interface::START));
+		pulls[Interface::END] |= bool(child->pullInterface(Interface::END));
+	}
+
+	// initialize this' pull connections
+	for (Interface::Direction dir : { Interface::START, Interface::END }) {
+		if (pulls[dir])
+			impl->pullInterface(dir).reset(new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState, impl, dir, _1, _2)));
+		else
+			impl->pullInterface(dir).reset();
+	}
+
+	if (impl->children().empty())
+		errors.push_back(*this, "no children");
 
 	if (errors)
 		throw errors;

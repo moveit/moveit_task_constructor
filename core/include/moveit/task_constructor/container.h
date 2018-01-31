@@ -108,7 +108,7 @@ protected:
 	/// until the end, i.e. until there are no more subsolutions in the given direction
 	/// For each solution path, callback the given processor passing
 	/// the full trace (from start to end, but not including start) and its accumulated costs
-	template<TraverseDirection dir>
+	template<Interface::Direction dir>
 	void traverse(const SolutionBase &start, const SolutionProcessor &cb,
 	              solution_container &trace, double trace_cost = 0);
 

@@ -142,6 +142,7 @@ private:
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
 class Interface : public ordered<InterfaceState> {
 public:
+	enum Direction { FORWARD, BACKWARD, START=FORWARD, END=BACKWARD };
 	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
 	Interface(const NotifyFunction &notify = NotifyFunction());
 
@@ -169,6 +170,9 @@ class SolutionBase {
 public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
+
+	template <Interface::Direction dir>
+	inline const InterfaceState::Solutions& trajectories() const;
 
 	inline void setStartState(const InterfaceState& state){
 		assert(start_ == NULL);  // only allow setting once (by Stage)
@@ -244,17 +248,13 @@ private:
 };
 
 
-enum TraverseDirection { FORWARD, BACKWARD };
-template <TraverseDirection dir>
-const InterfaceState::Solutions& trajectories(const SolutionBase &start);
-
 template <> inline
-const InterfaceState::Solutions& trajectories<FORWARD>(const SolutionBase &solution) {
-	return solution.end()->outgoingTrajectories();
+const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {
+	return end_->outgoingTrajectories();
 }
 template <> inline
-const InterfaceState::Solutions& trajectories<BACKWARD>(const SolutionBase &solution) {
-	return solution.start()->incomingTrajectories();
+const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>() const {
+	return start_->incomingTrajectories();
 }
 
 } }
