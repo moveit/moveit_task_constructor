@@ -113,7 +113,7 @@ class Interface : protected std::list<InterfaceState> {
 public:
 	typedef std::list<InterfaceState> container_type;
 	typedef std::function<void(const container_type::iterator&)> NotifyFunction;
-	Interface(const NotifyFunction &notify);
+	Interface(const NotifyFunction &notify = NotifyFunction());
 
 	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
 	// and finally run the notify callback
