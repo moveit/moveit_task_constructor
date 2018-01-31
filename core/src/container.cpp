@@ -52,8 +52,8 @@ namespace moveit { namespace task_constructor {
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase *me, const std::string &name)
    : StagePrivate(me, name)
 {
-	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
-	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
+	pending_backward_.reset(new Interface);
+	pending_forward_.reset(new Interface);
 }
 
 ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) const {
