@@ -97,15 +97,13 @@ bool ContainerBasePrivate::compute()
 	return static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::copyState(Interface::iterator external,
-                                     Stage &child, bool to_start, bool updated) {
-	if (to_start) {
-		InterfaceState& internal = *child.pimpl()->starts()->clone(*external);
-		internal_to_external_.insert(std::make_pair(&internal, external));
-	} else {
-		InterfaceState& internal = *child.pimpl()->ends()->clone(*external);
-		internal_to_external_.insert(std::make_pair(&internal, external));
-	}
+void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
+	// TODO need to update existing mapping?
+
+	// create a clone of external state within target interface (child's starts() or ends())
+	InterfaceState& internal = *target->clone(*external);
+	// and remember the mapping between them
+	internal_to_external_.insert(std::make_pair(&internal, external));
 }
 
 ContainerBase::ContainerBase(ContainerBasePrivate *impl)
@@ -364,19 +362,10 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		ContainerBase::init(scene);
 
 		// initialize starts_ and ends_ interfaces
-		Stage* child = start->get();
-		if (child->pimpl()->starts())
-			impl->starts_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
-				// new external state in our starts_ interface is copied to first child
-				impl->copyState(external, *child, true, updated);
-			}));
-
-		child = last->get();
-		if (child->pimpl()->ends())
-			impl->ends_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
-				// new external state in our ends_ interface is copied to last child
-				impl->copyState(external, *child, false, updated);
-			}));
+		if (const InterfacePtr& target = (*start)->pimpl()->starts())
+			impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
+		if (const InterfacePtr& target = (*last)->pimpl()->ends())
+			impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
 
 		// validate connectivity of this
 		if (!impl->nextStarts())

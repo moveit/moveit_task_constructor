@@ -99,7 +99,7 @@ protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
-	void copyState(Interface::iterator external, Stage &child, bool to_start, bool updated);
+	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 
 protected:
 	container_type children_;
