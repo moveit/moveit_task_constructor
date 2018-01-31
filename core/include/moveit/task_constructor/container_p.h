@@ -110,6 +110,9 @@ protected:
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
+	/// lift solution from internal to external level
+	void liftSolution(SolutionBase& solution,
+	                  const InterfaceState *internal_from, const InterfaceState *internal_to);
 
 protected:
 	container_type children_;
@@ -157,12 +160,7 @@ class SerialContainerPrivate : public ContainerBasePrivate {
 	friend class SerialContainer;
 
 public:
-	SerialContainerPrivate(SerialContainer* me, const std::string &name)
-	   : ContainerBasePrivate(me, name)
-	{}
-
-	void storeNewSolution(SerialSolution&& s);
-	const ordered<SerialSolution>& solutions() const { return solutions_; }
+	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 private:
 	void connect(StagePrivate *prev, StagePrivate *next);
@@ -179,8 +177,12 @@ class ParallelContainerBasePrivate : public ContainerBasePrivate {
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
 
+private:
 	/// callback for new externally received states
 	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
+
+	// set of all solutions
+	ordered<WrappedSolution> solutions_;
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 

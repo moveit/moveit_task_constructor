@@ -106,6 +106,36 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	internal_to_external_.insert(std::make_pair(&internal, external));
 }
 
+void ContainerBasePrivate::liftSolution(SolutionBase& solution,
+                                        const InterfaceState *internal_from, const InterfaceState *internal_to)
+{
+	// add solution to existing or new start state
+	auto it = internal_to_external_.find(internal_from);
+	if (it != internal_to_external_.end()) {
+		// connect solution to existing start state
+		solution.setStartState(*it->second);
+	} else {
+		// spawn a new state in previous stage
+		Interface::iterator external = prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		internal_to_external_.insert(std::make_pair(internal_from, external));
+	}
+
+	// add solution to existing or new end state
+	it = internal_to_external_.find(internal_to);
+	if (it != internal_to_external_.end()) {
+		// connect solution to existing start state
+		solution.setEndState(*it->second);
+	} else {
+		// spawn a new state in next stage
+		Interface::iterator external = nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		internal_to_external_.insert(std::make_pair(internal_to, external));
+	}
+
+	// perform default stage action on new solution
+	StagePrivate::newSolution(solution);
+}
+
+
 ContainerBase::ContainerBase(ContainerBasePrivate *impl)
    : Stage(impl)
 {
@@ -268,42 +298,10 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	}
 
 	// store new solutions (in sorted)
-	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it)
-		impl->storeNewSolution(std::move(*it));
-}
-
-void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
-{
-	const InterfaceState *internal_from = s.internalStart();
-	const InterfaceState *internal_to = s.internalEnd();
-
-	// create new SerialSolution and get a reference to it
-	SerialSolution& solution = *solutions_.insert(std::move(s));
-
-	// add solution to existing or new start state
-	auto it = internal_to_external_.find(internal_from);
-	if (it != internal_to_external_.end()) {
-		// connect solution to existing start state
-		solution.setStartState(*it->second);
-	} else {
-		// spawn a new state in previous stage
-		Interface::iterator external = prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
-		internal_to_external_.insert(std::make_pair(internal_from, external));
+	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it) {
+		auto inserted = impl->solutions_.insert(std::move(*it));
+		impl->liftSolution(*inserted, inserted->internalStart(), inserted->internalEnd());
 	}
-
-	// add solution to existing or new end state
-	it = internal_to_external_.find(internal_to);
-	if (it != internal_to_external_.end()) {
-		// connect solution to existing start state
-		solution.setEndState(*it->second);
-	} else {
-		// spawn a new state in next stage
-		Interface::iterator external = nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
-		internal_to_external_.insert(std::make_pair(internal_to, external));
-	}
-
-	// perform default stage action on new solution
-	newSolution(solution);
 }
 
 
@@ -324,6 +322,10 @@ void SerialContainer::reset()
 	// recursively reset children
 	ContainerBase::reset();
 }
+
+SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
+   : ContainerBasePrivate(me, name)
+{}
 
 void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
 	prev->setNextStarts(next->starts());
@@ -410,7 +412,7 @@ size_t SerialContainer::numSolutions() const
 
 void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &processor) const
 {
-	for(const SolutionBase& s : pimpl()->solutions())
+	for(const SolutionBase& s : pimpl()->solutions_)
 		if (!processor(s))
 			break;
 }
@@ -525,14 +527,9 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 
 void ParallelContainerBase::onNewSolution(const SolutionBase &s)
 {
-	// update state priorities
-	InterfaceState::Priority prio(1, s.cost());
-	InterfaceState* start = const_cast<InterfaceState*>(s.start());
-	start->owner()->updatePriority(*start, prio);
-	InterfaceState* end = const_cast<InterfaceState*>(s.end());
-	end->owner()->updatePriority(*end, prio);
-
-	pimpl()->newSolution(s);
+	auto impl = pimpl();
+	auto it = impl->solutions_.insert(WrappedSolution(impl, &s));
+	impl->liftSolution(*it, s.start(), s.end());
 }
 
 
@@ -591,6 +588,7 @@ Stage* WrapperBase::wrapped()
 
 void WrapperBase::onNewSolution(const SolutionBase &s)
 {
+	// TODO replace with liftSolution()
 	// update state priorities
 	InterfaceState::Priority prio(1, s.cost());
 	InterfaceState* start = const_cast<InterfaceState*>(s.start());
