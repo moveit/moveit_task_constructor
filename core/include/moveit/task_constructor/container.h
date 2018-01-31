@@ -150,7 +150,7 @@ protected:
 /** Wrap an existing solution - for use in containers.
  *
  * This essentially wraps a solution of a child and thus allows
- * for new new clones of start / end states, which in turn will
+ * for new clones of start / end states, which in turn will
  * have separate incoming/outgoing trajectories */
 class WrappedSolution : public SolutionBase {
 public:

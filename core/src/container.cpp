@@ -49,6 +49,13 @@ using namespace std::placeholders;
 
 namespace moveit { namespace task_constructor {
 
+ContainerBasePrivate::ContainerBasePrivate(ContainerBase *me, const std::string &name)
+   : StagePrivate(me, name)
+{
+	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
+	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
+}
+
 ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) const {
 	const_iterator position = children_.begin();
 	if (index > 0) {
@@ -156,7 +163,10 @@ void ContainerBase::reset()
 	for (auto& child: impl->children())
 		child->reset();
 
-	// clear mapping
+	// clear buffer interfaces
+	impl->pending_backward_->clear();
+	impl->pending_forward_->clear();
+	// ... and state mapping
 	impl->internal_to_external_.clear();
 
 	Stage::reset();
@@ -187,15 +197,6 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	if (errors)
 		throw errors;
-}
-
-
-SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::string &name)
-   : ContainerBasePrivate(me, name)
-{
-	// these lists don't need a notify function, connections are handled by onNewSolution()
-	pending_backward_.reset(new Interface(Interface::NotifyFunction()));
-	pending_forward_.reset(new Interface(Interface::NotifyFunction()));
 }
 
 
@@ -320,8 +321,6 @@ void SerialContainer::reset()
 
 	// clear queues
 	impl->solutions_.clear();
-	impl->pending_backward_->clear();
-	impl->pending_forward_->clear();
 
 	// recursively reset children
 	ContainerBase::reset();
@@ -521,13 +520,6 @@ void ParallelContainerBase::onNewSolution(const SolutionBase &s)
 }
 
 
-WrapperBasePrivate::WrapperBasePrivate(WrapperBase *me, const std::string &name)
-   : ContainerBasePrivate(me, name)
-{
-	dummy_starts_.reset(new Interface(Interface::NotifyFunction()));
-	dummy_ends_.reset(new Interface(Interface::NotifyFunction()));
-}
-
 WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
    : WrapperBase(new WrapperBasePrivate(this, name), std::move(child))
 {}
@@ -548,8 +540,7 @@ bool WrapperBase::insert(Stage::pointer &&stage, int before)
 
 void WrapperBase::reset()
 {
-	pimpl()->dummy_starts_->clear();
-	pimpl()->dummy_ends_->clear();
+	ContainerBase::reset();
 }
 
 void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -564,8 +555,8 @@ void WrapperBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 	assert(!impl->ends());
 
 	// provide a dummy interface to receive interface states of wrapped child
-	wrapped()->pimpl()->setPrevEnds(impl->dummy_ends_);
-	wrapped()->pimpl()->setNextStarts(impl->dummy_starts_);
+	wrapped()->pimpl()->setPrevEnds(impl->pending_backward_);
+	wrapped()->pimpl()->setNextStarts(impl->pending_forward_);
 
 	// init + validate children
 	ContainerBase::init(scene);

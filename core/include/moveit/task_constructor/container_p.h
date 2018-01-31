@@ -47,13 +47,16 @@
 
 namespace moveit { namespace task_constructor {
 
-/* A container needs to decouple its interfaces from those of its children.
- * Both, the container and the children have their own starts_ and ends_.
- * The container needs to forward states received in its interfaces to
- * the interfaces of the children.
- * Solutions found by the children, then need to be connected to the
- * container's interface states. To this end, we remember the mapping
- * from internal to external states.
+/* A container needs to decouple its own (external) interfaces
+ * from those (internal) of its children.
+ * Both, the container and the children have their own pull interfaces: starts_ and ends_.
+ * The container forwards states received in its pull interfaces to the
+ * corresponding interfaces of the children.
+ * States pushed by children are temporarily stored in pending_backward_ and pending_forward_.
+ *
+ * Solutions found by the children need to be lifted from the internal level to the
+ * external level. To this end, we remember the mapping from internal to external states.
+ *
  * Note, that there might be many solutions connecting a single start-end pair.
  * These solutions might origin from different children (ParallelContainer)
  * or from different solution paths in a SerialContainer.
@@ -93,9 +96,7 @@ public:
 	bool compute() override;
 
 protected:
-	ContainerBasePrivate(ContainerBase *me, const std::string &name)
-	   : StagePrivate(me, name)
-	{}
+	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, Stage &child, bool to_start, bool updated);
@@ -105,6 +106,11 @@ protected:
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
 	std::map<const InterfaceState*, Interface::iterator> internal_to_external_;
+
+	// interface to receive children's sendBackward() states
+	InterfacePtr pending_backward_;
+	// interface to receive children's sendForward() states
+	InterfacePtr pending_forward_;
 };
 PIMPL_FUNCTIONS(ContainerBase)
 
@@ -134,29 +140,20 @@ private:
  * The solution of a single child stage is usually disconnected to the container's start or end.
  * Only if all the children in the chain have found a coherent solution from start to end,
  * this solution can be announced as a solution of the SerialContainer.
- *
- * Particularly, the first/last stage's sendBackward()/sendForward() call
- * cannot directly propagate their associated state to the previous/next stage of this container,
- * because we cannot provide a full solution yet. Hence, the first/last stage
- * propagate to the pending_backward_/pending_forward_ interface first.
- * If eventually a full solution is found, it is propagated to prevEnds()/nextStarts() -
- * together with the solution. */
+ */
 class SerialContainerPrivate : public ContainerBasePrivate {
 	friend class SerialContainer;
 
 public:
-	SerialContainerPrivate(SerialContainer* me, const std::string &name);
+	SerialContainerPrivate(SerialContainer* me, const std::string &name)
+	   : ContainerBasePrivate(me, name)
+	{}
 
 	void storeNewSolution(SerialSolution&& s);
 	const ordered<SerialSolution>& solutions() const { return solutions_; }
 
 private:
 	void connect(StagePrivate *prev, StagePrivate *next);
-
-	// interface to buffer first child's sendBackward() states
-	InterfacePtr pending_backward_;
-	// interface to buffer last child's sendForward() states
-	InterfacePtr pending_forward_;
 
 	// set of all solutions
 	ordered<SerialSolution> solutions_;
@@ -177,11 +174,10 @@ class WrapperBasePrivate : public ContainerBasePrivate {
 	friend class WrapperBase;
 
 public:
-	WrapperBasePrivate(WrapperBase* me, const std::string& name);
+WrapperBasePrivate(WrapperBase* me, const std::string& name)
+   : ContainerBasePrivate(me, name)
+{}
 
-private:
-	InterfacePtr dummy_starts_;
-	InterfacePtr dummy_ends_;
 };
 PIMPL_FUNCTIONS(WrapperBase)
 
