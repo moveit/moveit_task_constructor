@@ -139,11 +139,6 @@ protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
 	virtual void onNewSolution(const SolutionBase& s) override;
-
-	/// callback for new start states (received externally)
-	virtual void onNewStartState(Interface::iterator external, bool updated) = 0;
-	/// callback for new end states (received externally)
-	virtual void onNewEndState(Interface::iterator external, bool updated) = 0;
 };
 
 
@@ -164,6 +159,40 @@ public:
 
 private:
 	const SolutionBase* wrapped_;
+};
+
+
+/** Plan for different alternatives in parallel.
+ *
+ * Solution of all children are reported - sorted by cost.
+ */
+class Alternatives : public ParallelContainerBase
+{
+public:
+	Alternatives(const std::string &name) : ParallelContainerBase(name) {}
+
+	bool canCompute() const override;
+	bool compute() override;
+};
+
+
+/** Plan for different alternatives in sequence.
+ *
+ * Try to find feasible solutions using first child. Only if this fails,
+ * proceed to the next child trying an alternative planning strategy.
+ * All solutions of the last active child are reported.
+ */
+class Fallbacks : public ParallelContainerBase
+{
+	mutable Stage* active_child_ = nullptr;
+
+public:
+	Fallbacks(const std::string &name) : ParallelContainerBase(name) {}
+
+	void reset() override;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	bool canCompute() const override;
+	bool compute() override;
 };
 
 

@@ -98,6 +98,16 @@ public:
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
+	// Get push interface to be used for children: If our own push interface is not set,
+	// don't set children's interface either: pushing is not supported.
+	// Otherwise return pending_* buffer.
+	InterfacePtr getPushBackwardInterface() {
+		return prevEnds() ? pending_backward_ : InterfacePtr();
+	}
+	InterfacePtr getPushForwardInterface() {
+		return nextStarts() ? pending_forward_ : InterfacePtr();
+	}
+
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 
@@ -107,6 +117,8 @@ protected:
 	// map start/end states of children (internal) to corresponding states in our external interfaces
 	std::map<const InterfaceState*, Interface::iterator> internal_to_external_;
 
+	/* TODO: these interfaces don't need to be priority-sorted.
+	 * Introduce base class UnsortedInterface (which is a plain list) for this use case. */
 	// interface to receive children's sendBackward() states
 	InterfacePtr pending_backward_;
 	// interface to receive children's sendForward() states
@@ -166,6 +178,9 @@ class ParallelContainerBasePrivate : public ContainerBasePrivate {
 
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
+
+	/// callback for new externally received states
+	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
