@@ -1,15 +1,23 @@
 add_library(${PROJECT_NAME}_stages
-	${PROJECT_INCLUDE}/stages/cartesian_position_motion.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 	${PROJECT_INCLUDE}/stages/current_state.h
 	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
+	${PROJECT_INCLUDE}/stages/connect.h
+	${PROJECT_INCLUDE}/stages/move_to.h
+	${PROJECT_INCLUDE}/stages/move_relative.h
+
+	${PROJECT_INCLUDE}/stages/cartesian_position_motion.h
 	${PROJECT_INCLUDE}/stages/gripper.h
 	${PROJECT_INCLUDE}/stages/move.h
 
-	cartesian_position_motion.cpp
 	current_state.cpp
 	compute_ik.cpp
 	generate_grasp_pose.cpp
+	connect.cpp
+	move_to.cpp
+	move_relative.cpp
+
+	cartesian_position_motion.cpp
 	gripper.cpp
 	move.cpp
 )

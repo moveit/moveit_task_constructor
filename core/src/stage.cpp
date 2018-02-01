@@ -216,8 +216,8 @@ SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
 		return *solutions_.insert(std::move(trajectory));
 	} else if (me()->storeFailures()) {
 		// only store failures when introspection is enabled
-		failures_.emplace_back(std::move(trajectory));
-		return failures_.back();
+		auto it = failures_.insert(failures_.end(), std::move(trajectory));
+		return *it;
 	} else
 		return trajectory;
 }

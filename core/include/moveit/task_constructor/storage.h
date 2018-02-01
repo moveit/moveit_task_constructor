@@ -234,13 +234,14 @@ public:
 	{}
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
+	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
 	void fillMessage(moveit_task_constructor_msgs::Solution &msg,
 	                 Introspection* introspection = nullptr) const override;
 
 private:
 	// actual trajectory, might be empty
-	const robot_trajectory::RobotTrajectoryPtr trajectory_;
+	robot_trajectory::RobotTrajectoryPtr trajectory_;
 };
 
 
