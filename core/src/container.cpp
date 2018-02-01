@@ -130,9 +130,6 @@ void ContainerBasePrivate::liftSolution(SolutionBase& solution,
 		Interface::iterator external = nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
 		internal_to_external_.insert(std::make_pair(internal_to, external));
 	}
-
-	// perform default stage action on new solution
-	StagePrivate::newSolution(solution);
 }
 
 
@@ -301,6 +298,7 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it) {
 		auto inserted = impl->solutions_.insert(std::move(*it));
 		impl->liftSolution(*inserted, inserted->internalStart(), inserted->internalEnd());
+		impl->newSolution(*inserted);
 	}
 }
 
@@ -436,7 +434,7 @@ void SerialContainer::traverse(const SolutionBase &start, const SolutionProcesso
 }
 
 void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
-                                 Introspection* introspection = nullptr) const
+                                 Introspection* introspection) const
 {
 	moveit_task_constructor_msgs::SubSolution sub_msg;
 	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
@@ -457,6 +455,12 @@ void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 		s->fillMessage(msg, introspection);
 }
 
+
+void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution &solution,
+                                  Introspection *introspection) const
+{
+	wrapped_->fillMessage(solution, introspection);
+}
 
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::string &name)
    : ContainerBasePrivate(me, name)
@@ -480,6 +484,13 @@ void ParallelContainerBase::reset()
 {
 	// recursively reset children
 	ContainerBase::reset();
+	// clear buffers
+	auto impl = pimpl();
+	impl->solutions_.clear();
+	impl->failures_.clear();
+	impl->wrapped_solutions_.clear();
+	impl->created_solutions_.clear();
+	impl->states_.clear();
 }
 
 /* States received by the container need to be copied to all children's pull interfaces.
@@ -532,17 +543,72 @@ size_t ParallelContainerBase::numSolutions() const
 
 void ParallelContainerBase::processSolutions(const Stage::SolutionProcessor &processor) const
 {
-	for(const SolutionBase& s : pimpl()->solutions_)
-		if (!processor(s))
+	for(const SolutionBase* s : pimpl()->solutions_)
+		if (!processor(*s))
 			break;
 }
 
-void ParallelContainerBase::onNewSolution(const SolutionBase &s)
+size_t ParallelContainerBase::numFailures() const
+{
+	return pimpl()->failures_.size();
+}
+
+void ParallelContainerBase::processFailures(const Stage::SolutionProcessor &processor) const
+{
+	for(const SolutionBase* f : pimpl()->failures_)
+		if (!processor(*f))
+			break;
+}
+
+void ParallelContainerBase::onNewSolution(const SolutionBase& s)
+{
+	liftSolution(&s);
+}
+
+void ParallelContainerBase::liftSolution(const SolutionBase* solution, double cost)
 {
 	auto impl = pimpl();
-	auto it = impl->solutions_.insert(WrappedSolution(impl, &s));
-	impl->liftSolution(*it, s.start(), s.end());
+	// create new WrappedSolution instance
+	auto wit = impl->wrapped_solutions_.insert(impl->wrapped_solutions_.end(), WrappedSolution(impl, solution, cost));
+
+	if (wit->isFailure()) {
+		wit->setStartState(*solution->start());
+		wit->setEndState(*solution->end());
+		impl->failures_.push_back(&*wit);
+	} else {
+		impl->solutions_.insert(&*wit);
+		impl->liftSolution(*wit, solution->start(), solution->end());
+	}
+	impl->newSolution(*wit);
 }
+
+void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
+{
+	auto impl = pimpl();
+	assert(impl->prevEnds() && impl->nextStarts());
+
+	t.setCreator(impl);
+	// store newly created solution (otherwise it's lost)
+	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
+
+	if (it->isFailure()) {
+		auto state_it = impl->states_.insert(impl->states_.end(), std::move(state));
+		it->setStartState(*state_it);
+		it->setEndState(*state_it);
+		impl->failures_.push_back(&*it);
+	} else {
+		// directly spawn states in push interfaces
+		impl->prevEnds()->add(InterfaceState(state), NULL, &*it);
+		impl->nextStarts()->add(std::move(state), &*it, NULL);
+		impl->solutions_.insert(&*it);
+	}
+	impl->newSolution(*it);
+}
+
+
+WrapperBasePrivate::WrapperBasePrivate(WrapperBase *me, const std::string &name)
+   : ParallelContainerBasePrivate(me, name)
+{}
 
 
 WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
@@ -568,77 +634,16 @@ Stage* WrapperBase::wrapped()
 	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
 }
 
-
-WrapperPrivate::WrapperPrivate(Wrapper *me, const std::string &name)
-   : WrapperBasePrivate(me, name)
-{}
-
-
-Wrapper::Wrapper(WrapperPrivate *impl, Stage::pointer &&child)
-   : WrapperBase(impl, std::move(child))
-{}
-Wrapper::Wrapper(const std::string &name, Stage::pointer &&child)
-   : Wrapper(new WrapperPrivate(this, name), std::move(child))
-{}
-
-void Wrapper::reset()
-{
-	WrapperBase::reset();
-	pimpl()->solutions_.clear();
-}
-
-bool Wrapper::canCompute() const
+bool WrapperBase::canCompute() const
 {
 	return wrapped()->pimpl()->canCompute();
 }
 
-bool Wrapper::compute()
+bool WrapperBase::compute()
 {
 	size_t num_before = numSolutions();
 	wrapped()->pimpl()->compute();
 	return numSolutions() > num_before;
-}
-
-size_t Wrapper::numSolutions() const
-{
-	return pimpl()->solutions_.size();
-}
-
-size_t Wrapper::numFailures() const
-{
-	return pimpl()->failures_.size();
-}
-
-void Wrapper::processSolutions(const Stage::SolutionProcessor &processor) const
-{
-	for(const auto& s : pimpl()->solutions_)
-		if (!processor(*s))
-			break;
-}
-
-void Wrapper::processFailures(const Stage::SolutionProcessor &processor) const
-{
-	for(const auto& s : pimpl()->failures_)
-		if (!processor(*s))
-			break;
-}
-
-void Wrapper::spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s)
-{
-	auto impl = pimpl();
-	s->setCreator(impl);
-	SolutionBase* solution = s.get();
-	if (s->isFailure()) {
-		impl->failure_states_.emplace_back(std::move(state));
-		s->setStartState(impl->failure_states_.back());
-		s->setEndState(impl->failure_states_.back());
-		impl->failures_.emplace_back(std::move(s));
-	} else {
-		impl->solutions_.insert(std::move(s));
-		impl->prevEnds()->add(InterfaceState(state), NULL, solution);
-		impl->nextStarts()->add(std::move(state), solution, NULL);
-	}
-	impl->newSolution(*solution);
 }
 
 

@@ -39,7 +39,6 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
-#include "utils.h"
 #include "stage_p.h"
 
 #include <map>
@@ -174,6 +173,27 @@ private:
 PIMPL_FUNCTIONS(SerialContainer)
 
 
+/** Wrap an existing solution - for use in parallel containers and wrappers.
+ *
+ * This essentially wraps a solution of a child and thus allows
+ * for new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase {
+public:
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost)
+		: SolutionBase(creator, cost), wrapped_(wrapped)
+	{}
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
+		: WrappedSolution(creator, wrapped, wrapped->cost())
+	{}
+	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
+	                 Introspection* introspection = nullptr) const override;
+
+private:
+	const SolutionBase* wrapped_;
+};
+
+
 class ParallelContainerBasePrivate : public ContainerBasePrivate {
 	friend class ParallelContainerBase;
 
@@ -184,8 +204,17 @@ private:
 	/// callback for new externally received states
 	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
 
-	// set of all solutions
-	ordered<WrappedSolution> solutions_;
+	// buffer for wrapped solutions
+	std::list<WrappedSolution> wrapped_solutions_;
+	// buffer for newly created (not wrapped) solutions
+	std::list<SubTrajectory> created_solutions_;
+	// buffer of created states (for use in created solutions)
+	std::list<InterfaceState> states_;
+
+	// cost-ordered set of solutions (pointers into wrapped or created)
+	ordered<SolutionBase*> solutions_;
+	// buffer for failures (pointers into wrapped or created)
+	std::list<SolutionBase*> failures_;
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
@@ -194,25 +223,8 @@ class WrapperBasePrivate : public ParallelContainerBasePrivate {
 	friend class WrapperBase;
 
 public:
-WrapperBasePrivate(WrapperBase* me, const std::string& name)
-   : ParallelContainerBasePrivate(me, name)
-{}
-
+	WrapperBasePrivate(WrapperBase* me, const std::string& name);
 };
 PIMPL_FUNCTIONS(WrapperBase)
-
-
-class WrapperPrivate : public WrapperBasePrivate {
-	friend class Wrapper;
-
-public:
-	WrapperPrivate(Wrapper* me, const std::string& name);
-
-private:
-	ordered<std::unique_ptr<SolutionBase>, pointerLessThan<std::unique_ptr<SolutionBase>>> solutions_;
-	std::list<std::unique_ptr<SolutionBase>> failures_;
-	std::list<InterfaceState> failure_states_;
-};
-PIMPL_FUNCTIONS(Wrapper)
 
 } }

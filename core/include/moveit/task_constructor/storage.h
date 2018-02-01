@@ -258,3 +258,13 @@ const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>
 }
 
 } }
+
+namespace std {
+// comparison for pointers to SolutionBase: compare based on value
+template<> struct less<moveit::task_constructor::SolutionBase*> {
+	bool operator()(const moveit::task_constructor::SolutionBase* x,
+	                const moveit::task_constructor::SolutionBase* y) {
+		return *x < *y;
+	}
+};
+}

@@ -94,12 +94,3 @@ private:
 };
 
 #define DECLARE_FLAGS(Flags, Enum) typedef QFlags<Enum> Flags;
-
-
-// compare two pointers by comparing their referenced values
-template <typename T>
-struct pointerLessThan : std::enable_if<std::is_pointer<T>::value> {
-	inline bool operator()(const T& x, const T& y) const {
-		return *x < *y;
-	}
-};
