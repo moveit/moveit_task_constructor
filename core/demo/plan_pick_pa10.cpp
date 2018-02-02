@@ -1,11 +1,16 @@
 #include <moveit/task_constructor/task.h>
 
+#include <moveit/task_constructor/solvers/cartesian_path.h>
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
+
 #include <moveit/task_constructor/stages/current_state.h>
-#include <moveit/task_constructor/stages/gripper.h>
-#include <moveit/task_constructor/stages/move.h>
+#include <moveit/task_constructor/stages/move_to.h>
+#include <moveit/task_constructor/stages/move_relative.h>
+#include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
-#include <moveit/task_constructor/stages/cartesian_position_motion.h>
 #include <moveit/task_constructor/stages/compute_ik.h>
+#include <moveit/task_constructor/stages/modify_planning_scene.h>
+#include <moveit/task_constructor/stages/fix_collision_objects.h>
 
 #include <ros/ros.h>
 
@@ -43,34 +48,42 @@ int main(int argc, char** argv){
 	// define global properties used by most stages
 	t.setProperty("group", std::string("left_arm"));
 	t.setProperty("eef", std::string("la_tool_mount"));
-	t.setProperty("planner", std::string("RRTConnectkConfigDefault"));
+	t.setProperty("gripper", std::string("left_hand"));
 	t.setProperty("link", std::string("la_tool_mount"));
 
-	t.add(std::make_unique<stages::CurrentState>("current state"));
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	pipeline->setTimeout(8.0);
+	pipeline->setPlannerId("RRTConnectkConfigDefault");
+	auto cartesian = std::make_shared<solvers::CartesianPath>();
 
+	t.add(std::make_unique<stages::CurrentState>());
+	t.add(std::make_unique<stages::FixCollisionObjects>());
 	{
-		auto move = std::make_unique<stages::Gripper>("open gripper");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTo("open");
+		auto move = std::make_unique<stages::MoveTo>("open gripper", pipeline);
+		move->restrictDirection(stages::MoveTo::FORWARD);
+		move->properties().property("group").configureInitFrom(Stage::PARENT, "gripper");
+		move->setGoal("open");
 		t.add(std::move(move));
 	}
 
 	{
-		auto move = std::make_unique<stages::Move>("move to pre-grasp");
+		auto move = std::make_unique<stages::Connect>("move to object", pipeline);
 		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTimeout(8.0);
 		t.add(std::move(move));
 	}
 
 	{
-		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
+		auto move = std::make_unique<stages::MoveRelative>("approach object", cartesian);
+		move->restrictDirection(stages::MoveRelative::BACKWARD);
 		move->properties().configureInitFrom(Stage::PARENT);
-		move->setMinMaxDistance(.05, 0.1);
-		move->setCartesianStepSize(0.02);
+		move->properties().set("marker_ns", std::string("approach"));
+		move->properties().set("link", std::string("lh_tool_frame"));
+		move->setMinMaxDistance(0.05, 0.1);
 
-		geometry_msgs::PointStamped target;
-		target.header.frame_id= "object";
-		move->towards(target);
+		geometry_msgs::Vector3Stamped direction;
+		direction.header.frame_id = "lh_tool_frame";
+		direction.vector.z = 1;
+		move->along(direction);
 		t.add(std::move(move));
 	}
 
@@ -91,22 +104,38 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move = std::make_unique<stages::Gripper>("grasp");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTo("closed");
-		move->graspObject("object");
+		auto move = std::make_unique<stages::ModifyPlanningScene>("enable object collision");
+		move->restrictDirection(stages::ModifyPlanningScene::FORWARD);
+
+		move->enableCollisions("object", t.getRobotModel()->getJointModelGroup("left_hand")->getLinkModelNamesWithCollisionGeometry(), true);
 		t.add(std::move(move));
 	}
 
 	{
-		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->properties().configureInitFrom(Stage::PARENT);
+		auto move = std::make_unique<stages::MoveTo>("close gripper", pipeline);
+		move->restrictDirection(stages::MoveTo::FORWARD);
+		move->properties().property("group").configureInitFrom(Stage::PARENT, "gripper");
+		move->setGoal("closed");
+		t.add(std::move(move));
+	}
+
+	{
+		auto move = std::make_unique<stages::ModifyPlanningScene>("attach object");
+		move->restrictDirection(stages::ModifyPlanningScene::FORWARD);
+		move->attachObjects("object", "lh_tool_frame");
+		t.add(std::move(move));
+	}
+
+	{
+		auto move = std::make_unique<stages::MoveRelative>("lift object", cartesian);
+		move->properties().configureInitFrom(Stage::PARENT, {"group"});
 		move->setMinMaxDistance(0.03, 0.05);
-		move->setCartesianStepSize(0.01);
+		move->properties().set("marker_ns", std::string("lift"));
+		move->properties().set("link", std::string("lh_tool_frame"));
 
 		geometry_msgs::Vector3Stamped direction;
-		direction.header.frame_id= "world";
-		direction.vector.z= 1.0;
+		direction.header.frame_id = "world";
+		direction.vector.z = 1;
 		move->along(direction);
 		t.add(std::move(move));
 	}
