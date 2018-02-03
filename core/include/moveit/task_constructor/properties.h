@@ -50,7 +50,7 @@ namespace task_constructor {
 class Property;
 class PropertyMap;
 
-/// initializer function, using another name from the passed property map
+/// initializer function, using given name from the passed property map
 boost::any fromName(const PropertyMap& other, const std::string& other_name);
 
 enum PropertyInitializerSource {
@@ -67,7 +67,7 @@ class Property {
 	friend class PropertyMap;
 
 public:
-	typedef std::function<boost::any(const PropertyMap& other, const std::string& other_name)> InitializerFunction;
+	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
 	typedef std::map<PropertyInitializerSource, InitializerFunction> InitializerMap;
 
 	Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value);
@@ -80,9 +80,9 @@ public:
 	std::string typeName() const { return type_index_.name(); }
 
 	/// configure initialization from source using an arbitrary function
-	Property &configureInitFrom(PropertyInitializerSource source, const InitializerFunction& f = fromName);
-	/// configure initialization from source using other property name
-	Property &configureInitFrom(PropertyInitializerSource source, const std::string& other_name);
+	Property &configureInitFrom(PropertyInitializerSource source, const InitializerFunction& f);
+	/// configure initialization from source using given other property name
+	Property &configureInitFrom(PropertyInitializerSource source, const std::string& name);
 
 private:
 	std::string description_;

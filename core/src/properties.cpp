@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/properties.h>
 #include <boost/format.hpp>
 #include <ros/console.h>
+#include <functional>
 
 namespace moveit {
 namespace task_constructor {
@@ -79,11 +80,9 @@ Property& Property::configureInitFrom(PropertyInitializerSource source, const Pr
 	return *this;
 }
 
-Property& Property::configureInitFrom(PropertyInitializerSource source, const std::string &other_name)
+Property &Property::configureInitFrom(PropertyInitializerSource source, const std::string &name)
 {
-	initializers_[source] = [other_name](const PropertyMap& other, const std::string&) {
-		return fromName(other, other_name);
-	};
+	initializers_[source] = [name](const PropertyMap& other) { return fromName(other, name); };
 	return *this;
 }
 
@@ -109,7 +108,7 @@ void PropertyMap::configureInitFrom(PropertyInitializerSource source, const std:
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
-			pair.second.configureInitFrom(source);
+			pair.second.configureInitFrom(source, std::bind(&fromName, std::placeholders::_1, pair.first));
 	}
 }
 
@@ -161,7 +160,7 @@ void PropertyMap::performInitFrom(PropertyInitializerSource source, const Proper
 		Property &p = pair.second;
 		auto it = p.initializers_.find(source);
 		if (it == p.initializers_.end()) continue;
-		const boost::any& value = it->second(other, pair.first);
+		const boost::any& value = it->second(other);
 		if (value.empty()) continue;
 
 		typeCheck(value, p.type_index_);
