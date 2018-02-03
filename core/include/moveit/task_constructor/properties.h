@@ -60,8 +60,12 @@ enum PropertyInitializerSource {
 
 /** Property is a wrapper for a boost::any value, also providing a default value and a description.
  *
- * Properties can be configured to be initialized from another PropertyMap.
+ * Properties can be configured to be initialized from another PropertyMap - if still undefined.
  * Potential sources are the properties of the parent of a stage, or the properties passed in the interface.
+ *
+ * Setting the value via setValue() updates both, the current value and the default value.
+ * Using reset() the default value can be restored.
+ * Using setCurrentValue() only updates the current value, allowing for later reset to the original default.
  */
 class Property {
 	friend class PropertyMap;
@@ -72,17 +76,32 @@ public:
 
 	Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value);
 
+	/// set current value and default value
 	void setValue(const boost::any& value);
+	void setCurrentValue(const boost::any& value);
 
-	const boost::any& value() const;
+	/// reset to default value (which can be empty)
+	void reset();
+
+	inline bool defined() const { return !value_.empty(); }
+
+	/// get current value
+	inline const boost::any& value() const { return value_; }
+	/// get default value
 	const boost::any& defaultValue() const { return default_; }
+
+	/// get description text
 	const std::string& description() const { return description_; }
+	/// get typename
 	std::string typeName() const { return type_index_.name(); }
 
 	/// configure initialization from source using an arbitrary function
 	Property &configureInitFrom(PropertyInitializerSource source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name
 	Property &configureInitFrom(PropertyInitializerSource source, const std::string& name);
+
+	/// set current value using configured initializers
+	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other);
 
 private:
 	std::string description_;
@@ -127,8 +146,10 @@ public:
 	/// allow initialization from given source for listed properties - always using the same name
 	void configureInitFrom(PropertyInitializerSource source, const std::set<std::string> &properties = {});
 
-	/// set the value of a property
+	/// set (and, if neccessary, declare) the value of a property
 	void set(const std::string& name, const boost::any& value);
+	/// temporarily set the value of a property
+	void setCurrent(const std::string& name, const boost::any& value);
 
 	/// get the value of a property
 	const boost::any& get(const std::string& name) const;
@@ -143,12 +164,11 @@ public:
 	/// count number of defined properties from given list
 	size_t countDefined(const std::vector<std::string>& list) const;
 
-	/// reset properties to nil, if they have initializers
+	/// reset all properties to their defaults
 	void reset();
 
-	/// perform initialization of properties using configured initializers
-	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other,
-	                     bool checkConsistency = false);
+	/// perform initialization of still undefined properties using configured initializers
+	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other, bool enforce = false);
 };
 
 } // namespace task_constructor

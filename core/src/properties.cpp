@@ -48,6 +48,7 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    : description_(description)
    , type_index_(type_index)
    , default_(default_value)
+   , value_(default_value)
 {
 	if (!default_.empty() && std::type_index(default_.type()) != type_index_)
 		throw std::runtime_error("type of default value doesn't match declared type");
@@ -64,15 +65,23 @@ void typeCheck(const boost::any& value, const std::type_index& type_index)
 }
 
 void Property::setValue(const boost::any &value) {
-	typeCheck(value, type_index_);
-	value_ = value;
-	// clear all initializers when value was explicitly set
-	initializers_.clear();
+	setCurrentValue(value);
+	default_ = value_;
 }
 
-const boost::any &Property::value() const {
-	return value_.empty() ? default_ : value_;
+void Property::setCurrentValue(const boost::any &value)
+{
+	if (!value.empty())
+		typeCheck(value, type_index_);
+	value_ = value;
 }
+
+void Property::reset()
+{
+	value_ = default_;
+}
+
+
 
 Property& Property::configureInitFrom(PropertyInitializerSource source, const Property::InitializerFunction &f)
 {
@@ -84,6 +93,14 @@ Property &Property::configureInitFrom(PropertyInitializerSource source, const st
 {
 	initializers_[source] = [name](const PropertyMap& other) { return fromName(other, name); };
 	return *this;
+}
+
+void Property::performInitFrom(PropertyInitializerSource source, const PropertyMap &other)
+{
+	auto it = initializers_.find(source);
+	if (it == initializers_.end()) return;
+
+	setCurrentValue(it->second(other));
 }
 
 
@@ -128,6 +145,11 @@ void PropertyMap::set(const std::string &name, const boost::any &value)
 	}
 }
 
+void PropertyMap::setCurrent(const std::string &name, const boost::any &value)
+{
+	property(name).setCurrentValue(value);
+}
+
 const boost::any &PropertyMap::get(const std::string &name) const
 {
 	return property(name).value();
@@ -144,31 +166,16 @@ size_t PropertyMap::countDefined(const std::vector<std::string> &list) const
 
 void PropertyMap::reset()
 {
-	for (auto& pair : props_) {
-		Property &p = pair.second;
-		if (!p.initializers_.empty())
-			// if there are initializers, reset property value
-			// explicitly setting the value, clears initializers
-			p.value_ = boost::any();
-	}
+	for (auto& pair : props_)
+		pair.second.reset();
 }
 
-void PropertyMap::performInitFrom(PropertyInitializerSource source, const PropertyMap &other,
-                                  bool checkConsistency)
+void PropertyMap::performInitFrom(PropertyInitializerSource source, const PropertyMap &other, bool enforce)
 {
 	for (auto& pair : props_) {
 		Property &p = pair.second;
-		auto it = p.initializers_.find(source);
-		if (it == p.initializers_.end()) continue;
-		const boost::any& value = it->second(other);
-		if (value.empty()) continue;
-
-		typeCheck(value, p.type_index_);
-#if 0 // TODO: we cannot generically check for equality of boost::anys
-		if (checkConsistency && !p.value_.empty() && p.value_ != value)
-			throw std::runtime_error ("inconsistent values for property '" + pair.first + "'");
-#endif
-		p.value_ = value;
+		if (enforce || !p.defined())
+			p.performInitFrom(source, other);
 	}
 }
 
