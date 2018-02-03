@@ -53,11 +53,6 @@ class PropertyMap;
 /// initializer function, using given name from the passed property map
 boost::any fromName(const PropertyMap& other, const std::string& other_name);
 
-enum PropertyInitializerSource {
-	PARENT,
-	INTERFACE,
-};
-
 /** Property is a wrapper for a boost::any value, also providing a default value and a description.
  *
  * Properties can be configured to be initialized from another PropertyMap - if still undefined.

@@ -240,8 +240,8 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 void PropagatingEitherWayPrivate::initProperties(const InterfaceState& state)
 {
 	properties_.reset();
-	properties_.performInitFrom(PARENT, parent()->properties());
-	properties_.performInitFrom(INTERFACE, state.properties());
+	properties_.performInitFrom(Stage::PARENT, parent()->properties());
+	properties_.performInitFrom(Stage::INTERFACE, state.properties());
 }
 
 bool PropagatingEitherWayPrivate::canCompute() const
@@ -433,7 +433,7 @@ bool GeneratorPrivate::compute() {
 void GeneratorPrivate::initProperties()
 {
 	properties_.reset();
-	properties_.performInitFrom(PARENT, parent()->properties());
+	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 }
 
 
@@ -482,10 +482,10 @@ void ConnectingPrivate::newEndState(const Interface::iterator& it)
 void ConnectingPrivate::initProperties(const InterfaceState &start, const InterfaceState &end)
 {
 	properties_.reset();
-	properties_.performInitFrom(PARENT, parent()->properties());
+	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 	// properties from start/end states need to be consistent to each other
-	properties_.performInitFrom(INTERFACE, start.properties());
-	properties_.performInitFrom(INTERFACE, end.properties(), true);
+	properties_.performInitFrom(Stage::INTERFACE, start.properties());
+	properties_.performInitFrom(Stage::INTERFACE, end.properties(), true);
 }
 
 bool ConnectingPrivate::canCompute() const{

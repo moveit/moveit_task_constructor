@@ -80,6 +80,17 @@ class Stage {
 public:
 	PRIVATE_CLASS(Stage)
 	typedef std::unique_ptr<Stage> pointer;
+	/** Names for property initialization sources
+	 *
+	 * - INTERFACE allows to pass properties from one stage to the next (in a SerialContainer).
+	 * - PARENT allows to inherit properties from the parent.
+	 *
+	 * INTERFACE takes precedence over PARENT.
+	 */
+	enum PropertyInitializerSource {
+		PARENT,
+		INTERFACE,
+	};
 	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
