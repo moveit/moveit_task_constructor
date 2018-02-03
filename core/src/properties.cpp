@@ -73,13 +73,13 @@ const boost::any &Property::value() const {
 	return value_.empty() ? default_ : value_;
 }
 
-Property& Property::initFrom(PropertyInitializerSource source, const Property::InitializerFunction &f)
+Property& Property::configureInitFrom(PropertyInitializerSource source, const Property::InitializerFunction &f)
 {
 	initializers_[source] = f;
 	return *this;
 }
 
-Property& Property::initFrom(PropertyInitializerSource source, const std::string &other_name)
+Property& Property::configureInitFrom(PropertyInitializerSource source, const std::string &other_name)
 {
 	initializers_[source] = [other_name](const PropertyMap& other, const std::string&) {
 		return fromName(other, other_name);
@@ -105,11 +105,11 @@ Property& PropertyMap::property(const std::string &name)
 	return it->second;
 }
 
-void PropertyMap::initFrom(PropertyInitializerSource source, const std::set<std::string> &properties)
+void PropertyMap::configureInitFrom(PropertyInitializerSource source, const std::set<std::string> &properties)
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
-			pair.second.initFrom(source);
+			pair.second.configureInitFrom(source);
 	}
 }
 
@@ -154,8 +154,8 @@ void PropertyMap::reset()
 	}
 }
 
-void PropertyMap::initFrom(PropertyInitializerSource source, const PropertyMap &other,
-                           bool checkConsistency)
+void PropertyMap::performInitFrom(PropertyInitializerSource source, const PropertyMap &other,
+                                  bool checkConsistency)
 {
 	for (auto& pair : props_) {
 		Property &p = pair.second;

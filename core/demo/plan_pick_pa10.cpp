@@ -49,21 +49,21 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::Gripper>("open gripper");
-		move->properties().initFrom(PARENT);
+		move->properties().configureInitFrom(PARENT);
 		move->setTo("open");
 		t.add(std::move(move));
 	}
 
 	{
 		auto move = std::make_unique<stages::Move>("move to pre-grasp");
-		move->properties().initFrom(PARENT);
+		move->properties().configureInitFrom(PARENT);
 		move->setTimeout(8.0);
 		t.add(std::move(move));
 	}
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		move->properties().initFrom(PARENT);
+		move->properties().configureInitFrom(PARENT);
 		move->setMinMaxDistance(.05, 0.1);
 		move->setCartesianStepSize(0.02);
 
@@ -75,7 +75,7 @@ int main(int argc, char** argv){
 
 	{
 		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
-		gengrasp->properties().initFrom(PARENT);
+		gengrasp->properties().configureInitFrom(PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setGraspFrame(Eigen::Translation3d(0,0,.05)*
@@ -88,7 +88,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::Gripper>("grasp");
-		move->properties().initFrom(PARENT);
+		move->properties().configureInitFrom(PARENT);
 		move->setTo("closed");
 		move->graspObject("object");
 		t.add(std::move(move));
@@ -96,7 +96,7 @@ int main(int argc, char** argv){
 
 	{
 		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->properties().initFrom(PARENT);
+		move->properties().configureInitFrom(PARENT);
 		move->setMinMaxDistance(0.03, 0.05);
 		move->setCartesianStepSize(0.01);
 

@@ -58,6 +58,11 @@ enum PropertyInitializerSource {
 	INTERFACE,
 };
 
+/** Property is a wrapper for a boost::any value, also providing a default value and a description.
+ *
+ * Properties can be configured to be initialized from another PropertyMap.
+ * Potential sources are the properties of the parent of a stage, or the properties passed in the interface.
+ */
 class Property {
 	friend class PropertyMap;
 
@@ -74,9 +79,10 @@ public:
 	const std::string& description() const { return description_; }
 	std::string typeName() const { return type_index_.name(); }
 
-	/// set an initializer function
-	Property &initFrom(PropertyInitializerSource source, const InitializerFunction& f = fromName);
-	Property &initFrom(PropertyInitializerSource source, const std::string& other_name);
+	/// configure initialization from source using an arbitrary function
+	Property &configureInitFrom(PropertyInitializerSource source, const InitializerFunction& f = fromName);
+	/// configure initialization from source using other property name
+	Property &configureInitFrom(PropertyInitializerSource source, const std::string& other_name);
 
 private:
 	std::string description_;
@@ -87,6 +93,11 @@ private:
 };
 
 
+/** PropertyMap is map of (name, Property) pairs.
+ *
+ * Conveniency methods are provided to setup property initialization for several
+ * properties at once - always inheriting from the identically named external property.
+ */
 class PropertyMap
 {
 	std::map<std::string, Property> props_;
@@ -113,8 +124,8 @@ public:
 		return const_cast<PropertyMap*>(this)->property(name);
 	}
 
-	/// allow initialization from given source for listed properties
-	void initFrom(PropertyInitializerSource source, const std::set<std::string> &properties = {});
+	/// allow initialization from given source for listed properties - always using the same name
+	void configureInitFrom(PropertyInitializerSource source, const std::set<std::string> &properties = {});
 
 	/// set the value of a property
 	void set(const std::string& name, const boost::any& value);
@@ -134,9 +145,10 @@ public:
 
 	/// reset properties to nil, if they have initializers
 	void reset();
-	/// init properties from initializers
-	void initFrom(PropertyInitializerSource source, const PropertyMap& other,
-	              bool checkConsistency = false);
+
+	/// perform initialization of properties using configured initializers
+	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other,
+	                     bool checkConsistency = false);
 };
 
 } // namespace task_constructor
