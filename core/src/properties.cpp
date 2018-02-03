@@ -83,19 +83,19 @@ void Property::reset()
 
 
 
-Property& Property::configureInitFrom(PropertyInitializerSource source, const Property::InitializerFunction &f)
+Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
 	initializers_[source] = f;
 	return *this;
 }
 
-Property &Property::configureInitFrom(PropertyInitializerSource source, const std::string &name)
+Property &Property::configureInitFrom(SourceId source, const std::string &name)
 {
 	initializers_[source] = [name](const PropertyMap& other) { return fromName(other, name); };
 	return *this;
 }
 
-void Property::performInitFrom(PropertyInitializerSource source, const PropertyMap &other)
+void Property::performInitFrom(SourceId source, const PropertyMap &other)
 {
 	auto it = initializers_.find(source);
 	if (it == initializers_.end()) return;
@@ -121,7 +121,7 @@ Property& PropertyMap::property(const std::string &name)
 	return it->second;
 }
 
-void PropertyMap::configureInitFrom(PropertyInitializerSource source, const std::set<std::string> &properties)
+void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<std::string> &properties)
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
@@ -170,7 +170,7 @@ void PropertyMap::reset()
 		pair.second.reset();
 }
 
-void PropertyMap::performInitFrom(PropertyInitializerSource source, const PropertyMap &other, bool enforce)
+void PropertyMap::performInitFrom(Property::SourceId source, const PropertyMap &other, bool enforce)
 {
 	for (auto& pair : props_) {
 		Property &p = pair.second;

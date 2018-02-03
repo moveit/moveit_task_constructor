@@ -61,7 +61,8 @@ enum PropertyInitializerSource {
 /** Property is a wrapper for a boost::any value, also providing a default value and a description.
  *
  * Properties can be configured to be initialized from another PropertyMap - if still undefined.
- * Potential sources are the properties of the parent of a stage, or the properties passed in the interface.
+ * A source id allows to distinguish different initialization methods (e.g. using a different reference
+ * name) as well as to define a priority order between sources.
  *
  * Setting the value via setValue() updates both, the current value and the default value.
  * Using reset() the default value can be restored.
@@ -71,8 +72,9 @@ class Property {
 	friend class PropertyMap;
 
 public:
+	typedef int SourceId;
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
-	typedef std::map<PropertyInitializerSource, InitializerFunction> InitializerMap;
+	typedef std::map<SourceId, InitializerFunction> InitializerMap;
 
 	Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value);
 
@@ -96,12 +98,12 @@ public:
 	std::string typeName() const { return type_index_.name(); }
 
 	/// configure initialization from source using an arbitrary function
-	Property &configureInitFrom(PropertyInitializerSource source, const InitializerFunction& f);
+	Property &configureInitFrom(SourceId source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name
-	Property &configureInitFrom(PropertyInitializerSource source, const std::string& name);
+	Property &configureInitFrom(SourceId source, const std::string& name);
 
 	/// set current value using configured initializers
-	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other);
+	void performInitFrom(SourceId source, const PropertyMap& other);
 
 private:
 	std::string description_;
@@ -144,7 +146,7 @@ public:
 	}
 
 	/// allow initialization from given source for listed properties - always using the same name
-	void configureInitFrom(PropertyInitializerSource source, const std::set<std::string> &properties = {});
+	void configureInitFrom(Property::SourceId source, const std::set<std::string> &properties = {});
 
 	/// set (and, if neccessary, declare) the value of a property
 	void set(const std::string& name, const boost::any& value);
@@ -168,7 +170,7 @@ public:
 	void reset();
 
 	/// perform initialization of still undefined properties using configured initializers
-	void performInitFrom(PropertyInitializerSource source, const PropertyMap& other, bool enforce = false);
+	void performInitFrom(Property::SourceId source, const PropertyMap& other, bool enforce = false);
 };
 
 } // namespace task_constructor
