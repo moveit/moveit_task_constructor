@@ -73,6 +73,7 @@ private:
 std::ostream& operator<<(std::ostream &os, const InitStageException& e);
 
 
+class ContainerBase;
 class StagePrivate;
 class Stage {
 	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
@@ -102,6 +103,7 @@ public:
 	/// initialize stage once before planning
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
+	const ContainerBase* parent() const;
 	const std::string& name() const;
 	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;

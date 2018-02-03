@@ -127,9 +127,15 @@ void ContainerBase::reset()
 void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	InitStageException errors;
-	auto& children = pimpl()->children();
+	auto impl = pimpl();
+	auto& children = impl->children();
 
 	Stage::init(scene);
+
+	// containers don't need to reset and init their properties on each execution
+	impl->properties_.reset();
+	if (impl->parent())
+		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 
 	// we need to have some children to do the actual work
 	if (children.empty()) {

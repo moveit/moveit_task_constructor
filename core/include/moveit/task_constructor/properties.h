@@ -150,12 +150,20 @@ public:
 
 	/// get the value of a property
 	const boost::any& get(const std::string& name) const;
+
+	/// Get typed value of property. Throws runtime_error if undefined or bad_any_cast on type mismatch.
 	template<typename T>
 	const T& get(const std::string& name) const {
 		const boost::any& value = get(name);
 		if (value.empty())
 			throw std::runtime_error(std::string("undefined property: " + name));
 		return boost::any_cast<const T&>(value);
+	}
+	/// get typed value of property, using fallback if undefined. Throws bad_any_cast on type mismatch.
+	template<typename T>
+	const T& get(const std::string& name, const T& fallback) const {
+		const boost::any& value = get(name);
+		return (value.empty()) ? fallback : boost::any_cast<const T&>(value);
 	}
 
 	/// count number of defined properties from given list

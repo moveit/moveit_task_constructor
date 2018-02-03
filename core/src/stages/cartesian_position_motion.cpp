@@ -17,7 +17,7 @@ CartesianPositionMotion::CartesianPositionMotion(std::string name)
 {
 	auto& p = properties();
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<std::string>("link", "", "name of link used for IK");
+	p.declare<std::string>("link", "name of link used for IK");
 	p.declare<double>("min_distance", "minimum distance to move");
 	p.declare<double>("max_distance", "maximum distance to move");
 	p.declare<double>("step_size", 0.005);

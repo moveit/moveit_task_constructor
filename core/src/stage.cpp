@@ -105,6 +105,10 @@ void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 }
 
+const ContainerBase *Stage::parent() const {
+	return pimpl_->parent_;
+}
+
 const std::string& Stage::name() const {
 	return pimpl_->name_;
 }
@@ -239,9 +243,12 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 
 void PropagatingEitherWayPrivate::initProperties(const InterfaceState& state)
 {
+	// reset properties to their defaults
 	properties_.reset();
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
+	// first init from INTERFACE
 	properties_.performInitFrom(Stage::INTERFACE, state.properties());
+	// then init from PARENT
+	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 }
 
 bool PropagatingEitherWayPrivate::canCompute() const
@@ -432,7 +439,9 @@ bool GeneratorPrivate::compute() {
 
 void GeneratorPrivate::initProperties()
 {
+	// reset properties to their defaults
 	properties_.reset();
+	// then init from PARENT
 	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 }
 
@@ -481,11 +490,10 @@ void ConnectingPrivate::newEndState(const Interface::iterator& it)
 
 void ConnectingPrivate::initProperties(const InterfaceState &start, const InterfaceState &end)
 {
+	// reset properties to their defaults
 	properties_.reset();
+	// then init from PARENT
 	properties_.performInitFrom(Stage::PARENT, parent()->properties());
-	// properties from start/end states need to be consistent to each other
-	properties_.performInitFrom(Stage::INTERFACE, start.properties());
-	properties_.performInitFrom(Stage::INTERFACE, end.properties(), true);
 }
 
 bool ConnectingPrivate::canCompute() const{
