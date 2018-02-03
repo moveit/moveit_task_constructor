@@ -38,7 +38,6 @@
 
 #include <moveit/task_constructor/properties.h>
 #include <boost/format.hpp>
-#include <ros/console.h>
 #include <functional>
 
 namespace moveit {
@@ -50,8 +49,8 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    , default_(default_value)
    , value_(default_value)
 {
-	if (!default_.empty() && std::type_index(default_.type()) != type_index_)
-		throw std::runtime_error("type of default value doesn't match declared type");
+	// default value's type should match declared type by construction
+	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
 }
 
 namespace {
@@ -59,7 +58,7 @@ void typeCheck(const boost::any& value, const std::type_index& type_index)
 {
 	if (std::type_index(value.type()) != type_index) {
 		static boost::format fmt("type (%1%) doesn't match property's declared type (%2%)");
-		throw std::runtime_error(boost::str(fmt % value.type().name() % type_index.name()));
+		throw std::logic_error(boost::str(fmt % value.type().name() % type_index.name()));
 	}
 }
 }
@@ -109,7 +108,7 @@ Property& PropertyMap::declare(const std::string &name, const std::type_info &ty
 {
 	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value)));
 	if (!it_inserted.second && std::type_index(type) != it_inserted.first->second.type_index_)
-		throw std::runtime_error("Property '" + name + "' was already declared with different type.");
+		throw std::logic_error("Property '" + name + "' was already declared with different type.");
 	return it_inserted.first->second;
 }
 
@@ -117,7 +116,7 @@ Property& PropertyMap::property(const std::string &name)
 {
 	auto it = props_.find(name);
 	if (it == props_.end())
-		throw std::runtime_error("Unknown property '" + name + "'");
+		throw std::runtime_error("Undeclared property '" + name + "'");
 	return it->second;
 }
 
@@ -133,10 +132,8 @@ void PropertyMap::set(const std::string &name, const boost::any &value)
 {
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) { // name is not yet declared
-		if (value.empty()) {
-			ROS_ERROR("trying to define property '%s' with NULL value", name.c_str());
-			return;
-		}
+		if (value.empty())
+			throw std::logic_error("trying to set undeclared property '" + name + "' with NULL value");
 		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any())));
 		it->second.setValue(value);
 	} else {

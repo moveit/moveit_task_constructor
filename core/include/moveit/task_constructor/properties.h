@@ -118,16 +118,17 @@ class PropertyMap
 {
 	std::map<std::string, Property> props_;
 
-public:
-	/// declare a property for future use
+	/// implementation of declare methods
 	Property& declare(const std::string& name, const std::type_info& type,
 	                  const std::string& description = "",
 	                  const boost::any& default_value = boost::any());
-
+public:
+	/// declare a property for future use
 	template<typename T>
 	Property& declare(const std::string& name, const std::string& description = "") {
 		return declare(name, typeid(T), description);
 	}
+	/// declare a property with default value
 	template<typename T>
 	Property& declare(const std::string& name, const T& default_value,
 	             const std::string& description = "") {
