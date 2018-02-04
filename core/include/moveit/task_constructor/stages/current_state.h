@@ -44,7 +44,7 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class CurrentState : public Generator {
 public:
-	CurrentState(std::string name);
+	CurrentState(const std::string& name = "current state");
 
 	void init(const planning_scene::PlanningSceneConstPtr& scene) override;
 	bool canCompute() const override;

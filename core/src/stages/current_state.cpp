@@ -39,7 +39,7 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-CurrentState::CurrentState(std::string name = "current state")
+CurrentState::CurrentState(const std::string &name)
    : Generator(name)
 {
 	ran_= false;
