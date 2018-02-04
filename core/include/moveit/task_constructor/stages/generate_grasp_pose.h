@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
+#include <Eigen/Geometry>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -54,13 +55,9 @@ public:
 
 	void setGroup(std::string group_name);
 
-	void setLink(std::string ik_link);
-
 	void setGripperGraspPose(std::string pose_name);
 
 	void setObject(std::string object);
-
-	void setGraspOffset(double grasp_offset);
 
 	void setTimeout(double timeout);
 
@@ -68,36 +65,22 @@ public:
 
 	void setMaxIKSolutions(uint32_t n);
 
-	void ignoreCollisions(bool flag);
+	void setIgnoreCollisions(bool flag);
+
+	void setGraspFrame(const geometry_msgs::TransformStamped &transform);
+	void setGraspFrame(const Eigen::Affine3d& transform, const std::string& link = "");
+	template <typename T>
+	void setGraspFrame(const T& t, const std::string& link = "") {
+		Eigen::Affine3d transform; transform = t;
+		setGraspFrame(transform, link);
+	}
 
 protected:
 	planning_scene::PlanningSceneConstPtr scene_;
 
-	std::string eef_;
-
-	std::string group_;
-
-	std::string ik_link_;
-
-	double grasp_offset_ = 0.0;
-
-	uint32_t max_ik_solutions_;
-
-	bool ignore_collisions_ = false;
-
-	std::string gripper_grasp_pose_;
-
-	std::string object_;
-
-	double timeout_ = 0.1;
-
-	double angle_delta_ = 0.1;
-
 	/* temp values */
 
 	double current_angle_ = 0.0;
-
-	double remaining_time_;
 
 	bool tried_current_state_as_seed_ = false;
 

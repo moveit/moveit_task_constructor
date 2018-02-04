@@ -7,8 +7,6 @@
 #include <moveit/task_constructor/stages/cartesian_position_motion.h>
 
 #include <ros/ros.h>
-#include <moveit_msgs/CollisionObject.h>
-#include <shape_msgs/SolidPrimitive.h>
 
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
@@ -19,11 +17,11 @@ void spawnObject(){
 
 	moveit_msgs::CollisionObject o;
 	o.id= "object";
-	o.header.frame_id= "base_link";
+	o.header.frame_id= "world";
 	o.primitive_poses.resize(1);
-	o.primitive_poses[0].position.x= 0.53;
-	o.primitive_poses[0].position.y= 0.05;
-	o.primitive_poses[0].position.z= 0.84;
+	o.primitive_poses[0].position.x= 0.3;
+	o.primitive_poses[0].position.y= 0.23;
+	o.primitive_poses[0].position.z= 0.12;
 	o.primitive_poses[0].orientation.w= 1.0;
 	o.primitives.resize(1);
 	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
@@ -41,30 +39,32 @@ int main(int argc, char** argv){
 	spawnObject();
 
 	Task t;
+	// define global properties used by most stages
+	t.setProperty("group", std::string("left_arm"));
+	t.setProperty("eef", std::string("la_tool_mount"));
+	t.setProperty("planner", std::string("RRTConnectkConfigDefault"));
+	t.setProperty("link", std::string("la_tool_mount"));
 
-	t.add( std::make_unique<stages::CurrentState>("current state") );
+	t.add(std::make_unique<stages::CurrentState>("current state"));
 
 	{
-		auto move= std::make_unique<stages::Gripper>("open gripper");
-		move->setEndEffector("left_gripper");
+		auto move = std::make_unique<stages::Gripper>("open gripper");
+		move->properties().configureInitFrom(Stage::PARENT);
 		move->setTo("open");
 		t.add(std::move(move));
 	}
 
 	{
-		auto move= std::make_unique<stages::Move>("move to pre-grasp");
-		move->setGroup("left_arm");
-		move->setPlannerId("RRTConnectkConfigDefault");
+		auto move = std::make_unique<stages::Move>("move to pre-grasp");
+		move->properties().configureInitFrom(Stage::PARENT);
 		move->setTimeout(8.0);
 		t.add(std::move(move));
 	}
 
 	{
-		auto move= std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		move->addSolutionCallback(std::ref(t.introspection()));
-		move->setGroup("left_arm");
-		move->setLink("l_gripper_tool_frame");
-		move->setMinMaxDistance(.03, 0.1);
+		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
+		move->properties().configureInitFrom(Stage::PARENT);
+		move->setMinMaxDistance(.05, 0.1);
 		move->setCartesianStepSize(0.02);
 
 		geometry_msgs::PointStamped target;
@@ -74,33 +74,34 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto gengrasp= std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
-		gengrasp->setEndEffector("left_gripper");
-		//gengrasp->setGroup("arm");
+		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
+		gengrasp->properties().configureInitFrom(Stage::PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(), "l_gripper_tool_frame");
-		gengrasp->setAngleDelta(.2);
+		gengrasp->setGraspFrame(Eigen::Translation3d(0,0,.05)*
+		                        Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
+		                        "lh_tool_frame");
+		gengrasp->setAngleDelta(-.2);
+		gengrasp->setMaxIKSolutions(1);
 		t.add(std::move(gengrasp));
 	}
 
 	{
-		auto move= std::make_unique<stages::Gripper>("grasp");
-		move->setEndEffector("left_gripper");
+		auto move = std::make_unique<stages::Gripper>("grasp");
+		move->properties().configureInitFrom(Stage::PARENT);
 		move->setTo("closed");
 		move->graspObject("object");
 		t.add(std::move(move));
 	}
 
 	{
-		auto move= std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->setGroup("left_arm");
-		move->setLink("l_gripper_tool_frame");
+		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
+		move->properties().configureInitFrom(Stage::PARENT);
 		move->setMinMaxDistance(0.03, 0.05);
 		move->setCartesianStepSize(0.01);
 
 		geometry_msgs::Vector3Stamped direction;
-		direction.header.frame_id= "base_link";
+		direction.header.frame_id= "world";
 		direction.vector.z= 1.0;
 		move->along(direction);
 		t.add(std::move(move));

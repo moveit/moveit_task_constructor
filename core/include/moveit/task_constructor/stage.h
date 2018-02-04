@@ -109,6 +109,7 @@ private:
 std::ostream& operator<<(std::ostream &os, const InitStageException& e);
 
 
+class ContainerBase;
 class StagePrivate;
 class Stage {
 	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
@@ -116,6 +117,17 @@ class Stage {
 public:
 	PRIVATE_CLASS(Stage)
 	typedef std::unique_ptr<Stage> pointer;
+	/** Names for property initialization sources
+	 *
+	 * - INTERFACE allows to pass properties from one stage to the next (in a SerialContainer).
+	 * - PARENT allows to inherit properties from the parent.
+	 *
+	 * INTERFACE takes precedence over PARENT.
+	 */
+	enum PropertyInitializerSource {
+		PARENT,
+		INTERFACE,
+	};
 	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
@@ -127,6 +139,7 @@ public:
 	/// initialize stage once before planning
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
+	const ContainerBase* parent() const;
 	const std::string& name() const;
 	void setName(const std::string& name);
 	virtual size_t numSolutions() const = 0;
@@ -142,6 +155,12 @@ public:
 	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
 	/// remove function callback
 	void erase(SolutionCallbackList::const_iterator which);
+
+	PropertyMap& properties();
+	const PropertyMap& properties() const {
+		return const_cast<Stage*>(this)->properties();
+	}
+	void setProperty(const std::string& name, const boost::any& value);
 
 protected:
 	/// Stage can only be instantiated through derived classes
