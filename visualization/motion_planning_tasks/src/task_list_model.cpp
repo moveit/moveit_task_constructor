@@ -113,12 +113,13 @@ Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
 StageFactoryPtr getStageFactory()
 {
 	static std::weak_ptr<StageFactory> factory;
-	if (!factory.expired())
-		return factory.lock();
+	StageFactoryPtr result = factory.lock();
+	if (result)
+		return result;
 
 	try {
-		StageFactoryPtr result(new StageFactory("moveit_task_constructor_core",
-		                                        "moveit::task_constructor::Stage"));
+		result.reset(new StageFactory("moveit_task_constructor_core",
+		                              "moveit::task_constructor::Stage"));
 		// Hm. pluglinlib / ClassLoader cannot instantiate classes in implicitly loaded libs
 		result->addBuiltInClass<moveit::task_constructor::SerialContainer>("Serial Container", "");
 		factory = result; // remember for future uses
@@ -285,7 +286,6 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 
 		// create a new local task using the given container as root
 		auto *m = new LocalTaskModel(std::move(container), this);
-		m->setStageFactory(stage_factory_);
 		insertModel(m, row);
 		return true;
 	}

@@ -68,7 +68,7 @@ public:
 	bool removeRows(int row, int count, const QModelIndex &parent) override;
 
 	/// providing a StageFactory makes the model accepting drops
-	void setStageFactory(const StageFactoryPtr &factory);
+	void setStageFactory(const StageFactoryPtr &factory) override;
 	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
