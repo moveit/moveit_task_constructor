@@ -1,0 +1,9 @@
+<library path="libmoveit_task_constructor_core_stages">
+  <class name="moveit_task_constructor/Current State"
+         type="moveit::task_constructor::stages::CurrentState"
+         base_class_type="moveit::task_constructor::Stage">
+    <description>
+      Use the current state of the robot (when starting planning) as a target.
+    </description>
+  </class>
+</library>

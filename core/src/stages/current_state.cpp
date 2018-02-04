@@ -39,8 +39,8 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-CurrentState::CurrentState(std::string name)
-: Generator(name)
+CurrentState::CurrentState(std::string name = "current state")
+   : Generator(name)
 {
 	ran_= false;
 }
@@ -58,9 +58,13 @@ bool CurrentState::canCompute() const{
 
 bool CurrentState::compute(){
 	ran_= true;
-	spawn(InterfaceState(scene_));
+	spawn(InterfaceState(scene_), 0.0);
 
 	return true;
 }
 
 } } }
+
+/// register plugin
+#include <pluginlib/class_list_macros.h>
+PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::CurrentState, moveit::task_constructor::Stage)

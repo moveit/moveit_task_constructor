@@ -44,6 +44,7 @@
 #include "factory_model.h"
 #include "pluginlib_factory.h"
 #include "task_display.h"
+#include <moveit/visualization_tools/task_solution_visualization.h>
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
@@ -130,7 +131,11 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 {
 	setupUi(q_ptr);
 	// init tasks view
-	tasks_view->setModel(&MetaTaskListModel::instance());
+	MetaTaskListModel *meta_model = &MetaTaskListModel::instance();
+	StageFactoryPtr factory = getStageFactory();
+	if (factory) meta_model->setMimeTypes( { factory->mimeType() } );
+	else button_show_stage_dock_widget->setEnabled(false);
+	tasks_view->setModel(meta_model);
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -164,6 +169,15 @@ TaskPanelPrivate::getTaskModel(const QModelIndex &index) const
 {
 	auto *meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskModel(index);
+}
+
+void TaskPanelPrivate::unlock(TaskDisplay* display)
+{
+	if (locked_display_ && locked_display_ != display) {
+		locked_display_->clearMarkers();
+		locked_display_->visualization()->unlock();
+		locked_display_ = display;
+	}
 }
 
 void TaskPanel::onInitialize()
@@ -222,6 +236,9 @@ void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIn
 	std::tie(task, task_index) = d_ptr->getTaskModel(current);
 	d_ptr->actionRemoveTaskTreeRows->setEnabled(task != nullptr);
 
+	// TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
+	d_ptr->unlock(nullptr);
+
 	auto *view = d_ptr->solutions_view;
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
@@ -229,29 +246,50 @@ void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIn
 	view->setModel(m);
 	delete sm;  // we don't store the selection model
 
-	if (m)
-		connect(view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+	if (m) {
+		sm = view->selectionModel();
+		connect(sm, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
 		        this, SLOT(onCurrentSolutionChanged(QModelIndex,QModelIndex)));
+		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
+		        this, SLOT(onSolutionSelectionChanged(QItemSelection, QItemSelection)));
+	}
 }
 
 void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-	if (!current.isValid())
+	TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
+	d_ptr->unlock(display);
+
+	if (!display || !current.isValid())
 		return;
+
+	BaseTaskModel *task = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex()).first;
+	Q_ASSERT(task);
+
+	d_ptr->locked_display_ = display;
+	TaskSolutionVisualization* vis = display->visualization();
+	const DisplaySolutionPtr& solution = task->getSolution(current);
+	display->setSolutionStatus(bool(solution));
+	vis->interruptCurrentDisplay();
+	vis->showTrajectory(solution, true);
+}
+
+void TaskPanel::onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+	QItemSelectionModel *sm = d_ptr->solutions_view->selectionModel();
+	const QModelIndexList& selected_rows = sm->selectedRows();
 
 	TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
 	Q_ASSERT(display);
-
-	BaseTaskModel *task;
-	QModelIndex task_index;
-	std::tie(task, task_index) = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex());
+	BaseTaskModel *task = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex()).first;
 	Q_ASSERT(task);
 
-	const DisplaySolutionPtr &solution = task->getSolution(current);
-	if (!solution)
-		return;
-
-	display->showTrajectory(solution);
+	display->clearMarkers();
+	for (const auto& index : selected_rows) {
+		const DisplaySolutionPtr &solution = task->getSolution(index);
+		display->setSolutionStatus(bool(solution));
+		display->showMarkers(solution);
+	}
 }
 
 }

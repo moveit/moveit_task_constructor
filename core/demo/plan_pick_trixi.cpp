@@ -5,6 +5,7 @@
 #include <moveit/task_constructor/stages/move.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 #include <moveit/task_constructor/stages/cartesian_position_motion.h>
+#include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -76,17 +77,20 @@ int main(int argc, char** argv){
 	{
 		auto gengrasp= std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->setEndEffector("left_gripper");
-		//gengrasp->setGroup("arm");
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(), "l_gripper_tool_frame");
+		gengrasp->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
 		gengrasp->setAngleDelta(.2);
-		t.add(std::move(gengrasp));
+
+		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
+		ik->setEndEffector("left_gripper");
+		t.add(std::move(ik));
 	}
 
 	{
 		auto move= std::make_unique<stages::Gripper>("grasp");
 		move->setEndEffector("left_gripper");
+		move->setAttachLink("l_gripper_tool_frame");
 		move->setTo("closed");
 		move->graspObject("object");
 		t.add(std::move(move));

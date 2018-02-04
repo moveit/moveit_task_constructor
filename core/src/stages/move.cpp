@@ -89,7 +89,7 @@ bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
 	::planning_interface::MotionPlanRequest req;
 	mgi.constructMotionPlanRequest(req);
 
-	ros::Duration(4.0).sleep();
+	ros::Duration(4.0).sleep(); // TODO: get rid of this!
 	::planning_interface::MotionPlanResponse res;
 	if(!planner_->generatePlan(from.scene(), req, res))
 		return false;

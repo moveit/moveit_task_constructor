@@ -35,6 +35,7 @@
 /* Author: Robert Haschke */
 
 #include <moveit/visualization_tools/display_solution.h>
+#include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <ros/console.h>
@@ -83,6 +84,11 @@ const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 	return data_[idx_pair.first].name_;
 }
 
+const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::IndexPair &idx_pair) const
+{
+	return data_[idx_pair.first].markers_;
+}
+
 void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
                                      const moveit_task_constructor_msgs::Solution &msg)
 {
@@ -113,6 +119,11 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 
 		// create new reference scene for next iteration
 		ref_scene = ref_scene->diff();
+
+		if (sub.markers.size())
+			data_[i].markers_.reset(new MarkerVisualization(sub.markers));
+		else
+			data_[i].markers_.reset();
 		++i;
 	}
 }

@@ -187,7 +187,7 @@ protected:
 	/// ComputeBase can only be instantiated by derived classes in stage.cpp
 	ComputeBase(ComputeBasePrivate* impl);
 
-	SubTrajectory& addTrajectory(const robot_trajectory::RobotTrajectoryPtr &, double cost);
+	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
 };
 
 
@@ -206,12 +206,25 @@ public:
 
 	void sendForward(const InterfaceState& from,
 	                 InterfaceState&& to,
-	                 const robot_trajectory::RobotTrajectoryPtr& trajectory,
-	                 double cost = 0);
+	                 SubTrajectory&& trajectory);
 	void sendBackward(InterfaceState&& from,
 	                  const InterfaceState& to,
-	                  const robot_trajectory::RobotTrajectoryPtr& trajectory,
-	                  double cost = 0);
+	                  SubTrajectory&& trajectory);
+
+	void sendForward(const InterfaceState& from,
+	                 InterfaceState&& to,
+	                 SubTrajectory&& trajectory,
+	                 double cost) {
+		trajectory.setCost(cost);
+		sendForward(from, std::move(to), std::move(trajectory));
+	}
+	void sendBackward(InterfaceState&& from,
+	                  const InterfaceState& to,
+	                  SubTrajectory&& trajectory,
+	                  double cost) {
+		trajectory.setCost(cost);
+		sendBackward(std::move(from), to, std::move(trajectory));
+	}
 
 protected:
 	// constructor for use in derived classes
@@ -254,7 +267,12 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
-	void spawn(InterfaceState &&state, double cost = 0);
+	void spawn(InterfaceState &&state, SubTrajectory &&trajectory);
+	void spawn(InterfaceState &&state, double cost) {
+		SubTrajectory trajectory;
+		trajectory.setCost(cost);
+		spawn(std::move(state), std::move(trajectory));
+	}
 };
 
 
@@ -266,7 +284,12 @@ public:
 
 	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
 	void connect(const InterfaceState& from, const InterfaceState& to,
-	             const robot_trajectory::RobotTrajectoryPtr& trajectory, double cost = 0);
+	             SubTrajectory&& trajectory);
+	void connect(const InterfaceState& from, const InterfaceState& to,
+	             SubTrajectory&& trajectory, double cost) {
+		trajectory.setCost(cost);
+		connect(from, to, std::move(trajectory));
+	}
 };
 
 

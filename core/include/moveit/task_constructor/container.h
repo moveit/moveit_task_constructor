@@ -68,7 +68,7 @@ public:
 	virtual bool compute() = 0;
 
 	/// called by a (direct) child when a new solution becomes available
-	virtual void onNewSolution(SolutionBase& t) = 0;
+	virtual void onNewSolution(const SolutionBase& s) = 0;
 
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
@@ -96,7 +96,7 @@ public:
 
 protected:
 	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(SolutionBase &s) override;
+	void onNewSolution(const SolutionBase &s) override;
 
 	/// function type used for traversing solutions
 	/// For each sub solution (current), the trace from the start as well as the
@@ -135,14 +135,8 @@ public:
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
-	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
-
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
-
-	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(SolutionBase &s) override;
 
 	/// callback for new start states (received externally)
 	virtual void onNewStartState(const InterfaceState &external) = 0;
@@ -151,18 +145,43 @@ protected:
 };
 
 
-/** A wrapper can wrap a single generator-style stage (and acts itself as a generator).
+/** Wrap an existing solution - for use in containers.
  *
- * The wrapped stage must act as a generator, i.e. only spawn new states
- * in its external interfaces. It's intended, e.g. to filter or clone
- * a generated solution of its wrapped generator. */
-class WrapperBase : protected ParallelContainerBase
+ * This essentially wraps a solution of a child and thus allows
+ * for new new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase {
+public:
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
+	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
+	{}
+	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
+                    Introspection* introspection = nullptr) const override {
+		wrapped_->fillMessage(solution, introspection);
+	}
+
+private:
+	const SolutionBase* wrapped_;
+};
+
+
+class WrapperBasePrivate;
+/** Base class for Wrapper and Task
+ *
+ * WrapperBase ensures that only a single child is wrapped in a container.
+ * This child can be accessed via wrapped().
+ */
+class WrapperBase : public ContainerBase
 {
 public:
+	PRIVATE_CLASS(WrapperBase)
 	WrapperBase(const std::string &name, pointer &&child = Stage::pointer());
+
+	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
-protected:
+	size_t numSolutions() const override;
+
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
 
@@ -172,9 +191,43 @@ protected:
 		return const_cast<WrapperBase*>(this)->wrapped();
 	}
 
-private:
-	void onNewStartState(const InterfaceState&) override {}
-	void onNewEndState(const InterfaceState&) override {}
+protected:
+	WrapperBase(WrapperBasePrivate *impl, pointer &&child = Stage::pointer());
+};
+
+
+class WrapperPrivate;
+/** A wrapper wraps a single generator-style stage (and acts itself as a generator).
+ *
+ * The wrapped stage must act as a generator, i.e. only spawn new states
+ * in its external interfaces. It's intended, e.g. to filter or clone
+ * a generated solution of its wrapped generator.
+ */
+class Wrapper : public WrapperBase
+{
+public:
+	PRIVATE_CLASS(Wrapper)
+	Wrapper(const std::string &name, pointer &&child = Stage::pointer());
+
+	void reset() override;
+	bool canCompute() const override;
+	bool compute() override;
+
+	size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+
+	void spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s);
+	void spawn(InterfaceState &&state, double cost) {
+		std::unique_ptr<SolutionBase> s(new SubTrajectory());
+		s->setCost(cost);
+		spawn(std::move(state), std::move(s));
+	}
+
+protected:
+	Wrapper(WrapperPrivate* impl, pointer &&child = Stage::pointer());
+
+	/// called by a (direct) child when a new solution becomes available
+	void onNewSolution(const SolutionBase &s) = 0;
 };
 
 } }

@@ -120,16 +120,12 @@ protected:
 	void initScene();
 	bool canCompute() const override;
 	bool compute() override;
-	void onNewSolution(SolutionBase &s) override;
+	void onNewSolution(const SolutionBase &s) override;
 
 private:
 	std::string id_;
 	robot_model_loader::RobotModelLoaderPtr rml_;
 	planning_scene::PlanningSceneConstPtr scene_; // initial scene
-
-	// use separate interfaces as targets for wrapper's prevEnds() / nextStarts()
-	InterfacePtr task_starts_;
-	InterfacePtr task_ends_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

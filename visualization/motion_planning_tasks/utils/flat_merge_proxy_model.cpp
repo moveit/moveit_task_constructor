@@ -45,6 +45,7 @@ class FlatMergeProxyModelPrivate {
 public:
 	Q_DECLARE_PUBLIC(FlatMergeProxyModel)
 	FlatMergeProxyModel* q_ptr;
+	QStringList mime_types_;
 
 	struct ModelData {
 		ModelData(QAbstractItemModel* m) : model_(m) {}
@@ -296,6 +297,16 @@ bool FlatMergeProxyModel::setData(const QModelIndex &index, const QVariant &valu
 	QModelIndex src_index = d_ptr->mapToSource(index, data);
 	Q_ASSERT(data->model_ == src_index.model());
 	return data->model_->setData(src_index, value, role);
+}
+
+void FlatMergeProxyModel::setMimeTypes(const QStringList &mime_types)
+{
+	d_ptr->mime_types_ = mime_types;
+}
+
+QStringList FlatMergeProxyModel::mimeTypes() const
+{
+	return d_ptr->mime_types_;
 }
 
 bool FlatMergeProxyModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent)

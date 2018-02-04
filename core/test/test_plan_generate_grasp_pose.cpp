@@ -39,11 +39,9 @@ int main(int argc, char** argv){
 	auto st= std::make_unique<stages::GenerateGraspPose>("generate grasp candidates");
 
 	st->setEndEffector("gripper");
-	//st->setGroup("arm");
 	st->setObject("object");
-	st->setTimeout(0.5);
 	st->setAngleDelta(0.1);
-	st->setGraspFrame(Eigen::Translation3d(.03,0,0));
+	st->setToolToGraspTF(Eigen::Translation3d(.03,0,0));
 
 	t.add(std::move(st));
 

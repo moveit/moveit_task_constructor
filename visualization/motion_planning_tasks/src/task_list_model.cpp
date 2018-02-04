@@ -113,12 +113,13 @@ Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
 StageFactoryPtr getStageFactory()
 {
 	static std::weak_ptr<StageFactory> factory;
-	if (!factory.expired())
-		return factory.lock();
+	StageFactoryPtr result = factory.lock();
+	if (result)
+		return result;
 
 	try {
-		StageFactoryPtr result(new StageFactory("moveit_task_constructor_core",
-		                                        "moveit::task_constructor::Stage"));
+		result.reset(new StageFactory("moveit_task_constructor_core",
+		                              "moveit::task_constructor::Stage"));
 		// Hm. pluglinlib / ClassLoader cannot instantiate classes in implicitly loaded libs
 		result->addBuiltInClass<moveit::task_constructor::SerialContainer>("Serial Container", "");
 		factory = result; // remember for future uses
@@ -147,6 +148,7 @@ TaskListModel::TaskListModel(QObject *parent)
    : FlatMergeProxyModel(parent)
 {
 	ROS_DEBUG_NAMED(LOGNAME, "created TaskListModel: %p", this);
+	setStageFactory(getStageFactory());
 }
 
 TaskListModel::~TaskListModel() {
@@ -167,43 +169,27 @@ void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
 
 void TaskListModel::setSolutionClient(ros::ServiceClient *client)
 {
-	if (!client || get_solution_client_ != client ||
-	    get_solution_client_->getService() != client->getService()) {
-		// service client's address changed: invalidate existing client pointers
-		for (int row=0, end = rowCount(); row != end; ++row) {
-			RemoteTaskModel* task = dynamic_cast<RemoteTaskModel*>(getModel(index(row, 0)).first);
-			if (!task) continue;
-			task->setSolutionClient(nullptr);
-		}
-	}
 	get_solution_client_ = client;
 }
 
 void TaskListModel::setStageFactory(const StageFactoryPtr &factory)
 {
 	stage_factory_ = factory;
+	if (stage_factory_)
+		setMimeTypes({ stage_factory_->mimeType() });
 }
 
 // re-implemented from base class to allow dropping
 Qt::ItemFlags TaskListModel::flags(const QModelIndex &index) const
 {
+	auto f = FlatMergeProxyModel::flags(index);
+
 	if (!index.isValid()) {
-		Qt::ItemFlags f = QAbstractItemModel::flags(index);
 		// dropping at root will create a new local task
 		if (stage_factory_)
 			f |= Qt::ItemIsDropEnabled;
-		return f;
 	}
-
-	return FlatMergeProxyModel::flags(index);
-}
-
-QStringList TaskListModel::mimeTypes() const
-{
-	QStringList result;
-	if (stage_factory_)
-		result << stage_factory_->mimeType();
-	return result;
+	return f;
 }
 
 QVariant TaskListModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -306,7 +292,8 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 		}
 
 		// create a new local task using the given container as root
-		insertModel(new LocalTaskModel(std::move(container), this), row);
+		auto *m = new LocalTaskModel(std::move(container), this);
+		insertModel(m, row);
 		return true;
 	}
 

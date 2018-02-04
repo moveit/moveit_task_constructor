@@ -5,6 +5,7 @@
 #include <moveit/task_constructor/stages/move.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 #include <moveit/task_constructor/stages/cartesian_position_motion.h>
+#include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <ros/ros.h>
 
@@ -78,12 +79,15 @@ int main(int argc, char** argv){
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
 		gengrasp->setGripperGraspPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setGraspFrame(Eigen::Translation3d(0,0,.05)*
-		                        Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
-		                        "lh_tool_frame");
+		gengrasp->setToolToGraspTF(Eigen::Translation3d(0,0,.05)*
+		                           Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
+		                           "lh_tool_frame");
 		gengrasp->setAngleDelta(-.2);
-		gengrasp->setMaxIKSolutions(1);
-		t.add(std::move(gengrasp));
+
+		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
+		ik->properties().configureInitFrom(Stage::PARENT);
+		ik->setMaxIKSolutions(1);
+		t.add(std::move(ik));
 	}
 
 	{
@@ -107,8 +111,14 @@ int main(int argc, char** argv){
 		t.add(std::move(move));
 	}
 
-	t.plan();
-	t.publishAllSolutions();
+	try {
+		t.plan();
+		t.publishAllSolutions();
+	}
+	catch (const InitStageException &e) {
+		std::cerr << e;
+		return EINVAL;
+	}
 
 	return 0;
 }

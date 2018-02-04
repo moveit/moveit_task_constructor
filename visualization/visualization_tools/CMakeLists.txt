@@ -4,6 +4,7 @@ set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/visualization_too
 
 set(HEADERS
 	${PROJECT_INCLUDE}/display_solution.h
+	${PROJECT_INCLUDE}/marker_visualization.h
 	${PROJECT_INCLUDE}/task_solution_panel.h
 	${PROJECT_INCLUDE}/task_solution_visualization.h
 )
@@ -12,6 +13,7 @@ add_library(${MOVEIT_LIB_NAME}
 	${HEADERS}
 
 	src/display_solution.cpp
+	src/marker_visualization.cpp
 	src/task_solution_panel.cpp
 	src/task_solution_visualization.cpp
 )
@@ -19,6 +21,7 @@ set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_V
 
 target_link_libraries(${MOVEIT_LIB_NAME}
 	${catkin_LIBRARIES}
+	${rviz_DEFAULT_PLUGIN_LIBRARIES}
 	${OGRE_LIBRARIES}
 	${QT_LIBRARIES}
 	${Boost_LIBRARIES}

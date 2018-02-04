@@ -2,6 +2,7 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/container.h
 	${PROJECT_INCLUDE}/container_p.h
 	${PROJECT_INCLUDE}/introspection.h
+	${PROJECT_INCLUDE}/marker_tools.h
 	${PROJECT_INCLUDE}/properties.h
 	${PROJECT_INCLUDE}/stage.h
 	${PROJECT_INCLUDE}/stage_p.h
@@ -11,6 +12,7 @@ add_library(${PROJECT_NAME}
 
 	container.cpp
 	introspection.cpp
+	marker_tools.cpp
 	properties.cpp
 	stage.cpp
 	storage.cpp

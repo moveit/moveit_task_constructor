@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Dave Coleman, Robert Haschke */
+/* Author: Robert Haschke */
 
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
@@ -164,6 +164,9 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
   robot_render_.reset();
   if (slider_dock_panel_)
     delete slider_dock_panel_;
+
+  if (main_scene_node_)
+    main_scene_node_->getCreator()->destroySceneNode(main_scene_node_);
 }
 
 void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context)
@@ -323,11 +326,8 @@ void TaskSolutionVisualization::onDisable()
 
 void TaskSolutionVisualization::interruptCurrentDisplay()
 {
-  // update() starts a new trajectory as soon as it is available
-  // interrupting may cause the newly received trajectory to interrupt
-  // hence, only interrupt when current_state_ already advanced past first
-  if (current_state_ > 0)
-    animating_ = false;
+  if (!locked_)
+    drop_displaying_solution_ = true;
 }
 
 float TaskSolutionVisualization::getStateDisplayTime()
@@ -352,11 +352,6 @@ float TaskSolutionVisualization::getStateDisplayTime()
   }
 }
 
-void TaskSolutionVisualization::dropTrajectory()
-{
-  drop_displaying_solution_ = true;
-}
-
 void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
 {
   if (drop_displaying_solution_)
@@ -371,25 +366,23 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     boost::mutex::scoped_lock lock(display_solution_mutex_);
 
     // new trajectory available to display?
-    if (solution_to_display_ && !solution_to_display_->empty())
-    {
+    if (solution_to_display_ && (!locked_ || !displaying_solution_)) {
       animating_ = true;
       displaying_solution_ = solution_to_display_;
       changedTrail();
       if (slider_panel_)
         slider_panel_->update(solution_to_display_->getWayPointCount());
     }
-    else if (displaying_solution_)
-    {
+    else if (displaying_solution_) {
       if (loop_display_property_->getBool()) {
         animating_ = true;
-      } else if (slider_panel_ && slider_panel_->isVisible())
-      {
+      } else if (slider_panel_ && slider_panel_->isVisible()) {
         if (slider_panel_->getSliderPosition() == (int)displaying_solution_->getWayPointCount() - 1)
           return;  // nothing more to do
         else
           animating_ = true;
-      }
+      } else if (locked_)
+        return;
     }
     solution_to_display_.reset();
 
@@ -432,29 +425,37 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
         if (!loop_display_property_->getBool() && slider_panel_)
           slider_panel_->pauseButton(true);
         // ensure to render end state
-        renderWayPoint(waypoint_count - 1, previous_state);
-        renderPlanningScene(displaying_solution_->scene(waypoint_count));
+        renderWayPoint(waypoint_count, previous_state);
       }
       current_state_time_ = 0.0f;
     }
     current_state_time_ += wall_dt;
   }
 
-  // main scene node is visible if: animation, trail, or panel is shown
+  // main scene node is visible if animation, trail, or panel is shown, or if display is locked
   setVisibility(main_scene_node_, parent_scene_node_,
                 display_->isEnabled() && displaying_solution_ &&
-                (animating_ || trail_scene_node_->getParent() ||
+                (animating_ || locked_ || trail_scene_node_->getParent() ||
                  (slider_panel_ && slider_panel_->isVisible())));
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 {
-  auto idx_pair = displaying_solution_->indexPair(index);
-  const planning_scene::PlanningSceneConstPtr &scene = displaying_solution_->scene(idx_pair);
+  moveit::core::RobotStateConstPtr robot_state;
+  planning_scene::PlanningSceneConstPtr scene;
+  if (index == displaying_solution_->getWayPointCount()) {
+      scene = displaying_solution_->scene(index);
+      renderPlanningScene (scene);
+      robot_state.reset(new moveit::core::RobotState(scene->getCurrentState()));
+  } else {
+    auto idx_pair = displaying_solution_->indexPair(index);
+    scene = displaying_solution_->scene(idx_pair);
 
-  if (previous_index < 0 ||
-      displaying_solution_->indexPair(previous_index).first != idx_pair.first)
-    renderPlanningScene (scene);
+    if (previous_index < 0 ||
+        displaying_solution_->indexPair(previous_index).first != idx_pair.first)
+      renderPlanningScene (scene);
+    robot_state = displaying_solution_->getWayPointPtr(idx_pair);
+  }
 
   QColor attached_color = attached_body_color_property_->getColor();
   std_msgs::ColorRGBA color;
@@ -465,9 +466,9 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 
   planning_scene::ObjectColorMap color_map;
   scene->getKnownObjectColors(color_map);
-  robot_render_->update(displaying_solution_->getWayPointPtr(idx_pair), color, color_map);
+  robot_render_->update(robot_state, color, color_map);
 
-  if (slider_panel_)
+  if (slider_panel_ && index >= 0)
     slider_panel_->setSliderPosition(index);
 }
 
@@ -492,17 +493,24 @@ void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msg
 
   DisplaySolutionPtr s (new DisplaySolution);
   s->setFromMessage(scene_, msg);
-  showTrajectory(s);
+  showTrajectory(s, false);
 }
 
-void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s)
+void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s, bool lock_display)
 {
-  if (!s->empty()) {
+  if (lock_display || !s->empty()) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
     solution_to_display_ = s;
-    if (interrupt_display_property_->getBool())
+    if (lock_display)
+      locked_ = drop_displaying_solution_ = true;
+    else if (interrupt_display_property_->getBool())
       interruptCurrentDisplay();
   }
+}
+
+void TaskSolutionVisualization::unlock()
+{
+  locked_ = false;
 }
 
 void TaskSolutionVisualization::changedRobotColor()

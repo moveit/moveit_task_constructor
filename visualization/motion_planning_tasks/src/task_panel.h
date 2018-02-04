@@ -41,6 +41,7 @@
 #include <rviz/panel.h>
 #include <moveit/macros/class_forward.h>
 #include <QModelIndex>
+class QItemSelection;
 
 namespace rviz {
 class WindowManagerInterface;
@@ -89,6 +90,7 @@ protected Q_SLOTS:
 	void removeSelectedStages();
 	void onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous);
+	void onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 };
 
 }

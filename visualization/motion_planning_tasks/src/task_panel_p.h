@@ -43,6 +43,7 @@
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
+#include <QPointer>
 
 namespace moveit_rviz_plugin {
 
@@ -64,8 +65,12 @@ public:
 	inline std::pair<BaseTaskModel*, QModelIndex>
 	getTaskModel(const QModelIndex& index) const;
 
+	/// unlock locked_display_ if given display is different
+	void unlock(TaskDisplay *display);
+
 	TaskPanel* q_ptr;
 	rviz::PropertyTreeModel* settings;
+	QPointer<TaskDisplay> locked_display_;
 	rviz::WindowManagerInterface* window_manager_;
 
 	static QPointer<TaskPanel> global_instance_;

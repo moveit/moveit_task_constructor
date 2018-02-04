@@ -48,10 +48,18 @@ MOVEIT_CLASS_FORWARD(PlanningScene)
 namespace robot_trajectory {
 MOVEIT_CLASS_FORWARD(RobotTrajectory)
 }
+namespace Ogre
+{
+class SceneNode;
+}
+namespace rviz {
+class DisplayContext;
+}
 
 namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
+MOVEIT_CLASS_FORWARD(MarkerVisualization)
 
 /** Class representing a task solution for display */
 class DisplaySolution
@@ -68,6 +76,8 @@ class DisplaySolution
 		robot_trajectory::RobotTrajectoryPtr trajectory_;
 		/// optional name of the trajectory
 		std::string name_;
+		/// rviz markers
+		MarkerVisualizationPtr markers_;
 	};
 	std::vector<Data> data_;
 
@@ -75,6 +85,8 @@ public:
 	DisplaySolution() = default;
 	/// create DisplaySolution for given sub trajectory of master
 	DisplaySolution(const DisplaySolution& master, uint32_t sub);
+
+	size_t numSubSolutions() const { return data_.size(); }
 
 	size_t getWayPointCount() const { return steps_; }
 	bool empty() const { return steps_ == 0; }
@@ -100,6 +112,13 @@ public:
 	const std::string& name(const IndexPair& idx_pair) const;
 	const std::string& name(size_t index) const {
 		return name(indexPair(index));
+	}
+	const MarkerVisualizationPtr markers(const IndexPair& idx_pair) const;
+	const MarkerVisualizationPtr markers(size_t index) const {
+		return markers(indexPair(index));
+	}
+	const MarkerVisualizationPtr markersOfSubTrajectory(size_t index) const {
+		return data_.at(index).markers_;
 	}
 
 	void setFromMessage(const planning_scene::PlanningScenePtr &start_scene,

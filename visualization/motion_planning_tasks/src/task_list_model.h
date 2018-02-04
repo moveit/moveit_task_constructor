@@ -55,6 +55,10 @@ namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 MOVEIT_CLASS_FORWARD(RemoteTaskModel)
+typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
+typedef std::shared_ptr<StageFactory> StageFactoryPtr;
+
+StageFactoryPtr getStageFactory();
 
 /** Base class to represent a single local or remote Task as a Qt model. */
 class BaseTaskModel : public QAbstractItemModel {
@@ -76,17 +80,13 @@ public:
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex &index, int role) const override;
 
+	virtual void setStageFactory(const StageFactoryPtr &factory) {}
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
 
 	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;
 	virtual DisplaySolutionPtr getSolution(const QModelIndex &index) = 0;
 };
-
-
-typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
-typedef std::shared_ptr<StageFactory> StageFactoryPtr;
-StageFactoryPtr getStageFactory();
 
 
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
@@ -135,13 +135,14 @@ public:
 	/// insert a TaskModel, pos is relative to modelCount()
 	inline bool insertModel(BaseTaskModel* model, int pos = -1) {
 		Q_ASSERT(model && model->columnCount() == columnCount());
+		// pass on stage factory
+		model->setStageFactory(stage_factory_);
 		// just wrap the base class method to further constrain the model type
 		return FlatMergeProxyModel::insertModel(model, pos);
 	}
 
 	/// providing a StageFactory makes the model accepting drops
 	void setStageFactory(const StageFactoryPtr &factory);
-	QStringList mimeTypes() const override;
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 	Qt::DropActions supportedDropActions() const override;
 	Qt::ItemFlags flags(const QModelIndex &index) const;

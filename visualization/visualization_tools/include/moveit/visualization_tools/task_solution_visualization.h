@@ -105,8 +105,8 @@ public:
 
   planning_scene::PlanningSceneConstPtr getScene() const { return scene_; }
   void showTrajectory(const moveit_task_constructor_msgs::Solution& msg);
-  void showTrajectory(moveit_rviz_plugin::DisplaySolutionPtr s);
-  void dropTrajectory();
+  void showTrajectory(moveit_rviz_plugin::DisplaySolutionPtr s, bool lock);
+  void unlock();
 
 public Q_SLOTS:
   void interruptCurrentDisplay();
@@ -148,6 +148,7 @@ protected:
   std::vector<rviz::Robot*> trail_;
   bool animating_ = false;
   bool drop_displaying_solution_ = false;
+  bool locked_ = false;
   int current_state_ = -1;
   float current_state_time_;
   boost::mutex display_solution_mutex_;

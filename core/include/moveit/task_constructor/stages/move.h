@@ -49,8 +49,8 @@ public:
 	void init(const planning_scene::PlanningSceneConstPtr &scene);
 	bool compute(const InterfaceState &from, const InterfaceState &to);
 
-	void setGroup(const std::__cxx11::string &group);
-	void setPlannerId(const std::__cxx11::string &planner);
+	void setGroup(const std::string &group);
+	void setPlannerId(const std::string &planner);
 	void setTimeout(double timeout);
 
 protected:

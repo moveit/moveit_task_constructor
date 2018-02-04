@@ -54,10 +54,14 @@ protected:
 TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
 	SerialContainerPrivate *cp = c.pimpl();
+	// pretend, that the container is connected
+	InterfacePtr dummy(new Interface(Interface::NotifyFunction()));
+	cp->setNextStarts(dummy);
+	cp->setPrevEnds(dummy);
 	planning_scene::PlanningScenePtr scene;
 
 	EXPECT_EQ(cp->parent(), nullptr);
-	c.init(scene);
+	EXPECT_THROW(c.init(scene), InitStageException);
 	VALIDATE();
 
 	/*****  inserting first stage  *****/

@@ -64,6 +64,7 @@ namespace moveit_rviz_plugin
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 class TaskSolutionVisualization;
+class MarkerVisualizationProperty;
 class TaskListModel;
 
 class TaskDisplay : public rviz::Display
@@ -84,9 +85,12 @@ public:
   virtual void onEnable();
   virtual void onDisable();
   void setName(const QString& name);
+  void setSolutionStatus(bool ok);
 
   TaskListModel& getTaskListModel() { return *task_list_model_; }
-  void showTrajectory(const DisplaySolutionPtr& s) const;
+  TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
+  void clearMarkers();
+  void showMarkers(const DisplaySolutionPtr &s);
 
 private Q_SLOTS:
   /**
@@ -123,6 +127,7 @@ protected:
   // Properties
   rviz::StringProperty* robot_description_property_;
   rviz::RosTopicProperty* task_solution_topic_property_;
+  MarkerVisualizationProperty* marker_visual_;
   rviz::Property* tasks_property_;
 };
 

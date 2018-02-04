@@ -97,7 +97,8 @@ TEST(TreeMergeModel, basics) {
 
 	EXPECT_EQ(tree.rowCount(), 1);
 	EXPECT_EQ(tree.columnCount(), 3);
-	EXPECT_TRUE(tree.index(0, 1).flags() & Qt::ItemIsSelectable);
+	EXPECT_TRUE(tree.index(0, 0).flags() & Qt::ItemIsSelectable);
+	EXPECT_FALSE(tree.index(0, 1).flags() & Qt::ItemIsSelectable);
 	EXPECT_FALSE(tree.index(1, 0).isValid());
 
 	QModelIndex idx = tree.index(0, 0);

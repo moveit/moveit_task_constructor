@@ -42,6 +42,8 @@
 #include "meta_task_list_model.h"
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit/visualization_tools/marker_visualization.h>
+#include <moveit/visualization_tools/display_solution.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
 
 #include <moveit/rdf_loader/rdf_loader.h>
@@ -59,6 +61,8 @@ namespace moveit_rviz_plugin
 TaskDisplay::TaskDisplay() : Display()
 {
 	task_list_model_.reset(new TaskListModel);
+	task_list_model_->setSolutionClient(&get_solution_client);
+
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
 	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
@@ -80,6 +84,8 @@ TaskDisplay::TaskDisplay() : Display()
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
 
+	marker_visual_ = new MarkerVisualizationProperty("Markers", this);
+
 	tasks_property_ =
 	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
@@ -93,6 +99,7 @@ void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
+	marker_visual_->onInitialize(scene_node_, context_);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	// displays are loaded before panels, hence wait a little bit for the panel to be loaded
@@ -176,6 +183,7 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		task_list_model_->processTaskDescriptionMessage(id, *msg);
 	});
 }
@@ -184,6 +192,7 @@ void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStati
 {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		task_list_model_->processTaskStatisticsMessage(id, *msg);
 	});
 }
@@ -192,15 +201,22 @@ void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionCon
 {
 	const std::string id = getUniqueId(msg->process_id, msg->task_id);
 	mainloop_jobs_.addJob([this, id, msg]() {
+		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		trajectory_visual_->showTrajectory(s);
+		if (s) trajectory_visual_->showTrajectory(s, false);
 		return;
 	});
 }
 
-void TaskDisplay::showTrajectory(const DisplaySolutionPtr &s) const {
-	trajectory_visual_->interruptCurrentDisplay();
-	trajectory_visual_->showTrajectory(s);
+void TaskDisplay::clearMarkers() {
+	marker_visual_->clearMarkers();
+}
+
+void TaskDisplay::showMarkers(const DisplaySolutionPtr &s) {
+	if (!s) return;
+	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
+		marker_visual_->showMarkers(s->markersOfSubTrajectory(i));
+	}
 }
 
 void TaskDisplay::changedTaskSolutionTopic()
@@ -211,14 +227,14 @@ void TaskDisplay::changedTaskSolutionTopic()
 	get_solution_client.shutdown();
 
 	// generate task monitoring topics from solution topic
-	std::string solution_topic = task_solution_topic_property_->getStdString();
-	auto last_sep = solution_topic.find_last_of('/');
-	if (last_sep == std::string::npos) {
-		setStatus(rviz::StatusProperty::Error, "Task Monitor", "invalid topic");
+	const QString& solution_topic = task_solution_topic_property_->getString();
+	if (!solution_topic.endsWith(QString("/").append(SOLUTION_TOPIC))) {
+		setStatus(rviz::StatusProperty::Error, "Task Monitor",
+		          QString("Invalid topic. Expecting a name ending on \"/%1\"").arg(SOLUTION_TOPIC));
 		return;
 	}
 
-	std::string base_ns = solution_topic.substr(0, last_sep+1);
+	std::string base_ns = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
 	// listen to task descriptions updates
 	task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
@@ -227,13 +243,18 @@ void TaskDisplay::changedTaskSolutionTopic()
 	task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
 
 	// listen to task solutions
-	task_solution_sub = update_nh_.subscribe(solution_topic, 2, &TaskDisplay::taskSolutionCB, this);
+	task_solution_sub = update_nh_.subscribe(base_ns + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
 
 	// service to request solutions
 	get_solution_client = update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
-	task_list_model_->setSolutionClient(&get_solution_client);
 
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "Connected");
+	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
+}
+
+void TaskDisplay::setSolutionStatus(bool ok)
+{
+	if (ok) setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
+	else setStatus(rviz::StatusProperty::Warn, "Solution", "Retrieval failed");
 }
 
 void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
