@@ -157,6 +157,7 @@ public:
 		data->storeMapping(src.internalPointer(), src_parent);
 	}
 
+	// remove model referenced by it, call indicates that onRemoveModel() should be called
 	bool removeModel(std::vector<ModelData>::iterator& it, bool call);
 
 private:
@@ -430,24 +431,25 @@ bool FlatMergeProxyModel::removeModel(int pos)
 
 void FlatMergeProxyModel::onRemoveModel(QAbstractItemModel *model)
 {
-	QObject::disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
-	                    this, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
-	QObject::disconnect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-	                    this, SLOT(_q_sourceRowsInserted(QModelIndex,int,int)));
-	QObject::disconnect(model, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-	                    this, SLOT(_q_sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
-	QObject::disconnect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-	                    this, SLOT(_q_sourceRowsRemoved(QModelIndex,int,int)));
-	QObject::disconnect(model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)),
-	                    this, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
-	QObject::disconnect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
-	                    this, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
+	disconnect(model, SIGNAL(destroyed(QObject*)), this, SLOT(_q_sourceDestroyed(QObject*)));
+	disconnect(model, SIGNAL(rowsAboutToBeInserted(QModelIndex,int,int)),
+	           this, SLOT(_q_sourceRowsAboutToBeInserted(QModelIndex,int,int)));
+	disconnect(model, SIGNAL(rowsInserted(QModelIndex,int,int)),
+	           this, SLOT(_q_sourceRowsInserted(QModelIndex,int,int)));
+	disconnect(model, SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
+	           this, SLOT(_q_sourceRowsAboutToBeRemoved(QModelIndex,int,int)));
+	disconnect(model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+	           this, SLOT(_q_sourceRowsRemoved(QModelIndex,int,int)));
+	disconnect(model, SIGNAL(rowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)),
+	           this, SLOT(_q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int)));
+	disconnect(model, SIGNAL(rowsMoved(QModelIndex,int,int,QModelIndex,int)),
+	           this, SLOT(_q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int)));
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	QObject::disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
-	                    this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
+	disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex,QVector<int>)),
+	           this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>)));
 #else
-	QObject::disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-	                    this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex)));
+	disconnect(model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+	           this, SLOT(_q_sourceDataChanged(QModelIndex,QModelIndex)));
 #endif
 }
 

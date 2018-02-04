@@ -135,6 +135,12 @@ void TaskListModel::onRemoveModel(QAbstractItemModel *model)
 	FlatMergeProxyModel::onRemoveModel(model);
 	if (model->parent() == this)
 		model->deleteLater();
+
+	// mark model as removed
+	auto it = std::find_if(remote_tasks_.begin(), remote_tasks_.end(),
+	                       [model](const auto& pair) { return pair.second == model; });
+	if (it != remote_tasks_.end())
+		it->second = nullptr;
 }
 
 TaskListModel::TaskListModel(QObject *parent)
@@ -149,7 +155,8 @@ TaskListModel::~TaskListModel() {
 	removeRows(0, rowCount());
 	// free RemoteTaskModels
 	for (auto& pair : remote_tasks_) {
-		if (pair.second) delete pair.second;
+		if (pair.second)
+			delete pair.second;
 	}
 }
 
@@ -232,7 +239,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		}
 	} else if (created) { // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(scene_);
+		remote_task = new RemoteTaskModel(scene_, this);
 		remote_task->setSolutionClient(get_solution_client_);
 	}
 	if (!remote_task)
