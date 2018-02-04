@@ -37,6 +37,7 @@
 */
 
 #include "task_display.h"
+#include "task_panel.h"
 #include "task_list_model.h"
 #include "meta_task_list_model.h"
 #include <moveit/task_constructor/introspection.h>
@@ -46,6 +47,7 @@
 #include <moveit/rdf_loader/rdf_loader.h>
 #include <moveit/robot_model/robot_model.h>
 
+#include <rviz/display_context.h>
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/ros_topic_property.h>
 #include <rviz/properties/status_property.h>
@@ -83,11 +85,13 @@ TaskDisplay::TaskDisplay() : Display()
 
 TaskDisplay::~TaskDisplay()
 {
+	if (context_) TaskPanel::decUseCount();
 }
 
 void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
+	TaskPanel::incUseCount(context_->getWindowManager());
 	trajectory_visual_->onInitialize(scene_node_, context_);
 }
 

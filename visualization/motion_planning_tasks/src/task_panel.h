@@ -42,11 +42,15 @@
 #include <moveit/macros/class_forward.h>
 #include <QModelIndex>
 
+namespace rviz {
+class WindowManagerInterface;
+}
+
 namespace moveit_rviz_plugin {
 
 class TaskSolutionVisualization;
 MOVEIT_CLASS_FORWARD(TaskListModel)
-typedef std::weak_ptr<TaskListModel> TaskListModelWeakPtr;
+MOVEIT_CLASS_FORWARD(TaskPanel)
 
 /** The TaskPanel displays information about manipulation tasks in the system.
  *
@@ -64,6 +68,14 @@ class TaskPanel: public rviz::Panel
 public:
 	TaskPanel(QWidget* parent = 0);
 	~TaskPanel();
+
+	/** Increment/decrement use count for global task panel instance.
+	 *
+	 * If not yet done, an instance is created. If use count drops to zero,
+	 * the global instance is destroyed.
+	 */
+	static void incUseCount(rviz::WindowManagerInterface *window_manager);
+	static void decUseCount();
 
 	void onInitialize() override;
 	void load(const rviz::Config& config) override;
