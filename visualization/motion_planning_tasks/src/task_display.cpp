@@ -51,6 +51,7 @@
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/ros_topic_property.h>
 #include <rviz/properties/status_property.h>
+#include <QTimer>
 
 namespace moveit_rviz_plugin
 {
@@ -91,8 +92,15 @@ TaskDisplay::~TaskDisplay()
 void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
-	TaskPanel::incUseCount(context_->getWindowManager());
 	trajectory_visual_->onInitialize(scene_node_, context_);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+	// displays are loaded before panels, hence wait a little bit for the panel to be loaded
+	QTimer::singleShot(1000, [this](){ TaskPanel::incUseCount(context_->getWindowManager()); });
+#else
+	// Qt4 doesn't support lambdas: directly instantiate panel instance
+	TaskPanel::incUseCount(context_->getWindowManager());
+#endif
 }
 
 void TaskDisplay::loadRobotModel()
