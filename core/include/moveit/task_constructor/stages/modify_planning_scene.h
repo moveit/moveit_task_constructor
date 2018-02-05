@@ -1,36 +1,112 @@
+/*********************************************************************
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2017, Bielefeld University
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Bielefeld University nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
+
+/* Authors: Robert Haschke
+   Desc:    Modify planning scene
+*/
+
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
-#include <deque>
+#include <moveit/task_constructor/properties.h>
+#include <moveit/task_constructor/type_traits.h>
 #include <map>
 
-namespace moveit { namespace planning_interface {
-MOVEIT_CLASS_FORWARD(MoveGroupInterface)
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(JointModelGroup)
 } }
 
 namespace moveit { namespace task_constructor { namespace stages {
 
+/** Allow modification of planning scene
+ *
+ * This stage takes the incoming planning scene and applies previously scheduled
+ * changes to it, for example:
+ * - Modify allowed collision matrix, enabling or disabling collision pairs.
+ * - Attach or detach objects to robot links.
+ * - Spawn or remove objects.
+ */
 class ModifyPlanningScene : public PropagatingEitherWay {
 public:
 	typedef std::vector<std::string> Names;
-	ModifyPlanningScene(std::string name);
+	typedef std::function<void(planning_scene::PlanningScenePtr scene, PropertyMap& properties)> ApplyCallback;
+	ModifyPlanningScene(const std::string& name = "modify planning scene");
 
 	bool computeForward(const InterfaceState& from) override;
 	bool computeBackward(const InterfaceState& to) override;
 
-	/// methods to attach objects to a robot link
-	template <class C>
-	void attachObjects(const C& objects, const std::string& attach_link);
-	template <class C>
-	void detachObjects(const C& objects, const std::string& attach_link);
-	/// attachObjects() and detachObjects() forward to this method, setting attach = true resp. false
+	/// call an arbitrary function
+	void setCallback(const ApplyCallback& cb) { callback_ = cb; }
+
+	/// attach or detach a list of objects to the given link
 	void attachObjects(const Names& objects, const std::string& attach_link, bool attach);
 
-	/// method to enable / disable collision between object pairs
-	template <class T1, class T2>
-	void enableCollisions(const T1& first, const T2& second, bool enable_collision);
+	/// conviency methods accepting a single object name
+	inline void attachObject(const std::string& object, const std::string& link);
+	inline void detachObject(const std::string& object, const std::string& link);
+
+	/// conviency methods accepting any container of object names
+	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	inline void attachObjects(const T& objects, const std::string& link) {
+		attachObjects(Names(objects.cbegin(), objects.cend()), link, true);
+	}
+	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	inline void detachObjects(const T& objects, const std::string& link) {
+		attachObjects(Names(objects.cbegin(), objects.cend()), link, false);
+	}
+
+	/// enable / disable collisions for each combination of pairs in first and second lists
+	void enableCollisions(const Names& first, const Names& second, bool enable_collision);
 	/// enable / disable all collisions for given object
-	void enableCollisions(const std::string& object, bool enable_collision);
+	void enableCollisions(const std::string& object, bool enable_collision) {
+		enableCollisions(Names({object}), Names(), enable_collision);
+	}
+
+	/// conveniency method accepting arbitrary container types
+	template <typename T1, typename T2,
+	          typename E1 = typename std::enable_if_t<is_container<T1>::value && std::is_base_of<std::string, typename T1::value_type>::value>,
+	          typename E2 = typename std::enable_if_t<is_container<T2>::value && std::is_base_of<std::string, typename T2::value_type>::value>>
+	inline void enableCollisions(const T1& first, const T2& second, bool enable_collision) {
+		enableCollisions(Names(first.cbegin(), first.cend()), Names(second.cbegin(), second.cend()), enable_collision);
+	}
+	/// conveniency method accepting std::string and an arbitrary container of names
+	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	inline void enableCollisions(const std::string& first, const T& second, bool enable_collision) {
+		enableCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
+	}
+	/// conveniency method accepting std::string and JointModelGroup
+	void enableCollisions(const std::string& first, const moveit::core::JointModelGroup& jmg, bool enable_collision);
 
 protected:
 	// list of objects to attach (true) / detach (false) to a given link
@@ -43,131 +119,22 @@ protected:
 		bool enable;
 	};
 	std::list<CollisionMatrixPairs> collision_matrix_edits_;
+	ApplyCallback callback_;
 
 protected:
 	// apply stored modifications to scene
+	InterfaceState apply(const InterfaceState &from, bool invert);
 	void attachObjects(planning_scene::PlanningScene &scene, const std::pair<std::string, std::pair<Names, bool> >& pair, bool invert);
-	void setCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
-	planning_scene::PlanningScenePtr apply(const planning_scene::PlanningSceneConstPtr &scene, bool invert);
+	void enableCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
 };
 
 
-// As C++ doesn't allow for partial specialization of functions / methods, we need to use a helper class
-namespace detail {
-
-// generic implementation
-template <class T> struct AttachHelper {
-	static void impl(ModifyPlanningScene* stage, const T& objects, const std::string& link, bool attach) {
-		static_assert(std::is_base_of<std::string, typename T::value_type>::value, "T must be a container of std::strings");
-		stage->attachObjects(ModifyPlanningScene::Names(objects.cbegin(), objects.cend()), link, attach);
-	}
-};
-
-// specialization for Names
-template<>
-struct AttachHelper<ModifyPlanningScene::Names> {
-	static void impl(ModifyPlanningScene* stage, const ModifyPlanningScene::Names& objects, const std::string& link, bool attach) {
-		stage->attachObjects(objects, link, attach);
-	}
-};
-
-// specialization for std::string
-template<>
-struct AttachHelper<std::string> {
-	static void impl(ModifyPlanningScene* stage, const std::string& object, const std::string& link, bool attach) {
-		stage->attachObjects(ModifyPlanningScene::Names({object}), link, attach);
-	}
-};
-// specialization for string literal
-template<int N>
-struct AttachHelper<char[N]> {
-	static void impl(ModifyPlanningScene* stage, const char object[N], const std::string& link, bool attach) {
-		stage->attachObjects(ModifyPlanningScene::Names({object}), link, attach);
-	}
-};
-
-} // namespace detail
-
-// implementation of methods forwards to AttachHelper::impl()
-template <class T>
-void ModifyPlanningScene::attachObjects(const T& first, const std::string& attach_link) {
-	detail::AttachHelper<T>::impl(this, first, attach_link, true);
-}
-template <class T>
-void ModifyPlanningScene::detachObjects(const T& first, const std::string& attach_link) {
-	detail::AttachHelper<T>::impl(this, first, attach_link, false);
+inline void ModifyPlanningScene::attachObject(const std::string &object, const std::string &link) {
+	attachObjects(Names({object}), link, true);
 }
 
-
-
-// specialization for Names, implemented in .cpp
-template <>
-void ModifyPlanningScene::enableCollisions<ModifyPlanningScene::Names, ModifyPlanningScene::Names>
-(const ModifyPlanningScene::Names& first, const ModifyPlanningScene::Names& second, bool enable_collision);
-
-// As C++ doesn't allow for partial specialization of functions / methods, we need to use a helper class
-namespace detail {
-
-// generic implementation
-template <class T1, class T2> struct CollisionHelper {
-	static void impl(ModifyPlanningScene* stage, const T1& first, const T2& second, bool enable) {
-		static_assert(std::is_base_of<std::string, typename T1::value_type>::value, "T1 must be a container of std::strings");
-		static_assert(std::is_base_of<std::string, typename T2::value_type>::value, "T2 must be a container of std::strings");
-		stage->enableCollisions(ModifyPlanningScene::Names(first.cbegin(), first.cend()),
-		                        ModifyPlanningScene::Names(second.cbegin(), second.cend()), enable);
-	}
-};
-
-// specialization for Names
-template<>
-struct CollisionHelper<ModifyPlanningScene::Names, ModifyPlanningScene::Names> {
-	static void impl(ModifyPlanningScene* stage, const ModifyPlanningScene::Names& first, const ModifyPlanningScene::Names& second, bool enable) {
-		stage->enableCollisions(first, second, enable);
-	}
-};
-
-// specialization for pair of std::string
-template<>
-struct CollisionHelper<std::string, std::string> {
-	static void impl(ModifyPlanningScene* stage, const std::string& first, const std::string& second, bool enable) {
-		stage->enableCollisions(ModifyPlanningScene::Names({first}), ModifyPlanningScene::Names({second}), enable);
-	}
-};
-// specialization for pair of string literals
-template<int N1, int N2>
-struct CollisionHelper<char[N1], char[N2]> {
-	static void impl(ModifyPlanningScene* stage, const char first[N1], const char second[N2], bool enable) {
-		stage->enableCollisions(ModifyPlanningScene::Names({std::string(first)}),
-		                        ModifyPlanningScene::Names({std::string(second)}), enable);
-	}
-};
-
-// specialization for std::string, container
-template<class T2>
-struct CollisionHelper<std::string, T2> {
-	static void impl(ModifyPlanningScene* stage, const std::string& first, const T2& second, bool enable) {
-		stage->enableCollisions(ModifyPlanningScene::Names({first}), second, enable);
-	}
-};
-// specialization for string literal, container
-template<int N1, class T2>
-struct CollisionHelper<char[N1], T2> {
-	static void impl(ModifyPlanningScene* stage, const char first[N1], const T2& second, bool enable) {
-		stage->enableCollisions(ModifyPlanningScene::Names({std::string(first)}), second, enable);
-	}
-};
-
-} // namespace detail
-
-// implementation of method forwards to CollisionHelper::impl()
-template <class T1, class T2>
-inline void ModifyPlanningScene::enableCollisions(const T1& first, const T2& second, bool enable_collision) {
-	detail::CollisionHelper<T1, T2>::impl(this, first, second, enable_collision);
-}
-
-// single-object variant forwards to empty Names in second arg
-inline void ModifyPlanningScene::enableCollisions(const std::string &object, bool enable_collision) {
-	enableCollisions(Names({object}), Names(), enable_collision);
+inline void ModifyPlanningScene::detachObject(const std::string &object, const std::string &link) {
+	attachObjects(Names({object}), link, false);
 }
 
 } } }
