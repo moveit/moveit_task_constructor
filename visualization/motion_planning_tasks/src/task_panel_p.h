@@ -40,6 +40,8 @@
 
 #include "task_panel.h"
 #include "ui_task_panel.h"
+#include "ui_task_view.h"
+#include "ui_task_settings.h"
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
@@ -55,7 +57,19 @@ class TaskPanelPrivate : public Ui_TaskPanel {
 public:
 	TaskPanelPrivate(TaskPanel *q_ptr);
 
-	void initSettings(rviz::Property *root);
+	TaskPanel* q_ptr;
+	TaskView* tasks_widget;
+	TaskSettings* settings_widget;
+
+	rviz::WindowManagerInterface* window_manager_;
+	static QPointer<TaskPanel> global_instance_;
+	static uint global_use_count_;
+};
+
+
+class TaskViewPrivate : public Ui_TaskView {
+public:
+	TaskViewPrivate(TaskView *q_ptr);
 
 	/// retrieve TaskListModel corresponding to given index
 	inline std::pair<TaskListModel*, TaskDisplay*>
@@ -68,13 +82,16 @@ public:
 	/// unlock locked_display_ if given display is different
 	void unlock(TaskDisplay *display);
 
-	TaskPanel* q_ptr;
-	rviz::PropertyTreeModel* settings;
+	TaskView *q_ptr;
 	QPointer<TaskDisplay> locked_display_;
-	rviz::WindowManagerInterface* window_manager_;
+};
 
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
+
+class TaskSettingsPrivate : public Ui_TaskSettings {
+public:
+	TaskSettingsPrivate(TaskSettings *q_ptr);
+
+	TaskSettings *q_ptr;
 };
 
 }

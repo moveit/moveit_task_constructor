@@ -1,6 +1,10 @@
 set(MOVEIT_LIB_NAME motion_planning_tasks_rviz_plugin)
 
-qt_wrap_ui(UIC_FILES task_panel.ui)
+qt_wrap_ui(UIC_FILES
+	task_panel.ui
+	task_view.ui
+	task_settings.ui
+)
 
 add_library(${MOVEIT_LIB_NAME}
 	factory_model.cpp
