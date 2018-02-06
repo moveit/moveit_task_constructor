@@ -40,6 +40,8 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
+#include <rviz/properties/property_tree_model.h>
+#include <rviz/properties/property.h>
 #include <ros/console.h>
 #include <ros/service_client.h>
 
@@ -64,9 +66,11 @@ struct RemoteTaskModel::Node {
 	InterfaceFlags interface_flags_;
 	NodeFlags node_flags_;
 	std::unique_ptr<RemoteSolutionModel> solutions_;
+	std::unique_ptr<rviz::PropertyTreeModel> properties_;
 
 	inline Node(Node *parent) : parent_(parent) {
 		solutions_.reset(new RemoteSolutionModel());
+		properties_.reset(new rviz::PropertyTreeModel(new rviz::Property()));
 	}
 
 	bool setName(const QString& name) {
@@ -367,6 +371,13 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex &index)
 		return result;
 	}
 	return it->second;
+}
+
+rviz::PropertyTreeModel* RemoteTaskModel::getPropertyModel(const QModelIndex &index)
+{
+	Node *n = node(index);
+	if (!n) return nullptr;
+	return n->properties_.get();
 }
 
 namespace detail {

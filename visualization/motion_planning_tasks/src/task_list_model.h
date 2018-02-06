@@ -50,6 +50,7 @@
 #include <memory>
 
 namespace ros { class ServiceClient; }
+namespace rviz { class PropertyTreeModel; }
 
 namespace moveit_rviz_plugin {
 
@@ -84,8 +85,13 @@ public:
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
 
+	/// get solution model for given stage index
 	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;
+	/// get solution for given solution index
 	virtual DisplaySolutionPtr getSolution(const QModelIndex &index) = 0;
+
+	/// get property model for given stage index
+	virtual rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) = 0;
 };
 
 

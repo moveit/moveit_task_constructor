@@ -254,7 +254,8 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 
 	d_ptr->lock(nullptr); // unlocks any locked_display_
 
-	auto *view = d_ptr->solutions_view;
+	// update the SolutionModel
+	QTreeView *view = d_ptr->solutions_view;
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
 	view->sortByColumn(-1);
@@ -268,6 +269,13 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
 		        this, SLOT(onSolutionSelectionChanged(QItemSelection, QItemSelection)));
 	}
+
+	// update the PropertyModel
+	view = d_ptr->property_view;
+	sm = view->selectionModel();
+	m = task ? task->getPropertyModel(task_index) : nullptr;
+	view->setModel(m);
+	delete sm;  // we don't store the selection model
 }
 
 void TaskView::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)

@@ -36,46 +36,49 @@
 
 #pragma once
 
-#include "task_list_model.h"
-#include <moveit/task_constructor/task.h>
+#include <QObject>
+#include <QString>
+#include <map>
+#include <functional>
+#include <typeindex>
+
+namespace rviz {
+class Property;
+class PropertyTreeModel;
+}
+namespace moveit { namespace task_constructor {
+class Property;
+class PropertyMap;
+} }
 
 namespace moveit_rviz_plugin {
 
-class LocalTaskModel
-      : public BaseTaskModel
-      , public moveit::task_constructor::Task
+class PropertyFactory
 {
-	Q_OBJECT
-	typedef moveit::task_constructor::StagePrivate Node;
-	Node *root_;
-	StageFactoryPtr stage_factory_;
-	std::map<Node*, rviz::PropertyTreeModel*> properties_;
-
-	inline Node* node(const QModelIndex &index) const;
-	QModelIndex index(Node *n) const;
-
 public:
-	LocalTaskModel(QObject *parent = nullptr);
-	LocalTaskModel(ContainerBase::pointer &&container, QObject *parent = nullptr);
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+	static PropertyFactory& instance();
 
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-	QModelIndex parent(const QModelIndex &index) const override;
+	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property*)> FactoryFunction;
 
-	Qt::ItemFlags flags(const QModelIndex & index) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+	/// register a new factory function for type T
+	template <typename T>
+	void registerType(const FactoryFunction& f) { registerType(std::type_index(typeid(T)).name(), f); }
 
-	bool removeRows(int row, int count, const QModelIndex &parent) override;
+	/// retrieve rviz property for given task_constructor property
+	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property *prop) const;
 
-	/// providing a StageFactory makes the model accepting drops
-	void setStageFactory(const StageFactoryPtr &factory) override;
-	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+private:
+	std::map<std::string, FactoryFunction> registry_;
 
-	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
-	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
+	/// class is singleton
+	PropertyFactory();
+	PropertyFactory(const PropertyFactory&) = delete;
+	void operator=(const PropertyFactory&) = delete;
 
-	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
+	void registerType(const std::string& type_name, const FactoryFunction& f);
 };
+
+/// turn a PropertyMap into an rviz::PropertyTreeModel
+rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::PropertyMap &properties, QObject *parent = nullptr);
 
 }
