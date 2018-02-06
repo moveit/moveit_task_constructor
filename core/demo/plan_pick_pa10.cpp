@@ -14,13 +14,11 @@
 
 #include <ros/ros.h>
 
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 using namespace moveit::task_constructor;
 
-void spawnObject(){
-	moveit::planning_interface::PlanningSceneInterface psi;
-
+void spawnObject(planning_scene::PlanningScenePtr scene) {
 	moveit_msgs::CollisionObject o;
 	o.id= "object";
 	o.header.frame_id= "world";
@@ -34,15 +32,13 @@ void spawnObject(){
 	o.primitives[0].dimensions.resize(2);
 	o.primitives[0].dimensions[0]= 0.23;
 	o.primitives[0].dimensions[1]= 0.03;
-	psi.applyCollisionObject(o);
+	scene->processCollisionObjectMsg(o);
 }
 
 int main(int argc, char** argv){
 	ros::init(argc, argv, "plan_pick");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
-
-	spawnObject();
 
 	Task t;
 	// define global properties used by most stages
@@ -57,7 +53,12 @@ int main(int argc, char** argv){
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 
 	t.add(std::make_unique<stages::CurrentState>());
-	t.add(std::make_unique<stages::FixCollisionObjects>());
+	{
+		auto stage = std::make_unique<stages::FixCollisionObjects>();
+		stage->restrictDirection(stages::MoveTo::FORWARD);
+		stage->setMaxPenetration(0.1);
+		t.add(std::move(stage));
+	}
 	{
 		auto move = std::make_unique<stages::MoveTo>("open gripper", pipeline);
 		move->restrictDirection(stages::MoveTo::FORWARD);
@@ -122,7 +123,7 @@ int main(int argc, char** argv){
 	{
 		auto move = std::make_unique<stages::ModifyPlanningScene>("attach object");
 		move->restrictDirection(stages::ModifyPlanningScene::FORWARD);
-		move->attachObjects("object", "lh_tool_frame");
+		move->attachObject("object", "lh_tool_frame");
 		t.add(std::move(move));
 	}
 
@@ -141,6 +142,12 @@ int main(int argc, char** argv){
 	}
 
 	try {
+		auto scene = t.initScene(ros::Duration(0));
+		auto& state = scene->getCurrentStateNonConst();
+		state.setToDefaultValues(state.getJointModelGroup("left_arm"), "home");
+		state.setToDefaultValues(state.getJointModelGroup("right_arm"), "home");
+		state.update();
+		spawnObject(scene);
 		t.plan();
 		std::cout << "waiting for <enter>\n";
 		char ch;
