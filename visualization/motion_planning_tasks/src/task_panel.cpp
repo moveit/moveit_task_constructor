@@ -176,7 +176,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
 	solutions_view->setStretchSection(2);
 
 	// init actions
-	tasks_view->addActions({actionRemoveTaskTreeRows, actionAddLocalTask});
+	tasks_view->addActions({actionAddLocalTask, actionRemoveTaskTreeRows});
 }
 
 std::pair<TaskListModel*, TaskDisplay*>
@@ -193,13 +193,13 @@ TaskViewPrivate::getTaskModel(const QModelIndex &index) const
 	return meta_model->getTaskModel(index);
 }
 
-void TaskViewPrivate::unlock(TaskDisplay* display)
+void TaskViewPrivate::lock(TaskDisplay* display)
 {
 	if (locked_display_ && locked_display_ != display) {
 		locked_display_->clearMarkers();
 		locked_display_->visualization()->unlock();
-		locked_display_ = display;
 	}
+	locked_display_ = display;
 }
 
 TaskView::TaskView(QWidget *parent)
@@ -214,16 +214,23 @@ TaskView::TaskView(QWidget *parent)
 	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
 	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
 
+	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
 }
 
 void TaskView::addTask()
 {
-	TaskListModel* task_list_model = nullptr;
 	QModelIndex current = d_ptr->tasks_view->currentIndex();
-	if (current.isValid()) {
-		task_list_model = d_ptr->getTaskListModel(current).first;
-		task_list_model->insertModel(new LocalTaskModel(task_list_model), current.row());
-	}
+	if (!current.isValid()) return;
+	bool is_top_level = !current.parent().isValid();
+
+	TaskListModel* task_list_model = d_ptr->getTaskListModel(current).first;
+	task_list_model->insertModel(new LocalTaskModel(task_list_model), is_top_level ? -1 : current.row());
+
+	// select and edit newly inserted model
+	if (is_top_level) current = current.model()->index(task_list_model->rowCount()-1, 0, current);
+	d_ptr->tasks_view->scrollTo(current);
+	d_ptr->tasks_view->setCurrentIndex(current);
+	d_ptr->tasks_view->edit(current);
 }
 
 void TaskView::removeSelectedStages()
@@ -235,13 +242,17 @@ void TaskView::removeSelectedStages()
 
 void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous)
 {
+	// adding task is allowed on top-level items and sub-top-level items
+	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
+	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
+	// removing stuff is allowed if there is any selection / any curren item
+	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid());
+
 	BaseTaskModel *task;
 	QModelIndex task_index;
 	std::tie(task, task_index) = d_ptr->getTaskModel(current);
-	d_ptr->actionRemoveTaskTreeRows->setEnabled(task != nullptr);
 
-	// TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
-	d_ptr->unlock(nullptr);
+	d_ptr->lock(nullptr); // unlocks any locked_display_
 
 	auto *view = d_ptr->solutions_view;
 	QItemSelectionModel *sm = view->selectionModel();
@@ -262,7 +273,7 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 void TaskView::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
 {
 	TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
-	d_ptr->unlock(display);
+	d_ptr->lock(display);
 
 	if (!display || !current.isValid())
 		return;
@@ -270,7 +281,6 @@ void TaskView::onCurrentSolutionChanged(const QModelIndex &current, const QModel
 	BaseTaskModel *task = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex()).first;
 	Q_ASSERT(task);
 
-	d_ptr->locked_display_ = display;
 	TaskSolutionVisualization* vis = display->visualization();
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 	display->setSolutionStatus(bool(solution));

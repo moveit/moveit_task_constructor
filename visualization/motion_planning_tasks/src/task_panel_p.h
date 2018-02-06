@@ -80,7 +80,7 @@ public:
 	getTaskModel(const QModelIndex& index) const;
 
 	/// unlock locked_display_ if given display is different
-	void unlock(TaskDisplay *display);
+	void lock(TaskDisplay *display);
 
 	TaskView *q_ptr;
 	QPointer<TaskDisplay> locked_display_;
