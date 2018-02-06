@@ -68,34 +68,36 @@ void Task::initModel () {
 	if( !rml_->getModel() )
 		throw Exception("Task failed to construct RobotModel");
 }
-void Task::initScene() {
+
+planning_scene::PlanningScenePtr Task::initScene(ros::Duration timeout) {
 	assert(rml_);
+
+	scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
 
 	ros::NodeHandle h;
 	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-	client.waitForExistence();
+	if (timeout != ros::Duration() && client.waitForExistence(timeout)) {
+		moveit_msgs::GetPlanningScene::Request req;
+		moveit_msgs::GetPlanningScene::Response res;
 
-	moveit_msgs::GetPlanningScene::Request req;
-	moveit_msgs::GetPlanningScene::Response res;
+		req.components.components =
+		      moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
+		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE
+		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
+		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
+		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
+		      | moveit_msgs::PlanningSceneComponents::OCTOMAP
+		      | moveit_msgs::PlanningSceneComponents::TRANSFORMS
+		      | moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
+		      | moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
+		      | moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
 
-	req.components.components =
-		moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
-		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE
-		| moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
-		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
-		| moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
-		| moveit_msgs::PlanningSceneComponents::OCTOMAP
-		| moveit_msgs::PlanningSceneComponents::TRANSFORMS
-		| moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
-		| moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
-		| moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
-
-	if(!client.call(req, res)){
-		throw Exception("Task failed to acquire current PlanningScene");
+		if (client.call(req, res))
+			std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
+		return scene_;
 	}
-
-	scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
-	std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
+	ROS_WARN("failed to acquire current PlanningScene, using empty one");
+	return scene_;
 }
 
 planning_pipeline::PlanningPipelinePtr
@@ -205,7 +207,7 @@ bool Task::compute()
 bool Task::plan()
 {
 	reset();
-	initScene();
+	if (!scene_) initScene();
 	init(scene_);
 
 	while(ros::ok() && canCompute()) {

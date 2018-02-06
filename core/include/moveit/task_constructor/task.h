@@ -91,11 +91,18 @@ public:
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
+	/// initialize planning scene from get_planning_scene service (waiting given timeout for it)
+	/// if service is not available or timeout is zero, use an empty planning scene
+	planning_scene::PlanningScenePtr initScene(ros::Duration timeout = ros::Duration(-1));
+
+	/// reset all stages
 	void reset() override;
+	/// initialize all stages with given scene
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
+	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan();
-	/// print current state std::cout
+	/// print current task state (number of found solutions and propagated states) to std::cout
 	static void printState(const Task &t);
 
 	size_t numSolutions() const override;
@@ -117,7 +124,6 @@ public:
 
 protected:
 	void initModel();
-	void initScene();
 	bool canCompute() const override;
 	bool compute() override;
 	void onNewSolution(const SolutionBase &s) override;
@@ -125,7 +131,7 @@ protected:
 private:
 	std::string id_;
 	robot_model_loader::RobotModelLoaderPtr rml_;
-	planning_scene::PlanningSceneConstPtr scene_; // initial scene
+	planning_scene::PlanningScenePtr scene_; // initial scene
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;
