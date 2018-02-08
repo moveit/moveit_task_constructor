@@ -73,6 +73,8 @@ void Property::setCurrentValue(const boost::any &value)
 	if (!value.empty())
 		typeCheck(value, type_index_);
 	value_ = value;
+	if (signaller_)
+		signaller_(this);
 }
 
 void Property::reset()

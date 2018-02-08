@@ -72,6 +72,8 @@ public:
 	typedef int SourceId;
 	/// function callback used to initialize property value from another PropertyMap
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
+	/// function callback used to signal value setting to external components
+	typedef std::function<void(const Property*)> SignalFunction;
 
 	/// set current value and default value
 	void setValue(const boost::any& value);
@@ -100,6 +102,10 @@ public:
 	/// set current value using matching configured initializers
 	void performInitFrom(SourceId source, const PropertyMap& other);
 
+	/// define a function callback to be called on each value update
+	/// note, that boost::any doesn't allow for change detection
+	void setSignalCallback(const SignalFunction& f) { signaller_ = f; }
+
 private:
 	std::string description_;
 	std::type_index type_index_;
@@ -109,6 +115,7 @@ private:
 	/// used for external initialization
 	SourceId source_id_ = 0;
 	InitializerFunction initializer_;
+	SignalFunction signaller_;
 };
 
 
