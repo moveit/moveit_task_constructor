@@ -140,6 +140,11 @@ void Stage::reset()
 
 void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	// init properties once from parent
+	auto impl = pimpl();
+	impl->properties_.reset();
+	if (impl->parent())
+		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 }
 
 const ContainerBase *Stage::parent() const {
@@ -278,16 +283,6 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 	return state;
 }
 
-void PropagatingEitherWayPrivate::initProperties(const InterfaceState& state)
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// first init from INTERFACE
-	properties_.performInitFrom(Stage::INTERFACE, state.properties());
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
-}
-
 bool PropagatingEitherWayPrivate::canCompute() const
 {
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState())
@@ -304,13 +299,15 @@ bool PropagatingEitherWayPrivate::compute()
 	bool result = false;
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
 		const InterfaceState& state = fetchStartState();
-		initProperties(state);
+		// enforce property initialization from INTERFACE
+		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
 		if (me->computeForward(state))
 			result |= true;
 	}
 	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
 		const InterfaceState& state = fetchEndState();
-		initProperties(state);
+		// enforce property initialization from INTERFACE
+		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
 		if (me->computeBackward(state))
 			result |= true;
 	}
@@ -470,16 +467,7 @@ bool GeneratorPrivate::canCompute() const {
 }
 
 bool GeneratorPrivate::compute() {
-	initProperties();
 	return static_cast<Generator*>(me_)->compute();
-}
-
-void GeneratorPrivate::initProperties()
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 }
 
 
@@ -525,14 +513,6 @@ void ConnectingPrivate::newEndState(const Interface::iterator& it)
 		--it_pairs_.second;
 }
 
-void ConnectingPrivate::initProperties(const InterfaceState &start, const InterfaceState &end)
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
-}
-
 bool ConnectingPrivate::canCompute() const{
 	// TODO: implement this properly
 	return it_pairs_.first != starts_->end() &&
@@ -543,7 +523,6 @@ bool ConnectingPrivate::compute() {
 	// TODO: implement this properly
 	const InterfaceState& from = *it_pairs_.first;
 	const InterfaceState& to = *(it_pairs_.second++);
-	initProperties(from, to);
 	return static_cast<Connecting*>(me_)->compute(from, to);
 }
 

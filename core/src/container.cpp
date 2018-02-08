@@ -168,11 +168,6 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	Stage::init(scene);
 
-	// containers don't need to reset and init their properties on each execution
-	impl->properties_.reset();
-	if (impl->parent())
-		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
-
 	// we need to have some children to do the actual work
 	if (children.empty()) {
 		errors.push_back(*this, "no children");

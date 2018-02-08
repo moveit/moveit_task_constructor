@@ -158,8 +158,6 @@ protected:
 	// get informed when new start or end state becomes available
 	void newStartState(const std::list<InterfaceState>::iterator& it);
 	void newEndState(const std::list<InterfaceState>::iterator& it);
-	// initialize properties from parent and/or state
-	void initProperties(const InterfaceState &state);
 
 	Interface::const_iterator next_start_state_;
 	Interface::const_iterator next_end_state_;
@@ -187,10 +185,6 @@ public:
 
 	bool canCompute() const override;
 	bool compute() override;
-
-private:
-	// initialize properties from parent
-	void initProperties();
 };
 PIMPL_FUNCTIONS(Generator)
 
@@ -211,8 +205,6 @@ private:
 	// get informed when new start or end state becomes available
 	void newStartState(const std::list<InterfaceState>::iterator& it);
 	void newEndState(const std::list<InterfaceState>::iterator& it);
-	// initialize properties from parent and/or interface states
-	void initProperties(const InterfaceState &start, const InterfaceState &end);
 
 	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
 };

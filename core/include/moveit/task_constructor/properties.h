@@ -66,12 +66,12 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
 class Property {
 	friend class PropertyMap;
 
+	Property(const std::type_index &type_index, const std::string &description, const boost::any &default_value);
+
 public:
 	typedef int SourceId;
+	/// function callback used to initialize property value from another PropertyMap
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
-	typedef std::map<SourceId, InitializerFunction> InitializerMap;
-
-	Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value);
 
 	/// set current value and default value
 	void setValue(const boost::any& value);
@@ -97,7 +97,7 @@ public:
 	/// configure initialization from source using given other property name
 	Property &configureInitFrom(SourceId source, const std::string& name);
 
-	/// set current value using configured initializers
+	/// set current value using matching configured initializers
 	void performInitFrom(SourceId source, const PropertyMap& other);
 
 private:
@@ -105,7 +105,10 @@ private:
 	std::type_index type_index_;
 	boost::any default_;
 	boost::any value_;
-	InitializerMap initializers_;
+
+	/// used for external initialization
+	SourceId source_id_ = 0;
+	InitializerFunction initializer_;
 };
 
 
@@ -120,13 +123,13 @@ class PropertyMap
 
 	/// implementation of declare methods
 	Property& declare(const std::string& name, const std::type_info& type,
-	                  const std::string& description = "",
-	                  const boost::any& default_value = boost::any());
+	                  const std::string& description,
+	                  const boost::any& default_value);
 public:
 	/// declare a property for future use
 	template<typename T>
 	Property& declare(const std::string& name, const std::string& description = "") {
-		return declare(name, typeid(T), description);
+		return declare(name, typeid(T), description, boost::any());
 	}
 	/// declare a property with default value
 	template<typename T>

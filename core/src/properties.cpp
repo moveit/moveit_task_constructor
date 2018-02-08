@@ -84,22 +84,23 @@ void Property::reset()
 
 Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
-	initializers_[source] = f;
+	if (source != source_id_ && initializer_)
+		throw std::runtime_error("Property was already configured for initialization from another source id");
+
+	source_id_ = source;
+	initializer_ = f;
 	return *this;
 }
 
 Property &Property::configureInitFrom(SourceId source, const std::string &name)
 {
-	initializers_[source] = [name](const PropertyMap& other) { return fromName(other, name); };
-	return *this;
+	return configureInitFrom(source, [name](const PropertyMap& other) { return fromName(other, name); });
 }
 
 void Property::performInitFrom(SourceId source, const PropertyMap &other)
 {
-	auto it = initializers_.find(source);
-	if (it == initializers_.end()) return;
-
-	setCurrentValue(it->second(other));
+	if (source_id_ != source || !initializer_) return;  // source ids not matching
+	setCurrentValue(initializer_(other));
 }
 
 

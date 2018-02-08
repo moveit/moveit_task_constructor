@@ -109,6 +109,12 @@ TEST_F(InitFromTest, sourceId) {
 	EXPECT_THROW(slave.property("double4"), std::runtime_error);
 }
 
+TEST_F(InitFromTest, multipleSourceIds) {
+	slave.configureInitFrom(0);
+	slave.configureInitFrom(0);  // init is allowed second time with same id
+	EXPECT_THROW(slave.configureInitFrom(1), std::runtime_error);  // but not with other id
+}
+
 TEST_F(InitFromTest, otherName) {
 	slave.property("double1").configureInitFrom(0, "double2"); // init double1 from double2
 	slave.performInitFrom(0, master);
