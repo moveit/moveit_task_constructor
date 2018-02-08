@@ -43,6 +43,7 @@
 #include <map>
 #include <set>
 #include <functional>
+#include <sstream>
 
 namespace moveit {
 namespace task_constructor {
@@ -66,7 +67,18 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
 class Property {
 	friend class PropertyMap;
 
-	Property(const std::type_index &type_index, const std::string &description, const boost::any &default_value);
+	typedef std::function<std::string(const boost::any& v)> SerializeFunction;
+
+	Property(const std::type_index &type_index, const std::string &description, const boost::any &default_value,
+	         const Property::SerializeFunction &serialize);
+
+	template <typename T>
+	static std::string serialize(const boost::any& value) {
+		if (value.empty()) return "";
+		std::ostringstream oss;
+		oss << boost::any_cast<T>(value);
+		return oss.str();
+	}
 
 public:
 	typedef int SourceId;
@@ -88,6 +100,8 @@ public:
 	inline const boost::any& value() const { return value_; }
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
+	/// serialize current value
+	std::string serialize() const;
 
 	/// get description text
 	const std::string& description() const { return description_; }
@@ -116,6 +130,7 @@ private:
 	SourceId source_id_ = 0;
 	InitializerFunction initializer_;
 	SignalFunction signaller_;
+	SerializeFunction serialize_;
 };
 
 
@@ -127,22 +142,25 @@ private:
 class PropertyMap
 {
 	std::map<std::string, Property> props_;
+	typedef std::map<std::string, Property>::iterator iterator;
+	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
 	Property& declare(const std::string& name, const std::type_info& type,
 	                  const std::string& description,
-	                  const boost::any& default_value);
+	                  const boost::any& default_value,
+	                  const Property::SerializeFunction &serialize);
 public:
 	/// declare a property for future use
 	template<typename T>
 	Property& declare(const std::string& name, const std::string& description = "") {
-		return declare(name, typeid(T), description, boost::any());
+		return declare(name, typeid(T), description, boost::any(), &Property::serialize<T>);
 	}
 	/// declare a property with default value
 	template<typename T>
 	Property& declare(const std::string& name, const T& default_value,
 	             const std::string& description = "") {
-		return declare(name, typeid(T), description, default_value);
+		return declare(name, typeid(T), description, default_value, &Property::serialize<T>);
 	}
 
 	/// get the property with given name
@@ -151,11 +169,23 @@ public:
 		return const_cast<PropertyMap*>(this)->property(name);
 	}
 
+	iterator begin() { return props_.begin(); }
+	iterator end() { return props_.end(); }
+	const_iterator begin() const { return props_.begin(); }
+	const_iterator end() const { return props_.end(); }
+
 	/// allow initialization from given source for listed properties - always using the same name
 	void configureInitFrom(Property::SourceId source, const std::set<std::string> &properties = {});
 
 	/// set (and, if neccessary, declare) the value of a property
-	void set(const std::string& name, const boost::any& value);
+	template <typename T>
+	void set(const std::string& name, const T& value) {
+		auto it = props_.find(name);
+		if (it == props_.end())  // name is not yet declared
+			declare<T>(name, value, "");
+		else
+			it->second.setValue(value);
+	}
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
 
@@ -186,6 +216,10 @@ public:
 	/// perform initialization of still undefined properties using configured initializers
 	void performInitFrom(Property::SourceId source, const PropertyMap& other, bool enforce = false);
 };
+
+// boost::any needs a specialization to avoid recursion
+template <>
+void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value);
 
 } // namespace task_constructor
 } // namespace moveit

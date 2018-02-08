@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 # ROS messages, services and actions
 add_message_files(DIRECTORY msg FILES
+	Property.msg
 	Solution.msg
 	StageDescription.msg
 	StageStatistics.msg

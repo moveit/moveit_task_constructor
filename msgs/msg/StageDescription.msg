@@ -13,5 +13,4 @@ string name
 uint32 flags
 
 # properties
-string property_name
-string property_value
+Property[] properties
