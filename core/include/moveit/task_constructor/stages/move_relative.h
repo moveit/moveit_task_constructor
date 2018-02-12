@@ -32,66 +32,47 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
+/* Authors: Michael Goerner, Robert Haschke
+   Desc:    Move to joint-state or Cartesian goal pose
 */
 
 #pragma once
 
-#include "task_panel.h"
-#include "ui_task_panel.h"
-#include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include <moveit/task_constructor/stage.h>
+#include <moveit/task_constructor/solvers/planner_interface.h>
+#include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
-#include <QPointer>
+namespace moveit { namespace task_constructor { namespace stages {
 
-namespace moveit_rviz_plugin {
-
-class BaseTaskModel;
-class TaskListModel;
-class TaskDisplay;
-
-class TaskPanelPrivate : public Ui_TaskPanel {
+/** Perform a Cartesian motion relative to some link */
+class MoveRelative : public PropagatingEitherWay {
 public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
+	MoveRelative(std::string name, const solvers::PlannerInterfacePtr& planner);
 
-	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	bool computeForward(const InterfaceState& from) override;
+	bool computeBackward(const InterfaceState& to) override;
 
-	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
+	void setGroup(const std::string& group);
+	void setLink(const std::string& link);
+
+	/// set minimum / maximum distance to move
+	void setMinDistance(double distance);
+	void setMaxDistance(double distance);
+	void setMinMaxDistance(double min_distance, double max_distance);
+
+	/// perform twist motion on specified link
+	void along(const geometry_msgs::TwistStamped& twist);
+	/// translate link along given direction
+	void along(const geometry_msgs::Vector3Stamped& direction);
+
+protected:
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
+	             SubTrajectory &trajectory, Direction dir);
+
+protected:
+	solvers::PlannerInterfacePtr planner_;
 };
 
-
-class TaskViewPrivate : public Ui_TaskView {
-public:
-	TaskViewPrivate(TaskView *q_ptr);
-
-	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
-
-	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
-
-	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
-
-	TaskView *q_ptr;
-	QPointer<TaskDisplay> locked_display_;
-};
-
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
-public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
-
-	TaskSettings *q_ptr;
-};
-
-}
+} } }

@@ -79,13 +79,15 @@ TaskPanel::TaskPanel(QWidget* parent)
   : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
 {
 	Q_D(TaskPanel);
-	// connect signals
-	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
-	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
-	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 
-	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
-	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
+	d->tasks_widget = new TaskView(this);
+	d->settings_widget = new TaskSettings(this);
+	layout()->addWidget(d->tasks_widget);
+	layout()->addWidget(d->settings_widget);
+
+	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
+	connect(d->button_show_settings, SIGNAL(toggled(bool)), d->settings_widget, SLOT(setVisible(bool)));
+	d->settings_widget->setVisible(d->button_show_settings->isChecked());
 
 	// if still undefined, this becomes the global instance
 	if (TaskPanelPrivate::global_instance_.isNull()) {
@@ -127,14 +129,41 @@ void TaskPanel::decUseCount()
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
-   , settings(new rviz::PropertyTreeModel(new rviz::Property, q_ptr))
 {
 	setupUi(q_ptr);
-	// init tasks view
+	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
+}
+
+void TaskPanel::onInitialize()
+{
+	d_ptr->window_manager_ = vis_manager_->getWindowManager();
+}
+
+void TaskPanel::save(rviz::Config config) const
+{
+	rviz::Panel::save(config);
+}
+
+void TaskPanel::load(const rviz::Config& config)
+{
+	rviz::Panel::load(config);
+}
+
+void TaskPanel::showStageDockWidget()
+{
+	rviz::PanelDockWidget *dock = getStageDockWidget(d_ptr->window_manager_);
+	if (dock) dock->show();
+}
+
+
+TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
+   : q_ptr(q_ptr)
+{
+	setupUi(q_ptr);
+
 	MetaTaskListModel *meta_model = &MetaTaskListModel::instance();
 	StageFactoryPtr factory = getStageFactory();
 	if (factory) meta_model->setMimeTypes( { factory->mimeType() } );
-	else button_show_stage_dock_widget->setEnabled(false);
 	tasks_view->setModel(meta_model);
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -147,99 +176,86 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
 	solutions_view->setStretchSection(2);
 
 	// init actions
-	tasks_view->addActions({actionRemoveTaskTreeRows, actionAddLocalTask});
-
-	initSettings(settings->getRoot());
-	settings_view->setModel(settings);
-}
-
-void TaskPanelPrivate::initSettings(rviz::Property* root)
-{
+	tasks_view->addActions({actionAddLocalTask, actionRemoveTaskTreeRows});
 }
 
 std::pair<TaskListModel*, TaskDisplay*>
-TaskPanelPrivate::getTaskListModel(const QModelIndex &index) const
+TaskViewPrivate::getTaskListModel(const QModelIndex &index) const
 {
 	auto *meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskListModel(index);
 }
 
 std::pair<BaseTaskModel*, QModelIndex>
-TaskPanelPrivate::getTaskModel(const QModelIndex &index) const
+TaskViewPrivate::getTaskModel(const QModelIndex &index) const
 {
 	auto *meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskModel(index);
 }
 
-void TaskPanelPrivate::unlock(TaskDisplay* display)
+void TaskViewPrivate::lock(TaskDisplay* display)
 {
 	if (locked_display_ && locked_display_ != display) {
 		locked_display_->clearMarkers();
 		locked_display_->visualization()->unlock();
-		locked_display_ = display;
 	}
+	locked_display_ = display;
 }
 
-void TaskPanel::onInitialize()
+TaskView::TaskView(QWidget *parent)
+   : QWidget(parent), d_ptr(new TaskViewPrivate(this))
 {
-	d_ptr->window_manager_ = vis_manager_->getWindowManager();
+	Q_D(TaskView);
+
+	// connect signals
+	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
+	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
+
+	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)),
+	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
+
+	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
 }
 
-void TaskPanel::save(rviz::Config config) const
+void TaskView::addTask()
 {
-	rviz::Panel::save(config);
-	d_ptr->settings->getRoot()->save(config);
-}
-
-void TaskPanel::load(const rviz::Config& config)
-{
-	rviz::Panel::load(config);
-	d_ptr->settings->getRoot()->load(config);
-}
-
-void TaskPanel::addTask()
-{
-	TaskListModel* task_list_model = nullptr;
 	QModelIndex current = d_ptr->tasks_view->currentIndex();
-	if (!current.isValid()) {
-		// create new TaskDisplay
-		TaskDisplay *display = new TaskDisplay();
-		display->setName("Motion Planning Task");
-		vis_manager_->getRootDisplayGroup()->addDisplay(display);
-		display->initialize(vis_manager_);
-		display->setEnabled(true);
+	if (!current.isValid()) return;
+	bool is_top_level = !current.parent().isValid();
 
-		task_list_model = &display->getTaskListModel();
-	} else
-		task_list_model = d_ptr->getTaskListModel(current).first;
+	TaskListModel* task_list_model = d_ptr->getTaskListModel(current).first;
+	task_list_model->insertModel(new LocalTaskModel(task_list_model), is_top_level ? -1 : current.row());
 
-	task_list_model->insertModel(new LocalTaskModel(task_list_model), current.row());
+	// select and edit newly inserted model
+	if (is_top_level) current = current.model()->index(task_list_model->rowCount()-1, 0, current);
+	d_ptr->tasks_view->scrollTo(current);
+	d_ptr->tasks_view->setCurrentIndex(current);
+	d_ptr->tasks_view->edit(current);
 }
 
-void TaskPanel::showStageDockWidget()
-{
-	rviz::PanelDockWidget *dock = getStageDockWidget(d_ptr->window_manager_);
-	if (dock) dock->show();
-}
-
-void TaskPanel::removeSelectedStages()
+void TaskView::removeSelectedStages()
 {
 	auto *m = d_ptr->tasks_view->model();
 	for (const auto &range : d_ptr->tasks_view->selectionModel()->selection())
 		m->removeRows(range.top(), range.bottom()-range.top()+1, range.parent());
 }
 
-void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous)
+void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous)
 {
+	// adding task is allowed on top-level items and sub-top-level items
+	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
+	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
+	// removing stuff is allowed if there is any selection / any curren item
+	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid());
+
 	BaseTaskModel *task;
 	QModelIndex task_index;
 	std::tie(task, task_index) = d_ptr->getTaskModel(current);
-	d_ptr->actionRemoveTaskTreeRows->setEnabled(task != nullptr);
 
-	// TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
-	d_ptr->unlock(nullptr);
+	d_ptr->lock(nullptr); // unlocks any locked_display_
 
-	auto *view = d_ptr->solutions_view;
+	// update the SolutionModel
+	QTreeView *view = d_ptr->solutions_view;
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
 	view->sortByColumn(-1);
@@ -253,12 +269,19 @@ void TaskPanel::onCurrentStageChanged(const QModelIndex &current, const QModelIn
 		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
 		        this, SLOT(onSolutionSelectionChanged(QItemSelection, QItemSelection)));
 	}
+
+	// update the PropertyModel
+	view = d_ptr->property_view;
+	sm = view->selectionModel();
+	m = task ? task->getPropertyModel(task_index) : nullptr;
+	view->setModel(m);
+	delete sm;  // we don't store the selection model
 }
 
-void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
+void TaskView::onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous)
 {
 	TaskDisplay *display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
-	d_ptr->unlock(display);
+	d_ptr->lock(display);
 
 	if (!display || !current.isValid())
 		return;
@@ -266,7 +289,6 @@ void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QMode
 	BaseTaskModel *task = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex()).first;
 	Q_ASSERT(task);
 
-	d_ptr->locked_display_ = display;
 	TaskSolutionVisualization* vis = display->visualization();
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 	display->setSolutionStatus(bool(solution));
@@ -274,7 +296,7 @@ void TaskPanel::onCurrentSolutionChanged(const QModelIndex &current, const QMode
 	vis->showTrajectory(solution, true);
 }
 
-void TaskPanel::onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void TaskView::onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
 	QItemSelectionModel *sm = d_ptr->solutions_view->selectionModel();
 	const QModelIndexList& selected_rows = sm->selectedRows();
@@ -290,6 +312,19 @@ void TaskPanel::onSolutionSelectionChanged(const QItemSelection &selected, const
 		display->setSolutionStatus(bool(solution));
 		display->showMarkers(solution);
 	}
+}
+
+
+TaskSettingsPrivate::TaskSettingsPrivate(TaskSettings *q_ptr)
+   : q_ptr(q_ptr)
+{
+	setupUi(q_ptr);
+}
+
+TaskSettings::TaskSettings(QWidget *parent)
+   : QWidget(parent), d_ptr(new TaskSettingsPrivate(this))
+{
+	Q_D(TaskSettings);
 }
 
 }

@@ -55,7 +55,7 @@ TEST_F(BaseTest, serialContainer) {
 	SerialContainer c("serial");
 	SerialContainerPrivate *cp = c.pimpl();
 	// pretend, that the container is connected
-	InterfacePtr dummy(new Interface(Interface::NotifyFunction()));
+	InterfacePtr dummy(new Interface);
 	cp->setNextStarts(dummy);
 	cp->setPrevEnds(dummy);
 	planning_scene::PlanningScenePtr scene;

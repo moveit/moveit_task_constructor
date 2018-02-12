@@ -49,6 +49,7 @@ class LocalTaskModel
 	typedef moveit::task_constructor::StagePrivate Node;
 	Node *root_;
 	StageFactoryPtr stage_factory_;
+	std::map<Node*, rviz::PropertyTreeModel*> properties_;
 
 	inline Node* node(const QModelIndex &index) const;
 	QModelIndex index(Node *n) const;
@@ -73,6 +74,8 @@ public:
 
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
 	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
+
+	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
 
 }

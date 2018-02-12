@@ -36,6 +36,7 @@
 
 #include "local_task_model.h"
 #include "factory_model.h"
+#include "properties/property_factory.h"
 #include <moveit/task_constructor/container_p.h>
 
 #include <ros/console.h>
@@ -230,6 +231,16 @@ DisplaySolutionPtr LocalTaskModel::getSolution(const QModelIndex &index)
 {
 	// TODO implement
 	return DisplaySolutionPtr();
+}
+
+rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex &index)
+{
+	Node *n = node(index);
+	if (!n) return nullptr;
+	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
+	if (it_inserted.second)  // newly inserted, create new model
+		it_inserted.first->second = createPropertyTreeModel(n->me()->properties(), this);
+	return it_inserted.first->second;
 }
 
 }

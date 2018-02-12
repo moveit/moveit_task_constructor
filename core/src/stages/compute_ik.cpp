@@ -20,7 +20,7 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
-   : Wrapper(name, std::move(child))
+   : WrapperBase(name, std::move(child))
 {
 	auto& p = properties();
 	p.declare<double>("timeout", 1.0);
@@ -218,17 +218,17 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		start_time = now;
 
 		planning_scene::PlanningSceneConstPtr scene = s.start()->scene();
-		std::unique_ptr<SolutionBase> solution(new SubTrajectory());
+		SubTrajectory solution;
 
 		// include markers from original solution
-		std::copy(s.markers().begin(), s.markers().end(), std::back_inserter(solution->markers()));
+		std::copy(s.markers().begin(), s.markers().end(), std::back_inserter(solution.markers()));
 
 		// frame at target pose
 		target_pose_msg.header.frame_id = scene->getPlanningFrame();
-		rviz_marker_tools::appendFrame(solution->markers(), target_pose_msg, 0.1, "ik frame");
+		rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
 
 		if (succeeded) {
-			solution->setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+			solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
 			// create a new scene for each solution as they will have different robot states
 			planning_scene::PlanningScenePtr new_scene = s.start()->scene()->diff();
 			robot_state::RobotState& robot_state = new_scene->getCurrentStateNonConst();
@@ -240,11 +240,11 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			auto appender = [&solution](visualization_msgs::Marker& marker, const std::string& name) {
 				marker.ns = "ik solution";
 				marker.color.a *= 0.5;
-				solution->markers().push_back(marker);
+				solution.markers().push_back(marker);
 			};
 			generateVisualMarkers(robot_state, appender, jmg->getLinkModelNames());
 		} else {
-			solution->setCost(std::numeric_limits<double>::infinity());
+			solution.setCost(std::numeric_limits<double>::infinity());
 		}
 
 		spawn(InterfaceState(scene), std::move(solution));

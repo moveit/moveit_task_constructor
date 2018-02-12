@@ -87,6 +87,8 @@ public:
 
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
 	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
+
+	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
 
 

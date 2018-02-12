@@ -82,15 +82,40 @@ public:
 	void load(const rviz::Config& config) override;
 	void save(rviz::Config config) const override;
 
+protected Q_SLOTS:
+	void showStageDockWidget();
+};
+
+
+class MetaTaskListModel;
+class TaskViewPrivate;
+class TaskView : public QWidget {
+	Q_OBJECT
+	Q_DECLARE_PRIVATE(TaskView)
+	TaskViewPrivate *d_ptr;
+
+public:
+	TaskView(QWidget* parent = 0);
+
 public Q_SLOTS:
 	void addTask();
-	void showStageDockWidget();
 
 protected Q_SLOTS:
 	void removeSelectedStages();
 	void onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous);
 	void onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+};
+
+
+class TaskSettingsPrivate;
+class TaskSettings : public QWidget {
+	Q_OBJECT
+	Q_DECLARE_PRIVATE(TaskSettings)
+	TaskSettingsPrivate *d_ptr;
+
+public:
+	TaskSettings(QWidget* parent = 0);
 };
 
 }

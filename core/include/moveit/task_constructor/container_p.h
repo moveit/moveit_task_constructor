@@ -39,7 +39,6 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
-#include "utils.h"
 #include "stage_p.h"
 
 #include <map>
@@ -47,13 +46,16 @@
 
 namespace moveit { namespace task_constructor {
 
-/* A container needs to decouple its interfaces from those of its children.
- * Both, the container and the children have their own starts_ and ends_.
- * The container needs to forward states received in its interfaces to
- * the interfaces of the children.
- * Solutions found by the children, then need to be connected to the
- * container's interface states. To this end, we remember the mapping
- * from internal to external states.
+/* A container needs to decouple its own (external) interfaces
+ * from those (internal) of its children.
+ * Both, the container and the children have their own pull interfaces: starts_ and ends_.
+ * The container forwards states received in its pull interfaces to the
+ * corresponding interfaces of the children.
+ * States pushed by children are temporarily stored in pending_backward_ and pending_forward_.
+ *
+ * Solutions found by the children need to be lifted from the internal level to the
+ * external level. To this end, we remember the mapping from internal to external states.
+ *
  * Note, that there might be many solutions connecting a single start-end pair.
  * These solutions might origin from different children (ParallelContainer)
  * or from different solution paths in a SerialContainer.
@@ -92,19 +94,40 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
+	InterfacePtr pendingBackward() const { return pending_backward_; }
+	InterfacePtr pendingForward() const { return pending_forward_; }
+
 protected:
-	ContainerBasePrivate(ContainerBase *me, const std::string &name)
-	   : StagePrivate(me, name)
-	{}
+	ContainerBasePrivate(ContainerBase *me, const std::string &name);
+
+	// Get push interface to be used for children: If our own push interface is not set,
+	// don't set children's interface either: pushing is not supported.
+	// Otherwise return pending_* buffer.
+	InterfacePtr getPushBackwardInterface() {
+		return prevEnds() ? pending_backward_ : InterfacePtr();
+	}
+	InterfacePtr getPushForwardInterface() {
+		return nextStarts() ? pending_forward_ : InterfacePtr();
+	}
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
-	void copyState(Interface::iterator external, Stage &child, bool to_start, bool updated);
+	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
+	/// lift solution from internal to external level
+	void liftSolution(SolutionBase& solution,
+	                  const InterfaceState *internal_from, const InterfaceState *internal_to);
 
 protected:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
 	std::map<const InterfaceState*, Interface::iterator> internal_to_external_;
+
+	/* TODO: these interfaces don't need to be priority-sorted.
+	 * Introduce base class UnsortedInterface (which is a plain list) for this use case. */
+	// interface to receive children's sendBackward() states
+	InterfacePtr pending_backward_;
+	// interface to receive children's sendForward() states
+	InterfacePtr pending_forward_;
 };
 PIMPL_FUNCTIONS(ContainerBase)
 
@@ -134,29 +157,15 @@ private:
  * The solution of a single child stage is usually disconnected to the container's start or end.
  * Only if all the children in the chain have found a coherent solution from start to end,
  * this solution can be announced as a solution of the SerialContainer.
- *
- * Particularly, the first/last stage's sendBackward()/sendForward() call
- * cannot directly propagate their associated state to the previous/next stage of this container,
- * because we cannot provide a full solution yet. Hence, the first/last stage
- * propagate to the pending_backward_/pending_forward_ interface first.
- * If eventually a full solution is found, it is propagated to prevEnds()/nextStarts() -
- * together with the solution. */
+ */
 class SerialContainerPrivate : public ContainerBasePrivate {
 	friend class SerialContainer;
 
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
-	void storeNewSolution(SerialSolution&& s);
-	const ordered<SerialSolution>& solutions() const { return solutions_; }
-
 private:
 	void connect(StagePrivate *prev, StagePrivate *next);
-
-	// interface to buffer first child's sendBackward() states
-	InterfacePtr pending_backward_;
-	// interface to buffer last child's sendForward() states
-	InterfacePtr pending_forward_;
 
 	// set of all solutions
 	ordered<SerialSolution> solutions_;
@@ -164,39 +173,58 @@ private:
 PIMPL_FUNCTIONS(SerialContainer)
 
 
+/** Wrap an existing solution - for use in parallel containers and wrappers.
+ *
+ * This essentially wraps a solution of a child and thus allows
+ * for new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase {
+public:
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost)
+		: SolutionBase(creator, cost), wrapped_(wrapped)
+	{}
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
+		: WrappedSolution(creator, wrapped, wrapped->cost())
+	{}
+	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
+	                 Introspection* introspection = nullptr) const override;
+
+private:
+	const SolutionBase* wrapped_;
+};
+
+
 class ParallelContainerBasePrivate : public ContainerBasePrivate {
 	friend class ParallelContainerBase;
 
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
+
+private:
+	/// callback for new externally received states
+	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
+
+	// buffer for wrapped solutions
+	std::list<WrappedSolution> wrapped_solutions_;
+	// buffer for newly created (not wrapped) solutions
+	std::list<SubTrajectory> created_solutions_;
+	// buffer of created states (for use in created solutions)
+	std::list<InterfaceState> states_;
+
+	// cost-ordered set of solutions (pointers into wrapped or created)
+	ordered<SolutionBase*> solutions_;
+	// buffer for failures (pointers into wrapped or created)
+	std::list<SolutionBase*> failures_;
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
 
-class WrapperBasePrivate : public ContainerBasePrivate {
+class WrapperBasePrivate : public ParallelContainerBasePrivate {
 	friend class WrapperBase;
 
 public:
 	WrapperBasePrivate(WrapperBase* me, const std::string& name);
-
-private:
-	InterfacePtr dummy_starts_;
-	InterfacePtr dummy_ends_;
 };
 PIMPL_FUNCTIONS(WrapperBase)
-
-
-class WrapperPrivate : public WrapperBasePrivate {
-	friend class Wrapper;
-
-public:
-	WrapperPrivate(Wrapper* me, const std::string& name);
-
-private:
-	ordered<std::unique_ptr<SolutionBase>, pointerLessThan<std::unique_ptr<SolutionBase>>> solutions_;
-	std::list<std::unique_ptr<SolutionBase>> failures_;
-	std::list<InterfaceState> failure_states_;
-};
-PIMPL_FUNCTIONS(Wrapper)
 
 } }

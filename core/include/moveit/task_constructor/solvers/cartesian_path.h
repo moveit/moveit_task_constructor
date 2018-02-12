@@ -32,66 +32,38 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
+/* Authors: Michael Goerner, Robert Haschke
+   Desc:    generate and validate a straight-line Cartesian path
 */
 
 #pragma once
 
-#include "task_panel.h"
-#include "ui_task_panel.h"
-#include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include <moveit/task_constructor/solvers/planner_interface.h>
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
-#include <QPointer>
+namespace moveit { namespace task_constructor { namespace solvers {
 
-namespace moveit_rviz_plugin {
-
-class BaseTaskModel;
-class TaskListModel;
-class TaskDisplay;
-
-class TaskPanelPrivate : public Ui_TaskPanel {
+/** Use RobotState's computeCartesianPath() to generate a straigh-line path between to scenes */
+class CartesianPath : public PlannerInterface {
 public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
+	CartesianPath();
 
-	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
+	void setGroup(const std::string &group) { setProperty("group", group); }
+	void setTimeout(double timeout) { setProperty("timeout", timeout); }
 
-	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
+
+	bool plan(const planning_scene::PlanningSceneConstPtr from,
+	          const planning_scene::PlanningSceneConstPtr to,
+	          const moveit::core::JointModelGroup *jmg,
+             double timeout,
+	          robot_trajectory::RobotTrajectoryPtr& result) override;
+
+	bool plan(const planning_scene::PlanningSceneConstPtr from,
+	          const moveit::core::LinkModel &link,
+	          const Eigen::Affine3d& target,
+	          const moveit::core::JointModelGroup *jmg,
+             double timeout,
+	          robot_trajectory::RobotTrajectoryPtr& result) override;
 };
 
-
-class TaskViewPrivate : public Ui_TaskView {
-public:
-	TaskViewPrivate(TaskView *q_ptr);
-
-	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
-
-	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
-
-	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
-
-	TaskView *q_ptr;
-	QPointer<TaskDisplay> locked_display_;
-};
-
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
-public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
-
-	TaskSettings *q_ptr;
-};
-
-}
+} } }

@@ -80,6 +80,12 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
+	/// templated access to pull/push interfaces
+	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
+	inline InterfacePtr  pushInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock(); }
+	inline InterfaceConstPtr pullInterface(Interface::Direction dir) const { return dir == Interface::FORWARD ? starts_ : ends_; }
+	inline InterfaceConstPtr pushInterface(Interface::Direction dir) const { return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock(); }
+
 	/// the following methods should be called only by a container
 	/// to setup the connection structure of their children
 	inline void setHierarchy(ContainerBase* parent, container_type::iterator it) {

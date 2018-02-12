@@ -15,7 +15,7 @@ namespace core { MOVEIT_CLASS_FORWARD(RobotState) }
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-class ComputeIK : public Wrapper {
+class ComputeIK : public WrapperBase {
 public:
 	ComputeIK(const std::string &name, pointer &&child = Stage::pointer());
 

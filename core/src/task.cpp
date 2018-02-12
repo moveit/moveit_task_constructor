@@ -69,6 +69,10 @@ void Task::initModel () {
 		throw Exception("Task failed to construct RobotModel");
 }
 
+const moveit::core::RobotModelPtr Task::getRobotModel() const {
+	return rml_ ? rml_->getModel() : moveit::core::RobotModelPtr();
+}
+
 planning_scene::PlanningScenePtr Task::initScene(ros::Duration timeout) {
 	assert(rml_);
 
@@ -182,10 +186,19 @@ void Task::reset()
 
 void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
-	WrapperBase::init(scene);
+	auto impl = pimpl();
+	// initialize push connections of wrapped child
+	StagePrivate *child = wrapped()->pimpl();
+	child->setPrevEnds(impl->pendingBackward());
+	child->setNextStarts(impl->pendingForward());
+
+	// explicitly call ContainerBase::init(), not WrapperBase::init()
+	// to keep the just set push interface for the wrapped child
+	ContainerBase::init(scene);
+
 	// provide introspection instance to all stages
-	pimpl()->setIntrospection(introspection_.get());
-	pimpl()->traverseStages([this](Stage& stage, int) {
+	impl->setIntrospection(introspection_.get());
+	impl->traverseStages([this](Stage& stage, int) {
 		stage.pimpl()->setIntrospection(introspection_.get());
 		return true;
 	}, 1, UINT_MAX);
@@ -224,9 +237,7 @@ bool Task::plan()
 
 size_t Task::numSolutions() const
 {
-	auto w = stages();
-	// during initial insert() we call numSolutions(), but wrapped() is not yet defined
-	return w ? w->numSolutions() : 0;
+	return stages()->numSolutions();
 }
 
 void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) const
@@ -242,7 +253,7 @@ void Task::publishAllSolutions(bool wait)
 
 void Task::onNewSolution(const SolutionBase &s)
 {
-	WrapperBase::onNewSolution(s);
+	// no need to call WrapperBase::onNewSolution!
 	if (introspection_)
 		introspection_->publishSolution(s);
 }

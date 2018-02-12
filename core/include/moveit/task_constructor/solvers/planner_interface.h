@@ -32,66 +32,63 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
+/* Authors: Robert Haschke
+   Desc:    planner interface
 */
 
 #pragma once
 
-#include "task_panel.h"
-#include "ui_task_panel.h"
-#include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include <moveit/macros/class_forward.h>
+#include <moveit/task_constructor/properties.h>
+#include <Eigen/Geometry>
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
-#include <QPointer>
-
-namespace moveit_rviz_plugin {
-
-class BaseTaskModel;
-class TaskListModel;
-class TaskDisplay;
-
-class TaskPanelPrivate : public Ui_TaskPanel {
-public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
-
-	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
-
-	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
-};
-
-
-class TaskViewPrivate : public Ui_TaskView {
-public:
-	TaskViewPrivate(TaskView *q_ptr);
-
-	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
-
-	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
-
-	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
-
-	TaskView *q_ptr;
-	QPointer<TaskDisplay> locked_display_;
-};
-
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
-public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
-
-	TaskSettings *q_ptr;
-};
-
+namespace planning_scene {
+MOVEIT_CLASS_FORWARD(PlanningScene)
 }
+namespace robot_trajectory {
+MOVEIT_CLASS_FORWARD(RobotTrajectory)
+}
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(LinkModel)
+MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(JointModelGroup)
+} }
+
+namespace moveit { namespace task_constructor { namespace solvers {
+
+MOVEIT_CLASS_FORWARD(PlannerInterface)
+class PlannerInterface {
+	// these properties take precedence over stage properties
+	PropertyMap properties_;
+
+public:
+	PlannerInterface() {}
+
+	PropertyMap& properties() { return properties_; }
+	const PropertyMap& properties() const { return properties_; }
+
+	void setProperty(const std::string& name, const boost::any& value) {
+		properties_.set(name, value);
+	}
+
+	virtual void init(const moveit::core::RobotModelConstPtr& robot_model) = 0;
+
+	/// plan trajectory between to robot states
+	virtual bool plan(const planning_scene::PlanningSceneConstPtr from,
+	                  const planning_scene::PlanningSceneConstPtr to,
+	                  const moveit::core::JointModelGroup *jmg,
+                     double timeout,
+	                  robot_trajectory::RobotTrajectoryPtr& result) = 0;
+
+	/// plan trajectory from current robot state to Cartesian target
+	virtual bool plan(const planning_scene::PlanningSceneConstPtr from,
+	                  const moveit::core::LinkModel &link,
+	                  const Eigen::Affine3d& target,
+	                  const moveit::core::JointModelGroup *jmg,
+                     double timeout,
+	                  robot_trajectory::RobotTrajectoryPtr& result) = 0;
+};
+
+std::string getEndEffectorLink(const moveit::core::JointModelGroup *jmg);
+
+} } }

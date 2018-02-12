@@ -11,6 +11,10 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/task.h
 	${PROJECT_INCLUDE}/utils.h
 
+	${PROJECT_INCLUDE}/solvers/planner_interface.h
+	${PROJECT_INCLUDE}/solvers/cartesian_path.h
+	${PROJECT_INCLUDE}/solvers/pipeline_planner.h
+
 	container.cpp
 	introspection.cpp
 	marker_tools.cpp
@@ -18,6 +22,10 @@ add_library(${PROJECT_NAME}
 	stage.cpp
 	storage.cpp
 	task.cpp
+
+	solvers/planner_interface.cpp
+	solvers/cartesian_path.cpp
+	solvers/pipeline_planner.cpp
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 target_include_directories(${PROJECT_NAME}

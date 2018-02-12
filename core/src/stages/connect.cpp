@@ -32,66 +32,42 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
+/* Authors: Michael Goerner, Robert Haschke
+   Desc:    Connect arbitrary states by motion planning
 */
 
-#pragma once
+#include <moveit/task_constructor/stages/connect.h>
+#include <moveit/planning_scene/planning_scene.h>
 
-#include "task_panel.h"
-#include "ui_task_panel.h"
-#include "ui_task_view.h"
-#include "ui_task_settings.h"
+namespace moveit { namespace task_constructor { namespace stages {
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
-#include <QPointer>
-
-namespace moveit_rviz_plugin {
-
-class BaseTaskModel;
-class TaskListModel;
-class TaskDisplay;
-
-class TaskPanelPrivate : public Ui_TaskPanel {
-public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
-
-	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
-
-	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
-};
-
-
-class TaskViewPrivate : public Ui_TaskView {
-public:
-	TaskViewPrivate(TaskView *q_ptr);
-
-	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
-
-	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
-
-	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
-
-	TaskView *q_ptr;
-	QPointer<TaskDisplay> locked_display_;
-};
-
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
-public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
-
-	TaskSettings *q_ptr;
-};
-
+Connect::Connect(std::string name, const solvers::PlannerInterfacePtr& planner)
+   : Connecting(name)
+   , planner_(planner)
+{
+	auto& p = properties();
+	p.declare<double>("timeout", 10.0, "planning timeout");
+	p.declare<std::string>("group", "name of planning group");
 }
+
+void Connect::init(const planning_scene::PlanningSceneConstPtr &scene)
+{
+	Connecting::init(scene);
+	planner_->init(scene->getRobotModel());
+}
+
+bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
+	const auto& props = properties();
+	const std::string& group = props.get<std::string>("group");
+	double timeout = props.get<double>("timeout");
+	const moveit::core::JointModelGroup* jmg = from.scene()->getRobotModel()->getJointModelGroup(group);
+
+	robot_trajectory::RobotTrajectoryPtr trajectory;
+	if (!planner_->plan(from.scene(), to.scene(), jmg, timeout, trajectory))
+		return false;
+
+	connect(from, to, trajectory);
+	return true;
+}
+
+} } }

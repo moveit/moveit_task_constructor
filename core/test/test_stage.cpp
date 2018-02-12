@@ -18,8 +18,8 @@ public:
 		robot_model_loader::RobotModelLoader loader;
 		ps.reset(new planning_scene::PlanningScene(loader.getModel()));
 
-		prev.reset(new Interface(Interface::NotifyFunction()));
-		next.reset(new Interface(Interface::NotifyFunction()));
+		prev.reset(new Interface);
+		next.reset(new Interface);
 		pimpl()->setPrevEnds(prev);
 		pimpl()->setNextStarts(next);
 	}

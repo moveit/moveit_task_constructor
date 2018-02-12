@@ -264,7 +264,7 @@ void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last
 	TaskListModel* m = static_cast<TaskListModel*>(sender());
 	for (; first <= last; ++first) {
 		QModelIndex idx = m->index(first, 0, parent);
-		tasks_property_->addChild(new rviz::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()));
+		tasks_property_->addChild(new rviz::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()), first);
 	}
 }
 

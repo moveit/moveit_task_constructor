@@ -108,7 +108,7 @@ protected:
 	/// until the end, i.e. until there are no more subsolutions in the given direction
 	/// For each solution path, callback the given processor passing
 	/// the full trace (from start to end, but not including start) and its accumulated costs
-	template<TraverseDirection dir>
+	template<Interface::Direction dir>
 	void traverse(const SolutionBase &start, const SolutionProcessor &cb,
 	              solution_container &trace, double trace_cost = 0);
 
@@ -135,102 +135,101 @@ public:
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
+	size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+	size_t numFailures() const override;
+	void processFailures(const SolutionProcessor &processor) const override;
+
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
+	/// method called if any child found a new (internal) solution
 	virtual void onNewSolution(const SolutionBase& s) override;
 
-	/// callback for new start states (received externally)
-	virtual void onNewStartState(Interface::iterator external, bool updated) = 0;
-	/// callback for new end states (received externally)
-	virtual void onNewEndState(Interface::iterator external, bool updated) = 0;
+	/// lift unmodified child solution (useful for simple filtering)
+	void liftSolution(const SolutionBase* solution) {
+		liftSolution(solution, solution->cost());
+	}
+	/// lift child solution, but allow for modifying costs
+	void liftSolution(const SolutionBase* solution, double cost);
+
+	/// spawn a new solution with given state as start and end
+	void spawn(InterfaceState &&state, SubTrajectory&& trajectory);
+	/// convience method spawning an empty SubTrajectory with given cost
+	void spawn(InterfaceState &&state, double cost) {
+		SubTrajectory trajectory;
+		trajectory.setCost(cost);
+		spawn(std::move(state), std::move(trajectory));
+	}
 };
 
 
-/** Wrap an existing solution - for use in containers.
+/** Plan for different alternatives in parallel.
  *
- * This essentially wraps a solution of a child and thus allows
- * for new new clones of start / end states, which in turn will
- * have separate incoming/outgoing trajectories */
-class WrappedSolution : public SolutionBase {
+ * Solution of all children are reported - sorted by cost.
+ */
+class Alternatives : public ParallelContainerBase
+{
 public:
-	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
-	   : SolutionBase(creator, wrapped->cost()), wrapped_(wrapped)
-	{}
-	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
-                    Introspection* introspection = nullptr) const override {
-		wrapped_->fillMessage(solution, introspection);
-	}
+	Alternatives(const std::string &name) : ParallelContainerBase(name) {}
 
-private:
-	const SolutionBase* wrapped_;
+	bool canCompute() const override;
+	bool compute() override;
+};
+
+
+/** Plan for different alternatives in sequence.
+ *
+ * Try to find feasible solutions using first child. Only if this fails,
+ * proceed to the next child trying an alternative planning strategy.
+ * All solutions of the last active child are reported.
+ */
+class Fallbacks : public ParallelContainerBase
+{
+	mutable Stage* active_child_ = nullptr;
+
+public:
+	Fallbacks(const std::string &name) : ParallelContainerBase(name) {}
+
+	void reset() override;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	bool canCompute() const override;
+	bool compute() override;
 };
 
 
 class WrapperBasePrivate;
-/** Base class for Wrapper and Task
+/** A wrapper wraps a single child stage, which can be accessed via wrapped().
  *
- * WrapperBase ensures that only a single child is wrapped in a container.
- * This child can be accessed via wrapped().
+ * Implementations of this interface need to implement onNewSolution(), which is
+ * called when the child has generated a new solution.
+ * The wrapper may reject the solution or create one or multiple derived solutions,
+ * potentially adapting the cost, as well as its start and end states.
+ *
+ * Care needs to be taken to not modify pulled states, but only pushed ones!
+ * liftFor each new solution, liftSolution() should be called, which comes in various
+ * flavours to allow for handing in new states (or not).
  */
-class WrapperBase : public ContainerBase
+class WrapperBase : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(WrapperBase)
 	WrapperBase(const std::string &name, pointer &&child = Stage::pointer());
 
-	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
-
-	size_t numSolutions() const override;
-
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
 
-	/// access the single wrapped child
+	/// access the single wrapped child, NULL if still empty
 	Stage* wrapped();
 	inline const Stage* wrapped() const {
 		return const_cast<WrapperBase*>(this)->wrapped();
 	}
 
-protected:
-	virtual void onNewSolution(const SolutionBase& s) = 0;
-
-	WrapperBase(WrapperBasePrivate *impl, pointer &&child = Stage::pointer());
-};
-
-
-class WrapperPrivate;
-/** A wrapper wraps a single generator-style stage (and acts itself as a generator).
- *
- * The wrapped stage must act as a generator, i.e. only spawn new states
- * in its external interfaces. It's intended, e.g. to filter or clone
- * a generated solution of its wrapped generator.
- */
-class Wrapper : public WrapperBase
-{
-public:
-	PRIVATE_CLASS(Wrapper)
-	Wrapper(const std::string &name, pointer &&child = Stage::pointer());
-
-	void reset() override;
 	bool canCompute() const override;
 	bool compute() override;
 
-	size_t numSolutions() const override;
-	size_t numFailures() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
-	void processFailures(const SolutionProcessor &processor) const override;
-
-	void spawn(InterfaceState &&state, std::unique_ptr<SolutionBase>&& s);
-	void spawn(InterfaceState &&state, double cost) {
-		std::unique_ptr<SolutionBase> s(new SubTrajectory());
-		s->setCost(cost);
-		spawn(std::move(state), std::move(s));
-	}
-
 protected:
-	Wrapper(WrapperPrivate* impl, pointer &&child = Stage::pointer());
+	WrapperBase(WrapperBasePrivate* impl, pointer &&child = Stage::pointer());
 
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase &s) override = 0;

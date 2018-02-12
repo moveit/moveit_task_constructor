@@ -32,66 +32,31 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke
-   Desc:   Monitor manipulation tasks and visualize their solutions
+/* Authors: Elham Iravani, Robert Haschke
+   Desc:    Fix collisions in input scene
 */
 
 #pragma once
 
-#include "task_panel.h"
-#include "ui_task_panel.h"
-#include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include <moveit/task_constructor/stage.h>
+#include <visualization_msgs/Marker.h>
+#include <geometry_msgs/Pose.h>
+#include <deque>
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
-#include <QPointer>
+namespace moveit { namespace task_constructor { namespace stages {
 
-namespace moveit_rviz_plugin {
-
-class BaseTaskModel;
-class TaskListModel;
-class TaskDisplay;
-
-class TaskPanelPrivate : public Ui_TaskPanel {
+class FixCollisionObjects : public PropagatingEitherWay {
 public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
+	FixCollisionObjects(const std::string& name = "fix collisions of objects");
 
-	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
+	bool computeForward(const InterfaceState& from) override;
+	bool computeBackward(const InterfaceState& to) override;
 
-	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
+	void setMaxPenetration(double penetration);
+
+private:
+	bool fixCollisions(planning_scene::PlanningScene &scene, std::deque<visualization_msgs::Marker>& markers) const;
+	void fixCollision(planning_scene::PlanningScene &scene, geometry_msgs::Pose pose, const std::string& object) const;
 };
 
-
-class TaskViewPrivate : public Ui_TaskView {
-public:
-	TaskViewPrivate(TaskView *q_ptr);
-
-	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
-
-	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
-
-	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
-
-	TaskView *q_ptr;
-	QPointer<TaskDisplay> locked_display_;
-};
-
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
-public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
-
-	TaskSettings *q_ptr;
-};
-
-}
+} } }
