@@ -101,18 +101,15 @@ protected:
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase &s) override;
 
-	/// function type used for traversing solutions
-	/// For each sub solution (current), the trace from the start as well as the
-	/// accumulated cost of all solutions in the trace are provided.
-	/// Return true, if traversal should continue, otherwise false.
-	typedef std::function<bool(const SolutionBase& current,
-	                           const solution_container& trace,
+	typedef std::function<void(const solution_container& trace,
 	                           double trace_accumulated_cost)> SolutionProcessor;
 
-	/// traverse all solutions, starting at start and call the callback for each subsolution
-	/// The return value is always false, indicating that the traversal eventually stopped.
+	/// Traverse all solution pathes starting at start and going in given direction dir
+	/// until the end, i.e. until there are no more subsolutions in the given direction
+	/// For each solution path, callback the given processor passing
+	/// the full trace (from start to end, but not including start) and its accumulated costs
 	template<TraverseDirection dir>
-	bool traverse(const SolutionBase &start, const SolutionProcessor &cb,
+	void traverse(const SolutionBase &start, const SolutionProcessor &cb,
 	              solution_container &trace, double trace_cost = 0);
 
 protected:
@@ -141,10 +138,12 @@ public:
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
+	virtual void onNewSolution(const SolutionBase& s) override;
+
 	/// callback for new start states (received externally)
-	virtual void onNewStartState(const InterfaceState &external) = 0;
+	virtual void onNewStartState(Interface::iterator external, bool updated) = 0;
 	/// callback for new end states (received externally)
-	virtual void onNewEndState(const InterfaceState &external) = 0;
+	virtual void onNewEndState(Interface::iterator external, bool updated) = 0;
 };
 
 
@@ -195,6 +194,8 @@ public:
 	}
 
 protected:
+	virtual void onNewSolution(const SolutionBase& s) = 0;
+
 	WrapperBase(WrapperBasePrivate *impl, pointer &&child = Stage::pointer());
 };
 

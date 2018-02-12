@@ -85,7 +85,7 @@ int main(int argc, char** argv){
 		gengrasp->setAngleDelta(M_PI / 10.);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
-		ik->properties().configureInitFrom(Stage::PARENT);
+		ik->properties().configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
 		ik->setMaxIKSolutions(1);
 		t.add(std::move(ik));
 	}

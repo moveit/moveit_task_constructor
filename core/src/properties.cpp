@@ -43,11 +43,13 @@
 namespace moveit {
 namespace task_constructor {
 
-Property::Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value)
+Property::Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value,
+                   const Property::SerializeFunction &serialize)
    : description_(description)
    , type_index_(type_index)
    , default_(default_value)
    , value_(default_value)
+   , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
 	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
@@ -73,6 +75,8 @@ void Property::setCurrentValue(const boost::any &value)
 	if (!value.empty())
 		typeCheck(value, type_index_);
 	value_ = value;
+	if (signaller_)
+		signaller_(this);
 }
 
 void Property::reset()
@@ -80,33 +84,38 @@ void Property::reset()
 	value_ = default_;
 }
 
-
+std::string Property::serialize() const {
+	if (!serialize_) return "";
+	return serialize_(value());
+}
 
 Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
-	initializers_[source] = f;
+	if (source != source_id_ && initializer_)
+		throw std::runtime_error("Property was already configured for initialization from another source id");
+
+	source_id_ = source;
+	initializer_ = f;
 	return *this;
 }
 
 Property &Property::configureInitFrom(SourceId source, const std::string &name)
 {
-	initializers_[source] = [name](const PropertyMap& other) { return fromName(other, name); };
-	return *this;
+	return configureInitFrom(source, [name](const PropertyMap& other) { return fromName(other, name); });
 }
 
 void Property::performInitFrom(SourceId source, const PropertyMap &other)
 {
-	auto it = initializers_.find(source);
-	if (it == initializers_.end()) return;
-
-	setCurrentValue(it->second(other));
+	if (source_id_ != source || !initializer_) return;  // source ids not matching
+	setCurrentValue(initializer_(other));
 }
 
 
 Property& PropertyMap::declare(const std::string &name, const std::type_info &type,
-                               const std::string &description, const boost::any &default_value)
+                               const std::string &description, const boost::any &default_value,
+                               const Property::SerializeFunction &serialize)
 {
-	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value)));
+	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value, serialize)));
 	if (!it_inserted.second && std::type_index(type) != it_inserted.first->second.type_index_)
 		throw std::logic_error("Property '" + name + "' was already declared with different type.");
 	return it_inserted.first->second;
@@ -128,18 +137,17 @@ void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<st
 	}
 }
 
-void PropertyMap::set(const std::string &name, const boost::any &value)
-{
+template <>
+void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value) {
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) { // name is not yet declared
 		if (value.empty())
 			throw std::logic_error("trying to set undeclared property '" + name + "' with NULL value");
-		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any())));
+		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any(),
+		                                                                   Property::SerializeFunction())));
 		it->second.setValue(value);
-	} else {
-		assert(range.first->first == name);
+	} else
 		range.first->second.setValue(value);
-	}
 }
 
 void PropertyMap::setCurrent(const std::string &name, const boost::any &value)

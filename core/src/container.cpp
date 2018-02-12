@@ -43,6 +43,9 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
+#include <functional>
+
+using namespace std::placeholders;
 
 namespace moveit { namespace task_constructor {
 
@@ -87,14 +90,14 @@ bool ContainerBasePrivate::compute()
 	return static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::copyState(InterfaceState &external_state,
-                                     Stage &child, bool to_start) {
+void ContainerBasePrivate::copyState(Interface::iterator external,
+                                     Stage &child, bool to_start, bool updated) {
 	if (to_start) {
-		auto internal = child.pimpl()->starts()->clone(external_state);
-		internal_to_my_starts_.insert(std::make_pair(&*internal, &external_state));
+		InterfaceState& internal = *child.pimpl()->starts()->clone(*external);
+		internal_to_external_.insert(std::make_pair(&internal, external));
 	} else {
-		auto internal = child.pimpl()->ends()->clone(external_state);
-		internal_to_my_ends_.insert(std::make_pair(&*internal, &external_state));
+		InterfaceState& internal = *child.pimpl()->ends()->clone(*external);
+		internal_to_external_.insert(std::make_pair(&internal, external));
 	}
 }
 
@@ -154,8 +157,7 @@ void ContainerBase::reset()
 		child->reset();
 
 	// clear mapping
-	impl->internal_to_my_starts_.clear();
-	impl->internal_to_my_ends_.clear();
+	impl->internal_to_external_.clear();
 
 	Stage::reset();
 }
@@ -167,11 +169,6 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 	auto& children = impl->children();
 
 	Stage::init(scene);
-
-	// containers don't need to reset and init their properties on each execution
-	impl->properties_.reset();
-	if (impl->parent())
-		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 
 	// we need to have some children to do the actual work
 	if (children.empty()) {
@@ -203,18 +200,18 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 
 
 struct SolutionCollector {
-	SolutionCollector(const Stage::pointer& stage) : stopping_stage(stage->pimpl()) {}
+	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
 
-	bool operator()(const SolutionBase& current, const SerialContainer::solution_container& trace, double cost) {
-		if (current.creator() != stopping_stage)
-			return true; // not yet traversed to stopping_stage
+	void operator()(const SerialContainer::solution_container& trace, double cost) {
+		// traced path should not extend past container boundaries
+		assert(trace.size() <= max_depth);
 
-		solutions.emplace_back(std::make_pair(trace, cost));
-		return false; // we are done
+		if (trace.size() == max_depth) // reached max depth
+			solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
 	std::list<std::pair<SerialContainer::solution_container, double>> solutions;
-	const StagePrivate* const stopping_stage;
+	const size_t max_depth;
 };
 
 void SerialContainer::onNewSolution(const SolutionBase &current)
@@ -223,45 +220,54 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	const StagePrivate *creator = current.creator();
 	auto& children = impl->children();
 
-	// s.creator() should be one of our children
-	assert(std::find_if(children.begin(), children.end(),
-	                    [creator](const Stage::pointer& stage) { return stage->pimpl() == creator; } )
-	       != children.end());
+	// find number of stages before and after creator stage
+	size_t num_before = 0, num_after = 0;
+	for (auto it = children.begin(), end = children.end(); it != end; ++it, ++num_before)
+		if ((*it)->pimpl() == creator)
+			break;
+	assert(num_before < children.size());  // creator should be one of our children
+	num_after = children.size()-1 - num_before;
 
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
-	// find all incoming trajectories connected to current solution
-	SolutionCollector incoming(children.front());
+	// find all incoming solution pathes ending at current solution
+	SolutionCollector incoming(num_before);
 	traverse<BACKWARD>(current, std::ref(incoming), trace);
-	if (incoming.solutions.empty())
-		return; // no connection to front()
 
-
-	// find all outgoing trajectories connected to current solution
-	SolutionCollector outgoing(children.back());
+	// find all outgoing solution pathes starting at current solution
+	SolutionCollector outgoing(num_after);
 	traverse<FORWARD>(current, std::ref(outgoing), trace);
-	if (outgoing.solutions.empty())
-		return; // no connection to back()
 
-	// collect (and sort) all solutions for all combinations of incoming + current + outgoing
+	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SerialSolution> sorted;
 	SerialContainer::solution_container solution;
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			assert(solution.empty());
-			// insert incoming solutions in reverse order
-			solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
-			// insert current solution
-			solution.push_back(&current);
-			// insert outgoing solutions in normal order
-			solution.insert(solution.end(), out.first.begin(), out.first.end());
-
-			sorted.insert(SerialSolution(impl, std::move(solution), in.second + current.cost() + out.second));
+			InterfaceState::Priority prio(in.first.size() + 1 + out.first.size(),
+			                              in.second + current.cost() + out.second);
+			// found a complete solution path connecting start to end?
+			if (prio.depth() == children.size()) {
+				assert(solution.empty());
+				// insert incoming solutions in reverse order
+				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
+				// insert current solution
+				solution.push_back(&current);
+				// insert outgoing solutions in normal order
+				solution.insert(solution.end(), out.first.begin(), out.first.end());
+				// store solution in sorted list
+				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
+			} else {
+				// update state costs
+				const InterfaceState* start = (in.first.empty() ? current : *in.first.back()).start();
+				start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
+				const InterfaceState* end = (out.first.empty() ? current : *out.first.back()).end();
+				end->owner()->updatePriority(*const_cast<InterfaceState*>(end), prio);
+			}
 		}
 	}
 
-	// store new solutions
+	// store new solutions (in sorted)
 	for (auto it = sorted.begin(), end = sorted.end(); it != end; ++it)
 		impl->storeNewSolution(std::move(*it));
 }
@@ -275,23 +281,25 @@ void SerialContainerPrivate::storeNewSolution(SerialSolution &&s)
 	SerialSolution& solution = *solutions_.insert(std::move(s));
 
 	// add solution to existing or new start state
-	auto it = internal_to_my_starts_.find(internal_from);
-	if (it != internal_to_my_starts_.end()) {
+	auto it = internal_to_external_.find(internal_from);
+	if (it != internal_to_external_.end()) {
 		// connect solution to existing start state
 		solution.setStartState(*it->second);
 	} else {
 		// spawn a new state in previous stage
-		prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		Interface::iterator external = prevEnds()->add(InterfaceState(*internal_from), NULL, &solution);
+		internal_to_external_.insert(std::make_pair(internal_from, external));
 	}
 
 	// add solution to existing or new end state
-	it = internal_to_my_ends_.find(internal_to);
-	if (it != internal_to_my_ends_.end()) {
+	it = internal_to_external_.find(internal_to);
+	if (it != internal_to_external_.end()) {
 		// connect solution to existing start state
 		solution.setEndState(*it->second);
 	} else {
 		// spawn a new state in next stage
-		nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		Interface::iterator external = nextStarts()->add(InterfaceState(*internal_to), &solution, NULL);
+		internal_to_external_.insert(std::make_pair(internal_to, external));
 	}
 
 	// perform default stage action on new solution
@@ -359,16 +367,16 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		// initialize starts_ and ends_ interfaces
 		Stage* child = start->get();
 		if (child->pimpl()->starts())
-			impl->starts_.reset(new Interface([impl, child](const Interface::iterator& external){
+			impl->starts_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
 				// new external state in our starts_ interface is copied to first child
-				impl->copyState(*external, *child, true);
+				impl->copyState(external, *child, true, updated);
 			}));
 
 		child = last->get();
 		if (child->pimpl()->ends())
-			impl->ends_.reset(new Interface([impl, child](const Interface::iterator& external){
+			impl->ends_.reset(new Interface([impl, child](Interface::iterator external, bool updated){
 				// new external state in our ends_ interface is copied to last child
-				impl->copyState(*external, *child, false);
+				impl->copyState(external, *child, false, updated);
 			}));
 
 		// validate connectivity of this
@@ -419,26 +427,21 @@ void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &p
 }
 
 template <TraverseDirection dir>
-bool SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
+void SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
                                solution_container &trace, double trace_cost)
 {
-	if (!cb(start, trace, trace_cost))
-		// stopping criterium met: stop traversal along dir
-		return true; // but continue traversal of further trajectories
-
-	bool result = false; // if no trajectory traversed, return false
-	for (SolutionBase* successor : trajectories<dir>(start)) {
+	const InterfaceState::Solutions& solutions = trajectories<dir>(start);
+	if (solutions.empty())  // if we reached the end, call the callback
+		cb(trace, trace_cost);
+	else for (SolutionBase* successor : solutions) {
 		trace.push_back(successor);
 		trace_cost += successor->cost();
 
-		result = traverse<dir>(*successor, cb, trace, trace_cost);
+		traverse<dir>(*successor, cb, trace, trace_cost);
 
 		trace_cost -= successor->cost();
 		trace.pop_back();
-
-		if (!result) break;
 	}
-	return result;
 }
 
 void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
@@ -467,12 +470,8 @@ void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::string &name)
    : ContainerBasePrivate(me, name)
 {
-	starts_.reset(new Interface([me](const Interface::iterator& external){
-		me->onNewStartState(*external);
-	}));
-	ends_.reset(new Interface([me](const Interface::iterator& external){
-		me->onNewEndState(*external);
-	}));
+	starts_.reset(new Interface(std::bind(&ParallelContainerBase::onNewStartState, me, _1, _2)));
+	ends_.reset(new Interface(std::bind(&ParallelContainerBase::onNewEndState, me, _1, _2)));
 }
 
 
@@ -507,6 +506,18 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 
 	if (errors)
 		throw errors;
+}
+
+void ParallelContainerBase::onNewSolution(const SolutionBase &s)
+{
+	// update state priorities
+	InterfaceState::Priority prio(1, s.cost());
+	InterfaceState* start = const_cast<InterfaceState*>(s.start());
+	start->owner()->updatePriority(*start, prio);
+	InterfaceState* end = const_cast<InterfaceState*>(s.end());
+	end->owner()->updatePriority(*end, prio);
+
+	pimpl()->newSolution(s);
 }
 
 
@@ -569,6 +580,18 @@ size_t WrapperBase::numSolutions() const
 Stage* WrapperBase::wrapped()
 {
 	return pimpl()->children().empty() ? nullptr : pimpl()->children().front().get();
+}
+
+void WrapperBase::onNewSolution(const SolutionBase &s)
+{
+	// update state priorities
+	InterfaceState::Priority prio(1, s.cost());
+	InterfaceState* start = const_cast<InterfaceState*>(s.start());
+	start->owner()->updatePriority(*start, prio);
+	InterfaceState* end = const_cast<InterfaceState*>(s.end());
+	end->owner()->updatePriority(*end, prio);
+
+	pimpl()->newSolution(s);
 }
 
 

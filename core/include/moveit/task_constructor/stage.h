@@ -203,7 +203,9 @@ public:
 	enum Direction { FORWARD = 0x01, BACKWARD = 0x02, ANYWAY = FORWARD | BACKWARD};
 	void restrictDirection(Direction dir);
 
+	virtual void reset() override;
 	virtual void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+
 	virtual bool computeForward(const InterfaceState& from) = 0;
 	virtual bool computeBackward(const InterfaceState& to) = 0;
 
@@ -284,6 +286,8 @@ class Connecting : public ComputeBase {
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);
+
+	virtual void reset() override;
 
 	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
 	void connect(const InterfaceState& from, const InterfaceState& to,

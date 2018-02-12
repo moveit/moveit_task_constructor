@@ -146,6 +146,7 @@ PIMPL_FUNCTIONS(ComputeBase)
 
 class PropagatingEitherWayPrivate : public ComputeBasePrivate {
 	friend class PropagatingEitherWay;
+	std::list<Interface::value_type> processed;  // already processed states
 
 public:
 	PropagatingEitherWay::Direction dir;
@@ -166,14 +167,9 @@ public:
 	const InterfaceState &fetchEndState();
 
 protected:
-	// get informed when new start or end state becomes available
-	void newStartState(const std::list<InterfaceState>::iterator& it);
-	void newEndState(const std::list<InterfaceState>::iterator& it);
-	// initialize properties from parent and/or state
-	void initProperties(const InterfaceState &state);
-
-	Interface::const_iterator next_start_state_;
-	Interface::const_iterator next_end_state_;
+	// drop states corresponding to failed (infinite-cost) trajectories
+	void dropFailedStarts(Interface::iterator state);
+	void dropFailedEnds(Interface::iterator state);
 };
 PIMPL_FUNCTIONS(PropagatingEitherWay)
 
@@ -198,10 +194,6 @@ public:
 
 	bool canCompute() const override;
 	bool compute() override;
-
-private:
-	// initialize properties from parent
-	void initProperties();
 };
 PIMPL_FUNCTIONS(Generator)
 
@@ -209,6 +201,12 @@ PIMPL_FUNCTIONS(Generator)
 class ConnectingPrivate : public ComputeBasePrivate {
 	friend class Connecting;
 
+	typedef std::pair<Interface::const_iterator, Interface::const_iterator> StatePair;
+	struct StatePairLess {
+		bool operator()(const StatePair& x, const StatePair& y) const {
+			return x.first->priority() + x.second->priority() < y.first->priority() + y.second->priority();
+		}
+	};
 public:
 	inline ConnectingPrivate(Connecting *me, const std::string &name);
 
@@ -220,12 +218,11 @@ public:
 
 private:
 	// get informed when new start or end state becomes available
-	void newStartState(const std::list<InterfaceState>::iterator& it);
-	void newEndState(const std::list<InterfaceState>::iterator& it);
-	// initialize properties from parent and/or interface states
-	void initProperties(const InterfaceState &start, const InterfaceState &end);
+	void newStartState(Interface::iterator it, bool updated);
+	void newEndState(Interface::iterator it, bool updated);
 
-	std::pair<Interface::const_iterator, Interface::const_iterator> it_pairs_;
+	// ordered list of pending state pairs
+	ordered<StatePair, StatePairLess> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
 

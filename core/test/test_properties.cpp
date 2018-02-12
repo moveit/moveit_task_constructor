@@ -23,6 +23,18 @@ TEST(Property, standard) {
 	EXPECT_EQ(props.get<double>("double3"), 3.0);
 }
 
+TEST(Property, directset) {
+	PropertyMap props;
+	props.set("int1", 1);
+	EXPECT_EQ(props.get<int>("int1"), 1);
+	EXPECT_STREQ(props.property("int1").serialize().c_str(), "1");
+
+	props.set("int2", boost::any(2));
+	EXPECT_EQ(props.get<int>("int2"), 2);
+	// cannot serialize, because directly set
+	EXPECT_STREQ(props.property("int2").serialize().c_str(), "");
+}
+
 TEST(Property, redeclare) {
 	PropertyMap props;
 	props.declare<double>("double1");
@@ -63,6 +75,14 @@ TEST(Property, reset) {
 	// back to default
 	props.reset();
 	EXPECT_EQ(props.get<double>("double1"), 1.0);
+}
+
+TEST(Property, serialize) {
+	PropertyMap props;
+	props.declare<int>("int");
+	EXPECT_STREQ(props.property("int").serialize().c_str(), "");
+	props.set("int", 42);
+	EXPECT_STREQ(props.property("int").serialize().c_str(), "42");
 }
 
 class InitFromTest : public ::testing::Test {
@@ -107,6 +127,12 @@ TEST_F(InitFromTest, sourceId) {
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
 	EXPECT_THROW(slave.property("double4"), std::runtime_error);
+}
+
+TEST_F(InitFromTest, multipleSourceIds) {
+	slave.configureInitFrom(0);
+	slave.configureInitFrom(0);  // init is allowed second time with same id
+	EXPECT_THROW(slave.configureInitFrom(1), std::runtime_error);  // but not with other id
 }
 
 TEST_F(InitFromTest, otherName) {

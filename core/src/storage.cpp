@@ -59,31 +59,52 @@ Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
 {}
 
+// Function used by sendForward()/sendBackward()/spawn() to create a new interface state
 Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing) {
 	if (!state.incomingTrajectories().empty() || !state.outgoingTrajectories().empty())
 		throw std::runtime_error("expecting empty incoming/outgoing trajectories");
 	if (!state.scene())
 		throw std::runtime_error("expecting valid planning scene");
 
+	// move state to a list node
+	std::list<InterfaceState> container;
+	auto it = container.insert(container.end(), std::move(state));
+	assert(it->owner_ == nullptr);
+	it->owner_ = this;
+
+	// configure state: inherit priority from other end's state and add current solution's cost
 	assert(bool(incoming) ^ bool(outgoing)); // either incoming or outgoing is set
-	emplace_back(state);
-	iterator back = --end();
-	// adjust subtrajectories ...
-	if (incoming) incoming->setEndState(*back);
-	if (outgoing) outgoing->setStartState(*back);
-	// ... before calling notify callback
-	if (notify_) notify_(back);
-	return back;
+	if (incoming) {
+		it->priority_ = InterfaceState::Priority(1, incoming->cost());
+		incoming->setEndState(*it);
+	} else if (outgoing) {
+		it->priority_ = InterfaceState::Priority(1, outgoing->cost());
+		outgoing->setStartState(*it);
+	}
+	// move list node into interface's state list (sorted by priority)
+	moveFrom(it, container);
+	// and finally call notify callback
+	if (notify_) notify_(it, false);
+	return it;
 }
 
 Interface::iterator Interface::clone(const InterfaceState &state)
 {
-	emplace_back(InterfaceState(state));
-	iterator back = --end();
-	if (notify_) notify_(back);
-	return back;
+	iterator it = insert(InterfaceState(state));
+	it->owner_ = this;
+	if (notify_) notify_(it, false);
+	return it;
 }
 
+void Interface::updatePriority(InterfaceState &state, const InterfaceState::Priority& priority)
+{
+	if (priority < state.priority()) {
+		auto it = std::find_if(begin(), end(), [&state](const InterfaceState& other) { return &state == &other; });
+		assert(it != end());  // state should be part of this interface
+		state.priority_ = priority;
+		if (notify_) notify_(it, true);
+	}
+}
 
 void SolutionBase::setCreator(StagePrivate *creator)
 {

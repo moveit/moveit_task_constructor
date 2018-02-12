@@ -38,6 +38,7 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit_task_constructor_msgs/Property.h>
 
 #include <ros/node_handle.h>
 #include <ros/publisher.h>
@@ -228,7 +229,15 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 		desc.id = stageId(&stage);
 		desc.name = stage.name();
 		desc.flags = stage.pimpl()->interfaceFlags();
-		// TODO fill stage properties
+
+		// fill stage properties
+		for (const auto& pair : stage.properties()) {
+			moveit_task_constructor_msgs::Property p;
+			p.name = pair.first;
+			p.description = pair.second.description();
+			p.value = pair.second.serialize();
+			desc.properties.push_back(p);
+		}
 
 		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
 		assert (it != impl->stage_to_id_map_.cend());

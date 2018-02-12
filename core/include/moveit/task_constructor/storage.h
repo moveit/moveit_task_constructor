@@ -41,6 +41,7 @@
 
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
+#include <moveit/task_constructor/cost_queue.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -74,8 +75,31 @@ MOVEIT_CLASS_FORWARD(Introspection)
  */
 class InterfaceState {
 	friend class SolutionBase; // addIncoming() / addOutgoing() should be called only by SolutionBase
+	friend class Interface; // allow Interface to set owner_ and priority_
 public:
-	// TODO turn this into priority queue
+	/** InterfaceStates are ordered according to two values:
+	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
+	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
+	 */
+	struct Priority : public std::pair<unsigned int, double> {
+		Priority() : Priority(0, 0.0) {}
+		Priority(unsigned int depth, double cost)
+		   : std::pair<unsigned int, double>(depth, cost) {}
+
+		inline unsigned int depth() const { return this->first; }
+		inline double cost() const { return this->second; }
+
+		Priority operator+(const Priority& other) const {
+			return Priority(this->depth() + other.depth(),
+			                this->cost() + other.cost());
+		}
+		inline bool operator<(const Priority& other) const {
+			if (this->depth() == other.depth())
+				return this->cost() < other.cost();
+			else
+				return this->depth() > other.depth();
+		}
+	};
 	typedef std::deque<SolutionBase*> Solutions;
 
 	/// create an InterfaceState from a planning scene
@@ -91,6 +115,13 @@ public:
 	PropertyMap& properties() { return properties_; }
 	const PropertyMap& properties() const { return properties_; }
 
+	/// states are ordered by priority
+	inline bool operator<(const InterfaceState& other) const {
+		return this->priority_ < other.priority_;
+	}
+	inline const Priority& priority() const { return priority_; }
+	Interface* owner() const { return owner_; }
+
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
@@ -101,50 +132,27 @@ private:
 	PropertyMap properties_;
 	Solutions incoming_trajectories_;
 	Solutions outgoing_trajectories_;
+
+	// members needed for priority scheduling in Interface list
+	Priority priority_;
+	Interface* owner_ = nullptr;  // allow update of priority
 };
 
 
-/** Interface provides a list of InterfaceStates available as input for a stage.
- *
- *  This is essentially an adaptor to a container class, to allow for notification
- *  of the interface's owner when new states become available
- */
-class Interface : protected std::list<InterfaceState> {
+/** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
+class Interface : public ordered<InterfaceState> {
 public:
-	typedef std::list<InterfaceState> container_type;
-	typedef std::function<void(const container_type::iterator&)> NotifyFunction;
-	Interface(const NotifyFunction &notify);
+	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
+	Interface(const NotifyFunction &notify = NotifyFunction());
 
-	// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
-	// and finally run the notify callback
-	container_type::iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
+	/// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
+	iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
 
-	// clone an existing InterfaceState, but without its incoming/outgoing connections
-	container_type::iterator clone(const InterfaceState &state);
+	/// clone an existing InterfaceState, but without its incoming/outgoing connections
+	iterator clone(const InterfaceState &state);
 
-	using container_type::value_type;
-	using container_type::reference;
-	using container_type::const_reference;
-
-	using container_type::iterator;
-	using container_type::const_iterator;
-	using container_type::reverse_iterator;
-	using container_type::const_reverse_iterator;
-
-	using container_type::empty;
-	using container_type::size;
-	using container_type::clear;
-	using container_type::front;
-	using container_type::back;
-
-	using container_type::begin;
-	using container_type::cbegin;
-	using container_type::end;
-	using container_type::cend;
-	using container_type::rbegin;
-	using container_type::crbegin;
-	using container_type::rend;
-	using container_type::crend;
+	/// update state's priority if new priority is smaller and call notify_
+	void updatePriority(InterfaceState &state, const InterfaceState::Priority &priority);
 
 private:
 	const NotifyFunction notify_;
@@ -163,13 +171,13 @@ public:
 	inline const InterfaceState* end() const { return end_; }
 
 	inline void setStartState(const InterfaceState& state){
-		assert(start_ == NULL);
+		assert(start_ == NULL);  // only allow setting once (by Stage)
 		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
-		assert(end_ == NULL);
+		assert(end_ == NULL);  // only allow setting once (by Stage)
 		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}

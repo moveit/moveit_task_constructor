@@ -42,6 +42,7 @@
 #include <iomanip>
 #include <ros/console.h>
 
+using namespace std::placeholders;
 namespace moveit { namespace task_constructor {
 
 void InitStageException::push_back(const Stage &stage, const std::string &msg)
@@ -129,6 +130,11 @@ void Stage::reset()
 
 void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
+	// init properties once from parent
+	auto impl = pimpl();
+	impl->properties_.reset();
+	if (impl->parent())
+		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 }
 
 const ContainerBase *Stage::parent() const {
@@ -257,42 +263,35 @@ PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *m
 {
 }
 
+void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
+	// move infinite-cost states to processed list
+	if (std::isinf(state->priority().cost()))
+		starts_->moveTo(state, processed, processed.end());
+}
+void PropagatingEitherWayPrivate::dropFailedEnds(Interface::iterator state) {
+	// move infinite-cost states to processed list
+	if (std::isinf(state->priority().cost()))
+		ends_->moveTo(state, processed, processed.end());
+}
+
 inline bool PropagatingEitherWayPrivate::hasStartState() const{
-	return next_start_state_ != starts_->end();
+	return starts_ && !starts_->empty();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState(){
-	if (!hasStartState())
-		throw std::runtime_error("no new state for beginning available");
-
-	const InterfaceState& state= *next_start_state_;
-	++next_start_state_;
-
-	return state;
+	assert(hasStartState());
+	// move state to processed list
+	return *starts_->moveTo(starts_->begin(), processed, processed.end());
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const{
-	return next_end_state_ != ends_->end();
+	return ends_ && !ends_->empty();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
-	if(!hasEndState())
-		throw std::runtime_error("no new state for ending available");
-
-	const InterfaceState& state= *next_end_state_;
-	++next_end_state_;
-
-	return state;
-}
-
-void PropagatingEitherWayPrivate::initProperties(const InterfaceState& state)
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// first init from INTERFACE
-	properties_.performInitFrom(Stage::INTERFACE, state.properties());
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
+	assert(hasEndState());
+	// move state to processed list
+	return *ends_->moveTo(ends_->begin(), processed, processed.end());
 }
 
 bool PropagatingEitherWayPrivate::canCompute() const
@@ -311,33 +310,19 @@ bool PropagatingEitherWayPrivate::compute()
 	bool result = false;
 	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
 		const InterfaceState& state = fetchStartState();
-		initProperties(state);
+		// enforce property initialization from INTERFACE
+		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
 		if (me->computeForward(state))
 			result |= true;
 	}
 	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
 		const InterfaceState& state = fetchEndState();
-		initProperties(state);
+		// enforce property initialization from INTERFACE
+		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
 		if (me->computeBackward(state))
 			result |= true;
 	}
 	return countFailures(result);
-}
-
-void PropagatingEitherWayPrivate::newStartState(const Interface::iterator &it)
-{
-	// we just appended a state to the list, but the iterator doesn't see it anymore
-	// so let's point it at the new one
-	if(next_start_state_ == starts_->end())
-		--next_start_state_;
-}
-
-void PropagatingEitherWayPrivate::newEndState(const Interface::iterator &it)
-{
-	// we just appended a state to the list, but the iterator doesn't see it anymore
-	// so let's point it at the new one
-	if(next_end_state_ == ends_->end())
-		--next_end_state_;
 }
 
 
@@ -356,23 +341,17 @@ void PropagatingEitherWay::initInterface()
 {
 	auto impl = pimpl();
 	if (impl->dir & PropagatingEitherWay::FORWARD) {
-		if (!impl->starts_) { // keep existing interface if possible
-			impl->starts_.reset(new Interface([impl](const Interface::iterator& it) { impl->newStartState(it); }));
-			impl->next_start_state_ = impl->starts_->begin();
-		}
+		if (!impl->starts_)  // keep existing interface if possible
+			impl->starts_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, impl, _1)));
 	} else {
 		impl->starts_.reset();
-		impl->next_start_state_ = Interface::iterator();
 	}
 
 	if (impl->dir & PropagatingEitherWay::BACKWARD) {
-		if (!impl->ends_) { // keep existing interface if possible
-			impl->ends_.reset(new Interface([impl](const Interface::iterator& it) { impl->newEndState(it); }));
-			impl->next_end_state_ = impl->ends_->end();
-		}
+		if (!impl->ends_)  // keep existing interface if possible
+			impl->ends_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, impl, _1)));
 	} else {
 		impl->ends_.reset();
-		impl->next_end_state_ = Interface::iterator();
 	}
 }
 
@@ -386,6 +365,12 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	initInterface();
 }
 
+void PropagatingEitherWay::reset()
+{
+	pimpl()->processed.clear();
+	ComputeBase::reset();
+}
+
 void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	ComputeBase::init(scene);
@@ -393,14 +378,10 @@ void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &sce
 	auto impl = pimpl();
 
 	// after being connected, restrict actual interface directions
-	if (!impl->nextStarts()) {
+	if (!impl->nextStarts())
 		impl->starts_.reset();
-		impl->next_start_state_ = Interface::iterator();
-	}
-	if (!impl->prevEnds()) {
+	if (!impl->prevEnds())
 		impl->ends_.reset();
-		impl->next_end_state_ = Interface::iterator();
-	}
 	if (!impl->isConnected())
 		throw InitStageException(*this, "can neither send forwards nor backwards");
 }
@@ -433,7 +414,6 @@ PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward *me, con
 {
 	// indicate, that we don't accept new states from ends_ interface
 	ends_.reset();
-	next_end_state_ = Interface::iterator();
 }
 
 
@@ -452,7 +432,6 @@ PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward *me, 
 {
 	// indicate, that we don't accept new states from starts_ interface
 	starts_.reset();
-	next_start_state_ = Interface::iterator();
 }
 
 
@@ -475,16 +454,7 @@ bool GeneratorPrivate::canCompute() const {
 }
 
 bool GeneratorPrivate::compute() {
-	initProperties();
 	return countFailures(static_cast<Generator*>(me_)->compute());
-}
-
-void GeneratorPrivate::initProperties()
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
 }
 
 
@@ -510,44 +480,50 @@ void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
    : ComputeBasePrivate(me, name)
 {
-	starts_.reset(new Interface([this](const Interface::iterator& it) { this->newStartState(it); }));
-	ends_.reset(new Interface([this](const Interface::iterator& it) { this->newEndState(it); }));
-	it_pairs_ = std::make_pair(starts_->begin(), ends_->begin());
+	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newStartState, this, _1, _2)));
+	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newEndState, this, _1, _2)));
 }
 
-void ConnectingPrivate::newStartState(const Interface::iterator& it)
+void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 {
-	// TODO: need to handle the pairs iterator
-	if(it_pairs_.first == starts_->end())
-		--it_pairs_.first;
+	if (!std::isfinite(it->priority().cost()))
+		return;
+	if (updated) {
+		// many pairs might be affected: sort
+		pending.sort();
+	} else { // new state: insert all pairs with other interface
+		for (auto oit = ends_->begin(), oend = ends_->end(); oit != oend; ++oit) {
+			if (!std::isfinite(oit->priority().cost()))
+				break;
+			pending.insert(std::make_pair(it, oit));
+		}
+	}
 }
 
-void ConnectingPrivate::newEndState(const Interface::iterator& it)
+void ConnectingPrivate::newEndState(Interface::iterator it, bool updated)
 {
-	// TODO: need to handle the pairs iterator properly
-	if(it_pairs_.second == ends_->end())
-		--it_pairs_.second;
-}
-
-void ConnectingPrivate::initProperties(const InterfaceState &start, const InterfaceState &end)
-{
-	// reset properties to their defaults
-	properties_.reset();
-	// then init from PARENT
-	properties_.performInitFrom(Stage::PARENT, parent()->properties());
+	if (!std::isfinite(it->priority().cost()))
+		return;
+	if (updated) {
+		// many pairs might be affected: sort
+		pending.sort();
+	} else { // new state: insert all pairs with other interface
+		for (auto oit = starts_->begin(), oend = starts_->end(); oit != oend; ++oit) {
+			if (!std::isfinite(oit->priority().cost()))
+				break;
+			pending.insert(std::make_pair(oit, it));
+		}
+	}
 }
 
 bool ConnectingPrivate::canCompute() const{
-	// TODO: implement this properly
-	return it_pairs_.first != starts_->end() &&
-	       it_pairs_.second != ends_->end();
+	return !pending.empty();
 }
 
 bool ConnectingPrivate::compute() {
-	// TODO: implement this properly
-	const InterfaceState& from = *it_pairs_.first;
-	const InterfaceState& to = *(it_pairs_.second++);
-	initProperties(from, to);
+	const StatePair& top = pending.pop();
+	const InterfaceState& from = *top.first;
+	const InterfaceState& to = *top.second;
 	return countFailures(static_cast<Connecting*>(me_)->compute(from, to));
 }
 
@@ -555,6 +531,12 @@ bool ConnectingPrivate::compute() {
 Connecting::Connecting(const std::string &name)
    : ComputeBase(new ConnectingPrivate(this, name))
 {
+}
+
+void Connecting::reset()
+{
+	pimpl()->pending.clear();
+	ComputeBase::reset();
 }
 
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
