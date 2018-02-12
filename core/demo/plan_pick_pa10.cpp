@@ -141,6 +141,21 @@ int main(int argc, char** argv){
 		t.add(std::move(move));
 	}
 
+	{
+		auto move = std::make_unique<stages::MoveRelative>("shift object", cartesian);
+		move->properties().configureInitFrom(Stage::PARENT, {"group"});
+		move->setMinMaxDistance(0.1, 0.2);
+		move->properties().set("marker_ns", std::string("lift"));
+		move->properties().set("link", std::string("lh_tool_frame"));
+
+		geometry_msgs::TwistStamped twist;
+		twist.header.frame_id = "object";
+		twist.twist.linear.y = 1;
+		twist.twist.angular.y = 2;
+		move->along(twist);
+		t.add(std::move(move));
+	}
+
 	try {
 		auto scene = t.initScene(ros::Duration(0));
 		auto& state = scene->getCurrentStateNonConst();
