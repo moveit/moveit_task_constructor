@@ -117,24 +117,27 @@ bool GenerateGraspPose::compute(){
 	tf::transformMsgToEigen(tool2grasp_msg.transform, to_grasp);
 	grasp2tool = to_grasp.inverse();
 
+	const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
+	if (!link) throw std::runtime_error("requested link '" + link_name + "' does not exist");
+
 	if (tool2grasp_msg.header.frame_id != link_name) {
 		// convert to_grasp into transform w.r.t. link (instead of tool frame_id)
-		const Eigen::Affine3d link_pose = scene_->getFrameTransform(link_name);
-		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
-			throw std::runtime_error("requested link does not exist or could not be retrieved");
-		const Eigen::Affine3d tool_pose = scene_->getFrameTransform(tool2grasp_msg.header.frame_id);
-		if(tool_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
-			throw std::runtime_error("requested frame does not exist or could not be retrieved");
+		const robot_model::LinkModel* tool_link = robot_state.getLinkModel(tool2grasp_msg.header.frame_id);
+		if (!tool_link) throw std::runtime_error("requested frame '" + tool2grasp_msg.header.frame_id + "' is not a robot link");
+
+		const Eigen::Affine3d link_pose = robot_state.getGlobalLinkTransform(link);
+		const Eigen::Affine3d tool_pose = robot_state.getGlobalLinkTransform(tool_link);
 		to_grasp = link_pose.inverse() * tool_pose * to_grasp;
 		grasp2link = to_grasp.inverse();
 	} else
 		grasp2link = grasp2tool;
 
-	const Eigen::Affine3d object_pose = scene_->getFrameTransform(props.get<std::string>("object"));
-	if(object_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
+	const std::string& object_name = props.get<std::string>("object");
+	if (!scene_->knowsFrameTransform(object_name))
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
+	const Eigen::Affine3d object_pose = scene_->getFrameTransform(object_name);
 
-	while( canCompute() ){
+	while( canCompute() ) {
 		// rotate object pose about z-axis
 		Eigen::Affine3d grasp_pose = object_pose * Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ());
 		Eigen::Affine3d link_pose = grasp_pose * grasp2link;
