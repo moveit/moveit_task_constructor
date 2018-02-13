@@ -70,54 +70,33 @@ void ComputeIK::setIgnoreCollisions(bool flag)
 typedef std::vector<std::vector<double>> IKSolutions;
 
 namespace {
-bool isValid(planning_scene::PlanningSceneConstPtr scene,
-             bool ignore_collisions,
-             IKSolutions* ik_solutions,
-             robot_state::RobotState* state,
-             const robot_model::JointModelGroup* jmg,
-             const double* joint_positions){
-	for (const auto& sol : *ik_solutions){
-		if (jmg->distance(joint_positions, sol.data()) < 0.1)
-			return false; // to close to already found solution
-	}
-	state->setJointGroupPositions(jmg, joint_positions);
-	ik_solutions->emplace_back();
-	state->copyJointGroupPositions(jmg, ik_solutions->back());
-
-	return ignore_collisions || !scene->isStateColliding(*state, jmg->getName());
-}
 
 bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
                            const robot_model::JointModelGroup* jmg,
-                           const Eigen::Affine3d &pose,
+                           Eigen::Affine3d pose,
                            const std::string &link_name)
 {
 	planning_scene::PlanningScenePtr sandbox_scene = scene->diff();
 	robot_state::RobotState& robot_state = sandbox_scene->getCurrentStateNonConst();
-	robot_state.updateStateWithLinkAt(link_name, pose, true);
 
-	// disable collision checking for parent links (except fixed links)
-	auto& acm = sandbox_scene->getAllowedCollisionMatrixNonConst();
+	// consider all rigidly connected parent links as well
 	const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
-	const robot_model::LinkModel* parent_link = link->getParentLinkModel();
-	const robot_model::JointModel* joint = link->getParentJointModel();
+	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
+	if (parent != link)  // transform pose into pose suitable to place parent
+		pose = pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
 
-	// keep links rigidly attached to link_name
-	std::vector<const std::string*> fixed_eef_links;
-	while (parent_link && joint->getType() == robot_model::JointModel::FIXED) {
-		fixed_eef_links.push_back(&parent_link->getName());
-		link = parent_link;
-		joint = link->getParentJointModel();
-		parent_link = joint->getParentLinkModel();
-	}
-	// now parent_link is the first link that is not rigidly attached to link_name
+	// place link at given pose
+	robot_state.updateStateWithLinkAt(parent, pose);
+	robot_state.updateCollisionBodyTransforms();
 
-	std::vector<const std::string*> pending_links;
-	while (parent_link) {
-		pending_links.push_back(&parent_link->getName());
-		link = parent_link;
-		joint = link->getParentJointModel();
-		parent_link = joint->getParentLinkModel();
+	// disable collision checking for parent links (except links fixed to root)
+	auto& acm = sandbox_scene->getAllowedCollisionMatrixNonConst();
+	std::vector<const std::string*> pending_links;  // parent link names that might be rigidly connected to root
+	while (parent) {
+		pending_links.push_back(&parent->getName());
+		link = parent;
+		const robot_model::JointModel* joint = link->getParentJointModel();
+		parent = joint->getParentLinkModel();
 
 		if (joint->getType() != robot_model::JointModel::FIXED) {
 			for (const std::string* name : pending_links)
@@ -128,9 +107,8 @@ bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
 
 	// check collision with the world using the padded version
 	collision_detection::CollisionRequest req;
-	req.group_name = jmg->getName();
 	collision_detection::CollisionResult res;
-	scene->getCollisionWorld()->checkRobotCollision(req, res, *scene->getCollisionRobot(), robot_state, acm);
+	scene->checkCollision(req, res, robot_state, acm);
 	return res.collision;
 }
 
@@ -157,27 +135,50 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	const moveit::core::JointModelGroup* jmg = group.empty() ? robot_model->getJointModelGroup(eef_jmg->getEndEffectorParentGroup().first)
 	                                                         : robot_model->getJointModelGroup(group);
 
+	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
+	const robot_model::LinkModel* link = sandbox_state.getLinkModel(link_name);
+	if (!link) throw std::runtime_error("requested link '" + link_name + "' does not exist");
+
 	// compute target pose w.r.t. link_name
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
 	Eigen::Affine3d target_pose;
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
 	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
-		const Eigen::Affine3d& ref_pose = sandbox_scene->getFrameTransform(props.get<std::string>(target_pose_msg.header.frame_id));
-		if(ref_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
-			ROS_WARN("requested reference frame '%s' for target pose does not exist", target_pose_msg.header.frame_id.c_str());
-		const Eigen::Affine3d& link_pose = sandbox_scene->getFrameTransform(link_name);
-		if(link_pose.matrix().cwiseEqual(Eigen::Affine3d::Identity().matrix()).all())
-			ROS_WARN("requested link frame '%s' does not exist", link_name.c_str());
+		const robot_model::LinkModel* ref_link = sandbox_state.getLinkModel(target_pose_msg.header.frame_id);
+		if (!ref_link) throw std::runtime_error("requested reference frame '" + target_pose_msg.header.frame_id + "' is not a robot link");
 
+		const Eigen::Affine3d link_pose = sandbox_state.getGlobalLinkTransform(link_name);
+		const Eigen::Affine3d ref_pose = sandbox_state.getGlobalLinkTransform(target_pose_msg.header.frame_id);
 		// transform target pose such that the link frame will reach there
 		target_pose = target_pose * ref_pose.inverse() * link_pose;
 	}
 
-	// validate ee group for collision
-	if (isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link_name)) {
+	// validate placed link for collisions
+	bool colliding = isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link_name);
+	if (colliding && !storeFailures()) {
 		ROS_ERROR("eeg in collision");
 		return;
 	}
+
+	// visualize placed end-effector
+	std::deque<visualization_msgs::Marker> placed_link_markers;
+	auto appender = [&placed_link_markers](visualization_msgs::Marker& marker, const std::string& name) {
+		marker.ns = "ik target";
+		marker.color.a *= 0.5;
+		placed_link_markers.push_back(marker);
+	};
+	const auto& visualize_links = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
+	                              ->getParentJointModel()->getDescendantLinkModels();
+	if (colliding) {
+		SubTrajectory solution;
+		generateCollisionMarkers(sandbox_state, appender, visualize_links);
+		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));
+		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
+		spawn(InterfaceState(sandbox_scene), std::move(solution));
+		return;
+	} else
+		generateVisualMarkers(sandbox_state, appender, visualize_links);
+
 
 	// determine joint values of robot pose to compare IK solution with for costs
 	std::vector<double> compare_pose;
@@ -189,17 +190,23 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	} else
 		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
-	IKSolutions ik_solutions;
-	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
+	// prepare for marker frame usage
+	target_pose_msg.header.frame_id = s.start()->scene()->getPlanningFrame();
 
-	const moveit::core::GroupStateValidityCallbackFn is_valid =
-		std::bind(&isValid,
-	             sandbox_scene,
-	             props.get<bool>("ignore_collisions"),
-	             &ik_solutions,
-	             std::placeholders::_1,
-	             std::placeholders::_2,
-	             std::placeholders::_3);
+	IKSolutions ik_solutions;
+	bool ignore_collisions = props.get<bool>("ignore_collisions");
+	auto isValid = [sandbox_scene, ignore_collisions, &ik_solutions]
+	               (robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
+		for (const auto& sol : ik_solutions){
+			if (jmg->distance(joint_positions, sol.data()) < 0.1)
+				return false; // too close to already found solution
+		}
+		state->setJointGroupPositions(jmg, joint_positions);
+		ik_solutions.emplace_back();
+		state->copyJointGroupPositions(jmg, ik_solutions.back());
+
+		return ignore_collisions || !sandbox_scene->isStateColliding(*state, jmg->getName());
+	};
 
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
 	bool tried_current_state_as_seed = false;
@@ -211,46 +218,52 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			sandbox_state.setToRandomPositions(jmg);
 		tried_current_state_as_seed= true;
 
-		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, is_valid);
+		size_t previous = ik_solutions.size();
+		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, isValid);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 
-		planning_scene::PlanningSceneConstPtr scene = s.start()->scene();
-		SubTrajectory solution;
-
-		// include markers from original solution
-		std::copy(s.markers().begin(), s.markers().end(), std::back_inserter(solution.markers()));
-
-		// frame at target pose
-		target_pose_msg.header.frame_id = scene->getPlanningFrame();
-		rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
-
-		if (succeeded) {
-			solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+		if (succeeded || (storeFailures() && ik_solutions.size() > previous)) {
 			// create a new scene for each solution as they will have different robot states
-			planning_scene::PlanningScenePtr new_scene = s.start()->scene()->diff();
-			robot_state::RobotState& robot_state = new_scene->getCurrentStateNonConst();
-			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
-			scene = new_scene;
+			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+			SubTrajectory solution;
 
-			// robot model
-			robot_state.updateLinkTransforms();
-			auto appender = [&solution](visualization_msgs::Marker& marker, const std::string& name) {
-				marker.ns = "ik solution";
-				marker.color.a *= 0.5;
-				solution.markers().push_back(marker);
-			};
-			generateVisualMarkers(robot_state, appender, jmg->getLinkModelNames());
-		} else {
-			solution.setCost(std::numeric_limits<double>::infinity());
+			// frame at target pose
+			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
+
+			if (succeeded)
+				// compute cost as distance to compare_pose
+				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+			else // found an IK solution, but this was not valid
+				solution.setCost(std::numeric_limits<double>::infinity());
+
+			// set scene's robot state
+			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+
+			spawn(InterfaceState(scene), std::move(solution));
 		}
 
-		spawn(InterfaceState(scene), std::move(solution));
-
 		if (!succeeded && max_ik_solutions == 1)
-			break; // first and only attempt failed
+			break;  // first and only attempt failed
+	}
+
+	if (ik_solutions.empty() && storeFailures()) {  // failed to find any solution
+		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+		SubTrajectory solution;
+
+		// frame at target pose
+		rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
+
+		// mark solution as invalid
+		solution.setCost(std::numeric_limits<double>::infinity());
+
+		// ik target link placement
+		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));
+
+		spawn(InterfaceState(scene), std::move(solution));
 	}
 }
 
