@@ -70,6 +70,15 @@ template <class T> const std::string& materialName(const T& element);
 template <> const std::string& materialName(const urdf::Visual& element) { return element.material_name; }
 template <> const std::string& materialName(const urdf::Collision& element) { static std::string empty; return empty; }
 
+std::vector<std::string> linkNames(const std::vector<const moveit::core::LinkModel*>& link_models)
+{
+	std::vector<std::string> names;
+	names.reserve(link_models.size());
+	for (const moveit::core::LinkModel* link : link_models)
+		names.push_back(link->getName());
+	return names;
+}
+
 /** generate marker msgs to visualize the robot state, calling the given callback for each of them
  *  link_names: set of links to include (or all if empty) */
 template <class T> // with T = urdf::Visual or urdf::Collision
@@ -101,9 +110,11 @@ void generateMarkers(const moveit::core::RobotState &robot_state,
 			}
 		};
 
+		// either we have an array of collision/visual elements
 		for(const auto& element : elements_vector<T>(*link))
 			element_handler(element);
 
+		// or there is a single such element
 		if (!valid_found)
 			element_handler(element<T>(*link));
 	}
@@ -114,11 +125,21 @@ void generateCollisionMarkers(const moveit::core::RobotState &robot_state,
                              const std::vector<std::string> &link_names) {
 	generateMarkers<urdf::Collision>(robot_state, callback, link_names);
 }
+void generateCollisionMarkers(const moveit::core::RobotState &robot_state,
+                              const MarkerCallback &callback,
+                              const std::vector<const moveit::core::LinkModel*> &link_models) {
+	generateMarkers<urdf::Collision>(robot_state, callback, linkNames(link_models));
+}
 
 void generateVisualMarkers(const moveit::core::RobotState &robot_state,
                            const MarkerCallback& callback,
                            const std::vector<std::string> &link_names) {
 	generateMarkers<urdf::Visual>(robot_state, callback, link_names);
+}
+void generateVisualMarkers(const moveit::core::RobotState &robot_state,
+                           const MarkerCallback &callback,
+                           const std::vector<const moveit::core::LinkModel*> &link_models) {
+	generateMarkers<urdf::Visual>(robot_state, callback, linkNames(link_models));
 }
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them

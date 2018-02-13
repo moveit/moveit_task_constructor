@@ -10,6 +10,7 @@ MOVEIT_CLASS_FORWARD(PlanningScene)
 }
 namespace moveit { namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
+MOVEIT_CLASS_FORWARD(LinkModel)
 } }
 
 namespace moveit { namespace task_constructor {
@@ -28,12 +29,18 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr &scen
 void generateCollisionMarkers(const moveit::core::RobotState &robot_state,
                              const MarkerCallback& callback,
                              const std::vector<std::string> &link_names = {});
+void generateCollisionMarkers(const moveit::core::RobotState &robot_state,
+                             const MarkerCallback& callback,
+                             const std::vector<const moveit::core::LinkModel*> &link_models);
 
 /** generate marker msgs to visualize robot's visual geometry, calling the given callback for each of them
  *  link_names: set of links to include (or all if empty) */
 void generateVisualMarkers(const moveit::core::RobotState &robot_state,
                            const MarkerCallback& callback,
                            const std::vector<std::string> &link_names = {});
+void generateVisualMarkers(const moveit::core::RobotState &robot_state,
+                           const MarkerCallback& callback,
+                           const std::vector<const moveit::core::LinkModel*> &link_models);
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  calls generateMarkersForRobot() and generateMarkersForObjects() */
