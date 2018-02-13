@@ -139,7 +139,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	double linear_norm = 0.0, angular_norm = 0.0;
 
 	Eigen::Affine3d target_eigen;
-	const Eigen::Affine3d& link_pose = scene->getFrameTransform(link_name);
+	Eigen::Affine3d link_pose = scene->getFrameTransform(link_name);  // take a copy here, pose will change on success
 
 	boost::any goal = props.get("twist");
 	if (!goal.empty()) {
