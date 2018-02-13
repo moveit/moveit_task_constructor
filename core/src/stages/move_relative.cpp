@@ -214,10 +214,12 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			success = rotation.angle() > min_distance;
 		} else
 			success = (reached_pose.translation() - link_pose.translation()).norm() > min_distance;
+	} else if (!success && min_distance == 0.0) { // if min_distance is zero, we succeed in any case
+		success = true;
 	}
 
 	// store result
-	if (success || (robot_trajectory && storeFailures())) {
+	if (robot_trajectory && (success || storeFailures())) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD) robot_trajectory->reverse();
 		trajectory.setTrajectory(robot_trajectory);
