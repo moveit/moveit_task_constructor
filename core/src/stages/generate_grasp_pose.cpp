@@ -153,28 +153,24 @@ bool GenerateGraspPose::compute(){
 		trajectory.setCost(0.0);
 		trajectory.setName(std::to_string(current_angle_));
 
-		// add an arrow marker
-		visualization_msgs::Marker m;
-		m.header.frame_id = scene_->getPlanningFrame();
-		m.ns = "grasp pose";
-		rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
-		double scale = 0.1;
-		rviz_marker_tools::makeArrow(m, scale);
-		tf::poseEigenToMsg(grasp_pose * grasp2tool *
-		                   // arrow should point along z (instead of x)
-		                   Eigen::AngleAxisd(-M_PI / 2.0, Eigen::Vector3d::UnitY()) *
-		                   // arrow tip at goal_pose
-		                   Eigen::Translation3d(-scale, 0, 0), m.pose);
-		trajectory.markers().push_back(m);
+		// add frame at grasp pose
+		goal_pose_msg.header.frame_id = scene_->getPlanningFrame();
+		tf::poseEigenToMsg(grasp_pose, goal_pose_msg.pose);
+		rviz_marker_tools::appendFrame(trajectory.markers(), goal_pose_msg, 0.1, "grasp frame");
 
-		// add end-effector marker
-		robot_state.updateStateWithLinkAt(link_name, link_pose);
+		// add end-effector marker visualizing the pose of the end-effector, including all rigidly connected parent links
+		const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
+		const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
+		if (parent != link)  // transform pose into pose suitable to place parent
+			link_pose = link_pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
+
+		robot_state.updateStateWithLinkAt(parent, link_pose);
 		auto appender = [&trajectory](visualization_msgs::Marker& marker, const std::string& name) {
 			marker.ns = "grasp eef";
 			marker.color.a *= 0.5;
 			trajectory.markers().push_back(marker);
 		};
-		generateVisualMarkers(robot_state, appender, jmg->getLinkModelNames());
+		generateVisualMarkers(robot_state, appender, parent->getParentJointModel()->getDescendantLinkModels());
 
 		spawn(std::move(state), std::move(trajectory));
 		return true;
