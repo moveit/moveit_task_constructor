@@ -100,7 +100,8 @@ void Interface::updatePriority(InterfaceState &state, const InterfaceState::Prio
 {
 	if (priority < state.priority()) {
 		auto it = std::find_if(begin(), end(), [&state](const InterfaceState& other) { return &state == &other; });
-		assert(it != end());  // state should be part of this interface
+		// state should be part of the interface
+		assert(it != end());
 		state.priority_ = priority;
 		if (notify_) notify_(it, true);
 	}

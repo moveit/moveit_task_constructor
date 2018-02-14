@@ -88,10 +88,6 @@ void StagePrivate::newSolution(const SolutionBase &solution)
 	if (introspection_)
 		introspection_->registerSolution(solution);
 
-	// ignore invalid / failure solutions
-	if (solution.isFailure())
-		return;
-
 	// call solution callbacks for both, valid solutions and failures
 	for (const auto& cb : solution_cbs_)
 		cb(solution);
@@ -486,8 +482,13 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 
 void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 {
-	if (!std::isfinite(it->priority().cost()))
+	// TODO: only consider interface states with priority depth > threshold
+	if (!std::isfinite(it->priority().cost())) {
+		// remove pending pairs, if cost updated to infinity
+		if (updated)
+			pending.remove_if([it](const StatePair& p) { return p.first == it; });
 		return;
+	}
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();
@@ -502,8 +503,12 @@ void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 
 void ConnectingPrivate::newEndState(Interface::iterator it, bool updated)
 {
-	if (!std::isfinite(it->priority().cost()))
+	if (!std::isfinite(it->priority().cost())) {
+		// remove pending pairs, if cost updated to infinity
+		if (updated)
+			pending.remove_if([it](const StatePair& p) { return p.second == it; });
 		return;
+	}
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();

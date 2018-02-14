@@ -232,9 +232,7 @@ struct SolutionCollector {
 	void operator()(const SerialContainer::solution_container& trace, double cost) {
 		// traced path should not extend past container boundaries
 		assert(trace.size() <= max_depth);
-
-		if (trace.size() == max_depth) // reached max depth
-			solutions.emplace_back(std::make_pair(trace, cost));
+		solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
 	std::list<std::pair<SerialContainer::solution_container, double>> solutions;
@@ -257,11 +255,11 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 
 	SerialContainer::solution_container trace; trace.reserve(children.size());
 
-	// find all incoming solution pathes ending at current solution
+	// find all incoming solution paths ending at current solution
 	SolutionCollector incoming(num_before);
 	traverse<Interface::BACKWARD>(current, std::ref(incoming), trace);
 
-	// find all outgoing solution pathes starting at current solution
+	// find all outgoing solution paths starting at current solution
 	SolutionCollector outgoing(num_after);
 	traverse<Interface::FORWARD>(current, std::ref(outgoing), trace);
 
@@ -284,7 +282,7 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
 				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
-			} else {
+			} else if (prio.depth() > 1) {
 				// update state costs
 				const InterfaceState* start = (in.first.empty() ? current : *in.first.back()).start();
 				start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
@@ -592,8 +590,10 @@ void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
 	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
 
 	if (it->isFailure()) {
-		auto state_it = impl->states_.insert(impl->states_.end(), std::move(state));
+		// attach state (different for start / end) to trajectory
+		auto state_it = impl->states_.insert(impl->states_.end(), InterfaceState(state));
 		it->setStartState(*state_it);
+		state_it = impl->states_.insert(impl->states_.end(), std::move(state));
 		it->setEndState(*state_it);
 		impl->failures_.push_back(&*it);
 	} else {

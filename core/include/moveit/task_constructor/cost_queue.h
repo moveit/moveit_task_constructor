@@ -104,6 +104,9 @@ public:
 		c.splice(at, other, pos);
 		return pos;
 	}
+
+	template<typename Predicate>
+	void remove_if(Predicate p) { c.remove_if(p); }
 };
 
 namespace detail {
