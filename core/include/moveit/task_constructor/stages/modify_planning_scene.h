@@ -60,7 +60,7 @@ namespace moveit { namespace task_constructor { namespace stages {
 class ModifyPlanningScene : public PropagatingEitherWay {
 public:
 	typedef std::vector<std::string> Names;
-	typedef std::function<void(planning_scene::PlanningScenePtr scene, PropertyMap& properties)> ApplyCallback;
+	typedef std::function<void(const planning_scene::PlanningScenePtr& scene, const PropertyMap& properties)> ApplyCallback;
 	ModifyPlanningScene(const std::string& name = "modify planning scene");
 
 	bool computeForward(const InterfaceState& from) override;
