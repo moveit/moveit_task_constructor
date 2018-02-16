@@ -10,6 +10,9 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/move_to.h
 	${PROJECT_INCLUDE}/stages/move_relative.h
 
+	${PROJECT_INCLUDE}/stages/simple_grasp.h
+	${PROJECT_INCLUDE}/stages/pick.h
+
 	${PROJECT_INCLUDE}/stages/cartesian_position_motion.h
 	${PROJECT_INCLUDE}/stages/gripper.h
 	${PROJECT_INCLUDE}/stages/move.h
@@ -24,6 +27,9 @@ add_library(${PROJECT_NAME}_stages
 	connect.cpp
 	move_to.cpp
 	move_relative.cpp
+
+	simple_grasp.cpp
+	pick.cpp
 
 	cartesian_position_motion.cpp
 	gripper.cpp

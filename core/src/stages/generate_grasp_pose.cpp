@@ -50,8 +50,8 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 : Generator(name)
 {
 	auto& p = properties();
-	p.declare<std::string>("eef", "name of end-effector group");
-	p.declare<std::string>("eef_named_pose");
+	p.declare<std::string>("eef", "name of end-effector");
+	p.declare<std::string>("pregrasp", "name of end-effector's pregrasp pose");
 	p.declare<std::string>("object");
 	p.declare<geometry_msgs::TransformStamped>("tool_to_grasp_tf", geometry_msgs::TransformStamped(), "transform from robot tool frame to grasp frame");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
@@ -67,8 +67,8 @@ void GenerateGraspPose::setEndEffector(const std::string &eef){
 	setProperty("eef", eef);
 }
 
-void GenerateGraspPose::setGripperGraspPose(const std::string &pose_name){
-	setProperty("eef_named_pose", pose_name);
+void GenerateGraspPose::setNamedPose(const std::string &pose_name){
+	setProperty("pregrasp", pose_name);
 }
 
 void GenerateGraspPose::setObject(const std::string &object){
@@ -103,13 +103,13 @@ bool GenerateGraspPose::compute(){
 	const moveit::core::JointModelGroup* jmg = scene_->getRobotModel()->getEndEffector(eef);
 
 	robot_state::RobotState &robot_state = scene_->getCurrentStateNonConst();
-	const std::string& eef_named_pose = props.get<std::string>("eef_named_pose");
-	if(!eef_named_pose.empty()){
-		robot_state.setToDefaultValues(jmg , eef_named_pose);
+	const std::string& joint_pose = props.get<std::string>("pregrasp");
+	if(!joint_pose.empty()){
+		robot_state.setToDefaultValues(jmg , joint_pose);
 	}
 
 	geometry_msgs::TransformStamped tool2grasp_msg = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
-	const std::string &link_name = jmg ->getEndEffectorParentGroup().second;
+	const std::string &link_name = jmg->getEndEffectorParentGroup().second;
 	if (tool2grasp_msg.header.frame_id.empty()) // if no frame_id is given
 		tool2grasp_msg.header.frame_id = link_name; // interpret the transform w.r.t. eef link frame
 	Eigen::Affine3d to_grasp;
