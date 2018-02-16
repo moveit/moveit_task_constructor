@@ -386,7 +386,6 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        InterfaceState&& to,
                                        SubTrajectory&& t) {
 	auto impl = pimpl();
-	std::cout << "sending state forward" << std::endl;
 	SubTrajectory &trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
@@ -397,7 +396,6 @@ void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         const InterfaceState& to,
                                         SubTrajectory&& t) {
 	auto impl = pimpl();
-	std::cout << "sending state backward" << std::endl;
 	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
@@ -460,7 +458,6 @@ Generator::Generator(const std::string &name)
 
 void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 {
-	std::cout << "spawning state forwards and backwards" << std::endl;
 	assert(state.incomingTrajectories().empty() &&
 	       state.outgoingTrajectories().empty());
 	assert(!t.trajectory());

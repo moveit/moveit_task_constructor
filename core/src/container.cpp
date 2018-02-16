@@ -393,10 +393,10 @@ bool SerialContainer::compute()
 	for(const auto& stage : pimpl()->children()) {
 		if(!stage->pimpl()->canCompute())
 			continue;
-		std::cout << "Computing stage '" << stage->name() << "':" << std::endl;
+		ROS_INFO("Computing stage '%s'", stage->name().c_str());
 		bool success = stage->pimpl()->compute();
 		computed = true;
-		std::cout << (success ? "succeeded" : "failed") << std::endl;
+		ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
 	}
 	return computed;
 }

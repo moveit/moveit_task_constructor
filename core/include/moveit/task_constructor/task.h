@@ -104,7 +104,7 @@ public:
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan();
 	/// print current task state (number of found solutions and propagated states) to std::cout
-	static void printState(const Task &t);
+	void printState(std::ostream &os = std::cout) const;
 
 	size_t numSolutions() const override;
 	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
