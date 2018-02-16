@@ -308,17 +308,17 @@ bool PropagatingEitherWayPrivate::compute()
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (me->computeForward(state))
+		if (countFailures(me->computeForward(state)))
 			result |= true;
 	}
 	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (me->computeBackward(state))
+		if (countFailures(me->computeBackward(state)))
 			result |= true;
 	}
-	return countFailures(result);
+	return result;
 }
 
 
