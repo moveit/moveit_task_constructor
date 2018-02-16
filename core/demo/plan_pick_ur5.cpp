@@ -84,7 +84,7 @@ int main(int argc, char** argv){
 	{
 		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
-		gengrasp->setGripperGraspPose("open");
+		gengrasp->setNamedPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setToolToGraspTF(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 		gengrasp->setAngleDelta(-.2);

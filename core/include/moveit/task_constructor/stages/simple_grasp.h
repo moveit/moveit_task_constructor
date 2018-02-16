@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2018, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,45 +32,70 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner
-   Desc:    Generator Stage for simple grasp poses
-*/
+/* Authors: Robert Haschke */
 
 #pragma once
 
-#include <moveit/task_constructor/stage.h>
+#include <moveit/task_constructor/container.h>
+#include <moveit/macros/class_forward.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <Eigen/Geometry>
 
+namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
 namespace moveit { namespace task_constructor { namespace stages {
 
-class GenerateGraspPose : public MonitoringGenerator {
+class GenerateGraspPose;
+
+/** Simple Grasp Stage
+ *
+ * Given a named pre-grasp and grasp posture the stage generates
+ * fully-qualified pre-grasp and grasp robot states, connected
+ * by a grasping trajectory of the end-effector.
+ */
+class SimpleGrasp : public SerialContainer {
+	moveit::core::RobotModelConstPtr model_;
+	GenerateGraspPose* grasp_generator_ = nullptr;
+
 public:
-	GenerateGraspPose(const std::string& name);
+	SimpleGrasp(const std::string& name = "grasp");
 
-	void reset() override;
-	bool canCompute() const override;
-	bool compute() override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
+	void setMonitoredStage(Stage* monitored);
 
-	void setEndEffector(const std::string &eef);
-	void setNamedPose(const std::string &pose_name);
-	void setObject(const std::string &object);
+	void setEndEffector(const std::string& eef) {
+		properties().set<std::string>("eef", eef);
+	}
+	void setObject(const std::string& object) {
+		properties().set<std::string>("object", object);
+	}
 
-	void setToolToGraspTF(const geometry_msgs::TransformStamped &transform);
+	void setPreGraspPose(const std::string& pregrasp) {
+		properties().set<std::string>("pregrasp", pregrasp);
+	}
+	void setGraspPose(const std::string& grasp) {
+		properties().set<std::string>("grasp", grasp);
+	}
+
+	void setToolToGraspTF(const geometry_msgs::TransformStamped &transform) {
+		properties().set("tool_to_grasp_tf", transform);
+	}
 	void setToolToGraspTF(const Eigen::Affine3d& transform, const std::string& link = "");
 	template <typename T>
 	void setToolToGraspTF(const T& t, const std::string& link = "") {
 		Eigen::Affine3d transform; transform = t;
 		setToolToGraspTF(transform, link);
 	}
-	void setAngleDelta(double delta);
 
-protected:
-	void onNewSolution(const SolutionBase& s) override;
+	void setAngleDelta(double angle_delta) {
+		properties().set("angle_delta", angle_delta);
+	}
 
-protected:
-	planning_scene::PlanningScenePtr scene_;
-	double current_angle_ = 0.0;
+	void setMaxIKSolutions(uint32_t max_ik_solutions) {
+		properties().set("max_ik_solutions", max_ik_solutions);
+	}
+	void setTimeout(double timeout) {
+		properties().set("timeout", timeout);
+	}
 };
 
 } } }
