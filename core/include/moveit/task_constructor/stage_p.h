@@ -60,6 +60,7 @@ public:
 	virtual ~StagePrivate() = default;
 
 	InterfaceFlags interfaceFlags() const;
+	virtual InterfaceFlags requiredInterface() const = 0;
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
@@ -155,13 +156,14 @@ class PropagatingEitherWayPrivate : public ComputeBasePrivate {
 	std::list<Interface::value_type> processed;  // already processed states
 
 public:
-	PropagatingEitherWay::Direction dir;
+	PropagatingEitherWay::Direction required_interface_dirs_;
 
-	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir,
+	inline PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction required_interface_dirs_,
 	                                   const std::string &name);
 
-	// returns true if prevEnds() or nextStarts() are accessible
-	inline bool isConnected() const { return prevEnds() || nextStarts(); }
+	InterfaceFlags requiredInterface() const override;
+	// initialize pull interfaces for given propagation directions
+	void initInterface(PropagatingEitherWay::Direction dir);
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -198,6 +200,7 @@ class GeneratorPrivate : public ComputeBasePrivate {
 public:
 	inline GeneratorPrivate(Generator *me, const std::string &name);
 
+	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
 	bool compute() override;
 };
@@ -216,6 +219,7 @@ class ConnectingPrivate : public ComputeBasePrivate {
 public:
 	inline ConnectingPrivate(Connecting *me, const std::string &name);
 
+	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
 	bool compute() override;
 

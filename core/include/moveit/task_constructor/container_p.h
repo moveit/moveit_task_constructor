@@ -100,14 +100,18 @@ public:
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
-	// Get push interface to be used for children: If our own push interface is not set,
-	// don't set children's interface either: pushing is not supported.
-	// Otherwise return pending_* buffer.
-	InterfacePtr getPushBackwardInterface() {
-		return prevEnds() ? pending_backward_ : InterfacePtr();
+	// containers don't required a specific interface on their own
+	// their interface is derived from their children
+	InterfaceFlags requiredInterface() const override { return InterfaceFlags(); }
+
+	// set child's push interfaces: allow pushing if child requires so
+	inline void setChildsPushBackwardInterface(Stage& child) {
+		bool allowed = (child.pimpl()->requiredInterface() & WRITES_PREV_END);
+		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
-	InterfacePtr getPushForwardInterface() {
-		return nextStarts() ? pending_forward_ : InterfacePtr();
+	inline void setChildsPushForwardInterface(Stage& child) {
+		bool allowed = (child.pimpl()->requiredInterface() & WRITES_NEXT_START);
+		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
@@ -165,7 +169,12 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
 private:
-	void connect(StagePrivate *prev, StagePrivate *next);
+	// connect cur stage to its predecessor and successor
+	bool connect(container_type::const_iterator cur, InitStageException& errors,
+	             const planning_scene::PlanningSceneConstPtr& scene);
+	// restrict interfaces of auto-mode propagating stages
+	void stripInterfaces(std::vector<container_type::const_iterator>& stages);
+	void validateConnectivity(InitStageException& errors) const;
 
 	// set of all solutions
 	ordered<SerialSolution> solutions_;

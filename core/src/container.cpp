@@ -332,63 +332,104 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
    : ContainerBasePrivate(me, name)
 {}
 
-void SerialContainerPrivate::connect(StagePrivate* prev, StagePrivate* next) {
-	prev->setNextStarts(next->starts());
-	next->setPrevEnds(prev->ends());
+// connect cur stage to its predecessor and successor by setting the push interface pointers
+// return true if cur stage should be scheduled for a second sweep
+bool SerialContainerPrivate::connect(container_type::const_iterator cur, InitStageException& errors,
+                                     const planning_scene::PlanningSceneConstPtr &scene)
+{
+	constexpr InterfaceFlags UNKNOWN;
+	StagePrivate* const cur_impl = **cur;
+	InterfaceFlags required = cur_impl->requiredInterface();
+
+	// get iterators to prev / next stage in sequence
+	auto prev = cur; --prev;
+	auto next = cur; ++next;
+
+	// set push forward connection using next's starts
+	if ((required == UNKNOWN || required & WRITES_NEXT_START)
+	    && next != children().end()) // last child has not a next one
+		cur_impl->setNextStarts((*next)->pimpl()->starts());
+
+	// set push backward connection using prev's ends
+	if ((required == UNKNOWN || required & WRITES_PREV_END)
+	    && cur != children().begin())  // first child has not a previous one
+		cur_impl->setPrevEnds((*prev)->pimpl()->ends());
+
+	// schedule stage with unknown interface for 2nd sweep
+	return required == UNKNOWN;
+}
+
+// restrict interfaces of propagating stages that have auto-mode enabled
+void SerialContainerPrivate::stripInterfaces(std::vector<container_type::const_iterator>& stages)
+{
+	for (auto it = stages.rbegin(); it != stages.rend(); ++it) {
+	}
+	stages.clear();
 }
 
 void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
-	InitStageException errors;
+	// reset pull interfaces
 	auto impl = pimpl();
+	impl->starts_.reset();
+	impl->ends_.reset();
+	ContainerBase::init(scene); // throws if there are no children
 
-	// if there are no children, there is nothing to connect
-	if (!impl->children().empty()) {
-		/*** connect children ***/
-		// first stage sends backward to pending_backward_
-		auto start = impl->children().begin();
-		(*start)->pimpl()->setPrevEnds(impl->getPushBackwardInterface());
+	InitStageException errors;
 
-		// last stage sends forward to pending_forward_
-		auto last = --impl->children().end();
-		(*last)->pimpl()->setNextStarts(impl->getPushForwardInterface());
+	auto start = impl->children().begin();
+	auto last = --impl->children().end();
 
-		auto cur = start;
-		auto prev = cur; ++cur; // prev points to 1st, cur points to 2nd stage
-		if (prev != last) {// we have more than one children
-			auto next = cur; ++next; // next points to 3rd stage (or end)
-			for (; cur != last; ++prev, ++cur, ++next) {
-				impl->connect(**prev, **cur);
-				impl->connect(**cur, **next);
-			}
-			// finally connect last == cur and prev stage
-			impl->connect(**prev, **cur);
-		}
+	// connect first / last child's push interfaces to our pending_* buffers
+	impl->setChildsPushBackwardInterface(**start);
+	impl->setChildsPushForwardInterface(**last);
 
-		// recursively init + validate all children
-		// this needs to be done *after* initializing the connections
-		ContainerBase::init(scene);
+	std::vector<decltype(start)> scheduled; // stages scheduled for 2n sweep
 
-		// initialize starts_ and ends_ interfaces
-		if (const InterfacePtr& target = (*start)->pimpl()->starts())
-			impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
-		if (const InterfacePtr& target = (*last)->pimpl()->ends())
-			impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
-
-		// validate connectivity of this
-		if (!impl->nextStarts())
-			errors.push_back(*this, "cannot sendForward()");
-		if (!impl->prevEnds())
-			errors.push_back(*this, "cannot sendBackward()");
-	} else {
-		errors.push_back(*this, "no children");
-		// no children -> no reading
-		impl->starts_.reset();
-		impl->ends_.reset();
+	// initialize and connect remaining children in 2 sweeps
+	// to allow for interface auto-detection for propagating stages
+	for (auto cur = start, end = impl->children().end(); cur != end; ++cur) {
+		// 1st sweep: process forward connections
+		if (impl->connect(cur, errors, scene))
+			scheduled.push_back(cur);
+		else if (!scheduled.empty())  // reached a stage with known interface
+			impl->stripInterfaces(scheduled);
 	}
+	impl->stripInterfaces(scheduled);  // process stages accumulated up to end
+
+	// initialize pull interfaces if first/last child pulls
+	if (const InterfacePtr& target = (*start)->pimpl()->starts())
+		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
+	if (const InterfacePtr& target = (*last)->pimpl()->ends())
+		impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
+
+	// finally validate connectivity
+	impl->validateConnectivity(errors);
 
 	if (errors)
 		throw errors;
+}
+
+void SerialContainerPrivate::validateConnectivity(InitStageException& errors) const
+{
+	// validate propagation from children to this and vice versa
+	if (!children().empty()) {
+		const StagePrivate* start = children().front()->pimpl();
+		if (bool(start->prevEnds()) ^ bool(prevEnds()))
+			errors.push_back(*me(), "cannot propagate backward pushes of first child");
+
+		const StagePrivate* last = children().back()->pimpl();
+		if (bool(last->nextStarts()) ^ bool(nextStarts()))
+			errors.push_back(*me(), "cannot propagate forward pushes of last child");
+	}
+
+	// validate connectivity of children
+	for (auto& child : children()) {
+		InterfaceFlags required = child->pimpl()->requiredInterface();
+		InterfaceFlags actual = child->pimpl()->interfaceFlags();
+		if ((required & actual) != required)
+			errors.push_back(*child, "required interface doesn't match actual");
+	}
 }
 
 bool SerialContainer::canCompute() const
@@ -505,42 +546,31 @@ void ParallelContainerBase::reset()
  */
 void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
-	InitStageException errors;
+	// recursively init children
+	ContainerBase::init(scene);
 	auto impl = pimpl();
 
-	// initialize push connections of children
-	InterfacePtr push_prev = impl->getPushBackwardInterface();
-	InterfacePtr push_next = impl->getPushForwardInterface();
-	for (const Stage::pointer& stage : impl->children()) {
-		StagePrivate *child = stage->pimpl();
-		child->setPrevEnds(push_prev);
-		child->setNextStarts(push_next);
-	}
-	// recursively init + validate all children
-	// this needs to be done *after* initializing push connections
-	ContainerBase::init(scene);
-
-	bool pulls[2];
-	for (const Stage::pointer& stage : impl->children()) {
-		StagePrivate *child = stage->pimpl();
-		// is there any child reading from starts() or ends() ?
-		pulls[Interface::START] |= bool(child->pullInterface(Interface::START));
-		pulls[Interface::END] |= bool(child->pullInterface(Interface::END));
-	}
+	// determine the union of interfaces required by children
+	// TODO: should we better use the least common interface?
+	InterfaceFlags required;
+	for (const Stage::pointer& stage : impl->children())
+		required |= stage->pimpl()->requiredInterface();
 
 	// initialize this' pull connections
-	for (Interface::Direction dir : { Interface::START, Interface::END }) {
-		if (pulls[dir])
-			impl->pullInterface(dir).reset(new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState, impl, dir, _1, _2)));
-		else
-			impl->pullInterface(dir).reset();
+	impl->starts().reset(required & READS_START
+	                     ? new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState,
+	                                               impl, Interface::FORWARD, _1, _2))
+	                     : nullptr);
+	impl->ends().reset(required & READS_END
+	                   ? new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState,
+	                                             impl, Interface::BACKWARD, _1, _2))
+	                   : nullptr);
+
+	// initialize push connections of children according to their demands
+	for (const Stage::pointer& stage : impl->children()) {
+		impl->setChildsPushForwardInterface(*stage);
+		impl->setChildsPushBackwardInterface(*stage);
 	}
-
-	if (impl->children().empty())
-		errors.push_back(*this, "no children");
-
-	if (errors)
-		throw errors;
 }
 
 size_t ParallelContainerBase::numSolutions() const

@@ -192,9 +192,8 @@ void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
 	child->setPrevEnds(impl->pendingBackward());
 	child->setNextStarts(impl->pendingForward());
 
-	// explicitly call ContainerBase::init(), not WrapperBase::init()
-	// to keep the just set push interface for the wrapped child
-	ContainerBase::init(scene);
+	// and *afterwards* initialize all children
+	wrapped()->init(scene);
 
 	// provide introspection instance to all stages
 	impl->setIntrospection(introspection_.get());

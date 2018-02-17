@@ -118,10 +118,14 @@ Stage::operator const StagePrivate*() const {
 void Stage::reset()
 {
 	auto impl = pimpl();
+	// clear pull interfaces
 	if (impl->starts_) impl->starts_->clear();
 	if (impl->ends_) impl->ends_->clear();
+	// reset push interfaces
 	impl->prev_ends_.reset();
 	impl->next_starts_.reset();
+	// reset inherited properties
+	impl->properties_.reset();
 }
 
 void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
@@ -173,7 +177,9 @@ void Stage::setProperty(const std::string& name, const boost::any& value) {
 
 template<InterfaceFlag own, InterfaceFlag other>
 const char* direction(const StagePrivate& stage) {
+	static constexpr InterfaceFlags INPUT_IF_MASK({ READS_START | WRITES_PREV_END });
 	InterfaceFlags f = stage.interfaceFlags();
+
 	bool own_if = f & own;
 	bool other_if = f & other;
 	bool reverse = own & INPUT_IF_MASK;
@@ -254,8 +260,39 @@ void ComputeBase::reset() {
 
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
-   : ComputeBasePrivate(me, name), dir(dir)
+   : ComputeBasePrivate(me, name), required_interface_dirs_(dir)
 {
+	initInterface(required_interface_dirs_);
+}
+
+// initialize pull interfaces to match requested propagation directions
+void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction dir)
+{
+	if (dir & PropagatingEitherWay::FORWARD) {
+		if (!starts_)  // keep existing interface if possible
+			starts_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, this, _1)));
+	} else {
+		starts_.reset();
+	}
+
+	if (dir & PropagatingEitherWay::BACKWARD) {
+		if (!ends_)  // keep existing interface if possible
+			ends_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, this, _1)));
+	} else {
+		ends_.reset();
+	}
+}
+
+InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
+{
+	InterfaceFlags f;
+	if (required_interface_dirs_ & PropagatingEitherWay::FORWARD)
+		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
+	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
+		f |= InterfaceFlags({READS_END, WRITES_PREV_END});
+	// If required_interface_dirs_ == ANYWAY, we don't require an interface,
+	// but auto-derive - in init() - from the provided push interfaces.
+	return f;
 }
 
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
@@ -291,11 +328,7 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 
 bool PropagatingEitherWayPrivate::canCompute() const
 {
-	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState())
-		return true;
-	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState())
-		return true;
-	return false;
+	return hasStartState() || hasEndState();
 }
 
 bool PropagatingEitherWayPrivate::compute()
@@ -303,14 +336,14 @@ bool PropagatingEitherWayPrivate::compute()
 	PropagatingEitherWay* me = static_cast<PropagatingEitherWay*>(me_);
 
 	bool result = false;
-	if ((dir & PropagatingEitherWay::FORWARD) && hasStartState()) {
+	if (hasStartState()) {
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
 		if (countFailures(me->computeForward(state)))
 			result |= true;
 	}
-	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
+	if (hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
@@ -322,42 +355,23 @@ bool PropagatingEitherWayPrivate::compute()
 
 
 PropagatingEitherWay::PropagatingEitherWay(const std::string &name)
-   : PropagatingEitherWay(new PropagatingEitherWayPrivate(this, ANYWAY, name))
+   : PropagatingEitherWay(new PropagatingEitherWayPrivate(this, AUTO, name))
 {
 }
 
 PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate *impl)
    : ComputeBase(impl)
 {
-	initInterface();
-}
-
-void PropagatingEitherWay::initInterface()
-{
-	auto impl = pimpl();
-	if (impl->dir & PropagatingEitherWay::FORWARD) {
-		if (!impl->starts_)  // keep existing interface if possible
-			impl->starts_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, impl, _1)));
-	} else {
-		impl->starts_.reset();
-	}
-
-	if (impl->dir & PropagatingEitherWay::BACKWARD) {
-		if (!impl->ends_)  // keep existing interface if possible
-			impl->ends_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, impl, _1)));
-	} else {
-		impl->ends_.reset();
-	}
 }
 
 void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir)
 {
 	auto impl = pimpl();
-	if (impl->dir == dir) return;
-	if (impl->isConnected())
+	if (impl->required_interface_dirs_ == dir) return;
+	if (impl->prevEnds() || impl->nextStarts())
 		throw std::runtime_error("Cannot change direction after being connected");
-	impl->dir = dir;
-	initInterface();
+	impl->required_interface_dirs_ = dir;
+	impl->initInterface(impl->required_interface_dirs_);
 }
 
 void PropagatingEitherWay::reset()
@@ -366,19 +380,19 @@ void PropagatingEitherWay::reset()
 	ComputeBase::reset();
 }
 
-void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr &scene)
+void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr& scene)
 {
-	ComputeBase::init(scene);
-
+	Stage::init(scene);
 	auto impl = pimpl();
 
-	// after being connected, restrict actual interface directions
-	if (!impl->nextStarts())
-		impl->starts_.reset();
-	if (!impl->prevEnds())
-		impl->ends_.reset();
-	if (!impl->isConnected())
-		throw InitStageException(*this, "can neither send forwards nor backwards");
+	// In AUTO-mode, i.e. when auto-detecting direction of propagation from context,
+	// pretend that we offer both interface directions during init().
+	// This is needed due to a chicken-egg-problem: interface auto-detection requires
+	// the context (external pushing interfaces prevEnds, nextStarts) to be set,
+	// while the are ony set if we detected the correct interface...
+	if (impl->required_interface_dirs_ == AUTO)
+		impl->initInterface(BOTHWAY);
+	// otherwise the interface is already fixed and well-defined
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
@@ -442,6 +456,10 @@ GeneratorPrivate::GeneratorPrivate(Generator *me, const std::string &name)
    : ComputeBasePrivate(me, name)
 {}
 
+InterfaceFlags GeneratorPrivate::requiredInterface() const {
+	return InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END});
+}
+
 bool GeneratorPrivate::canCompute() const {
 	return static_cast<Generator*>(me_)->canCompute();
 }
@@ -474,6 +492,10 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 {
 	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newStartState, this, _1, _2)));
 	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newEndState, this, _1, _2)));
+}
+
+InterfaceFlags ConnectingPrivate::requiredInterface() const {
+	return InterfaceFlags( { READS_START, READS_END } );
 }
 
 void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)

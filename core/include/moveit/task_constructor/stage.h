@@ -69,11 +69,6 @@ enum InterfaceFlag {
 	READS_END          = 0x02,
 	WRITES_NEXT_START  = 0x04,
 	WRITES_PREV_END    = 0x08,
-
-	OWN_IF_MASK        = READS_START | READS_END,
-	EXT_IF_MASK        = WRITES_NEXT_START | WRITES_PREV_END,
-	INPUT_IF_MASK      = READS_START | WRITES_PREV_END,
-	OUTPUT_IF_MASK     = READS_END | WRITES_NEXT_START,
 };
 typedef Flags<InterfaceFlag> InterfaceFlags;
 
@@ -132,9 +127,17 @@ public:
 	operator StagePrivate*();
 	operator const StagePrivate*() const;
 
-	/// reset stage, clearing all solutions, interfaces, etc.
+	/// reset stage, clearing all solutions, interfaces, inherited properties.
 	virtual void reset();
-	/// initialize stage once before planning
+
+	/** initialize stage once before planning
+	 *
+	 * When called, properties configured for initialization from parent are already defined.
+	 * Push interfaces are not yet defined!
+	 *
+	 * The planning scene is the initial planning scene of the task. Use it as is or
+	 * to learn about the robot model.
+	 */
 	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
 
 	const ContainerBase* parent() const;
@@ -198,11 +201,16 @@ public:
 	PRIVATE_CLASS(PropagatingEitherWay)
 	PropagatingEitherWay(const std::string& name);
 
-	enum Direction { FORWARD = 0x01, BACKWARD = 0x02, ANYWAY = FORWARD | BACKWARD};
+	enum Direction {
+		AUTO = 0x00,     // auto-derive direction from context
+		FORWARD = 0x01,  // propagate forward only
+		BACKWARD = 0x02, // propagate backward only
+		BOTHWAY = FORWARD | BACKWARD, // propagate both ways
+	};
 	void restrictDirection(Direction dir);
 
-	virtual void reset() override;
-	virtual void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void reset() override;
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
 
 	virtual bool computeForward(const InterfaceState& from) = 0;
 	virtual bool computeBackward(const InterfaceState& to) = 0;
@@ -232,7 +240,6 @@ public:
 protected:
 	// constructor for use in derived classes
 	PropagatingEitherWay(PropagatingEitherWayPrivate* impl);
-	void initInterface();
 };
 
 
@@ -285,7 +292,7 @@ public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);
 
-	virtual void reset() override;
+	void reset() override;
 
 	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
 	void connect(const InterfaceState& from, const InterfaceState& to,

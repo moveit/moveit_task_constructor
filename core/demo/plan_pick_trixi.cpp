@@ -118,6 +118,7 @@ int main(int argc, char** argv){
 	}
 	catch (const InitStageException &e) {
 		std::cerr << e;
+		t.printState();
 		return EINVAL;
 	}
 
