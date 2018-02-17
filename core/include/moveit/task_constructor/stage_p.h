@@ -52,7 +52,7 @@ namespace moveit { namespace task_constructor {
 class ContainerBase;
 class StagePrivate {
 	friend class Stage;
-	friend std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
+	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
 
 public:
 	typedef std::list<Stage::pointer> container_type;
@@ -120,7 +120,7 @@ private:
 	Introspection* introspection_;  // task's introspection instance
 };
 PIMPL_FUNCTIONS(Stage)
-std::ostream& operator<<(std::ostream &os, const StagePrivate& stage);
+std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
 
 
 // ComputeBasePrivate is the base class for all computing stages, i.e. non-containers.

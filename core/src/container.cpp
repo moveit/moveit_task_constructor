@@ -225,6 +225,15 @@ void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 		throw errors;
 }
 
+std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
+	ContainerBase::StageCallback processor = [&os](const Stage& stage, int depth) -> bool {
+		os << std::string(2*depth, ' ') << *stage.pimpl() << std::endl;
+		return true;
+	};
+	container.traverseRecursively(processor);
+	return os;
+}
+
 
 struct SolutionCollector {
 	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}

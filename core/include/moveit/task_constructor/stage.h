@@ -86,7 +86,7 @@ typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePa
 /// exception thrown by Stage::init()
 /// It collects individual errors in stages throughout the pipeline to allow overall error reporting
 class InitStageException : public std::exception {
-	friend std::ostream& operator<<(std::ostream &os, const InitStageException& e);
+	friend std::ostream& operator<<(std::ostream& os, const InitStageException& e);
 
 public:
 	explicit InitStageException() {}
@@ -112,8 +112,6 @@ std::ostream& operator<<(std::ostream &os, const InitStageException& e);
 class ContainerBase;
 class StagePrivate;
 class Stage {
-	friend std::ostream& operator<<(std::ostream &os, const Stage& stage);
-
 public:
 	PRIVATE_CLASS(Stage)
 	typedef std::unique_ptr<Stage> pointer;
@@ -175,7 +173,7 @@ protected:
 protected:
 	StagePrivate* const pimpl_; // constness guarantees one initial write
 };
-std::ostream& operator<<(std::ostream &os, const Stage& stage);
+std::ostream& operator<<(std::ostream& os, const Stage& stage);
 
 
 class ComputeBasePrivate;
@@ -298,6 +296,5 @@ public:
 		connect(from, to, std::move(trajectory));
 	}
 };
-
 
 } }

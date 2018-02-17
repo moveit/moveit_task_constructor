@@ -76,6 +76,7 @@ public:
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
 };
+std::ostream& operator<<(std::ostream& os, const ContainerBase& stage);
 
 
 class SerialContainerPrivate;

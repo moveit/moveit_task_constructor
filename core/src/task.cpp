@@ -286,13 +286,8 @@ std::string Task::id() const
 	return id_;
 }
 
-void Task::printState(std::ostream& os) const
-{
-	ContainerBase::StageCallback processor = [&os](const Stage& stage, int depth) -> bool {
-		os << std::string(2*depth, ' ') << stage << std::endl;
-		return true;
-	};
-	stages()->traverseRecursively(processor);
+void Task::printState(std::ostream& os) const {
+	os << *stages();
 }
 
 } }

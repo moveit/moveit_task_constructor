@@ -61,7 +61,7 @@ const char *InitStageException::what() const noexcept
 	return msg;
 }
 
-std::ostream& operator<<(std::ostream &os, const InitStageException& e) {
+std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 	os << e.what() << std::endl;
 	for (const auto &pair : e.errors_)
 		os << pair.first->name() << ": " << pair.second << std::endl;
@@ -183,26 +183,25 @@ const char* direction(const StagePrivate& stage) {
 	return "<-";
 }
 
-std::ostream& operator<<(std::ostream &os, const Stage& stage) {
-	auto impl = stage.pimpl();
+std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	// starts
-	for (const InterfaceConstPtr& i : {impl->prevEnds(), impl->starts()}) {
+	for (const InterfaceConstPtr& i : {impl.prevEnds(), impl.starts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(*impl)
-	   << std::setw(3) << stage.numSolutions()
-	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(*impl);
+	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(impl)
+	   << std::setw(3) << impl.me()->numSolutions()
+	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(impl);
 	// ends
-	for (const InterfaceConstPtr& i : {impl->ends(), impl->nextStarts()}) {
+	for (const InterfaceConstPtr& i : {impl.ends(), impl.nextStarts()}) {
 		os << std::setw(3);
 		if (i) os << i->size();
 		else os << "-";
 	}
 	// name
-	os << " / " << stage.name();
+	os << " / " << impl.name();
 	return os;
 }
 
@@ -548,6 +547,11 @@ void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
 	trajectory.setStartState(from);
 	trajectory.setEndState(to);
 	impl->newSolution(trajectory);
+}
+
+std::ostream& operator<<(std::ostream& os, const Stage& stage) {
+	os << *stage.pimpl();
+	return os;
 }
 
 } }

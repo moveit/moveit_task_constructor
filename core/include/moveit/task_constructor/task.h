@@ -139,4 +139,9 @@ private:
 	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Task& task) {
+	task.printState(os);
+	return os;
+}
+
 } }
