@@ -6,11 +6,14 @@
 if (CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
 
+	add_library(gtest_utils gtest_value_printers.cpp)
+	target_link_libraries(gtest_utils ${PROJECT_NAME})
+
 	add_rostest_gtest(${PROJECT_NAME}-test-stage test_stage.launch test_stage.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-stage ${PROJECT_NAME} gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-container test_container.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-container ${PROJECT_NAME} gtest_main)
+	target_link_libraries(${PROJECT_NAME}-test-container ${PROJECT_NAME} gtest_utils gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-properties test_properties.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-properties ${PROJECT_NAME} gtest_main)

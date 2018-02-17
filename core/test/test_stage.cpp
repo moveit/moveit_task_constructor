@@ -8,13 +8,13 @@
 
 using namespace moveit::task_constructor;
 
-class TestGenerator : public Generator {
+class GeneratorMockup : public Generator {
 	planning_scene::PlanningScenePtr ps;
 	InterfacePtr prev;
 	InterfacePtr next;
 
 public:
-	TestGenerator() : Generator("generator") {
+	GeneratorMockup() : Generator("generator") {
 		robot_model_loader::RobotModelLoader loader;
 		ps.reset(new planning_scene::PlanningScene(loader.getModel()));
 
@@ -35,7 +35,7 @@ TEST(Stage, registerCallbacks) {
 	char *argv = nullptr;
 	ros::init(argc, &argv, "testLocalTaskModel");
 
-	TestGenerator g;
+	GeneratorMockup g;
 	uint called = 0;
 	auto cb = [&called](const SolutionBase &s) {
 		++called;
