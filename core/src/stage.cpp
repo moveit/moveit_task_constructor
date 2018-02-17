@@ -88,10 +88,6 @@ void StagePrivate::newSolution(const SolutionBase &solution)
 	if (introspection_)
 		introspection_->registerSolution(solution);
 
-	// ignore invalid / failure solutions
-	if (solution.isFailure())
-		return;
-
 	// call solution callbacks for both, valid solutions and failures
 	for (const auto& cb : solution_cbs_)
 		cb(solution);
@@ -312,17 +308,17 @@ bool PropagatingEitherWayPrivate::compute()
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (me->computeForward(state))
+		if (countFailures(me->computeForward(state)))
 			result |= true;
 	}
 	if ((dir & PropagatingEitherWay::BACKWARD) && hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (me->computeBackward(state))
+		if (countFailures(me->computeBackward(state)))
 			result |= true;
 	}
-	return countFailures(result);
+	return result;
 }
 
 
@@ -390,7 +386,6 @@ void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        InterfaceState&& to,
                                        SubTrajectory&& t) {
 	auto impl = pimpl();
-	std::cout << "sending state forward" << std::endl;
 	SubTrajectory &trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setStartState(from);
 	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
@@ -401,7 +396,6 @@ void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         const InterfaceState& to,
                                         SubTrajectory&& t) {
 	auto impl = pimpl();
-	std::cout << "sending state backward" << std::endl;
 	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setEndState(to);
 	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
@@ -464,7 +458,6 @@ Generator::Generator(const std::string &name)
 
 void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 {
-	std::cout << "spawning state forwards and backwards" << std::endl;
 	assert(state.incomingTrajectories().empty() &&
 	       state.outgoingTrajectories().empty());
 	assert(!t.trajectory());
@@ -486,8 +479,13 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 
 void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 {
-	if (!std::isfinite(it->priority().cost()))
+	// TODO: only consider interface states with priority depth > threshold
+	if (!std::isfinite(it->priority().cost())) {
+		// remove pending pairs, if cost updated to infinity
+		if (updated)
+			pending.remove_if([it](const StatePair& p) { return p.first == it; });
 		return;
+	}
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();
@@ -502,8 +500,12 @@ void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 
 void ConnectingPrivate::newEndState(Interface::iterator it, bool updated)
 {
-	if (!std::isfinite(it->priority().cost()))
+	if (!std::isfinite(it->priority().cost())) {
+		// remove pending pairs, if cost updated to infinity
+		if (updated)
+			pending.remove_if([it](const StatePair& p) { return p.second == it; });
 		return;
+	}
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();

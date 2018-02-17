@@ -155,7 +155,6 @@ void Introspection::publishAllSolutions(bool wait)
 	moveit_task_constructor_msgs::Solution msg;
 
 	Stage::SolutionProcessor processor = [this, &msg, wait](const SolutionBase& s) {
-		std::cout << "publishing solution with cost: " << s.cost() << std::endl;
 		msg.sub_solution.clear();
 		msg.sub_trajectory.clear();
 		fillSolution(msg, s);

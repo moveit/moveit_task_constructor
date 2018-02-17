@@ -58,7 +58,7 @@ Task::Task(const std::string& id, ContainerBase::pointer &&container)
 	initModel();
 
 	// monitor state on commandline
-	addTaskCallback(&printState);
+	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default
 	enableIntrospection(true);
 }
@@ -232,6 +232,7 @@ bool Task::plan()
 		} else
 			break;
 	}
+	printState();
 	return numSolutions() > 0;
 }
 
@@ -285,12 +286,13 @@ std::string Task::id() const
 	return id_;
 }
 
-void Task::printState(const Task &t){
-	ContainerBase::StageCallback processor = [](const Stage& stage, int depth) -> bool {
-		std::cout << std::string(2*depth, ' ') << stage << std::endl;
+void Task::printState(std::ostream& os) const
+{
+	ContainerBase::StageCallback processor = [&os](const Stage& stage, int depth) -> bool {
+		os << std::string(2*depth, ' ') << stage << std::endl;
 		return true;
 	};
-	t.stages()->traverseRecursively(processor);
+	stages()->traverseRecursively(processor);
 }
 
 } }

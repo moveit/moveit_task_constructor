@@ -132,6 +132,9 @@ void TaskDisplay::loadRobotModel()
 
 	// share the planning scene with task models
 	task_list_model_->setScene(trajectory_visual_->getScene());
+
+	// perform any postponed subscription to topics (after scene is well-defined)
+	changedTaskSolutionTopic();
 }
 
 void TaskDisplay::reset()
@@ -221,6 +224,10 @@ void TaskDisplay::showMarkers(const DisplaySolutionPtr &s) {
 
 void TaskDisplay::changedTaskSolutionTopic()
 {
+	// postpone setup until scene is well-defined
+	if (!trajectory_visual_->getScene())
+		return;
+
 	task_description_sub.shutdown();
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();

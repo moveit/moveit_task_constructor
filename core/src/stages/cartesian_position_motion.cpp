@@ -154,7 +154,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 
 		const double achieved_distance= achieved_fraction*(link_pose.translation()-target_point).norm();
 
-		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+		ROS_INFO_NAMED(this->name().c_str(), "achieved %f of cartesian motion", achieved_distance);
 
 		succeeded= achieved_distance >= props.get<double>("min_distance");
 	}
@@ -176,7 +176,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 			1.5, /* jump threshold */
 			is_valid);
 
-		std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+		ROS_INFO_NAMED(this->name().c_str(), "achieved %f of cartesian motion", achieved_distance);
 
 		succeeded= achieved_distance >= props.get<double>("min_distance");
 	}
@@ -248,7 +248,7 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 		1.5, /* jump threshold */
 		is_valid);
 
-	std::cout << "achieved " << achieved_distance << " of cartesian motion" << std::endl;
+	ROS_INFO_NAMED(this->name().c_str(), "achieved %f of cartesian motion", achieved_distance);
 
 	bool succeeded= achieved_distance >= props.get<double>("min_distance");
 

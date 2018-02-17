@@ -47,7 +47,5 @@ int main(int argc, char** argv){
 
 	t.plan();
 
-	Task::printState(t);
-
 	return 0;
 }
