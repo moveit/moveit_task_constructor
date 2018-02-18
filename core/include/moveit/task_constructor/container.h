@@ -63,6 +63,8 @@ public:
 
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr& scene) override;
+	/// validate connectivity of children (after init() was done)
+	virtual void validateConnectivity() const;
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
@@ -89,6 +91,9 @@ public:
 
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+
+	/// validate connectivity of children (after init() was done)
+	void validateConnectivity() const override;
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -136,6 +141,9 @@ public:
 
 	void reset() override;
 	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+
+	/// validate connectivity of children (after init() was done)
+	void validateConnectivity() const override;
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;

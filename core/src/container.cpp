@@ -200,29 +200,41 @@ void ContainerBase::reset()
 
 void ContainerBase::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
-	InitStageException errors;
 	auto impl = pimpl();
 	auto& children = impl->children();
 
 	Stage::init(scene);
 
 	// we need to have some children to do the actual work
-	if (children.empty()) {
-		errors.push_back(*this, "no children");
-		throw errors;
-	}
+	if (children.empty())
+		throw InitStageException(*this, "no children");
 
-	// recursively init all children
+	// recursively init all children and accumulate errors
+	InitStageException errors;
 	for (auto& child : children) {
-		try {
-			child->init(scene);
-		} catch (InitStageException &e) {
-			errors.append(e);
-		}
+		try { child->init(scene); } catch (InitStageException &e) { errors.append(e); }
 	}
 
-	if (errors)
-		throw errors;
+	if (errors) throw errors;
+}
+
+void ContainerBase::validateConnectivity() const
+{
+	InitStageException errors;
+	for (const auto& child : pimpl()->children()) {
+		// check that child's required interface is provided
+		InterfaceFlags required = child->pimpl()->requiredInterface();
+		InterfaceFlags actual = child->pimpl()->interfaceFlags();
+		if ((required & actual) != required)
+			errors.push_back(*child, "required interface is not satisfied");
+
+		// recursively validate all children and accumulate errors
+		ContainerBase* child_container = dynamic_cast<ContainerBase*>(child.get());
+		if (!child_container) continue;  // only containers provide validateConnectivity()
+		try { child_container->validateConnectivity(); } catch (InitStageException &e) { errors.append(e); }
+	}
+
+	if (errors) throw errors;
 }
 
 std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
@@ -380,7 +392,6 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 	impl->starts_.reset();
 	impl->ends_.reset();
 
-	InitStageException errors;
 	ContainerBase::init(scene); // throws if there are no children
 
 	auto start = impl->children().begin();
@@ -413,12 +424,6 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
 	if (const InterfacePtr& target = (*last)->pimpl()->ends())
 		impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
-
-	// finally validate connectivity
-	impl->validateConnectivity(errors);
-
-	if (errors)
-		throw errors;
 }
 
 // called by parent asking for pruning of this' interface
@@ -470,26 +475,52 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	}
 }
 
-void SerialContainerPrivate::validateConnectivity(InitStageException& errors) const
+void SerialContainer::validateConnectivity() const
 {
-	// validate propagation from children to this and vice versa
-	if (!children().empty()) {
-		const StagePrivate* start = children().front()->pimpl();
-		if (bool(start->prevEnds()) ^ bool(prevEnds()))
-			errors.push_back(*me(), "cannot propagate backward pushes of first child");
+	auto impl = pimpl();
+	InitStageException errors;
 
-		const StagePrivate* last = children().back()->pimpl();
-		if (bool(last->nextStarts()) ^ bool(nextStarts()))
-			errors.push_back(*me(), "cannot propagate forward pushes of last child");
+	constexpr InterfaceFlags INP_IF_MASK({READS_START, WRITES_PREV_END});
+	constexpr InterfaceFlags OUT_IF_MASK({READS_END, WRITES_NEXT_START});
+
+	// check that input / output interface of first / last child matches this' resp. interface
+	if (!impl->children().empty()) {
+		const StagePrivate* start = impl->children().front()->pimpl();
+		if ((start->interfaceFlags() & INP_IF_MASK) != (this->pimpl()->interfaceFlags() & INP_IF_MASK))
+			errors.push_back(*this, "input interface of '" + start->name() + "' doesn't match mine");
+
+		const StagePrivate* last = impl->children().back()->pimpl();
+		if ((last->interfaceFlags() & OUT_IF_MASK) != (this->pimpl()->interfaceFlags() & OUT_IF_MASK))
+			errors.push_back(*this, "output interface of '" + last->name() + "' doesn't match mine");
 	}
 
-	// validate connectivity of children
-	for (auto& child : children()) {
-		InterfaceFlags required = child->pimpl()->requiredInterface();
-		InterfaceFlags actual = child->pimpl()->interfaceFlags();
-		if ((required & actual) != required)
-			errors.push_back(*child, "required interface doesn't match actual");
+	// validate connectivity of children amongst each other
+	// ContainerBase::validateConnectivity() ensures that required push interfaces are present,
+	// that is, neighbouring stages have a corresponding pull interface.
+	// Here, it remains to check that - if a child requires a pull interface - it's indeed feeded.
+	for (auto cur = impl->children().begin(), end = impl->children().end(); cur != end; ++cur) {
+		const StagePrivate* const cur_impl = **cur;
+		InterfaceFlags required = cur_impl->requiredInterface();
+
+		// get iterators to prev / next stage in sequence
+		auto prev = cur; --prev;
+		auto next = cur; ++next;
+
+		// start pull interface fed?
+		if (cur != impl->children().begin() &&  // first child has not a previous one
+		    (required & READS_START) && !(*prev)->pimpl()->nextStarts())
+			errors.push_back(**cur, "end interface is not fed");
+
+		// end pull interface fed?
+		if (next != end && // last child has not a next one
+		    (required & READS_END) && !(*next)->pimpl()->prevEnds())
+			errors.push_back(**cur, "end interface is not fed");
 	}
+
+	// recursively validate children
+	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }
+
+	if (errors) throw errors;
 }
 
 bool SerialContainer::canCompute() const
@@ -631,6 +662,27 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 		impl->setChildsPushForwardInterface(*stage);
 		impl->setChildsPushBackwardInterface(*stage);
 	}
+}
+
+void ParallelContainerBase::validateConnectivity() const
+{
+	constexpr InterfaceFlags INP_IF_MASK({READS_START, WRITES_PREV_END});
+	constexpr InterfaceFlags OUT_IF_MASK({READS_END, WRITES_NEXT_START});
+
+	InitStageException errors;
+	auto impl = pimpl();
+	InterfaceFlags my_interface = impl->interfaceFlags();
+
+	// check that input / output interfaces of all children match my_interface
+	for (const auto& child : pimpl()->children()) {
+		if (child->pimpl()->interfaceFlags() != my_interface)
+			errors.push_back(*this, "interface of child '" + child->name() + "' doesn't match mine");
+	}
+
+	// recursively validate children
+	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }
+
+	if (errors) throw errors;
 }
 
 size_t ParallelContainerBase::numSolutions() const

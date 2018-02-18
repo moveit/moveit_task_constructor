@@ -192,8 +192,12 @@ void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
 	child->setPrevEnds(impl->pendingBackward());
 	child->setNextStarts(impl->pendingForward());
 
-	// and *afterwards* initialize all children
-	wrapped()->init(scene);
+	// and *afterwards* initialize all children recursively
+	stages()->init(scene);
+	// task expects its wrapped child to push to both ends, this triggers interface resolution
+	// TODO: stages()->pruneInterface(InterfaceFlags({WRITES_PREV_END, WRITES_NEXT_START}));
+	// and *finally* validate connectivity
+	stages()->validateConnectivity();
 
 	// provide introspection instance to all stages
 	impl->setIntrospection(introspection_.get());

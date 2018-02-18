@@ -113,6 +113,7 @@ protected:
 		append(serial, types);
 		try {
 			serial.init(scene);
+			serial.validateConnectivity();
 			if (!expect_failure) return; // as expected
 			ADD_FAILURE() << "init() didn't recognize a failure condition as expected\n" << serial;
 		} catch (const InitStageException &e) {
@@ -246,10 +247,17 @@ TEST_F(SerialTest, init_backward) {
 TEST_F(SerialTest, interface_detection) {
 	// derive propagation direction from inner generator
 	EXPECT_INIT_SUCCESS(true, true, ANY, GEN, ANY); // <- <-> ->
+	auto it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
+#if 0
 	// derive propagation direction from outer interface
 	EXPECT_INIT_SUCCESS(false, true, ANY); // -> ->
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, WRITES_NEXT_START}));
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // <- <-
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, WRITES_NEXT_START}));
+#endif
 }

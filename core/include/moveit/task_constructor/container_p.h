@@ -104,13 +104,17 @@ protected:
 	// their interface is derived from their children
 	InterfaceFlags requiredInterface() const override { return InterfaceFlags(); }
 
-	// set child's push interfaces: allow pushing if child requires so
+	// Set child's push interfaces: allow pushing if child requires it or
+	// if the interface is unknown: in this case greedily assume a push interface.
+	// If, during pruneInterface() later, we notice that it's not needed, prune there.
 	inline void setChildsPushBackwardInterface(Stage& child) {
-		bool allowed = (child.pimpl()->requiredInterface() & WRITES_PREV_END);
+		bool allowed = (child.pimpl()->requiredInterface() & WRITES_PREV_END) ||
+		               (child.pimpl()->requiredInterface() == 0); // unknown interface
 		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
 	inline void setChildsPushForwardInterface(Stage& child) {
-		bool allowed = (child.pimpl()->requiredInterface() & WRITES_NEXT_START);
+		bool allowed = (child.pimpl()->requiredInterface() & WRITES_NEXT_START) ||
+		               (child.pimpl()->requiredInterface() == 0); // unknown interface
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
@@ -170,8 +174,7 @@ public:
 
 private:
 	// connect cur stage to its predecessor and successor
-	bool connect(container_type::const_iterator cur, InitStageException& errors,
-	             const planning_scene::PlanningSceneConstPtr& scene);
+	bool connect(container_type::const_iterator cur);
 
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(PropagatingEitherWay::Direction dir) override;
@@ -182,8 +185,6 @@ private:
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end,
 	                     PropagatingEitherWay::Direction dir);
-
-	void validateConnectivity(InitStageException& errors) const;
 
 	// set of all solutions
 	ordered<SerialSolution> solutions_;
