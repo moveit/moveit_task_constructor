@@ -334,8 +334,7 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
 
 // connect cur stage to its predecessor and successor by setting the push interface pointers
 // return true if cur stage should be scheduled for a second sweep
-bool SerialContainerPrivate::connect(container_type::const_iterator cur, InitStageException& errors,
-                                     const planning_scene::PlanningSceneConstPtr &scene)
+bool SerialContainerPrivate::connect(container_type::const_iterator cur)
 {
 	constexpr InterfaceFlags UNKNOWN;
 	StagePrivate* const cur_impl = **cur;
@@ -359,45 +358,57 @@ bool SerialContainerPrivate::connect(container_type::const_iterator cur, InitSta
 	return required == UNKNOWN;
 }
 
-// restrict interfaces of propagating stages that have auto-mode enabled
-void SerialContainerPrivate::stripInterfaces(std::vector<container_type::const_iterator>& stages)
-{
-	for (auto it = stages.rbegin(); it != stages.rend(); ++it) {
-	}
-	stages.clear();
-}
-
+/* Establishing the interface connections, we face a chicken-egg-problem:
+ * To establish a connection, a predecessors/successors pull interface is
+ * assigned to the current's stage push interface.
+ * However, propagating stages (in auto-detection mode) can only create
+ * their pull interfaces if the corresponding, opposite-side push interface
+ * is present already (because that's the mechanism to determine the supported
+ * propagation directions).
+ *
+ * Hence, we need to resolve this by performing two sweeps:
+ * - initialization, assuming both propagation directions should be supported,
+ *   thus generating both pull interfaces, i.e. providing the egg
+ * - stripping down the interfaces to the actual context
+ *   This context is provided by two stages pushing from both ends
+ *   into a (potentially long) sequence of propagating stages (tbd).
+ */
 void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	// reset pull interfaces
 	auto impl = pimpl();
 	impl->starts_.reset();
 	impl->ends_.reset();
-	ContainerBase::init(scene); // throws if there are no children
 
 	InitStageException errors;
+	ContainerBase::init(scene); // throws if there are no children
 
 	auto start = impl->children().begin();
 	auto last = --impl->children().end();
 
 	// connect first / last child's push interfaces to our pending_* buffers
+	// if they require pushing
 	impl->setChildsPushBackwardInterface(**start);
 	impl->setChildsPushForwardInterface(**last);
 
-	std::vector<decltype(start)> scheduled; // stages scheduled for 2n sweep
-
-	// initialize and connect remaining children in 2 sweeps
-	// to allow for interface auto-detection for propagating stages
+	// initialize and connect remaining children in two sweeps
+	// to allow interface auto-detection for propagating stages
+	auto first_unknown = start;  // pointer to first stage with unknown interface
 	for (auto cur = start, end = impl->children().end(); cur != end; ++cur) {
-		// 1st sweep: process forward connections
-		if (impl->connect(cur, errors, scene))
-			scheduled.push_back(cur);
-		else if (!scheduled.empty())  // reached a stage with known interface
-			impl->stripInterfaces(scheduled);
+		// 1st sweep: connect everything potentially possible,
+		// remembering start of unknown sub sequence
+		if (impl->connect(cur));
+		else { // reached a stage with known interface
+			// 2nd sweep: prune interfaces from [first_unknown, cur)
+			impl->pruneInterfaces(first_unknown, cur);
+			// restart with first_unknown = ++cur
+			first_unknown = cur; ++first_unknown;
+		}
 	}
-	impl->stripInterfaces(scheduled);  // process stages accumulated up to end
+	// prune stages [first_unknown, end())
+	impl->pruneInterfaces(first_unknown, impl->children().end());
 
-	// initialize pull interfaces if first/last child pulls
+	// initialize this' pull interfaces if first/last child pulls
 	if (const InterfacePtr& target = (*start)->pimpl()->starts())
 		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
 	if (const InterfacePtr& target = (*last)->pimpl()->ends())
@@ -408,6 +419,55 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 
 	if (errors)
 		throw errors;
+}
+
+// called by parent asking for pruning of this' interface
+void SerialContainerPrivate::pruneInterface(PropagatingEitherWay::Direction dir) {
+	pruneInterfaces(children().begin(), children().end(), dir);
+}
+
+// called by init() to prune interfaces for children in range [first, last)
+// this function determines the feasible propagation directions
+void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first,
+                                             container_type::const_iterator end)
+{
+	if (first == end) return;  // nothing to do in this case
+
+	// determine feasible propagation directions from available push interfaces
+	int dir = 0;
+
+	// if previous stage pushes forward, we accept forward propagation
+	if (first != children().begin()) {
+		auto prev = first; --prev; // pointer to previous stage
+		if ((*prev)->pimpl()->requiredInterface() & WRITES_NEXT_START)
+			dir |= PropagatingEitherWay::FORWARD;
+	} // else: for first child we cannot determine the interface yet
+
+	// if end stage pushes backward, we accept backward propagation
+	if (end != children().end()) {
+		if ((*end)->pimpl()->requiredInterface() & WRITES_PREV_END)
+			dir |= PropagatingEitherWay::BACKWARD;
+	} // else: for last child we cannot determine the interface yet
+
+	// nothing to do if:
+	// - dir == 0: [first, last) covers all children, cannot determine interface
+	// - dir == PropagatingEitherWay::BOTHWAY: nothing changed
+	if (dir != 0 && dir != PropagatingEitherWay::BOTHWAY)
+		pruneInterfaces(first, end, PropagatingEitherWay::Direction(dir));
+}
+
+// prune interface for children in range [first, last) to given direction
+void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first,
+                                             container_type::const_iterator end,
+                                             PropagatingEitherWay::Direction dir)
+{
+	for (auto it = first; it != end; ++it) {
+		StagePrivate* impl = (*it)->pimpl();
+		// range should only contain stages with unknown required interface
+		assert(impl->requiredInterface() == PropagatingEitherWay::AUTO);
+		// let the child do the actual work (recursively)
+		impl->pruneInterface(dir);
+	}
 }
 
 void SerialContainerPrivate::validateConnectivity(InitStageException& errors) const

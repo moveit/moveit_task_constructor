@@ -172,8 +172,17 @@ private:
 	// connect cur stage to its predecessor and successor
 	bool connect(container_type::const_iterator cur, InitStageException& errors,
 	             const planning_scene::PlanningSceneConstPtr& scene);
-	// restrict interfaces of auto-mode propagating stages
-	void stripInterfaces(std::vector<container_type::const_iterator>& stages);
+
+	// called by parent asking for pruning of this' interface
+	void pruneInterface(PropagatingEitherWay::Direction dir) override;
+	// called by init() to prune interfaces for children in range [first, last)
+	void pruneInterfaces(container_type::const_iterator first,
+	                     container_type::const_iterator end);
+	// prune interface for children in range [first, last) to given direction
+	void pruneInterfaces(container_type::const_iterator first,
+	                     container_type::const_iterator end,
+	                     PropagatingEitherWay::Direction dir);
+
 	void validateConnectivity(InitStageException& errors) const;
 
 	// set of all solutions

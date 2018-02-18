@@ -60,7 +60,11 @@ public:
 	virtual ~StagePrivate() = default;
 
 	InterfaceFlags interfaceFlags() const;
+	// retrieve description of the interface required by this stage
+	// if this is unknown (because interface is auto-detected from context), return 0
 	virtual InterfaceFlags requiredInterface() const = 0;
+	// prune interface to the given propagation direction
+	virtual void pruneInterface(PropagatingEitherWay::Direction direction) {}
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
@@ -164,6 +168,10 @@ public:
 	InterfaceFlags requiredInterface() const override;
 	// initialize pull interfaces for given propagation directions
 	void initInterface(PropagatingEitherWay::Direction dir);
+	// prune interface to the given propagation direction
+	void pruneInterface(PropagatingEitherWay::Direction direction) override {
+		initInterface(direction);
+	}
 
 	bool canCompute() const override;
 	bool compute() override;

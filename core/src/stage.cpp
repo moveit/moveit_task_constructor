@@ -290,8 +290,8 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
 	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
 		f |= InterfaceFlags({READS_END, WRITES_PREV_END});
-	// If required_interface_dirs_ == ANYWAY, we don't require an interface,
-	// but auto-derive - in init() - from the provided push interfaces.
+	// if required_interface_dirs_ == ANYWAY, we don't require an interface
+	// but the parent container auto-derives the propagation direction
 	return f;
 }
 

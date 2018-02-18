@@ -243,7 +243,10 @@ TEST_F(SerialTest, init_backward) {
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
 }
 
-TEST_F(SerialTest, init_auto) {
+TEST_F(SerialTest, interface_detection) {
+	// derive propagation direction from inner generator
+	EXPECT_INIT_SUCCESS(true, true, ANY, GEN, ANY); // <- <-> ->
+
 	// derive propagation direction from outer interface
 	EXPECT_INIT_SUCCESS(false, true, ANY); // -> ->
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, WRITES_NEXT_START}));
