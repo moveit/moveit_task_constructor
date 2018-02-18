@@ -177,7 +177,6 @@ void Stage::setProperty(const std::string& name, const boost::any& value) {
 
 template<InterfaceFlag own, InterfaceFlag other>
 const char* direction(const StagePrivate& stage) {
-	static constexpr InterfaceFlags INPUT_IF_MASK({ READS_START | WRITES_PREV_END });
 	InterfaceFlags f = stage.interfaceFlags();
 
 	bool own_if = f & own;

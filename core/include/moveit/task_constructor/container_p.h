@@ -100,10 +100,6 @@ public:
 protected:
 	ContainerBasePrivate(ContainerBase *me, const std::string &name);
 
-	// containers don't required a specific interface on their own
-	// their interface is derived from their children
-	InterfaceFlags requiredInterface() const override { return InterfaceFlags(); }
-
 	// Set child's push interfaces: allow pushing if child requires it or
 	// if the interface is unknown: in this case greedily assume a push interface.
 	// If, during pruneInterface() later, we notice that it's not needed, prune there.
@@ -172,6 +168,9 @@ class SerialContainerPrivate : public ContainerBasePrivate {
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
+	// containers derive their required interface from their children
+	InterfaceFlags requiredInterface() const override;
+
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
 
@@ -219,6 +218,12 @@ class ParallelContainerBasePrivate : public ContainerBasePrivate {
 
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
+
+	// containers derive their required interface from their children
+	InterfaceFlags requiredInterface() const override;
+
+	// called by parent asking for pruning of this' interface
+	void pruneInterface(InterfaceFlags accepted) override;
 
 private:
 	/// callback for new externally received states

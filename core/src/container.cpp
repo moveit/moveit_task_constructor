@@ -344,11 +344,20 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
    : ContainerBasePrivate(me, name)
 {}
 
+// a serial container's required interface is derived from the required input interface
+// of the first child and the required output interface of the last child
+InterfaceFlags SerialContainerPrivate::requiredInterface() const
+{
+	if (children().empty())
+		return UNKNOWN;
+	return (children().front()->pimpl()->requiredInterface() & INPUT_IF_MASK)
+	      | (children().back()->pimpl()->requiredInterface() & OUTPUT_IF_MASK);
+}
+
 // connect cur stage to its predecessor and successor by setting the push interface pointers
 // return true if cur stage should be scheduled for a second sweep
 bool SerialContainerPrivate::connect(container_type::const_iterator cur)
 {
-	constexpr InterfaceFlags UNKNOWN;
 	StagePrivate* const cur_impl = **cur;
 	InterfaceFlags required = cur_impl->requiredInterface();
 
@@ -431,7 +440,7 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
 	constexpr InterfaceFlags BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
 
-	// I think, we only need to deal with the special case of the whole sequence to be pruned.
+	// We only need to deal with the special case of the whole sequence to be pruned.
 	if (accepted != BOTHWAYS && // will interface be restricted at all?
 	    children().front()->pimpl()->interfaceFlags() == BOTHWAYS)  // still undecided?
 	{
@@ -443,10 +452,8 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 		if (!children().back()->pimpl()->ends())
 			ends_.reset();
 	}
-
-	// If my assumption doesn't hold, we would need to prune partial sequences of stages
-	// with unknown-only interfaces at the *beginning* and *end* of the whole sequence.
-	// Reuse code from init() in that case.
+	if (interfaceFlags() == UNKNOWN)
+		throw InitStageException(*me(), "failed to derive propagation direction");
 }
 
 // called by init() to prune interfaces for children in range [first, last)
@@ -509,17 +516,14 @@ void SerialContainer::validateConnectivity() const
 	auto impl = pimpl();
 	InitStageException errors;
 
-	constexpr InterfaceFlags INP_IF_MASK({READS_START, WRITES_PREV_END});
-	constexpr InterfaceFlags OUT_IF_MASK({READS_END, WRITES_NEXT_START});
-
 	// check that input / output interface of first / last child matches this' resp. interface
 	if (!impl->children().empty()) {
 		const StagePrivate* start = impl->children().front()->pimpl();
-		if ((start->interfaceFlags() & INP_IF_MASK) != (this->pimpl()->interfaceFlags() & INP_IF_MASK))
+		if ((start->interfaceFlags() & INPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & INPUT_IF_MASK))
 			errors.push_back(*this, "input interface of '" + start->name() + "' doesn't match mine");
 
 		const StagePrivate* last = impl->children().back()->pimpl();
-		if ((last->interfaceFlags() & OUT_IF_MASK) != (this->pimpl()->interfaceFlags() & OUT_IF_MASK))
+		if ((last->interfaceFlags() & OUTPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & OUTPUT_IF_MASK))
 			errors.push_back(*this, "output interface of '" + last->name() + "' doesn't match mine");
 	}
 
@@ -635,6 +639,27 @@ ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase
 {
 }
 
+// A parallel container's required interface is derived from the required interfaces of all of its children.
+// They must not conflict to each other. Otherwise an InitStageException is thrown.
+InterfaceFlags ParallelContainerBasePrivate::requiredInterface() const
+{
+	if (children().empty())
+		return UNKNOWN;
+	/* TODO: replace this with a proper check for consistency of interfaces. Allowed combinations are:
+	 * ❘ ❘ = ❘  (connecting stages)
+	 * ↑ ↑ = ↑  (backward propagating)
+	 * ↓ ↓ = ↓  (forward propagating)
+	 * ↑ ↓ = ⇅ = ⇅ ↑ = ⇅ ↓  (propagating in both directions)
+	 * ↕ ↕ = ↕  (generating)
+	 */
+	return children().front()->pimpl()->requiredInterface();
+}
+
+void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted)
+{
+	// TODO: forward pruning to all children with UNKNOWN required interface
+}
+
 void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
 		copyState(external, stage->pimpl()->pullInterface(dir), updated);
@@ -695,9 +720,6 @@ void ParallelContainerBase::init(const planning_scene::PlanningSceneConstPtr &sc
 
 void ParallelContainerBase::validateConnectivity() const
 {
-	constexpr InterfaceFlags INP_IF_MASK({READS_START, WRITES_PREV_END});
-	constexpr InterfaceFlags OUT_IF_MASK({READS_END, WRITES_NEXT_START});
-
 	InitStageException errors;
 	auto impl = pimpl();
 	InterfaceFlags my_interface = impl->interfaceFlags();
