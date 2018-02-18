@@ -172,19 +172,20 @@ class SerialContainerPrivate : public ContainerBasePrivate {
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string &name);
 
+	// called by parent asking for pruning of this' interface
+	void pruneInterface(InterfaceFlags accepted) override;
+
 private:
 	// connect cur stage to its predecessor and successor
 	bool connect(container_type::const_iterator cur);
 
-	// called by parent asking for pruning of this' interface
-	void pruneInterface(PropagatingEitherWay::Direction dir) override;
 	// called by init() to prune interfaces for children in range [first, last)
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end);
 	// prune interface for children in range [first, last) to given direction
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end,
-	                     PropagatingEitherWay::Direction dir);
+	                     InterfaceFlags accepted);
 
 	// set of all solutions
 	ordered<SerialSolution> solutions_;

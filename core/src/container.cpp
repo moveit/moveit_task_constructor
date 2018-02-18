@@ -427,8 +427,26 @@ void SerialContainer::init(const planning_scene::PlanningSceneConstPtr &scene)
 }
 
 // called by parent asking for pruning of this' interface
-void SerialContainerPrivate::pruneInterface(PropagatingEitherWay::Direction dir) {
-	pruneInterfaces(children().begin(), children().end(), dir);
+void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
+	if (children().empty()) return;
+	constexpr InterfaceFlags BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
+
+	// I think, we only need to deal with the special case of the whole sequence to be pruned.
+	if (accepted != BOTHWAYS && // will interface be restricted at all?
+	    children().front()->pimpl()->interfaceFlags() == BOTHWAYS)  // still undecided?
+	{
+		pruneInterfaces(children().begin(), children().end(), accepted);
+
+		// reset my pull interfaces, if first/last child don't pull anymore
+		if (!children().front()->pimpl()->starts())
+			starts_.reset();
+		if (!children().back()->pimpl()->ends())
+			ends_.reset();
+	}
+
+	// If my assumption doesn't hold, we would need to prune partial sequences of stages
+	// with unknown-only interfaces at the *beginning* and *end* of the whole sequence.
+	// Reuse code from init() in that case.
 }
 
 // called by init() to prune interfaces for children in range [first, last)
@@ -438,40 +456,51 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 {
 	if (first == end) return;  // nothing to do in this case
 
-	// determine feasible propagation directions from available push interfaces
-	int dir = 0;
+	// determine accepted interface from available push interfaces
+	InterfaceFlags accepted;
 
 	// if previous stage pushes forward, we accept forward propagation
 	if (first != children().begin()) {
 		auto prev = first; --prev; // pointer to previous stage
 		if ((*prev)->pimpl()->requiredInterface() & WRITES_NEXT_START)
-			dir |= PropagatingEitherWay::FORWARD;
+			accepted |= WRITES_NEXT_START;
 	} // else: for first child we cannot determine the interface yet
 
 	// if end stage pushes backward, we accept backward propagation
 	if (end != children().end()) {
 		if ((*end)->pimpl()->requiredInterface() & WRITES_PREV_END)
-			dir |= PropagatingEitherWay::BACKWARD;
+			accepted |= WRITES_PREV_END;
 	} // else: for last child we cannot determine the interface yet
 
 	// nothing to do if:
-	// - dir == 0: [first, last) covers all children, cannot determine interface
-	// - dir == PropagatingEitherWay::BOTHWAY: nothing changed
-	if (dir != 0 && dir != PropagatingEitherWay::BOTHWAY)
-		pruneInterfaces(first, end, PropagatingEitherWay::Direction(dir));
+	// - accepted == 0: interface still unknown
+	// - accepted == PROPAGATE_FORWARDS | PROPAGATE_BACKWARDS: no change
+	if (accepted != 0 && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
+		pruneInterfaces(first, end, accepted);
 }
 
 // prune interface for children in range [first, last) to given direction
 void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first,
                                              container_type::const_iterator end,
-                                             PropagatingEitherWay::Direction dir)
+                                             InterfaceFlags accepted)
 {
+	// 1st sweep: remove push interfaces
 	for (auto it = first; it != end; ++it) {
 		StagePrivate* impl = (*it)->pimpl();
 		// range should only contain stages with unknown required interface
 		assert(impl->requiredInterface() == PropagatingEitherWay::AUTO);
-		// let the child do the actual work (recursively)
-		impl->pruneInterface(dir);
+
+		// remove push interfaces
+		if (!(accepted & WRITES_PREV_END))
+			impl->setPrevEnds(InterfacePtr());
+
+		if (!(accepted & WRITES_NEXT_START))
+			impl->setNextStarts(InterfacePtr());
+	}
+	// 2nd sweep: recursively prune children
+	for (auto it = first; it != end; ++it) {
+		StagePrivate* impl = (*it)->pimpl();
+		impl->pruneInterface(accepted);
 	}
 }
 

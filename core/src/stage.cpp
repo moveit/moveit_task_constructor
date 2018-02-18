@@ -283,13 +283,22 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 	}
 }
 
+void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
+	int dir = 0;
+	if (accepted & PROPAGATE_FORWARDS)
+		dir |= PropagatingEitherWay::FORWARD;
+	if (accepted & PROPAGATE_BACKWARDS)
+		dir |= PropagatingEitherWay::BACKWARD;
+	initInterface(PropagatingEitherWay::Direction(dir));
+}
+
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 {
 	InterfaceFlags f;
 	if (required_interface_dirs_ & PropagatingEitherWay::FORWARD)
-		f |= InterfaceFlags({READS_START, WRITES_NEXT_START});
+		f |= PROPAGATE_FORWARDS;
 	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
-		f |= InterfaceFlags({READS_END, WRITES_PREV_END});
+		f |= PROPAGATE_BACKWARDS;
 	// if required_interface_dirs_ == ANYWAY, we don't require an interface
 	// but the parent container auto-derives the propagation direction
 	return f;
@@ -495,7 +504,7 @@ ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
-	return InterfaceFlags( { READS_START, READS_END } );
+	return InterfaceFlags(CONNECT);
 }
 
 void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)

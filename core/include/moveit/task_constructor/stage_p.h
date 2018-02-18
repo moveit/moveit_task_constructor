@@ -64,7 +64,7 @@ public:
 	// if this is unknown (because interface is auto-detected from context), return 0
 	virtual InterfaceFlags requiredInterface() const = 0;
 	// prune interface to the given propagation direction
-	virtual void pruneInterface(PropagatingEitherWay::Direction direction) {}
+	virtual void pruneInterface(InterfaceFlags accepted) {}
 
 	virtual bool canCompute() const = 0;
 	virtual bool compute() = 0;
@@ -169,9 +169,7 @@ public:
 	// initialize pull interfaces for given propagation directions
 	void initInterface(PropagatingEitherWay::Direction dir);
 	// prune interface to the given propagation direction
-	void pruneInterface(PropagatingEitherWay::Direction direction) override {
-		initInterface(direction);
-	}
+	void pruneInterface(InterfaceFlags accepted) override;
 
 	bool canCompute() const override;
 	bool compute() override;

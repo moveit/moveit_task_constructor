@@ -113,6 +113,11 @@ protected:
 		append(serial, types);
 		try {
 			serial.init(scene);
+			// prune pull interfaces based on provided external interface (start, end)
+			InterfaceFlags accepted;
+			if (start) accepted |= WRITES_PREV_END;
+			if (end) accepted |= WRITES_NEXT_START;
+			serial.pimpl()->pruneInterface(accepted);
 			serial.validateConnectivity();
 			if (!expect_failure) return; // as expected
 			ADD_FAILURE() << "init() didn't recognize a failure condition as expected\n" << serial;
@@ -188,11 +193,11 @@ TEST_F(SerialTest, init_empty) {
 
 TEST_F(SerialTest, init_connecting) {
 	EXPECT_INIT_SUCCESS(false, false, CONN);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, READS_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), serial.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_FAILURE(true, true, CONN);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, READS_END, WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({CONNECT, GENERATE}));
 
 	EXPECT_INIT_FAILURE(false, false, CONN, CONN); // two connecting stages cannot be connected
 }
@@ -253,11 +258,28 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
-#if 0
 	// derive propagation direction from outer interface
-	EXPECT_INIT_SUCCESS(false, true, ANY); // -> ->
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, WRITES_NEXT_START}));
-	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // <- <-
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({READS_START, WRITES_NEXT_START}));
-#endif
+	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // -> ->
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	EXPECT_INIT_SUCCESS(true, false, ANY, ANY); // <- <-
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
+	EXPECT_INIT_SUCCESS(true, true, ANY, ANY); // <> <>
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
+
+	EXPECT_INIT_FAILURE(false, false, ANY, ANY); // -- --
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags());
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags());
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags());
 }
