@@ -277,7 +277,10 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
 
-	EXPECT_INIT_FAILURE(false, false, ANY, ANY); // -- --
+	// Issueing a warning for this artifical use case, will conflict with {CONN} use case, which
+	// also has an "empty" push interface signature.
+	// EXPECT_INIT_FAILURE(false, false, ANY, ANY); // -- --
+	EXPECT_INIT_SUCCESS(false, false, ANY, ANY); // -- --
 	it = serial.pimpl()->children().begin();
 	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags());
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags());
