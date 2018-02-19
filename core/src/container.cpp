@@ -235,9 +235,24 @@ struct SolutionCollector {
 		solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
-	std::list<std::pair<SerialContainer::solution_container, double>> solutions;
+	typedef std::list<std::pair<SerialContainer::solution_container, double>> SolutionCostPairs;
+	SolutionCostPairs solutions;
 	const size_t max_depth;
 };
+
+void updateStateCosts(const SerialContainer::solution_container &partial_solution_path,
+                      const InterfaceState::Priority &prio) {
+	for (const SolutionBase* solution : partial_solution_path) {
+		// here it suffices to update the start state, because the end state is the start state
+		// of the next solution (they are all connected)
+		InterfaceState* state = const_cast<InterfaceState*>(solution->start());
+		if (state->owner()) state->owner()->updatePriority(*state, prio);
+	}
+	// finally update the end state of the last solution
+	if (partial_solution_path.empty()) return;
+	InterfaceState* state = const_cast<InterfaceState*>(partial_solution_path.back()->end());
+	if (state->owner()) state->owner()->updatePriority(*state, prio);
+}
 
 void SerialContainer::onNewSolution(const SolutionBase &current)
 {
@@ -283,11 +298,10 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 				// store solution in sorted list
 				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
 			} else if (prio.depth() > 1) {
-				// update state priority at both ends of the partial solution path
-				const InterfaceState* start = (in.first.empty() ? current : *in.first.back()).start();
-				if (start->owner()) start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
-				const InterfaceState* end = (out.first.empty() ? current : *out.first.back()).end();
-				if (end->owner()) end->owner()->updatePriority(*const_cast<InterfaceState*>(end), prio);
+				// update state priorities along the whole partial solution path
+				updateStateCosts(in.first, prio);
+				updateStateCosts({&current}, prio);
+				updateStateCosts(out.first, prio);
 			}
 		}
 	}
