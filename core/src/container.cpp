@@ -283,11 +283,11 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 				// store solution in sorted list
 				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
 			} else if (prio.depth() > 1) {
-				// update state costs
+				// update state priority at both ends of the partial solution path
 				const InterfaceState* start = (in.first.empty() ? current : *in.first.back()).start();
-				start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
+				if (start->owner()) start->owner()->updatePriority(*const_cast<InterfaceState*>(start), prio);
 				const InterfaceState* end = (out.first.empty() ? current : *out.first.back()).end();
-				end->owner()->updatePriority(*const_cast<InterfaceState*>(end), prio);
+				if (end->owner()) end->owner()->updatePriority(*const_cast<InterfaceState*>(end), prio);
 			}
 		}
 	}

@@ -96,6 +96,14 @@ Interface::iterator Interface::clone(const InterfaceState &state)
 	return it;
 }
 
+Interface::container_type Interface::remove(iterator it)
+{
+	container_type result;
+	moveTo(it, result, result.end());
+	it->owner_ = nullptr;
+	return result;
+}
+
 void Interface::updatePriority(InterfaceState &state, const InterfaceState::Priority& priority)
 {
 	if (priority < state.priority()) {
