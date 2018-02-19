@@ -104,13 +104,13 @@ Interface::container_type Interface::remove(iterator it)
 	return result;
 }
 
-void Interface::updatePriority(InterfaceState &state, const InterfaceState::Priority& priority)
+void Interface::updatePriority(InterfaceState *state, const InterfaceState::Priority& priority)
 {
-	if (priority < state.priority()) {
-		auto it = std::find_if(begin(), end(), [&state](const InterfaceState& other) { return &state == &other; });
+	if (priority < state->priority()) {
+		auto it = std::find_if(begin(), end(), [state](const InterfaceState& other) { return state == &other; });
 		// state should be part of the interface
 		assert(it != end());
-		state.priority_ = priority;
+		state->priority_ = priority;
 		if (notify_) notify_(it, true);
 	}
 }

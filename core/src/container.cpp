@@ -246,12 +246,12 @@ void updateStateCosts(const SerialContainer::solution_container &partial_solutio
 		// here it suffices to update the start state, because the end state is the start state
 		// of the next solution (they are all connected)
 		InterfaceState* state = const_cast<InterfaceState*>(solution->start());
-		if (state->owner()) state->owner()->updatePriority(*state, prio);
+		if (state->owner()) state->owner()->updatePriority(state, prio);
 	}
 	// finally update the end state of the last solution
 	if (partial_solution_path.empty()) return;
 	InterfaceState* state = const_cast<InterfaceState*>(partial_solution_path.back()->end());
-	if (state->owner()) state->owner()->updatePriority(*state, prio);
+	if (state->owner()) state->owner()->updatePriority(state, prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase &current)

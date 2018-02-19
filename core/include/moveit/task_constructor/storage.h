@@ -156,7 +156,7 @@ public:
 	container_type remove(iterator it);
 
 	/// update state's priority if new priority is smaller and call notify_
-	void updatePriority(InterfaceState &state, const InterfaceState::Priority &priority);
+	void updatePriority(InterfaceState *state, const InterfaceState::Priority &priority);
 
 private:
 	const NotifyFunction notify_;
