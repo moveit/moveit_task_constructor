@@ -306,12 +306,12 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
 	// move infinite-cost states to processed list
 	if (std::isinf(state->priority().cost()))
-		starts_->moveTo(state, processed, processed.end());
+		processed.splice(processed.end(), starts_->remove(state));
 }
 void PropagatingEitherWayPrivate::dropFailedEnds(Interface::iterator state) {
 	// move infinite-cost states to processed list
 	if (std::isinf(state->priority().cost()))
-		ends_->moveTo(state, processed, processed.end());
+		processed.splice(processed.end(), ends_->remove(state));
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const{
@@ -320,8 +320,9 @@ inline bool PropagatingEitherWayPrivate::hasStartState() const{
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState(){
 	assert(hasStartState());
-	// move state to processed list
-	return *starts_->moveTo(starts_->begin(), processed, processed.end());
+	// move state to end of processed list
+	processed.splice(processed.end(), starts_->remove(starts_->begin()));
+	return processed.back();
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const{
@@ -331,7 +332,8 @@ inline bool PropagatingEitherWayPrivate::hasEndState() const{
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 	assert(hasEndState());
 	// move state to processed list
-	return *ends_->moveTo(ends_->begin(), processed, processed.end());
+	processed.splice(processed.end(), ends_->remove(ends_->begin()));
+	return processed.back();
 }
 
 bool PropagatingEitherWayPrivate::canCompute() const

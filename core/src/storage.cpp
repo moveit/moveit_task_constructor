@@ -96,13 +96,21 @@ Interface::iterator Interface::clone(const InterfaceState &state)
 	return it;
 }
 
-void Interface::updatePriority(InterfaceState &state, const InterfaceState::Priority& priority)
+Interface::container_type Interface::remove(iterator it)
 {
-	if (priority < state.priority()) {
-		auto it = std::find_if(begin(), end(), [&state](const InterfaceState& other) { return &state == &other; });
+	container_type result;
+	moveTo(it, result, result.end());
+	it->owner_ = nullptr;
+	return result;
+}
+
+void Interface::updatePriority(InterfaceState *state, const InterfaceState::Priority& priority)
+{
+	if (priority < state->priority()) {
+		auto it = std::find_if(begin(), end(), [state](const InterfaceState& other) { return state == &other; });
 		// state should be part of the interface
 		assert(it != end());
-		state.priority_ = priority;
+		state->priority_ = priority;
 		if (notify_) notify_(it, true);
 	}
 }

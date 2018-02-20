@@ -152,11 +152,22 @@ public:
 	/// clone an existing InterfaceState, but without its incoming/outgoing connections
 	iterator clone(const InterfaceState &state);
 
+	/// remove a state from the interface and return it as a one-element list
+	container_type remove(iterator it);
+
 	/// update state's priority if new priority is smaller and call notify_
-	void updatePriority(InterfaceState &state, const InterfaceState::Priority &priority);
+	void updatePriority(InterfaceState *state, const InterfaceState::Priority &priority);
 
 private:
 	const NotifyFunction notify_;
+
+	// restrict access to some functions to ensure consistency
+	// (we need to set/unset InterfaceState::owner_)
+	using ordered<InterfaceState>::moveTo;
+	using ordered<InterfaceState>::moveFrom;
+	using ordered<InterfaceState>::insert;
+	using ordered<InterfaceState>::erase;
+	using ordered<InterfaceState>::remove_if;
 };
 
 
