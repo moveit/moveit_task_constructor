@@ -260,10 +260,10 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
 	view->sortByColumn(-1);
 	view->setModel(m);
-	delete sm;  // we don't store the selection model
+	if (sm) delete sm;  // we don't store the selection model
+	sm = view->selectionModel();
 
-	if (m) {
-		sm = view->selectionModel();
+	if (sm) {
 		connect(sm, SIGNAL(currentChanged(QModelIndex, QModelIndex)),
 		        this, SLOT(onCurrentSolutionChanged(QModelIndex,QModelIndex)));
 		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)),
