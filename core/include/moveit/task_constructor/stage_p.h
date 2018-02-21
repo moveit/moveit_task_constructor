@@ -213,6 +213,17 @@ public:
 PIMPL_FUNCTIONS(Generator)
 
 
+class MonitoringGeneratorPrivate : public GeneratorPrivate {
+public:
+	Stage* monitored_;
+	Stage::SolutionCallbackList::const_iterator cb_;
+	bool registered_;
+
+	inline MonitoringGeneratorPrivate(MonitoringGenerator *me, const std::string &name);
+};
+PIMPL_FUNCTIONS(MonitoringGenerator)
+
+
 class ConnectingPrivate : public ComputeBasePrivate {
 	friend class Connecting;
 

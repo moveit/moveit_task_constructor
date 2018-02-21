@@ -293,6 +293,34 @@ public:
 		trajectory.setCost(cost);
 		spawn(std::move(state), std::move(trajectory));
 	}
+
+protected:
+	Generator(GeneratorPrivate* impl);
+};
+
+
+class MonitoringGeneratorPrivate;
+/** Generator that monitors solutions of another stage to make reuse of them
+ *
+ * Sometimes its necessary to reuse a previously planned solution, e.g. to traverse
+ * it in reverse order or to access the state of another generator.
+ * To this end, the present stage hooks into the onNewSolution() method of the
+ * monitored stage and forwards it to this' class onNewSolution() method.
+ */
+class MonitoringGenerator : public Generator
+{
+public:
+	PRIVATE_CLASS(MonitoringGenerator)
+	MonitoringGenerator(const std::string &name = "monitoring generator", Stage* monitored = nullptr);
+	void setMonitoredStage(Stage* monitored);
+
+	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+
+protected:
+	MonitoringGenerator(MonitoringGeneratorPrivate* impl);
+
+	/// called by monitored stage when a new solution was generated
+	virtual void onNewSolution(const SolutionBase &s) = 0;
 };
 
 

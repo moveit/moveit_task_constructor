@@ -479,8 +479,11 @@ bool GeneratorPrivate::compute() {
 }
 
 
+Generator::Generator(GeneratorPrivate* impl)
+   : ComputeBase(impl)
+{}
 Generator::Generator(const std::string &name)
-   : ComputeBase(new GeneratorPrivate(this, name))
+   : Generator(new GeneratorPrivate(this, name))
 {}
 
 void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
@@ -494,6 +497,46 @@ void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
 	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
 	impl->newSolution(trajectory);
+}
+
+
+MonitoringGeneratorPrivate::MonitoringGeneratorPrivate(MonitoringGenerator *me, const std::string &name)
+   : GeneratorPrivate(me, name), monitored_(nullptr), registered_(false)
+{}
+
+MonitoringGenerator::MonitoringGenerator(const std::string &name, Stage* monitored)
+   : Generator(new MonitoringGeneratorPrivate(this, name))
+{
+	setMonitoredStage(monitored);
+}
+
+void MonitoringGenerator::setMonitoredStage(Stage* monitored)
+{
+	auto impl = pimpl();
+	if (impl->monitored_ == monitored)
+		return;
+
+	if (impl->monitored_ && impl->registered_) {
+		impl->monitored_->removeSolutionCallback(impl->cb_);
+		impl->registered_ = false;
+	}
+
+	impl->monitored_ = monitored;
+}
+
+void MonitoringGenerator::init(const planning_scene::PlanningSceneConstPtr& scene)
+{
+	Generator::init(robot_model);
+
+	auto impl = pimpl();
+	if (!impl->monitored_)
+		throw InitStageException(*this, "no monitored stage defined");
+	if (impl->monitored_->pimpl()->requiredInterface() != GENERATE)
+		throw InitStageException(*this, "monitored stage must have generator-style interface");
+	if (!impl->registered_) {  // register only once
+		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGenerator::onNewSolution, this, _1));
+		impl->registered_ = true;
+	}
 }
 
 
