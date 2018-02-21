@@ -53,19 +53,19 @@ CurrentState::CurrentState(const std::string &name)
 	p.declare<ros::Duration>("timeout", ros::Duration(-1), "max time to wait for get_planning_scene service");
 }
 
-void CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
+void CurrentState::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	Generator::init(scene);
-	scene_ = scene->diff();
+	Generator::init(robot_model);
+	robot_model_ = robot_model;
+	scene_.reset();
 }
 
 bool CurrentState::canCompute() const{
-	return !ran_;
+	return !scene_;
 }
 
-bool CurrentState::compute(){
-	auto rml = std::make_shared<robot_model_loader::RobotModelLoader>();
-	scene_ = std::make_shared<planning_scene::PlanningScene>(rml->getModel());
+bool CurrentState::compute() {
+	scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
 	ros::NodeHandle h;
 	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
@@ -90,7 +90,6 @@ bool CurrentState::compute(){
 		if (client.call(req, res)) {
 			scene_->setPlanningSceneMsg(res.scene);
 			spawn(InterfaceState(scene_), 0.0);
-			ran_= true;
 			return true;
 		}
 	}

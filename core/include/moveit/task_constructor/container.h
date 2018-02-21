@@ -62,7 +62,7 @@ public:
 	virtual void clear();
 
 	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr& scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	/// validate connectivity of children (after init() was done)
 	virtual void validateConnectivity() const;
 
@@ -90,7 +90,7 @@ public:
 	SerialContainer(const std::string& name = "serial container");
 
 	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	/// validate connectivity of children (after init() was done)
 	void validateConnectivity() const override;
@@ -140,7 +140,7 @@ public:
 	ParallelContainerBase(const std::string &name);
 
 	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	/// validate connectivity of children (after init() was done)
 	void validateConnectivity() const override;
@@ -202,7 +202,7 @@ public:
 	Fallbacks(const std::string &name) : ParallelContainerBase(name) {}
 
 	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	bool compute() override;
 };

@@ -79,10 +79,10 @@ void MoveTo::setGoal(const std::string &joint_pose)
 	setProperty("joint_pose", joint_pose);
 }
 
-void MoveTo::init(const planning_scene::PlanningSceneConstPtr &scene)
+void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	PropagatingEitherWay::init(scene);
-	planner_->init(scene->getRobotModel());
+	PropagatingEitherWay::init(robot_model);
+	planner_->init(robot_model);
 }
 
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,

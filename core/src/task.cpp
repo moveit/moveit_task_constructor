@@ -43,8 +43,6 @@
 
 #include <ros/ros.h>
 
-#include <moveit_msgs/GetPlanningScene.h>
-
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
@@ -55,53 +53,15 @@ namespace moveit { namespace task_constructor {
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
    : WrapperBase(std::string(), std::move(container)), id_(id)
 {
-	initModel();
+	robot_model_loader::RobotModelLoader rml;
+	robot_model_ = rml.getModel();
+	if (!robot_model_)
+		throw Exception("Task failed to construct RobotModel");
 
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default
 	enableIntrospection(true);
-}
-
-void Task::initModel () {
-	rml_.reset(new robot_model_loader::RobotModelLoader);
-	if( !rml_->getModel() )
-		throw Exception("Task failed to construct RobotModel");
-}
-
-const moveit::core::RobotModelPtr Task::getRobotModel() const {
-	return rml_ ? rml_->getModel() : moveit::core::RobotModelPtr();
-}
-
-planning_scene::PlanningScenePtr Task::initScene(ros::Duration timeout) {
-	assert(rml_);
-
-	scene_ = std::make_shared<planning_scene::PlanningScene>(rml_->getModel());
-
-	ros::NodeHandle h;
-	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
-	if (timeout != ros::Duration() && client.waitForExistence(timeout)) {
-		moveit_msgs::GetPlanningScene::Request req;
-		moveit_msgs::GetPlanningScene::Response res;
-
-		req.components.components =
-		      moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
-		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE
-		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
-		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
-		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
-		      | moveit_msgs::PlanningSceneComponents::OCTOMAP
-		      | moveit_msgs::PlanningSceneComponents::TRANSFORMS
-		      | moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
-		      | moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
-		      | moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
-
-		if (client.call(req, res))
-			std::const_pointer_cast<planning_scene::PlanningScene>(scene_)->setPlanningSceneMsg(res.scene);
-		return scene_;
-	}
-	ROS_WARN("failed to acquire current PlanningScene, using empty one");
-	return scene_;
 }
 
 planning_pipeline::PlanningPipelinePtr
@@ -184,7 +144,7 @@ void Task::reset()
 	WrapperBase::reset();
 }
 
-void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Task::init(const moveit::core::RobotModelConstPtr& model)
 {
 	auto impl = pimpl();
 	// initialize push connections of wrapped child
@@ -193,7 +153,7 @@ void Task::init(const planning_scene::PlanningSceneConstPtr &scene)
 	child->setNextStarts(impl->pendingForward());
 
 	// and *afterwards* initialize all children recursively
-	stages()->init(scene);
+	stages()->init(model);
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->pruneInterface(InterfaceFlags({GENERATE}));
 	// and *finally* validate connectivity
@@ -223,8 +183,7 @@ bool Task::compute()
 bool Task::plan()
 {
 	reset();
-	if (!scene_) initScene();
-	init(scene_);
+	init(robot_model_);
 
 	while(ros::ok() && canCompute()) {
 		if (compute()) {

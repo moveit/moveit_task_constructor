@@ -49,7 +49,7 @@ class CurrentState : public Generator {
 public:
 	CurrentState(const std::string& name = "current state");
 
-	void init(const planning_scene::PlanningSceneConstPtr& scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	bool compute() override;
 
@@ -58,8 +58,8 @@ public:
 	}
 
 protected:
+	moveit::core::RobotModelConstPtr robot_model_;
 	planning_scene::PlanningScenePtr scene_;
-	bool ran_ = false;
 };
 
 } } }

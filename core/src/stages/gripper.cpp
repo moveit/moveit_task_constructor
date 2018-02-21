@@ -59,10 +59,10 @@ Gripper::Gripper(std::string name)
 	p.declare<std::string>("grasp_object", "name of grasp object");
 }
 
-void Gripper::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Gripper::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	PropagatingEitherWay::init(scene);
-	planner_ = Task::createPlanner(scene->getRobotModel());
+	PropagatingEitherWay::init(robot_model);
+	planner_ = Task::createPlanner(robot_model);
 }
 
 void Gripper::setEndEffector(std::string eef){

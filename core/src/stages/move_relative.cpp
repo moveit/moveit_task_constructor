@@ -90,10 +90,10 @@ void MoveRelative::along(const geometry_msgs::Vector3Stamped &direction)
 	setProperty("direction", direction);
 }
 
-void MoveRelative::init(const planning_scene::PlanningSceneConstPtr &scene)
+void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	PropagatingEitherWay::init(scene);
-	planner_->init(scene->getRobotModel());
+	PropagatingEitherWay::init(robot_model);
+	planner_->init(robot_model);
 }
 
 bool MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,

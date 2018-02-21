@@ -46,9 +46,6 @@
 
 #include <moveit/macros/class_forward.h>
 
-namespace robot_model_loader {
-	MOVEIT_CLASS_FORWARD(RobotModelLoader)
-}
 namespace moveit { namespace core {
 	MOVEIT_CLASS_FORWARD(RobotModel)
 	MOVEIT_CLASS_FORWARD(RobotState)
@@ -76,7 +73,7 @@ public:
 	~Task();
 
 	std::string id() const;
-	const moveit::core::RobotModelPtr getRobotModel() const;
+	const moveit::core::RobotModelConstPtr getRobotModel() const { return robot_model_; }
 
 	void add(Stage::pointer &&stage);
 	void clear() override;
@@ -92,14 +89,10 @@ public:
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
-	/// initialize planning scene from get_planning_scene service (waiting given timeout for it)
-	/// if service is not available or timeout is zero, use an empty planning scene
-	planning_scene::PlanningScenePtr initScene(ros::Duration timeout = ros::Duration(-1));
-
 	/// reset all stages
 	void reset() override;
 	/// initialize all stages with given scene
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& model) override;
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan();
@@ -124,15 +117,13 @@ public:
 	void setProperty(const std::string& name, const boost::any& value);
 
 protected:
-	void initModel();
 	bool canCompute() const override;
 	bool compute() override;
 	void onNewSolution(const SolutionBase &s) override;
 
 private:
 	std::string id_;
-	robot_model_loader::RobotModelLoaderPtr rml_;
-	planning_scene::PlanningScenePtr scene_; // initial scene
+	moveit::core::RobotModelConstPtr robot_model_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

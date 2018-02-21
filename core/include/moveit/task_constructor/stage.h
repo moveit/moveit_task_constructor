@@ -50,6 +50,10 @@
 	inline const Class##Private* pimpl() const; \
 	inline Class##Private* pimpl();
 
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(RobotModel)
+} }
+
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }
@@ -148,7 +152,7 @@ public:
 	 * The planning scene is the initial planning scene of the task. Use it as is or
 	 * to learn about the robot model.
 	 */
-	virtual void init(const planning_scene::PlanningSceneConstPtr& scene);
+	virtual void init(const moveit::core::RobotModelConstPtr& robot_model);
 
 	const ContainerBase* parent() const;
 	const std::string& name() const;
@@ -220,7 +224,7 @@ public:
 	void restrictDirection(Direction dir);
 
 	void reset() override;
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	virtual bool computeForward(const InterfaceState& from) = 0;
 	virtual bool computeBackward(const InterfaceState& to) = 0;
@@ -314,7 +318,7 @@ public:
 	MonitoringGenerator(const std::string &name = "monitoring generator", Stage* monitored = nullptr);
 	void setMonitoredStage(Stage* monitored);
 
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 protected:
 	MonitoringGenerator(MonitoringGeneratorPrivate* impl);

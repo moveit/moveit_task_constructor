@@ -43,7 +43,13 @@ int main(int argc, char** argv){
 
 	Task t;
 
-	t.add( std::make_unique<stages::CurrentState>("current state") );
+	Stage* initial_stage = nullptr;
+
+	{
+		auto initial = std::make_unique<stages::CurrentState>("current state");
+		initial_stage = initial.get();
+		t.add(std::move(initial));
+	}
 
 	{
 		auto move= std::make_unique<stages::Gripper>("open gripper");
@@ -81,6 +87,7 @@ int main(int argc, char** argv){
 		gengrasp->setObject("object");
 		gengrasp->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
 		gengrasp->setAngleDelta(.2);
+		gengrasp->setMonitoredStage(initial_stage);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
 		ik->setEndEffector("left_gripper");

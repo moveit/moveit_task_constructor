@@ -58,10 +58,10 @@ Move::Move(std::string name)
 	p.declare<std::string>("planner", "", "planner id");
 }
 
-void Move::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Move::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	Connecting::init(scene);
-	planner_ = Task::createPlanner(scene->getRobotModel());
+	Connecting::init(robot_model);
+	planner_ = Task::createPlanner(robot_model);
 }
 
 void Move::setGroup(const std::string& group){

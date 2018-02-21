@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 
-#include <moveit/task_constructor/stages/current_state.h>
+#include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/connect.h>
@@ -18,7 +18,7 @@
 
 using namespace moveit::task_constructor;
 
-void spawnObject(planning_scene::PlanningScenePtr scene) {
+void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	moveit_msgs::CollisionObject o;
 	o.id= "object";
 	o.header.frame_id= "world";
@@ -52,7 +52,21 @@ int main(int argc, char** argv){
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 
-	t.add(std::make_unique<stages::CurrentState>());
+	Stage* initial_stage = nullptr;
+	// create a fixed initial scene
+	{
+		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
+		auto& state = scene->getCurrentStateNonConst();
+		state.setToDefaultValues(state.getJointModelGroup("left_arm"), "home");
+		state.setToDefaultValues(state.getJointModelGroup("right_arm"), "home");
+		state.update();
+		spawnObject(scene);
+
+		auto initial = std::make_unique<stages::FixedState>();
+		initial_stage = initial.get();
+		initial->setState(scene);
+		t.add(std::move(initial));
+	}
 	{
 		auto stage = std::make_unique<stages::FixCollisionObjects>();
 		stage->restrictDirection(stages::MoveTo::FORWARD);
@@ -97,6 +111,7 @@ int main(int argc, char** argv){
 		                           Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
 		                           "lh_tool_frame");
 		gengrasp->setAngleDelta(M_PI / 10.);
+		gengrasp->setMonitoredStage(initial_stage);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
 		ik->properties().configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
@@ -157,12 +172,6 @@ int main(int argc, char** argv){
 	}
 
 	try {
-		auto scene = t.initScene(ros::Duration(0));
-		auto& state = scene->getCurrentStateNonConst();
-		state.setToDefaultValues(state.getJointModelGroup("left_arm"), "home");
-		state.setToDefaultValues(state.getJointModelGroup("right_arm"), "home");
-		state.update();
-		spawnObject(scene);
 		t.plan();
 		std::cout << "waiting for <enter>\n";
 		char ch;

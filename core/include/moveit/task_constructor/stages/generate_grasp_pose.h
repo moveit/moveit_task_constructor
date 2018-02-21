@@ -43,11 +43,10 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-class GenerateGraspPose : public Generator {
+class GenerateGraspPose : public MonitoringGenerator {
 public:
-	GenerateGraspPose(std::string name);
+	GenerateGraspPose(const std::string& name);
 
-	void init(const planning_scene::PlanningSceneConstPtr& scene) override;
 	bool canCompute() const override;
 	bool compute() override;
 
@@ -63,6 +62,9 @@ public:
 		setToolToGraspTF(transform, link);
 	}
 	void setAngleDelta(double delta);
+
+protected:
+	void onNewSolution(const SolutionBase& s) override;
 
 protected:
 	planning_scene::PlanningScenePtr scene_;

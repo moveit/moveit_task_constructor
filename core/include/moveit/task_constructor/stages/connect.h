@@ -47,7 +47,7 @@ class Connect : public Connecting {
 public:
 	Connect(std::string name, const solvers::PlannerInterfacePtr &planner);
 
-	void init(const planning_scene::PlanningSceneConstPtr &scene);
+	void init(const moveit::core::RobotModelConstPtr& robot_model);
 	bool compute(const InterfaceState &from, const InterfaceState &to);
 
 protected:

@@ -128,7 +128,7 @@ void Stage::reset()
 	impl->properties_.reset();
 }
 
-void Stage::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Stage::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	// init properties once from parent
 	auto impl = pimpl();
@@ -390,9 +390,9 @@ void PropagatingEitherWay::reset()
 	ComputeBase::reset();
 }
 
-void PropagatingEitherWay::init(const planning_scene::PlanningSceneConstPtr& scene)
+void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-	Stage::init(scene);
+	Stage::init(robot_model);
 	auto impl = pimpl();
 
 	// In AUTO-mode, i.e. when auto-detecting direction of propagation from context,
@@ -524,7 +524,7 @@ void MonitoringGenerator::setMonitoredStage(Stage* monitored)
 	impl->monitored_ = monitored;
 }
 
-void MonitoringGenerator::init(const planning_scene::PlanningSceneConstPtr& scene)
+void MonitoringGenerator::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	Generator::init(robot_model);
 

@@ -50,10 +50,10 @@ Connect::Connect(std::string name, const solvers::PlannerInterfacePtr& planner)
 	p.declare<std::string>("group", "name of planning group");
 }
 
-void Connect::init(const planning_scene::PlanningSceneConstPtr &scene)
+void Connect::init(const core::RobotModelConstPtr& robot_model)
 {
-	Connecting::init(scene);
-	planner_->init(scene->getRobotModel());
+	Connecting::init(robot_model);
+	planner_->init(robot_model);
 }
 
 bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {

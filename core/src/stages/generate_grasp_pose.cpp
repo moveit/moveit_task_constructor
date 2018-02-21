@@ -46,8 +46,8 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-GenerateGraspPose::GenerateGraspPose(std::string name)
-: Generator(name)
+GenerateGraspPose::GenerateGraspPose(const std::string& name)
+   : MonitoringGenerator(name)
 {
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector group");
@@ -55,12 +55,6 @@ GenerateGraspPose::GenerateGraspPose(std::string name)
 	p.declare<std::string>("object");
 	p.declare<geometry_msgs::TransformStamped>("tool_to_grasp_tf", geometry_msgs::TransformStamped(), "transform from robot tool frame to grasp frame");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
-}
-
-void GenerateGraspPose::init(const planning_scene::PlanningSceneConstPtr &scene)
-{
-	Generator::init(scene);
-	scene_ = scene->diff();
 }
 
 void GenerateGraspPose::setEndEffector(const std::string &eef){
@@ -91,8 +85,15 @@ void GenerateGraspPose::setAngleDelta(double delta){
 	setProperty("angle_delta", delta);
 }
 
+void GenerateGraspPose::onNewSolution(const SolutionBase& s)
+{
+	if (scene_)
+		ROS_WARN_NAMED("GenerateGraspPose", "got additional solution from monitored stage");
+	scene_ = s.end()->scene()->diff();
+}
+
 bool GenerateGraspPose::canCompute() const{
-	return current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
+	return scene_ && current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
 }
 
 bool GenerateGraspPose::compute(){

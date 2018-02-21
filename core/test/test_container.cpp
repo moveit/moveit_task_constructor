@@ -68,7 +68,7 @@ void append(ContainerBase& c, const std::initializer_list<StageType>& types, int
 
 class SerialTest : public ::testing::Test {
 protected:
-	planning_scene::PlanningScenePtr scene;
+	moveit::core::RobotModelConstPtr robot_model;
 	SerialContainer serial;
 	InterfacePtr dummy;
 
@@ -112,7 +112,7 @@ protected:
 		reset(start, end);
 		append(serial, types);
 		try {
-			serial.init(scene);
+			serial.init(robot_model);
 			// prune pull interfaces based on provided external interface (start, end)
 			InterfaceFlags accepted;
 			if (start) accepted |= WRITES_PREV_END;
@@ -141,7 +141,7 @@ TEST_F(SerialTest, insertion_order) {
 	SerialContainerPrivate *impl = serial.pimpl();
 
 	EXPECT_EQ(impl->parent(), nullptr);
-	EXPECT_THROW(serial.init(scene), InitStageException);
+	EXPECT_THROW(serial.init(robot_model), InitStageException);
 	VALIDATE();
 
 	/*****  inserting first stage  *****/

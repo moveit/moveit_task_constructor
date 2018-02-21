@@ -46,7 +46,7 @@ class Move : public Connecting {
 public:
 	Move(std::string name);
 
-	void init(const planning_scene::PlanningSceneConstPtr &scene);
+	void init(const moveit::core::RobotModelConstPtr& robot_model);
 	bool compute(const InterfaceState &from, const InterfaceState &to);
 
 	void setGroup(const std::string &group);

@@ -46,7 +46,13 @@ int main(int argc, char** argv){
 	t.setProperty("planner", std::string("RRTConnectkConfigDefault"));
 	t.setProperty("link", std::string("s_model_tool0"));
 
-	t.add(std::make_unique<stages::CurrentState>("current state"));
+	Stage* initial_stage = nullptr;
+
+	{
+		auto initial = std::make_unique<stages::CurrentState>("current state");
+		initial_stage = initial.get();
+		t.add(std::move(initial));
+	}
 
 	{
 		auto move = std::make_unique<stages::Gripper>("open gripper");
@@ -82,6 +88,7 @@ int main(int argc, char** argv){
 		gengrasp->setObject("object");
 		gengrasp->setToolToGraspTF(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 		gengrasp->setAngleDelta(-.2);
+		gengrasp->setMonitoredStage(initial_stage);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
 		ik->properties().configureInitFrom(Stage::PARENT, {"eef"});

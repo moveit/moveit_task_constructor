@@ -50,7 +50,7 @@ class MoveRelative : public PropagatingEitherWay {
 public:
 	MoveRelative(std::string name, const solvers::PlannerInterfacePtr& planner);
 
-	void init(const planning_scene::PlanningSceneConstPtr &scene) override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool computeForward(const InterfaceState& from) override;
 	bool computeBackward(const InterfaceState& to) override;
 
