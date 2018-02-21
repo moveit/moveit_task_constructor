@@ -118,6 +118,8 @@ public:
 	/// get typename
 	std::string typeName() const { return type_index_.name(); }
 
+	/// return true, if property initialized from given SourceId
+	bool initsFrom(SourceId source) const;
 	/// configure initialization from source using an arbitrary function
 	Property &configureInitFrom(SourceId source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name

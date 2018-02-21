@@ -80,6 +80,11 @@ std::string Property::serialize() const {
 	return serialize_(value());
 }
 
+bool Property::initsFrom(Property::SourceId source) const
+{
+	return (source == source_id_ && initializer_);
+}
+
 Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
 	if (source != source_id_ && initializer_)

@@ -579,12 +579,17 @@ bool SerialContainer::compute()
 {
 	bool computed = false;
 	for(const auto& stage : pimpl()->children()) {
-		if(!stage->pimpl()->canCompute())
-			continue;
-		ROS_INFO("Computing stage '%s'", stage->name().c_str());
-		bool success = stage->pimpl()->compute();
-		computed = true;
-		ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
+		try {
+			if(!stage->pimpl()->canCompute())
+				continue;
+
+			ROS_INFO("Computing stage '%s'", stage->name().c_str());
+			bool success = stage->pimpl()->compute();
+			computed = true;
+			ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
+		} catch (const Property::error &e) {
+			stage->reportPropertyError(e);
+		}
 	}
 	return computed;
 }
@@ -857,9 +862,14 @@ bool WrapperBase::canCompute() const
 
 bool WrapperBase::compute()
 {
-	size_t num_before = numSolutions();
-	wrapped()->pimpl()->compute();
-	return numSolutions() > num_before;
+	try {
+		size_t num_before = numSolutions();
+		wrapped()->pimpl()->compute();
+		return numSolutions() > num_before;
+	} catch (const Property::error &e) {
+		wrapped()->reportPropertyError(e);
+	}
+	return false;
 }
 
 
@@ -874,8 +884,13 @@ bool Alternatives::canCompute() const
 bool Alternatives::compute()
 {
 	bool success = false;
-	for (const auto& stage : pimpl()->children())
-		success |= stage->pimpl()->compute();
+	for (const auto& stage : pimpl()->children()) {
+		try {
+			success |= stage->pimpl()->compute();
+		} catch (const Property::error &e) {
+			stage->reportPropertyError(e);
+		}
+	}
 	return success;
 }
 
@@ -907,8 +922,15 @@ bool Fallbacks::canCompute() const
 
 bool Fallbacks::compute()
 {
-	if (!active_child_) return false;
-	return active_child_->pimpl()->compute();
+	if (!active_child_)
+		return false;
+
+	try {
+		return active_child_->pimpl()->compute();
+	} catch (const Property::error &e) {
+		active_child_->reportPropertyError(e);
+	}
+	return false;
 }
 
 } }
