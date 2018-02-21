@@ -3,6 +3,7 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/fix_collision_objects.h
 
 	${PROJECT_INCLUDE}/stages/current_state.h
+	${PROJECT_INCLUDE}/stages/fixed_state.h
 	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 
@@ -18,6 +19,7 @@ add_library(${PROJECT_NAME}_stages
 	fix_collision_objects.cpp
 
 	current_state.cpp
+	fixed_state.cpp
 	generate_grasp_pose.cpp
 	compute_ik.cpp
 
