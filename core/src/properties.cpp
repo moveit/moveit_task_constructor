@@ -55,16 +55,6 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
 	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
 }
 
-namespace {
-void typeCheck(const boost::any& value, const std::type_index& type_index)
-{
-	if (std::type_index(value.type()) != type_index) {
-		static boost::format fmt("type (%1%) doesn't match property's declared type (%2%)");
-		throw std::logic_error(boost::str(fmt % value.type().name() % type_index.name()));
-	}
-}
-}
-
 void Property::setValue(const boost::any &value) {
 	setCurrentValue(value);
 	default_ = value_;
@@ -72,8 +62,9 @@ void Property::setValue(const boost::any &value) {
 
 void Property::setCurrentValue(const boost::any &value)
 {
-	if (!value.empty())
-		typeCheck(value, type_index_);
+	if (!value.empty() && std::type_index(value.type()) != type_index_)
+		throw Property::type_error(value.type().name(), type_index_.name());
+
 	value_ = value;
 	if (signaller_)
 		signaller_(this);
@@ -92,7 +83,7 @@ std::string Property::serialize() const {
 Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
 	if (source != source_id_ && initializer_)
-		throw std::runtime_error("Property was already configured for initialization from another source id");
+		throw error("Property was already configured for initialization from another source id");
 
 	source_id_ = source;
 	initializer_ = f;
@@ -117,15 +108,21 @@ Property& PropertyMap::declare(const std::string &name, const std::type_info &ty
 {
 	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value, serialize)));
 	if (!it_inserted.second && std::type_index(type) != it_inserted.first->second.type_index_)
-		throw std::logic_error("Property '" + name + "' was already declared with different type.");
+		throw Property::type_error(std::type_index(type).name(), it_inserted.first->second.type_index_.name());
 	return it_inserted.first->second;
+}
+
+bool PropertyMap::hasProperty(const std::string& name) const
+{
+	auto it = props_.find(name);
+	return it != props_.end();
 }
 
 Property& PropertyMap::property(const std::string &name)
 {
 	auto it = props_.find(name);
 	if (it == props_.end())
-		throw std::runtime_error("Undeclared property '" + name + "'");
+		throw Property::undeclared(name);
 	return it->second;
 }
 
@@ -142,7 +139,7 @@ void PropertyMap::set<boost::any>(const std::string& name, const boost::any& val
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) { // name is not yet declared
 		if (value.empty())
-			throw std::logic_error("trying to set undeclared property '" + name + "' with NULL value");
+			throw Property::undeclared(name, "trying to set undeclared property '" + name + "' with NULL value");
 		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any(),
 		                                                                   Property::SerializeFunction())));
 		it->second.setValue(value);
@@ -193,6 +190,33 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name)
 		return boost::any();
 	}
 }
+
+
+Property::undeclared::undeclared(const std::string& name)
+   : undeclared(name, "Undeclared property: '" + name + "'")
+{}
+
+Property::undeclared::undeclared(const std::string& name, const std::string& msg)
+   : Property::error(msg)
+{
+	setName(name);
+}
+
+Property::undefined::undefined(const std::string& name)
+   : undefined(name, "Undefined property: '" + name + "'")
+{}
+
+Property::undefined::undefined(const std::string& name, const std::string& msg)
+   : Property::error(msg)
+{
+	setName(name);
+}
+
+static boost::format type_error_fmt("type (%1%) doesn't match property's declared type (%2%)");
+Property::type_error::type_error(const std::string& current_type, const std::string& declared_type)
+   : Property::error(boost::str(type_error_fmt % current_type % declared_type))
+{}
+
 
 } // namespace task_constructor
 } // namespace moveit

@@ -82,6 +82,15 @@ class Property {
 	}
 
 public:
+	/// base class for Property exceptions
+	class error;
+	/// exception thrown when accessing an undeclared property
+	class undeclared;
+	/// exception thrown when accessing an undefined property
+	class undefined;
+	/// exception thrown when trying to set a value not matching the declared type
+	class type_error;
+
 	typedef int SourceId;
 	/// function callback used to initialize property value from another PropertyMap
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
@@ -135,6 +144,30 @@ private:
 };
 
 
+class Property::error : public std::runtime_error {
+protected:
+	std::string property_name_;
+public:
+	explicit error(const std::string& msg) : std::runtime_error(msg) {}
+	const std::string& name() const { return property_name_; }
+	void setName(const std::string& name) { property_name_ = name; }
+};
+class Property::undeclared : public Property::error {
+public:
+	explicit undeclared(const std::string& name);
+	explicit undeclared(const std::string& name, const std::string& msg);
+};
+class Property::undefined : public Property::error {
+public:
+	explicit undefined(const std::string& name);
+	explicit undefined(const std::string& name, const std::string& msg);
+};
+class Property::type_error : public Property::error {
+public:
+	explicit type_error(const std::string& current_type, const std::string& declared_type);
+};
+
+
 /** PropertyMap is map of (name, Property) pairs.
  *
  * Conveniency methods are provided to setup property initialization for several
@@ -164,7 +197,9 @@ public:
 		return declare(name, typeid(T), description, default_value, &Property::serialize<T>);
 	}
 
-	/// get the property with given name
+	bool hasProperty(const std::string &name) const;
+
+	/// get the property with given name, throws Property::undeclared for unknown name
 	Property& property(const std::string &name);
 	const Property& property(const std::string &name) const {
 		return const_cast<PropertyMap*>(this)->property(name);
@@ -190,15 +225,15 @@ public:
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
 
-	/// get the value of a property
+	/// Gt the value of a property. Throws undeclared if unknown name
 	const boost::any& get(const std::string& name) const;
 
-	/// Get typed value of property. Throws runtime_error if undefined or bad_any_cast on type mismatch.
+	/// Get typed value of property. Throws undeclared, undefined, or bad_any_cast.
 	template<typename T>
 	const T& get(const std::string& name) const {
 		const boost::any& value = get(name);
 		if (value.empty())
-			throw std::runtime_error(std::string("undefined property: " + name));
+			throw Property::undefined(name);
 		return boost::any_cast<const T&>(value);
 	}
 	/// get typed value of property, using fallback if undefined. Throws bad_any_cast on type mismatch.
