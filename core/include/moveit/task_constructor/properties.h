@@ -42,6 +42,7 @@
 #include <typeindex>
 #include <map>
 #include <set>
+#include <vector>
 #include <functional>
 #include <sstream>
 

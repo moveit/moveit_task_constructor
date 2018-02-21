@@ -37,6 +37,7 @@
 #pragma once
 
 #include <QAbstractItemModel>
+#include <QStringList>
 
 namespace moveit_rviz_plugin {
 namespace utils {
