@@ -1,6 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
+ *  Copyright (c) 2017, Bielefeld University
  *  Copyright (c) 2017, Hamburg University
  *  All rights reserved.
  *
@@ -32,8 +33,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner
-   Desc:    Generator Stage to feed in the current state
+/* Authors: Michael Goerner, Luca Lach, Robert Haschke
+   Desc:    Generator Stage to fetch the current PlanningScene state
 */
 
 #pragma once
@@ -42,6 +43,8 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
+
+/** Fetch the current PlanningScene state via get_planning_scene service */
 class CurrentState : public Generator {
 public:
 	CurrentState(const std::string& name = "current state");
@@ -50,9 +53,13 @@ public:
 	bool canCompute() const override;
 	bool compute() override;
 
+	void setTimeout(const ros::Duration& timeout) {
+		setProperty("timeout", timeout);
+	}
+
 protected:
-	planning_scene::PlanningSceneConstPtr scene_;
-	bool ran_;
+	planning_scene::PlanningScenePtr scene_;
+	bool ran_ = false;
 };
 
 } } }

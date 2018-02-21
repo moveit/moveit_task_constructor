@@ -1,6 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
+ *  Copyright (c) 2017, Bielefeld University
  *  Copyright (c) 2017, Hamburg University
  *  All rights reserved.
  *
@@ -32,24 +33,30 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner */
+/* Authors: Michael Goerner, Luca Lach, Robert Haschke */
 
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit_msgs/GetPlanningScene.h>
+#include <moveit_msgs/PlanningSceneComponents.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <ros/ros.h>
+
 
 namespace moveit { namespace task_constructor { namespace stages {
 
 CurrentState::CurrentState(const std::string &name)
    : Generator(name)
 {
-	ran_= false;
+	auto &p = properties();
+	p.declare<ros::Duration>("timeout", ros::Duration(-1), "max time to wait for get_planning_scene service");
 }
 
 void CurrentState::init(const planning_scene::PlanningSceneConstPtr &scene)
 {
 	Generator::init(scene);
-	scene_ = scene;
-	ran_= false;
+	scene_ = scene->diff();
 }
 
 bool CurrentState::canCompute() const{
@@ -57,10 +64,38 @@ bool CurrentState::canCompute() const{
 }
 
 bool CurrentState::compute(){
-	ran_= true;
-	spawn(InterfaceState(scene_), 0.0);
+	auto rml = std::make_shared<robot_model_loader::RobotModelLoader>();
+	scene_ = std::make_shared<planning_scene::PlanningScene>(rml->getModel());
 
-	return true;
+	ros::NodeHandle h;
+	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+
+	ros::Duration timeout = properties().get<ros::Duration>("timeout");
+	if (client.waitForExistence(timeout)) {
+		moveit_msgs::GetPlanningScene::Request req;
+		moveit_msgs::GetPlanningScene::Response res;
+
+		req.components.components =
+		      moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
+		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE
+		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
+		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
+		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
+		      | moveit_msgs::PlanningSceneComponents::OCTOMAP
+		      | moveit_msgs::PlanningSceneComponents::TRANSFORMS
+		      | moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
+		      | moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
+		      | moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+
+		if (client.call(req, res)) {
+			scene_->setPlanningSceneMsg(res.scene);
+			spawn(InterfaceState(scene_), 0.0);
+			ran_= true;
+			return true;
+		}
+	}
+	ROS_WARN("failed to acquire current PlanningScene");
+	return false;
 }
 
 } } }
