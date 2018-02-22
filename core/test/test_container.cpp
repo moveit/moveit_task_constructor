@@ -66,6 +66,40 @@ void append(ContainerBase& c, const std::initializer_list<StageType>& types, int
 }
 
 
+class NamedStage : public GeneratorMockup {
+public:
+	NamedStage(const std::string& name) : GeneratorMockup() {
+		setName(name);
+	}
+};
+
+TEST(ContainerBase, position) {
+	SerialContainer s;
+	SerialContainerPrivate *impl = s.pimpl();
+
+	EXPECT_EQ(impl->position(0), impl->children().end());
+	EXPECT_EQ(impl->position(1), impl->children().end());
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_EQ(impl->position(-2), impl->children().end());
+
+	s.insert(std::make_unique<NamedStage>("0"));
+	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-3), impl->children().end());
+
+	s.insert(std::make_unique<NamedStage>("1"));
+	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
+	EXPECT_STREQ((*impl->position(1))->name().c_str(), "1");
+	EXPECT_EQ(impl->position(2), impl->children().end());
+
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "1");
+	EXPECT_STREQ((*impl->position(-3))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-4), impl->children().end());
+}
+
+
 class SerialTest : public ::testing::Test {
 protected:
 	moveit::core::RobotModelConstPtr robot_model;

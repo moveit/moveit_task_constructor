@@ -65,7 +65,7 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) c
 		container_type::const_reverse_iterator from_end = children_.rbegin();
 		for (auto end = children_.rend(); index < 0 && from_end != end; ++index)
 			++from_end;
-		position = from_end.base();
+		position = index < 0 ? children_.end() : from_end.base();
 	}
 	return position;
 }

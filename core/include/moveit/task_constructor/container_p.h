@@ -73,7 +73,7 @@ public:
 	inline const container_type& children() const { return children_; }
 
 	/** Retrieve iterator into children_ pointing to indexed element.
-	 * Negative index counts from end().
+	 * Negative index counts from end(), i.e. -1 is end(), -2 is --end(), etc.
 	 * Contrary to std::advance(), iterator limits are considered. */
 	const_iterator position(int index) const;
 
