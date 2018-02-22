@@ -292,6 +292,26 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
+	EXPECT_INIT_SUCCESS(true, true, GEN, ANY);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	EXPECT_INIT_SUCCESS(true, true, ANY, GEN);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	// derive propagation direction from inner connector
+	EXPECT_INIT_SUCCESS(false, false, ANY, CONN, ANY); // -> -- <-
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+
+	EXPECT_INIT_SUCCESS(false, false, CONN, ANY);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+
+	EXPECT_INIT_SUCCESS(false, false, ANY, CONN);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+
 	// derive propagation direction from outer interface
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // -> ->
 	it = serial.pimpl()->children().begin();
