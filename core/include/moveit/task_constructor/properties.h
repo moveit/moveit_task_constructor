@@ -104,10 +104,11 @@ public:
 	/// reset to default value (which can be empty)
 	void reset();
 
+	/// the current value defined or will the fallback be used?
 	inline bool defined() const { return !value_.empty(); }
 
-	/// get current value
-	inline const boost::any& value() const { return value_; }
+	/// get current value (or default if not defined)
+	inline const boost::any& value() const { return value_.empty() ? default_ : value_; }
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
 	/// serialize current value

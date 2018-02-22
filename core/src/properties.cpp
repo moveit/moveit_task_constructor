@@ -48,7 +48,7 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    : description_(description)
    , type_index_(type_index)
    , default_(default_value)
-   , value_(default_value)
+   , value_()
    , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
@@ -72,7 +72,7 @@ void Property::setCurrentValue(const boost::any &value)
 
 void Property::reset()
 {
-	value_ = default_;
+	value_.clear();
 }
 
 std::string Property::serialize() const {
