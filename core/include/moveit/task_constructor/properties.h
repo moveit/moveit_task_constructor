@@ -182,7 +182,7 @@ class PropertyMap
 	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
-	Property& declare(const std::string& name, const std::type_info& type,
+	Property& declare(const std::string& name, const std::type_index& type_index,
 	                  const std::string& description,
 	                  const boost::any& default_value,
 	                  const Property::SerializeFunction &serialize);

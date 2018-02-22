@@ -107,13 +107,13 @@ void Property::performInitFrom(SourceId source, const PropertyMap &other)
 }
 
 
-Property& PropertyMap::declare(const std::string &name, const std::type_info &type,
+Property& PropertyMap::declare(const std::string &name, const std::type_index &type_index,
                                const std::string &description, const boost::any &default_value,
                                const Property::SerializeFunction &serialize)
 {
-	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value, serialize)));
-	if (!it_inserted.second && std::type_index(type) != it_inserted.first->second.type_index_)
-		throw Property::type_error(std::type_index(type).name(), it_inserted.first->second.type_index_.name());
+	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value, serialize)));
+	if (!it_inserted.second && type_index != it_inserted.first->second.type_index_)
+		throw Property::type_error(type_index.name(), it_inserted.first->second.type_index_.name());
 	return it_inserted.first->second;
 }
 
