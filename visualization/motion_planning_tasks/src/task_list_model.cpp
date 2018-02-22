@@ -38,6 +38,7 @@
 #include "local_task_model.h"
 #include "remote_task_model.h"
 #include "factory_model.h"
+#include "icons.h"
 
 #include <ros/console.h>
 #include <ros/service_client.h>
@@ -47,6 +48,8 @@
 #include <QScrollBar>
 #include <qevent.h>
 #include <numeric>
+
+using namespace moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
@@ -107,6 +110,23 @@ Qt::ItemFlags BaseTaskModel::flags(const QModelIndex &index) const
 	if (index.column() == 0)
 		flags |= Qt::ItemIsEditable; // name is editable
 	return flags;
+}
+
+QVariant BaseTaskModel::flowIcon(moveit::task_constructor::InterfaceFlags f)
+{
+	static const QIcon CONNECT_ICON = icons::CONNECT.icon();
+	static const QIcon FORWARD_ICON = icons::FORWARD.icon();
+	static const QIcon BACKWARD_ICON = icons::BACKWARD.icon();
+	static const QIcon BOTHWAY_ICON = icons::BOTHWAY.icon();
+	static const QIcon GENERATE_ICON = icons::GENERATE.icon();
+
+	if (f == InterfaceFlags(CONNECT)) return CONNECT_ICON;
+	if (f == InterfaceFlags(PROPAGATE_FORWARDS)) return FORWARD_ICON;
+	if (f == InterfaceFlags(PROPAGATE_BACKWARDS)) return BACKWARD_ICON;
+	if (f == PROPAGATE_BOTHWAYS) return BOTHWAY_ICON;
+	if (f == InterfaceFlags(GENERATE)) return GENERATE_ICON;
+
+	return QVariant();
 }
 
 

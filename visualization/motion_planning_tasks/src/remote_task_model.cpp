@@ -200,6 +200,10 @@ QVariant RemoteTaskModel::data(const QModelIndex &index, int role) const
 		if (index.column() == 0 && !index.parent().isValid())
 			return (flags_ & IS_DESTROYED) ? QColor(Qt::red) : QApplication::palette().text().color();
 		break;
+	case Qt::DecorationRole:
+		if (index.column() == 0 && index.parent().isValid())
+			return flowIcon(n->interface_flags_);
+		break;
 	}
 
 	return BaseTaskModel::data(index, role);

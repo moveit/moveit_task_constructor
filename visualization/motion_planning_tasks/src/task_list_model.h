@@ -84,6 +84,7 @@ public:
 	virtual void setStageFactory(const StageFactoryPtr &factory) {}
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
+	static QVariant flowIcon(moveit::task_constructor::InterfaceFlags f);
 
 	/// get solution model for given stage index
 	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;

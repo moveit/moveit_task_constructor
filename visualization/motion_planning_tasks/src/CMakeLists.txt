@@ -8,6 +8,7 @@ qt_wrap_ui(UIC_FILES
 
 add_library(${MOVEIT_LIB_NAME}
 	factory_model.cpp
+	icons.cpp
 	job_queue.cpp
 	local_task_model.cpp
 	meta_task_list_model.cpp
