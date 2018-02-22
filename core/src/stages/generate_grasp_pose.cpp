@@ -105,9 +105,7 @@ bool GenerateGraspPose::compute(){
 
 	robot_state::RobotState &robot_state = scene_->getCurrentStateNonConst();
 	const std::string& eef_named_pose = props.get<std::string>("eef_named_pose");
-	if(!eef_named_pose.empty()){
-		robot_state.setToDefaultValues(jmg , eef_named_pose);
-	}
+	robot_state.setToDefaultValues(jmg , eef_named_pose);
 
 	geometry_msgs::TransformStamped tool2grasp_msg = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
 	const std::string &link_name = jmg ->getEndEffectorParentGroup().second;
