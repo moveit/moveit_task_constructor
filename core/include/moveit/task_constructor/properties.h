@@ -199,6 +199,11 @@ public:
 	             const std::string& description = "") {
 		return declare(name, typeid(T), description, default_value, &Property::serialize<T>);
 	}
+	/// declare all given properties also in other PropertyMap
+	void exposeTo(PropertyMap& other, const std::set<std::string>& properties);
+
+	/// declare given property name as other_name in other PropertyMap
+	void exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name);
 
 	bool hasProperty(const std::string &name) const;
 

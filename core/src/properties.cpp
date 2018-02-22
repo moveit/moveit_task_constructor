@@ -131,6 +131,18 @@ Property& PropertyMap::property(const std::string &name)
 	return it->second;
 }
 
+void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &properties)
+{
+	for (const std::string& name : properties)
+		exposeTo(other, name, name);
+}
+
+void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name)
+{
+	const Property& p = property(name);
+	other.declare(name, p.type_index_, p.description_, p.default_, p.serialize_);
+}
+
 void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<std::string> &properties)
 {
 	for (auto &pair : props_) {

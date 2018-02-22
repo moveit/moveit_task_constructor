@@ -181,6 +181,37 @@ void ContainerBase::clear()
 	pimpl()->children_.clear();
 }
 
+void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names)
+{
+	auto impl = pimpl();
+	// for negative child index, return last child for -1, next to last for -2, etc
+	ContainerBasePrivate::const_iterator child_it = impl->position(child < 0 ? child-1 : child);
+	if (child_it == impl->children().end())
+		throw std::runtime_error("invalid child index");
+
+	auto &child_props = (*child_it)->properties();
+	// declare variables
+	child_props.exposeTo(impl->properties_, names);
+	// configure inheritance
+	child_props.configureInitFrom(Stage::PARENT, names);
+}
+
+void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_property_name,
+                                            const std::string& parent_property_name)
+{
+	auto impl = pimpl();
+	// for negative child index, return last child for -1, next to last for -2, etc
+	ContainerBasePrivate::const_iterator child_it = impl->position(child < 0 ? child-1 : child);
+	if (child_it == impl->children().end())
+		throw std::runtime_error("invalid child index");
+
+	auto &child_props = (*child_it)->properties();
+	// declare variables
+	child_props.exposeTo(impl->properties_, child_property_name, parent_property_name);
+	// configure inheritance
+	child_props.property(child_property_name).configureInitFrom(Stage::PARENT, parent_property_name);
+}
+
 void ContainerBase::reset()
 {
 	auto impl = pimpl();
