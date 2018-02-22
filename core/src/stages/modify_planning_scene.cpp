@@ -110,8 +110,6 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 {
 	planning_scene::PlanningScenePtr scene = from.scene()->diff();
 	InterfaceState result(scene);
-	// initialize properties from input state
-	result.properties() = from.properties();
 
 	// attach/detach objects
 	for (const auto &pair : attach_objects_)
@@ -122,7 +120,7 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 		enableCollisions(*scene, pairs, invert);
 
 	if (callback_)
-		callback_(scene, result.properties());
+		callback_(scene, properties());
 
 	return result;
 }
