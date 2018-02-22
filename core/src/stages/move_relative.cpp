@@ -150,7 +150,8 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 		linear_norm = linear.norm();
 		angular_norm = angular.norm();
-		angular /= angular_norm;  // normalize angular
+		if (angular_norm > std::numeric_limits<double>::epsilon())
+			angular /= angular_norm;  // normalize angular
 		use_rotation_distance = linear_norm < std::numeric_limits<double>::epsilon();
 
 		// use max distance?
