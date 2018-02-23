@@ -64,6 +64,7 @@ MOVEIT_CLASS_FORWARD(Task)
  */
 class Task : protected WrapperBase {
 public:
+	// TODO: move into MoveIt! core
 	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
 	                                                            const std::string &ns = "move_group",
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
@@ -81,6 +82,7 @@ public:
 	/// load robot model from given parameter
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
+	// TODO: use Stage::insert as well?
 	void add(Stage::pointer &&stage);
 	void clear() override;
 
@@ -111,6 +113,7 @@ public:
 	/// publish all top-level solutions
 	void publishAllSolutions(bool wait = true);
 
+	// TODO: convenient access to arbitrary stage by name
 	/// access stage tree
 	ContainerBase *stages();
 	const ContainerBase *stages() const;

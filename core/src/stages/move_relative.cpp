@@ -241,10 +241,12 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 	// add an arrow marker
 	visualization_msgs::Marker m;
+	// TODO: make "marker" a common property of all stages
 	m.ns = props.get<std::string>("marker_ns");
 	if (!m.ns.empty()) {
 		m.header.frame_id = scene->getPlanningFrame();
 		if (linear_norm > 1e-3) {
+			// TODO: arrow could be split into "valid" and "invalid" part
 			rviz_marker_tools::setColor(m.color, success ? rviz_marker_tools::LIME_GREEN
 			                                             : rviz_marker_tools::RED);
 			rviz_marker_tools::makeArrow(m, linear_norm);

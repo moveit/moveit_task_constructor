@@ -116,6 +116,7 @@ typedef std::vector<std::vector<double>> IKSolutions;
 
 namespace {
 
+// TODO: provide callback methods in PlanningScene class / probably not very useful here though...
 bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene,
                            Eigen::Affine3d pose, const robot_model::LinkModel* link)
 {
@@ -215,6 +216,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	assert(s.start()->scene() == s.end()->scene()); // wrapped child should be a generator
 	planning_scene::PlanningScenePtr sandbox_scene = s.start()->scene()->diff();
 
+	// TODO: this should not be necessary in my opinion
 	// enforced initialization from interface ensures that new target_pose is read
 	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
 	const auto& props = properties();
@@ -376,6 +378,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			spawn(InterfaceState(scene), std::move(solution));
 		}
 
+		// TODO: magic constant should be a property instead ("current_seed_only", or equivalent)
 		if (!succeeded && max_ik_solutions == 1)
 			break;  // first and only attempt failed
 	}
