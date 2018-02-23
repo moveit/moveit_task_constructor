@@ -62,7 +62,7 @@ const char *InitStageException::what() const noexcept
 }
 
 std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
-	os << e.what() << std::endl;
+	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":" << std::endl;
 	for (const auto &pair : e.errors_)
 		os << pair.first->name() << ": " << pair.second << std::endl;
 	return os;
