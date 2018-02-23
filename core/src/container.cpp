@@ -702,14 +702,31 @@ InterfaceFlags ParallelContainerBasePrivate::requiredInterface() const
 {
 	if (children().empty())
 		return UNKNOWN;
-	/* TODO: replace this with a proper check for consistency of interfaces. Allowed combinations are:
+	/* The interfaces of all children need to be consistent with each other. Allowed combinations are:
 	 * ❘ ❘ = ❘  (connecting stages)
 	 * ↑ ↑ = ↑  (backward propagating)
 	 * ↓ ↓ = ↓  (forward propagating)
 	 * ↑ ↓ = ⇅ = ⇅ ↑ = ⇅ ↓  (propagating in both directions)
 	 * ↕ ↕ = ↕  (generating)
 	 */
-	return children().front()->pimpl()->requiredInterface();
+
+	InterfaceFlags accumulated = children().front()->pimpl()->requiredInterface();
+	for (const Stage::pointer& stage : children()) {
+		InterfaceFlags current = stage->pimpl()->requiredInterface();
+		if (accumulated != PROPAGATE_BOTHWAYS &&
+		    (accumulated & current) == current)  // all flags of current are already available in accumulated
+			continue;
+
+		bool current_is_propagating = (current == PROPAGATE_BOTHWAYS ||
+		                               current == PROPAGATE_FORWARDS ||
+		                               current == PROPAGATE_BACKWARDS);
+
+		if (current_is_propagating && accumulated != CONNECT && accumulated != GENERATE)
+			accumulated |= current;  // propagating is compatible to all except CONNECT and GENERATE
+		else
+			throw InitStageException(*me(), "child '" + stage->name() + "' has conflicting interface to previous children");
+	}
+	return accumulated;
 }
 
 void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted)
