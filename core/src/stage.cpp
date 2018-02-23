@@ -531,8 +531,6 @@ void MonitoringGenerator::init(const planning_scene::PlanningSceneConstPtr& scen
 	auto impl = pimpl();
 	if (!impl->monitored_)
 		throw InitStageException(*this, "no monitored stage defined");
-	if (impl->monitored_->pimpl()->requiredInterface() != GENERATE)
-		throw InitStageException(*this, "monitored stage must have generator-style interface");
 	if (!impl->registered_) {  // register only once
 		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGenerator::onNewSolution, this, _1));
 		impl->registered_ = true;
