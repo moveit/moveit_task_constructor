@@ -115,6 +115,10 @@ public:
 		return const_cast<Task*>(this)->properties();
 	}
 	void setProperty(const std::string& name, const boost::any& value);
+	/// overload: const char* values are stored as std::string
+	inline void setProperty(const std::string& name, const char* value) {
+		setProperty(name, std::string(value));
+	}
 
 protected:
 	bool canCompute() const override;

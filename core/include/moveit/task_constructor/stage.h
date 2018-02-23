@@ -182,6 +182,10 @@ public:
 	}
 	/// set a previously declared property to a new value
 	void setProperty(const std::string& name, const boost::any& value);
+	/// overload: const char* values are stored as std::string
+	inline void setProperty(const std::string& name, const char* value) {
+		setProperty(name, std::string(value));
+	}
 	/// analyze source of error and report accordingly
 	void reportPropertyError(const Property::error &e);
 

@@ -230,6 +230,12 @@ public:
 		else
 			it->second.setValue(value);
 	}
+
+	/// overloading: const char* is stored as std::string
+	inline void set(const std::string& name, const char* value){
+		set<std::string>(name, value);
+	}
+
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
 
