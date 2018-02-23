@@ -147,7 +147,12 @@ void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<st
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
-			pair.second.configureInitFrom(source, std::bind(&fromName, std::placeholders::_1, pair.first));
+			try {
+				pair.second.configureInitFrom(source, std::bind(&fromName, std::placeholders::_1, pair.first));
+			} catch (Property::error& e) {
+				e.setName(pair.first);
+				throw;
+			}
 	}
 }
 
