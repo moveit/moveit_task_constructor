@@ -57,23 +57,6 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 	insert(std::move(grasp_stage));
 
 	{
-		auto attach = std::make_unique<ModifyPlanningScene>("attach object");
-		PropertyMap& p = attach->properties();
-		p.declare<std::string>("eef");
-		p.declare<std::string>("object");
-		p.configureInitFrom(Stage::PARENT, { "eef", "object" });
-		attach->setCallback([this](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
-			const std::string& eef = p.get<std::string>("eef");
-			moveit_msgs::AttachedCollisionObject obj;
-			obj.object.operation = moveit_msgs::CollisionObject::ADD;
-			obj.link_name = scene->getRobotModel()->getEndEffector(eef)->getEndEffectorParentGroup().second;
-			obj.object.id = p.get<std::string>("object");
-			scene->processAttachedCollisionObjectMsg(obj);
-		});
-		insert(std::move(attach));
-	}
-
-	{
 		auto lift = std::make_unique<MoveRelative>("lift object", cartesian);
 		PropertyMap& p = lift->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
