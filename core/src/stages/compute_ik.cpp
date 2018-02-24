@@ -30,8 +30,9 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
 
-	// target_pose is read from the interface
-	p.declare<geometry_msgs::PoseStamped>("target_pose");
+	// target is read from the interface
+	p.declare<geometry_msgs::PoseStamped>("target_pose", "target pose for inverse kinematics");
+	p.declare<std::string>("target_link", "", "link for which target_pose is specified");
 	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
 }
 
@@ -141,15 +142,24 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 	// compute target pose w.r.t. link_name
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
+	const std::string& target_link = props.get<std::string>("target_link");
+
 	Eigen::Affine3d target_pose;
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
-	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
-		const robot_model::LinkModel* ref_link = sandbox_state.getLinkModel(target_pose_msg.header.frame_id);
-		if (!ref_link) throw std::runtime_error("requested reference frame '" + target_pose_msg.header.frame_id + "' is not a robot link");
 
+	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != sandbox_scene->getPlanningFrame()) {
+		if(!sandbox_scene->knowsFrameTransform(target_pose_msg.header.frame_id))
+			throw std::runtime_error("requested pose in frame '" + target_pose_msg.header.frame_id + "'. There is no such frame.");
+		target_pose = sandbox_scene->getFrameTransform(target_pose_msg.header.frame_id) * target_pose;
+	}
+
+	if (!target_link.empty() && target_link != link_name) {
+		if (!sandbox_state.getLinkModel(target_link) && !sandbox_state.hasAttachedBody())
+			throw std::runtime_error("requested reference frame '" + target_link + "' is not a robot link or attached body");
+
+		// assume a fixed transform link->target_link
 		const Eigen::Affine3d link_pose = sandbox_state.getGlobalLinkTransform(link_name);
-		const Eigen::Affine3d ref_pose = sandbox_state.getGlobalLinkTransform(target_pose_msg.header.frame_id);
-		// transform target pose such that the link frame will reach there
+		const Eigen::Affine3d ref_pose = sandbox_state.getGlobalLinkTransform(target_link);
 		target_pose = target_pose * ref_pose.inverse() * link_pose;
 	}
 
