@@ -66,6 +66,40 @@ void append(ContainerBase& c, const std::initializer_list<StageType>& types, int
 }
 
 
+class NamedStage : public GeneratorMockup {
+public:
+	NamedStage(const std::string& name) : GeneratorMockup() {
+		setName(name);
+	}
+};
+
+TEST(ContainerBase, position) {
+	SerialContainer s;
+	SerialContainerPrivate *impl = s.pimpl();
+
+	EXPECT_EQ(impl->position(0), impl->children().end());
+	EXPECT_EQ(impl->position(1), impl->children().end());
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_EQ(impl->position(-2), impl->children().end());
+
+	s.insert(std::make_unique<NamedStage>("0"));
+	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-3), impl->children().end());
+
+	s.insert(std::make_unique<NamedStage>("1"));
+	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
+	EXPECT_STREQ((*impl->position(1))->name().c_str(), "1");
+	EXPECT_EQ(impl->position(2), impl->children().end());
+
+	EXPECT_EQ(impl->position(-1), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "1");
+	EXPECT_STREQ((*impl->position(-3))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-4), impl->children().end());
+}
+
+
 class SerialTest : public ::testing::Test {
 protected:
 	moveit::core::RobotModelConstPtr robot_model;
@@ -257,6 +291,26 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	EXPECT_INIT_SUCCESS(true, true, GEN, ANY);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	EXPECT_INIT_SUCCESS(true, true, ANY, GEN);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	// derive propagation direction from inner connector
+	EXPECT_INIT_SUCCESS(false, false, ANY, CONN, ANY); // -> -- <-
+	it = serial.pimpl()->children().begin();
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+
+	EXPECT_INIT_SUCCESS(false, false, CONN, ANY);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
+
+	EXPECT_INIT_SUCCESS(false, false, ANY, CONN);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
 
 	// derive propagation direction from outer interface
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // -> ->

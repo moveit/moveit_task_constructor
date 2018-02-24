@@ -65,7 +65,7 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) c
 		container_type::const_reverse_iterator from_end = children_.rbegin();
 		for (auto end = children_.rend(); index < 0 && from_end != end; ++index)
 			++from_end;
-		position = from_end.base();
+		position = index < 0 ? children_.end() : from_end.base();
 	}
 	return position;
 }
@@ -511,23 +511,31 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	// determine accepted interface from available push interfaces
 	InterfaceFlags accepted;
 
-	// if previous stage pushes forward, we accept forward propagation
+	// if first stage ...
 	if (first != children().begin()) {
 		auto prev = first; --prev; // pointer to previous stage
+		// ... pushes forward, we accept forward propagation
 		if ((*prev)->pimpl()->requiredInterface() & WRITES_NEXT_START)
-			accepted |= WRITES_NEXT_START;
+			accepted |= PROPAGATE_FORWARDS;
+		// ... pulls backward, we accept backward propagation
+		if ((*prev)->pimpl()->requiredInterface() & READS_END)
+			accepted |= PROPAGATE_BACKWARDS;
 	} // else: for first child we cannot determine the interface yet
 
-	// if end stage pushes backward, we accept backward propagation
+	// if end stage ...
 	if (end != children().end()) {
+		// ... pushes backward, we accept backward propagation
 		if ((*end)->pimpl()->requiredInterface() & WRITES_PREV_END)
-			accepted |= WRITES_PREV_END;
+			accepted |= PROPAGATE_BACKWARDS;
+		// ... pulls forward, we accept forward propagation
+		if ((*end)->pimpl()->requiredInterface() & READS_START)
+			accepted |= PROPAGATE_FORWARDS;
 	} // else: for last child we cannot determine the interface yet
 
 	// nothing to do if:
 	// - accepted == 0: interface still unknown
 	// - accepted == PROPAGATE_FORWARDS | PROPAGATE_BACKWARDS: no change
-	if (accepted != 0 && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
+	if (accepted != UNKNOWN && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
 		pruneInterfaces(first, end, accepted);
 }
 
@@ -540,13 +548,13 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	for (auto it = first; it != end; ++it) {
 		StagePrivate* impl = (*it)->pimpl();
 		// range should only contain stages with unknown required interface
-		assert(impl->requiredInterface() == PropagatingEitherWay::AUTO);
+		assert(impl->requiredInterface() == UNKNOWN);
 
 		// remove push interfaces
-		if (!(accepted & WRITES_PREV_END))
+		if (!(accepted & PROPAGATE_BACKWARDS))
 			impl->setPrevEnds(InterfacePtr());
 
-		if (!(accepted & WRITES_NEXT_START))
+		if (!(accepted & PROPAGATE_FORWARDS))
 			impl->setNextStarts(InterfacePtr());
 	}
 	// 2nd sweep: recursively prune children
