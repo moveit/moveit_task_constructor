@@ -48,21 +48,11 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    : description_(description)
    , type_index_(type_index)
    , default_(default_value)
-   , value_(default_value)
+   , value_()
    , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
 	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
-}
-
-namespace {
-void typeCheck(const boost::any& value, const std::type_index& type_index)
-{
-	if (std::type_index(value.type()) != type_index) {
-		static boost::format fmt("type (%1%) doesn't match property's declared type (%2%)");
-		throw std::logic_error(boost::str(fmt % value.type().name() % type_index.name()));
-	}
-}
 }
 
 void Property::setValue(const boost::any &value) {
@@ -72,8 +62,9 @@ void Property::setValue(const boost::any &value) {
 
 void Property::setCurrentValue(const boost::any &value)
 {
-	if (!value.empty())
-		typeCheck(value, type_index_);
+	if (!value.empty() && std::type_index(value.type()) != type_index_)
+		throw Property::type_error(value.type().name(), type_index_.name());
+
 	value_ = value;
 	if (signaller_)
 		signaller_(this);
@@ -81,7 +72,7 @@ void Property::setCurrentValue(const boost::any &value)
 
 void Property::reset()
 {
-	value_ = default_;
+	value_.clear();
 }
 
 std::string Property::serialize() const {
@@ -89,10 +80,15 @@ std::string Property::serialize() const {
 	return serialize_(value());
 }
 
+bool Property::initsFrom(Property::SourceId source) const
+{
+	return (source == source_id_ && initializer_);
+}
+
 Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
 {
 	if (source != source_id_ && initializer_)
-		throw std::runtime_error("Property was already configured for initialization from another source id");
+		throw error("Property was already configured for initialization from another source id");
 
 	source_id_ = source;
 	initializer_ = f;
@@ -111,29 +107,52 @@ void Property::performInitFrom(SourceId source, const PropertyMap &other)
 }
 
 
-Property& PropertyMap::declare(const std::string &name, const std::type_info &type,
+Property& PropertyMap::declare(const std::string &name, const std::type_index &type_index,
                                const std::string &description, const boost::any &default_value,
                                const Property::SerializeFunction &serialize)
 {
-	auto it_inserted = props_.insert(std::make_pair(name, Property(std::type_index(type), description, default_value, serialize)));
-	if (!it_inserted.second && std::type_index(type) != it_inserted.first->second.type_index_)
-		throw std::logic_error("Property '" + name + "' was already declared with different type.");
+	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value, serialize)));
+	if (!it_inserted.second && type_index != it_inserted.first->second.type_index_)
+		throw Property::type_error(type_index.name(), it_inserted.first->second.type_index_.name());
 	return it_inserted.first->second;
+}
+
+bool PropertyMap::hasProperty(const std::string& name) const
+{
+	auto it = props_.find(name);
+	return it != props_.end();
 }
 
 Property& PropertyMap::property(const std::string &name)
 {
 	auto it = props_.find(name);
 	if (it == props_.end())
-		throw std::runtime_error("Undeclared property '" + name + "'");
+		throw Property::undeclared(name);
 	return it->second;
+}
+
+void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &properties)
+{
+	for (const std::string& name : properties)
+		exposeTo(other, name, name);
+}
+
+void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name)
+{
+	const Property& p = property(name);
+	other.declare(name, p.type_index_, p.description_, p.default_, p.serialize_);
 }
 
 void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<std::string> &properties)
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
-			pair.second.configureInitFrom(source, std::bind(&fromName, std::placeholders::_1, pair.first));
+			try {
+				pair.second.configureInitFrom(source, std::bind(&fromName, std::placeholders::_1, pair.first));
+			} catch (Property::error& e) {
+				e.setName(pair.first);
+				throw;
+			}
 	}
 }
 
@@ -142,7 +161,7 @@ void PropertyMap::set<boost::any>(const std::string& name, const boost::any& val
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) { // name is not yet declared
 		if (value.empty())
-			throw std::logic_error("trying to set undeclared property '" + name + "' with NULL value");
+			throw Property::undeclared(name, "trying to set undeclared property '" + name + "' with NULL value");
 		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any(),
 		                                                                   Property::SerializeFunction())));
 		it->second.setValue(value);
@@ -193,6 +212,36 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name)
 		return boost::any();
 	}
 }
+
+
+Property::error::error(const std::string& msg)
+   : std::runtime_error("Property: " + msg)
+   , msg_(msg)
+{}
+
+void Property::error::setName(const std::string& name)
+{
+	property_name_ = name;
+	// compose message from property name and runtime_errors' msg
+	msg_ = "Property '" + name + "': " + std::runtime_error::what();
+}
+
+Property::undeclared::undeclared(const std::string& name, const std::string& msg)
+   : Property::error(msg)
+{
+	setName(name);
+}
+
+Property::undefined::undefined(const std::string& name, const std::string& msg)
+   : Property::error(msg)
+{
+	setName(name);
+}
+
+static boost::format type_error_fmt("type (%1%) doesn't match property's declared type (%2%)");
+Property::type_error::type_error(const std::string& current_type, const std::string& declared_type)
+   : Property::error(boost::str(type_error_fmt % current_type % declared_type))
+{}
 
 } // namespace task_constructor
 } // namespace moveit

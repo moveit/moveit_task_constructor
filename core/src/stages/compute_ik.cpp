@@ -242,6 +242,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			// set scene's robot state
 			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+			robot_state.update();
 
 			spawn(InterfaceState(scene), std::move(solution));
 		}

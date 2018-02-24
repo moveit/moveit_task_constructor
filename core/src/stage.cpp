@@ -62,7 +62,7 @@ const char *InitStageException::what() const noexcept
 }
 
 std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
-	os << e.what() << std::endl;
+	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":" << std::endl;
 	for (const auto &pair : e.errors_)
 		os << pair.first->name() << ": " << pair.second << std::endl;
 	return os;
@@ -133,8 +133,17 @@ void Stage::init(const moveit::core::RobotModelConstPtr& robot_model)
 	// init properties once from parent
 	auto impl = pimpl();
 	impl->properties_.reset();
-	if (impl->parent())
-		impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
+	if (impl->parent()) {
+		try {
+			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
+		} catch (const Property::error &e) {
+			std::ostringstream oss;
+			oss << e.what();
+			// skip this stage and start error reporting at parent
+			impl->parent()->pimpl()->composePropertyErrorMsg(e.name(), oss);
+			throw InitStageException(*this, oss.str());
+		}
+	}
 }
 
 const ContainerBase *Stage::parent() const {
@@ -173,6 +182,35 @@ PropertyMap &Stage::properties()
 
 void Stage::setProperty(const std::string& name, const boost::any& value) {
 	pimpl()->properties_.set(name, value);
+}
+
+void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std::ostream& os)
+{
+	if (property_name.empty()) return;
+	os << "\nin stage '" << name() << "': ";
+	try {
+		const auto& p = properties_.property(property_name);
+		if (p.defined()) {
+			os << "defined here";
+			return;
+		} else
+			os << "declared, but undefined";
+
+		if (p.initsFrom(Stage::PARENT)) os << ", inherits from parent";
+		else if (p.initsFrom(Stage::PARENT)) os << ", initializes from interface";
+	} catch (const Property::undeclared &e) {
+		os << "undeclared";
+	}
+	if (parent()->parent())
+		parent()->pimpl()->composePropertyErrorMsg(property_name, os);
+}
+
+void Stage::reportPropertyError(const Property::error& e)
+{
+	std::ostringstream oss;
+	oss << e.what();
+	pimpl()->composePropertyErrorMsg(e.name(), oss);
+	throw std::runtime_error(oss.str());
 }
 
 template<InterfaceFlag own, InterfaceFlag other>

@@ -41,6 +41,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <ostream>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
 #define PIMPL_FUNCTIONS(Class) \
@@ -100,6 +101,7 @@ public:
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
 	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
+	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
 	void newSolution(const SolutionBase &current);
 

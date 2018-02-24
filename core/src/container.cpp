@@ -65,7 +65,7 @@ ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index) c
 		container_type::const_reverse_iterator from_end = children_.rbegin();
 		for (auto end = children_.rend(); index < 0 && from_end != end; ++index)
 			++from_end;
-		position = from_end.base();
+		position = index < 0 ? children_.end() : from_end.base();
 	}
 	return position;
 }
@@ -179,6 +179,37 @@ bool ContainerBase::remove(int pos)
 void ContainerBase::clear()
 {
 	pimpl()->children_.clear();
+}
+
+void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names)
+{
+	auto impl = pimpl();
+	// for negative child index, return last child for -1, next to last for -2, etc
+	ContainerBasePrivate::const_iterator child_it = impl->position(child < 0 ? child-1 : child);
+	if (child_it == impl->children().end())
+		throw std::runtime_error("invalid child index");
+
+	auto &child_props = (*child_it)->properties();
+	// declare variables
+	child_props.exposeTo(impl->properties_, names);
+	// configure inheritance
+	child_props.configureInitFrom(Stage::PARENT, names);
+}
+
+void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_property_name,
+                                            const std::string& parent_property_name)
+{
+	auto impl = pimpl();
+	// for negative child index, return last child for -1, next to last for -2, etc
+	ContainerBasePrivate::const_iterator child_it = impl->position(child < 0 ? child-1 : child);
+	if (child_it == impl->children().end())
+		throw std::runtime_error("invalid child index");
+
+	auto &child_props = (*child_it)->properties();
+	// declare variables
+	child_props.exposeTo(impl->properties_, child_property_name, parent_property_name);
+	// configure inheritance
+	child_props.property(child_property_name).configureInitFrom(Stage::PARENT, parent_property_name);
 }
 
 void ContainerBase::reset()
@@ -480,23 +511,31 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	// determine accepted interface from available push interfaces
 	InterfaceFlags accepted;
 
-	// if previous stage pushes forward, we accept forward propagation
+	// if first stage ...
 	if (first != children().begin()) {
 		auto prev = first; --prev; // pointer to previous stage
+		// ... pushes forward, we accept forward propagation
 		if ((*prev)->pimpl()->requiredInterface() & WRITES_NEXT_START)
-			accepted |= WRITES_NEXT_START;
+			accepted |= PROPAGATE_FORWARDS;
+		// ... pulls backward, we accept backward propagation
+		if ((*prev)->pimpl()->requiredInterface() & READS_END)
+			accepted |= PROPAGATE_BACKWARDS;
 	} // else: for first child we cannot determine the interface yet
 
-	// if end stage pushes backward, we accept backward propagation
+	// if end stage ...
 	if (end != children().end()) {
+		// ... pushes backward, we accept backward propagation
 		if ((*end)->pimpl()->requiredInterface() & WRITES_PREV_END)
-			accepted |= WRITES_PREV_END;
+			accepted |= PROPAGATE_BACKWARDS;
+		// ... pulls forward, we accept forward propagation
+		if ((*end)->pimpl()->requiredInterface() & READS_START)
+			accepted |= PROPAGATE_FORWARDS;
 	} // else: for last child we cannot determine the interface yet
 
 	// nothing to do if:
 	// - accepted == 0: interface still unknown
 	// - accepted == PROPAGATE_FORWARDS | PROPAGATE_BACKWARDS: no change
-	if (accepted != 0 && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
+	if (accepted != UNKNOWN && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
 		pruneInterfaces(first, end, accepted);
 }
 
@@ -509,13 +548,13 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	for (auto it = first; it != end; ++it) {
 		StagePrivate* impl = (*it)->pimpl();
 		// range should only contain stages with unknown required interface
-		assert(impl->requiredInterface() == PropagatingEitherWay::AUTO);
+		assert(impl->requiredInterface() == UNKNOWN);
 
 		// remove push interfaces
-		if (!(accepted & WRITES_PREV_END))
+		if (!(accepted & PROPAGATE_BACKWARDS))
 			impl->setPrevEnds(InterfacePtr());
 
-		if (!(accepted & WRITES_NEXT_START))
+		if (!(accepted & PROPAGATE_FORWARDS))
 			impl->setNextStarts(InterfacePtr());
 	}
 	// 2nd sweep: recursively prune children
@@ -579,12 +618,17 @@ bool SerialContainer::compute()
 {
 	bool computed = false;
 	for(const auto& stage : pimpl()->children()) {
-		if(!stage->pimpl()->canCompute())
-			continue;
-		ROS_INFO("Computing stage '%s'", stage->name().c_str());
-		bool success = stage->pimpl()->compute();
-		computed = true;
-		ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
+		try {
+			if(!stage->pimpl()->canCompute())
+				continue;
+
+			ROS_INFO("Computing stage '%s'", stage->name().c_str());
+			bool success = stage->pimpl()->compute();
+			computed = true;
+			ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
+		} catch (const Property::error &e) {
+			stage->reportPropertyError(e);
+		}
 	}
 	return computed;
 }
@@ -857,9 +901,14 @@ bool WrapperBase::canCompute() const
 
 bool WrapperBase::compute()
 {
-	size_t num_before = numSolutions();
-	wrapped()->pimpl()->compute();
-	return numSolutions() > num_before;
+	try {
+		size_t num_before = numSolutions();
+		wrapped()->pimpl()->compute();
+		return numSolutions() > num_before;
+	} catch (const Property::error &e) {
+		wrapped()->reportPropertyError(e);
+	}
+	return false;
 }
 
 
@@ -874,8 +923,13 @@ bool Alternatives::canCompute() const
 bool Alternatives::compute()
 {
 	bool success = false;
-	for (const auto& stage : pimpl()->children())
-		success |= stage->pimpl()->compute();
+	for (const auto& stage : pimpl()->children()) {
+		try {
+			success |= stage->pimpl()->compute();
+		} catch (const Property::error &e) {
+			stage->reportPropertyError(e);
+		}
+	}
 	return success;
 }
 
@@ -907,8 +961,15 @@ bool Fallbacks::canCompute() const
 
 bool Fallbacks::compute()
 {
-	if (!active_child_) return false;
-	return active_child_->pimpl()->compute();
+	if (!active_child_)
+		return false;
+
+	try {
+		return active_child_->pimpl()->compute();
+	} catch (const Property::error &e) {
+		active_child_->reportPropertyError(e);
+	}
+	return false;
 }
 
 } }

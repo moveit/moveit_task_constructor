@@ -13,9 +13,9 @@ TEST(Property, standard) {
 
 	EXPECT_EQ(props.get<double>("double1"), 1.0);
 	EXPECT_EQ(props.get<double>("double2"), 2.0);
-	EXPECT_THROW(props.get<double>("double3"), std::runtime_error);
+	EXPECT_THROW(props.get<double>("double3"), Property::undeclared);
 
-	EXPECT_THROW(props.get<double>("double4"), std::runtime_error);
+	EXPECT_THROW(props.get<double>("double4"), Property::undefined);
 	EXPECT_FALSE(props.property("double4").defined());
 	EXPECT_EQ(props.get<double>("double4", 0.0), 0.0);
 
@@ -41,10 +41,10 @@ TEST(Property, redeclare) {
 
 	// avoid second declaration with different type
 	props.declare<double>("double1");
-	EXPECT_THROW(props.declare<long double>("double1"), std::logic_error);
+	EXPECT_THROW(props.declare<long double>("double1"), Property::type_error);
 
 	// types not matching?
-	EXPECT_THROW(props.set("double1", 1), std::logic_error);
+	EXPECT_THROW(props.set("double1", 1), Property::type_error);
 
 	props.set("double1", 3.14);
 	EXPECT_EQ(props.get<double>("double1"), 3.14);
@@ -108,7 +108,7 @@ TEST_F(InitFromTest, standard) {
 	EXPECT_EQ(slave.get<double>("double1"), 1.0);
 	EXPECT_EQ(slave.get<double>("double2"), 2.0);
 	EXPECT_FALSE(slave.property("double3").defined());
-	EXPECT_THROW(slave.property("double4"), std::runtime_error);
+	EXPECT_THROW(slave.property("double4"), Property::undeclared);
 }
 
 TEST_F(InitFromTest, limited) {
@@ -117,7 +117,7 @@ TEST_F(InitFromTest, limited) {
 	EXPECT_EQ(slave.get<double>("double1"), 1.0);
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
-	EXPECT_THROW(slave.property("double4"), std::runtime_error);
+	EXPECT_THROW(slave.property("double4"), Property::undeclared);
 }
 
 TEST_F(InitFromTest, sourceId) {
@@ -126,7 +126,7 @@ TEST_F(InitFromTest, sourceId) {
 	EXPECT_FALSE(slave.property("double1").defined());
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
-	EXPECT_THROW(slave.property("double4"), std::runtime_error);
+	EXPECT_THROW(slave.property("double4"), Property::undeclared);
 }
 
 TEST_F(InitFromTest, multipleSourceIds) {
@@ -141,7 +141,7 @@ TEST_F(InitFromTest, otherName) {
 	EXPECT_EQ(slave.get<double>("double1"), 2.0);
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
-	EXPECT_THROW(slave.property("double4"), std::runtime_error);
+	EXPECT_THROW(slave.property("double4"), Property::undeclared);
 }
 
 TEST_F(InitFromTest, function) {
