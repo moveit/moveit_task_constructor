@@ -214,19 +214,23 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name)
 }
 
 
-Property::undeclared::undeclared(const std::string& name)
-   : undeclared(name, "Undeclared property: '" + name + "'")
+Property::error::error(const std::string& msg)
+   : std::runtime_error("Property: " + msg)
+   , msg_(msg)
 {}
+
+void Property::error::setName(const std::string& name)
+{
+	property_name_ = name;
+	// compose message from property name and runtime_errors' msg
+	msg_ = "Property '" + name + "': " + std::runtime_error::what();
+}
 
 Property::undeclared::undeclared(const std::string& name, const std::string& msg)
    : Property::error(msg)
 {
 	setName(name);
 }
-
-Property::undefined::undefined(const std::string& name)
-   : undefined(name, "Undefined property: '" + name + "'")
-{}
 
 Property::undefined::undefined(const std::string& name, const std::string& msg)
    : Property::error(msg)
@@ -238,7 +242,6 @@ static boost::format type_error_fmt("type (%1%) doesn't match property's declare
 Property::type_error::type_error(const std::string& current_type, const std::string& declared_type)
    : Property::error(boost::str(type_error_fmt % current_type % declared_type))
 {}
-
 
 } // namespace task_constructor
 } // namespace moveit

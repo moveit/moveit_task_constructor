@@ -150,20 +150,20 @@ private:
 class Property::error : public std::runtime_error {
 protected:
 	std::string property_name_;
+	std::string msg_;
 public:
-	explicit error(const std::string& msg) : std::runtime_error(msg) {}
+	explicit error(const std::string& msg);
 	const std::string& name() const { return property_name_; }
-	void setName(const std::string& name) { property_name_ = name; }
+	void setName(const std::string& name);
+	const char* what() const noexcept override { return msg_.c_str(); }
 };
 class Property::undeclared : public Property::error {
 public:
-	explicit undeclared(const std::string& name);
-	explicit undeclared(const std::string& name, const std::string& msg);
+	explicit undeclared(const std::string& name, const std::string& msg = "undeclared");
 };
 class Property::undefined : public Property::error {
 public:
-	explicit undefined(const std::string& name);
-	explicit undefined(const std::string& name, const std::string& msg);
+	explicit undefined(const std::string& name, const std::string& msg = "undefined");
 };
 class Property::type_error : public Property::error {
 public:
