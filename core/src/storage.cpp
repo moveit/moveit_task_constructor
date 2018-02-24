@@ -64,7 +64,7 @@ Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incomin
 	if (!state.incomingTrajectories().empty() || !state.outgoingTrajectories().empty())
 		throw std::runtime_error("expecting empty incoming/outgoing trajectories");
 	if (!state.scene())
-		throw std::runtime_error("expecting valid planning scene");
+		throw std::runtime_error("expecting valid planning scene in InterfaceState");
 
 	// move state to a list node
 	std::list<InterfaceState> container;
