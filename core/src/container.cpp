@@ -802,9 +802,10 @@ void ParallelContainerBase::validateConnectivity() const
 	auto impl = pimpl();
 	InterfaceFlags my_interface = impl->interfaceFlags();
 
-	// check that input / output interfaces of all children match my_interface
+	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : pimpl()->children()) {
-		if (child->pimpl()->interfaceFlags() != my_interface)
+		InterfaceFlags current = child->pimpl()->interfaceFlags();
+		if ((current & my_interface) != current)
 			errors.push_back(*this, "interface of child '" + child->name() + "' doesn't match mine");
 	}
 
