@@ -117,7 +117,6 @@ protected:
 	}
 	void reset(bool start=true, bool end=true) {
 		container.reset();
-		container.clear();
 		ContainerBasePrivate *impl = container.pimpl();
 		impl->setNextStarts(InterfacePtr());
 		impl->setPrevEnds(InterfacePtr());
@@ -214,11 +213,13 @@ TEST_F(SerialTest, insertion_order) {
 
 #define EXPECT_INIT_FAILURE(start, end, ...) {\
 	SCOPED_TRACE("validateInit({" #__VA_ARGS__ "})"); \
+	container.clear(); \
 	validateInit(start, end, {__VA_ARGS__}, true); \
 }
 
 #define EXPECT_INIT_SUCCESS(start, end, ...) {\
 	SCOPED_TRACE("validateInit({" #__VA_ARGS__ "})"); \
+	container.clear(); \
 	validateInit(start, end, {__VA_ARGS__}, false); \
 }
 
@@ -341,6 +342,13 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), UNKNOWN);
 	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), UNKNOWN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), UNKNOWN);
+}
+
+TEST_F(SerialTest, nested_interface_detection) {
+	auto inner = std::make_unique<SerialContainer>("inner");
+	append(*inner, {GEN, ANY});
+	container.insert(std::move(inner));
+	validateInit(true, true, {ANY}, false);
 }
 
 
