@@ -47,6 +47,7 @@ class GenerateGraspPose : public MonitoringGenerator {
 public:
 	GenerateGraspPose(const std::string& name);
 
+	void reset() override;
 	bool canCompute() const override;
 	bool compute() override;
 

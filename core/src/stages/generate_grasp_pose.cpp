@@ -85,6 +85,13 @@ void GenerateGraspPose::setAngleDelta(double delta){
 	setProperty("angle_delta", delta);
 }
 
+void GenerateGraspPose::reset()
+{
+	scene_.reset();
+	current_angle_ = 0.0;
+	MonitoringGenerator::reset();
+}
+
 void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 {
 	if (scene_)
