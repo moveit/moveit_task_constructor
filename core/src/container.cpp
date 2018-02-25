@@ -731,7 +731,11 @@ InterfaceFlags ParallelContainerBasePrivate::requiredInterface() const
 
 void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted)
 {
-	// TODO: forward pruning to all children with UNKNOWN required interface
+	// forward pruning to all children with UNKNOWN required interface
+	for (const Stage::pointer& stage : children()) {
+		if (stage->pimpl()->requiredInterface() == UNKNOWN)
+			stage->pimpl()->pruneInterface(accepted);
+	}
 }
 
 void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated) {
