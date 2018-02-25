@@ -775,9 +775,7 @@ void ParallelContainerBase::init(const moveit::core::RobotModelConstPtr& robot_m
 
 	// determine the union of interfaces required by children
 	// TODO: should we better use the least common interface?
-	InterfaceFlags required;
-	for (const Stage::pointer& stage : impl->children())
-		required |= stage->pimpl()->requiredInterface();
+	InterfaceFlags required = impl->requiredInterface();
 
 	// initialize this' pull connections
 	impl->starts().reset(required & READS_START
@@ -801,13 +799,18 @@ void ParallelContainerBase::validateConnectivity() const
 	InitStageException errors;
 	auto impl = pimpl();
 	InterfaceFlags my_interface = impl->interfaceFlags();
+	InterfaceFlags children_interfaces;
 
 	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : pimpl()->children()) {
 		InterfaceFlags current = child->pimpl()->interfaceFlags();
+		children_interfaces |= current;  // compute union of all children interfaces
 		if ((current & my_interface) != current)
 			errors.push_back(*this, "interface of child '" + child->name() + "' doesn't match mine");
 	}
+	// check that there is a child matching the expected push interfaces
+	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))
+		errors.push_back(*this, "no child provides expected push interface");
 
 	// recursively validate children
 	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }
