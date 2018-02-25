@@ -187,7 +187,7 @@ protected:
 class Alternatives : public ParallelContainerBase
 {
 public:
-	Alternatives(const std::string &name) : ParallelContainerBase(name) {}
+	Alternatives(const std::string &name = "alternatives") : ParallelContainerBase(name) {}
 
 	bool canCompute() const override;
 	bool compute() override;
@@ -205,7 +205,7 @@ class Fallbacks : public ParallelContainerBase
 	mutable Stage* active_child_ = nullptr;
 
 public:
-	Fallbacks(const std::string &name) : ParallelContainerBase(name) {}
+	Fallbacks(const std::string &name = "fallbacks") : ParallelContainerBase(name) {}
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;

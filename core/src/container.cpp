@@ -487,11 +487,10 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 // called by parent asking for pruning of this' interface
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
-	constexpr InterfaceFlags BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
 
 	// We only need to deal with the special case of the whole sequence to be pruned.
-	if (accepted != BOTHWAYS && // will interface be restricted at all?
-	    children().front()->pimpl()->interfaceFlags() == BOTHWAYS)  // still undecided?
+	if (accepted != PROPAGATE_BOTHWAYS && // will interface be restricted at all?
+	    children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS)  // still undecided?
 	{
 		pruneInterfaces(children().begin(), children().end(), accepted);
 
@@ -707,19 +706,40 @@ InterfaceFlags ParallelContainerBasePrivate::requiredInterface() const
 {
 	if (children().empty())
 		return UNKNOWN;
-	/* TODO: replace this with a proper check for consistency of interfaces. Allowed combinations are:
+	/* The interfaces of all children need to be consistent with each other. Allowed combinations are:
 	 * ❘ ❘ = ❘  (connecting stages)
 	 * ↑ ↑ = ↑  (backward propagating)
 	 * ↓ ↓ = ↓  (forward propagating)
 	 * ↑ ↓ = ⇅ = ⇅ ↑ = ⇅ ↓  (propagating in both directions)
 	 * ↕ ↕ = ↕  (generating)
 	 */
-	return children().front()->pimpl()->requiredInterface();
+
+	InterfaceFlags accumulated = children().front()->pimpl()->requiredInterface();
+	for (const Stage::pointer& stage : children()) {
+		InterfaceFlags current = stage->pimpl()->requiredInterface();
+		if (accumulated != PROPAGATE_BOTHWAYS &&
+		    (accumulated & current) == current)  // all flags of current are already available in accumulated
+			continue;
+
+		bool current_is_propagating = (current == PROPAGATE_BOTHWAYS ||
+		                               current == PROPAGATE_FORWARDS ||
+		                               current == PROPAGATE_BACKWARDS);
+
+		if (current_is_propagating && accumulated != CONNECT && accumulated != GENERATE)
+			accumulated |= current;  // propagating is compatible to all except CONNECT and GENERATE
+		else
+			throw InitStageException(*me(), "child '" + stage->name() + "' has conflicting interface to previous children");
+	}
+	return accumulated;
 }
 
 void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted)
 {
-	// TODO: forward pruning to all children with UNKNOWN required interface
+	// forward pruning to all children with UNKNOWN required interface
+	for (const Stage::pointer& stage : children()) {
+		if (stage->pimpl()->requiredInterface() == UNKNOWN)
+			stage->pimpl()->pruneInterface(accepted);
+	}
 }
 
 void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated) {
@@ -759,9 +779,7 @@ void ParallelContainerBase::init(const moveit::core::RobotModelConstPtr& robot_m
 
 	// determine the union of interfaces required by children
 	// TODO: should we better use the least common interface?
-	InterfaceFlags required;
-	for (const Stage::pointer& stage : impl->children())
-		required |= stage->pimpl()->requiredInterface();
+	InterfaceFlags required = impl->requiredInterface();
 
 	// initialize this' pull connections
 	impl->starts().reset(required & READS_START
@@ -785,12 +803,18 @@ void ParallelContainerBase::validateConnectivity() const
 	InitStageException errors;
 	auto impl = pimpl();
 	InterfaceFlags my_interface = impl->interfaceFlags();
+	InterfaceFlags children_interfaces;
 
-	// check that input / output interfaces of all children match my_interface
+	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : pimpl()->children()) {
-		if (child->pimpl()->interfaceFlags() != my_interface)
+		InterfaceFlags current = child->pimpl()->interfaceFlags();
+		children_interfaces |= current;  // compute union of all children interfaces
+		if ((current & my_interface) != current)
 			errors.push_back(*this, "interface of child '" + child->name() + "' doesn't match mine");
 	}
+	// check that there is a child matching the expected push interfaces
+	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))
+		errors.push_back(*this, "no child provides expected push interface");
 
 	// recursively validate children
 	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }

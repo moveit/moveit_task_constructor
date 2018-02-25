@@ -85,6 +85,7 @@ typedef Flags<InterfaceFlag> InterfaceFlags;
 constexpr InterfaceFlags UNKNOWN;
 constexpr InterfaceFlags INPUT_IF_MASK({READS_START, WRITES_PREV_END});
 constexpr InterfaceFlags OUTPUT_IF_MASK({READS_END, WRITES_NEXT_START});
+constexpr InterfaceFlags PROPAGATE_BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
 
 MOVEIT_CLASS_FORWARD(Interface)
 MOVEIT_CLASS_FORWARD(Stage)
