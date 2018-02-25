@@ -399,8 +399,8 @@ InterfaceFlags SerialContainerPrivate::requiredInterface() const
 {
 	if (children().empty())
 		return UNKNOWN;
-	return (children().front()->pimpl()->requiredInterface() & INPUT_IF_MASK)
-	      | (children().back()->pimpl()->requiredInterface() & OUTPUT_IF_MASK);
+	return (children().front()->pimpl()->interfaceFlags() & INPUT_IF_MASK)
+	      | (children().back()->pimpl()->interfaceFlags() & OUTPUT_IF_MASK);
 }
 
 // connect cur stage to its predecessor and successor by setting the push interface pointers
