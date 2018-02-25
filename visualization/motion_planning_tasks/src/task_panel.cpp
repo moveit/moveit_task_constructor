@@ -245,8 +245,8 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 	// adding task is allowed on top-level items and sub-top-level items
 	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
 	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
-	// removing stuff is allowed if there is any selection / any curren item
-	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid());
+	// removing stuff is allowed any valid selection except top-level items
+	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid() && current.parent().isValid());
 
 	BaseTaskModel *task;
 	QModelIndex task_index;

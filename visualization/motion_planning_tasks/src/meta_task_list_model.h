@@ -69,7 +69,7 @@ class MetaTaskListModel : public utils::TreeMergeProxyModel {
 	// hide this, as we want to offer another API
 	using utils::TreeMergeProxyModel::insertModel;
 
-	private Q_SLOTS:
+private Q_SLOTS:
 	void onRowsRemoved(const QModelIndex &parent, int first, int last);
 	void onDisplayNameChanged(const QString &name);
 
@@ -80,6 +80,7 @@ public:
 	bool insertModel(TaskListModel* model, TaskDisplay* display);
 
 	bool setData(const QModelIndex &index, const QVariant &value, int role) override;
+	bool removeRows(int row, int count, const QModelIndex &parent) override;
 
 	/// retrieve TaskListModel and TaskDisplay corresponding to given index
 	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex &index) const;
