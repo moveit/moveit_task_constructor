@@ -36,10 +36,18 @@
 
 #pragma once
 
+#include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/container.h>
 #include <geometry_msgs/TwistStamped.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit { namespace task_constructor {
+
+namespace solvers {
+MOVEIT_CLASS_FORWARD(CartesianPath)
+MOVEIT_CLASS_FORWARD(PipelinePlanner)
+}
+
+namespace stages {
 
 /** Pick wraps a complete pipeline to pick up an object with a given end effector.
  *
@@ -54,6 +62,8 @@ namespace moveit { namespace task_constructor { namespace stages {
  * the end effector's Cartesian pose needs to be provided by an external grasp stage.
  */
 class Pick : public SerialContainer {
+	solvers::CartesianPathPtr cartesian_solver_;
+	solvers::PipelinePlannerPtr pipeline_solver_;
 	Stage* grasp_stage_ = nullptr;
 	Stage* approach_stage_ = nullptr;
 	Stage* lift_stage_ = nullptr;
@@ -69,6 +79,9 @@ public:
 	void setObject(const std::string& object) {
 		properties().set<std::string>("object", object);
 	}
+
+	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
+	solvers::PipelinePlannerPtr pipelineSolver() { return pipeline_solver_; }
 
 	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
 	                       double min_distance, double max_distance);

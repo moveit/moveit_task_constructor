@@ -23,13 +23,13 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 	p.declare<std::string>("eef_group", "JMG of eef");
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
 
-	auto cartesian = std::make_shared<solvers::CartesianPath>();
-	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-	pipeline->setTimeout(8.0);
-	pipeline->setPlannerId("RRTConnectkConfigDefault");
+	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
+	pipeline_solver_ = std::make_shared<solvers::PipelinePlanner>();
+	pipeline_solver_->setTimeout(8.0);
+	pipeline_solver_->setPlannerId("RRTConnectkConfigDefault");
 
 	{
-		auto move = std::make_unique<MoveTo>("open gripper", pipeline);
+		auto move = std::make_unique<MoveTo>("open gripper", pipeline_solver_);
 		PropertyMap& p = move->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_group");
 		move->setGoal("open");  // TODO: retrieve from grasp stage
@@ -37,14 +37,14 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 	}
 
 	{
-		auto move = std::make_unique<Connect>("move to object", pipeline);
+		auto move = std::make_unique<Connect>("move to object", pipeline_solver_);
 		PropertyMap& p = move->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		insert(std::move(move));
 	}
 
 	{
-		auto approach = std::make_unique<MoveRelative>("approach object", cartesian);
+		auto approach = std::make_unique<MoveRelative>("approach object", cartesian_solver_);
 		PropertyMap& p = approach->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.set("marker_ns", std::string("approach"));
@@ -57,7 +57,7 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 	insert(std::move(grasp_stage));
 
 	{
-		auto lift = std::make_unique<MoveRelative>("lift object", cartesian);
+		auto lift = std::make_unique<MoveRelative>("lift object", cartesian_solver_);
 		PropertyMap& p = lift->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.set("marker_ns", std::string("lift"));
