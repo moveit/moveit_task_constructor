@@ -220,6 +220,12 @@ bool RemoteTaskModel::setData(const QModelIndex &index, const QVariant &value, i
 	return true;
 }
 
+QModelIndex RemoteTaskModel::indexFromStageId(size_t id) const
+{
+	Node *n = node(id);
+	return n ? index(n) : QModelIndex();
+}
+
 void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg)
 {
 	// iterate over descriptions and create new / update existing nodes where needed

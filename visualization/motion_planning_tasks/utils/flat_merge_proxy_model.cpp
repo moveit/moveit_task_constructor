@@ -261,6 +261,17 @@ QModelIndex FlatMergeProxyModel::parent(const QModelIndex &child) const
 	return d_ptr->mapFromSource(src_parent, data);
 }
 
+QModelIndex FlatMergeProxyModel::mapToSource(const QModelIndex &proxy_index) const
+{
+	FlatMergeProxyModelPrivate::ModelData* data;
+	return d_ptr->mapToSource(proxy_index, data);
+}
+
+QModelIndex FlatMergeProxyModel::mapFromSource(const QModelIndex &src_index) const
+{
+	return d_ptr->mapFromSource(src_index, nullptr);
+}
+
 Qt::ItemFlags FlatMergeProxyModel::flags(const QModelIndex &index) const
 {
 	if (!index.isValid())

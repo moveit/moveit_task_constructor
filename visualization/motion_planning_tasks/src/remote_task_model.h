@@ -81,6 +81,7 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
+	QModelIndex indexFromStageId(size_t id) const override;
 	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg);
 	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg);
 	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution &msg);

@@ -212,12 +212,38 @@ Qt::ItemFlags TaskListModel::flags(const QModelIndex &index) const
 	return f;
 }
 
+void TaskListModel::highlightStage(size_t id)
+{
+	if (!active_task_model_) return;
+	QModelIndex old_index = highlighted_row_index_;
+	QModelIndex new_index = active_task_model_->indexFromStageId(id);
+	if (new_index.isValid())
+		highlighted_row_index_ = new_index = mapFromSource(new_index);
+	else
+		highlighted_row_index_ = QModelIndex();
+
+	if (old_index == new_index) return;
+	if (old_index.isValid())
+		Q_EMIT dataChanged(old_index, old_index.sibling(old_index.row(), columnCount()-1));
+	if (new_index.isValid())
+		Q_EMIT dataChanged(new_index, new_index.sibling(new_index.row(), columnCount()-1));
+}
+
 QVariant TaskListModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
 	if (orientation == Qt::Horizontal)
 		return TaskListModel::horizontalHeader(section, role);
 	else
 		return QAbstractItemModel::headerData(section, orientation, role);
+}
+
+QVariant TaskListModel::data(const QModelIndex &index, int role) const
+{
+	if (role == Qt::BackgroundRole && index.isValid() &&
+	    index.row() == highlighted_row_index_.row() &&
+	    index.parent() == highlighted_row_index_.parent())
+		return QColor(Qt::yellow);
+	return FlatMergeProxyModel::data(index, role);
 }
 
 // process a task description message:
@@ -247,6 +273,9 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		// the model is managed by this instance via Qt's parent-child mechanism
 		remote_task = new RemoteTaskModel(scene_, this);
 		remote_task->setSolutionClient(get_solution_client_);
+
+		// HACK: always use the last created model as active
+		active_task_model_ = remote_task;
 	}
 	if (!remote_task)
 		return; // task is not in use anymore

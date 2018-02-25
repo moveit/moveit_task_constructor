@@ -72,6 +72,8 @@ public:
 	void setStageFactory(const StageFactoryPtr &factory) override;
 	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 
+	QModelIndex indexFromStageId(size_t id) const override;
+
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
 	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
 

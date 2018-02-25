@@ -83,6 +83,8 @@ TaskDisplay::TaskDisplay() : Display()
 	                                 this, SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
+	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)),
+	        task_list_model_.get(), SLOT(highlightStage(size_t)));
 
 	marker_visual_ = new MarkerVisualizationProperty("Markers", this);
 

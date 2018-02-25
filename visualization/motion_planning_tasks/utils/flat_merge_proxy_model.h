@@ -75,6 +75,9 @@ public:
 	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
 	QModelIndex parent(const QModelIndex &index) const override;
 
+	QModelIndex mapToSource(const QModelIndex &proxy_index) const;
+	QModelIndex mapFromSource(const QModelIndex &src_index) const;
+
 	Qt::ItemFlags flags(const QModelIndex & index) const override;
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;

@@ -84,6 +84,11 @@ const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
 	return data_[idx_pair.first].name_;
 }
 
+uint32_t DisplaySolution::creatorId(const DisplaySolution::IndexPair &idx_pair) const
+{
+	return data_[idx_pair.first].creator_id_;
+}
+
 const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::IndexPair &idx_pair) const
 {
 	return data_[idx_pair.first].markers_;
@@ -112,6 +117,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
 		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
 		data_[i].name_ = sub.name;
+		data_[i].creator_id_ = sub.stage_id;
 		steps_ += data_[i].trajectory_->getWayPointCount();
 
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
