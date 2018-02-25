@@ -105,12 +105,12 @@ protected:
 	// If, during pruneInterface() later, we notice that it's not needed, prune there.
 	inline void setChildsPushBackwardInterface(Stage& child) {
 		bool allowed = (child.pimpl()->requiredInterface() & WRITES_PREV_END) ||
-		               (child.pimpl()->requiredInterface() == 0); // unknown interface
+		               (child.pimpl()->requiredInterface() == UNKNOWN);
 		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
 	inline void setChildsPushForwardInterface(Stage& child) {
 		bool allowed = (child.pimpl()->requiredInterface() & WRITES_NEXT_START) ||
-		               (child.pimpl()->requiredInterface() == 0); // unknown interface
+		               (child.pimpl()->requiredInterface() == UNKNOWN);
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 

@@ -483,11 +483,10 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 // called by parent asking for pruning of this' interface
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
-	constexpr InterfaceFlags BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
 
 	// We only need to deal with the special case of the whole sequence to be pruned.
-	if (accepted != BOTHWAYS && // will interface be restricted at all?
-	    children().front()->pimpl()->interfaceFlags() == BOTHWAYS)  // still undecided?
+	if (accepted != PROPAGATE_BOTHWAYS && // will interface be restricted at all?
+	    children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS)  // still undecided?
 	{
 		pruneInterfaces(children().begin(), children().end(), accepted);
 

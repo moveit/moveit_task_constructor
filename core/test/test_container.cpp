@@ -219,7 +219,7 @@ TEST_F(SerialTest, insertion_order) {
 
 TEST_F(SerialTest, init_empty) {
 	EXPECT_INIT_FAILURE(true, true); // no children
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
 	EXPECT_INIT_FAILURE(false, false); // no children
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags());
@@ -238,7 +238,7 @@ TEST_F(SerialTest, init_connecting) {
 
 TEST_F(SerialTest, init_generator) {
 	EXPECT_INIT_SUCCESS(true, true, GEN);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), serial.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_FAILURE(false, false, GEN); // generator wants to push, but container cannot propagate pushes
@@ -260,7 +260,7 @@ TEST_F(SerialTest, init_forward) {
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), serial.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_SUCCESS(true, true, GEN, FW);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 }
 
 TEST_F(SerialTest, init_backward) {
@@ -277,10 +277,10 @@ TEST_F(SerialTest, init_backward) {
 	EXPECT_EQ(serial.pimpl()->interfaceFlags(), serial.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_SUCCESS(true, true, BW, GEN);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
 	EXPECT_INIT_SUCCESS(true, true, BW, GEN, FW);
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({WRITES_NEXT_START, WRITES_PREV_END}));
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 }
 
 TEST_F(SerialTest, interface_detection) {
@@ -327,13 +327,13 @@ TEST_F(SerialTest, interface_detection) {
 
 	EXPECT_INIT_SUCCESS(true, true, ANY, ANY); // <> <>
 	it = serial.pimpl()->children().begin();
-	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
-	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}));
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), PROPAGATE_BOTHWAYS);
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), PROPAGATE_BOTHWAYS);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), PROPAGATE_BOTHWAYS);
 
 	EXPECT_INIT_FAILURE(false, false, ANY, ANY); // -- --
 	it = serial.pimpl()->children().begin();
-	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags());
-	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags());
-	EXPECT_EQ(serial.pimpl()->interfaceFlags(), InterfaceFlags());
+	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), UNKNOWN);
+	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), UNKNOWN);
+	EXPECT_EQ(serial.pimpl()->interfaceFlags(), UNKNOWN);
 }
