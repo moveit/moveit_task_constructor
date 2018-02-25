@@ -614,7 +614,12 @@ void SerialContainer::validateConnectivity() const
 
 bool SerialContainer::canCompute() const
 {
-	return !pimpl()->children().empty();
+	size_t num_finished = 0;
+	for(const auto& stage : pimpl()->children()) {
+		if (!stage->pimpl()->canCompute())
+			++num_finished;
+	}
+	return num_finished < pimpl()->children().size();
 }
 
 bool SerialContainer::compute()
