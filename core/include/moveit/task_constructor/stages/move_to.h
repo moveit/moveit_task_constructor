@@ -40,6 +40,7 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit_msgs/Constraints.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
 
@@ -62,6 +63,10 @@ public:
 	void setGoal(const geometry_msgs::PointStamped& point);
 	/// move joint model group to given named pose
 	void setGoal(const std::string& joint_pose);
+
+	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+		setProperty("path_constraints", std::move(path_constraints));
+	}
 
 protected:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,

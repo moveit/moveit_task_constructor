@@ -40,6 +40,7 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit_msgs/Constraints.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
@@ -61,6 +62,10 @@ public:
 	void setMinDistance(double distance);
 	void setMaxDistance(double distance);
 	void setMinMaxDistance(double min_distance, double max_distance);
+
+	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+		setProperty("path_constraints", std::move(path_constraints));
+	}
 
 	/// perform twist motion on specified link
 	void along(const geometry_msgs::TwistStamped& twist);
