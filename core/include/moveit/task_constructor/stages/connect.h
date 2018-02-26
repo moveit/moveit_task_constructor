@@ -49,6 +49,10 @@ class Connect : public Connecting {
 public:
 	Connect(std::string name, const solvers::PlannerInterfacePtr &planner);
 
+	void setTimeout(const ros::Duration& timeout){
+		setProperty("timeout", timeout.toSec());
+	}
+
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
 		setProperty("path_constraints", std::move(path_constraints));
 	}
