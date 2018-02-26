@@ -156,6 +156,21 @@ void TaskPanel::showStageDockWidget()
 }
 
 
+// expand all children up to given depth
+void setExpanded(QTreeView *view, const QModelIndex &index, bool expand, int depth = -1)
+{
+	if (!index.isValid())
+		return;
+
+	// recursively expand all children
+	if (depth != 0) {
+		for (int row = 0, rows = index.model()->rowCount(index); row < rows; ++row)
+			setExpanded(view, index.child(row, 0), expand, depth-1);
+	}
+
+	view->setExpanded(index, expand);
+}
+
 TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
    : q_ptr(q_ptr)
 {
@@ -165,6 +180,21 @@ TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
 	StageFactoryPtr factory = getStageFactory();
 	if (factory) meta_model->setMimeTypes( { factory->mimeType() } );
 	tasks_view->setModel(meta_model);
+	// auto-expand newly-inserted top-level items
+	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last){
+		if (parent.isValid() && !parent.parent().isValid()) {
+			for (int row = first; row <= last; ++row) {
+				QModelIndex child = parent.child(row, 0);
+				// expand inserted items
+				setExpanded(tasks_view, child, true);
+				// collapse up to first level
+				setExpanded(tasks_view, child, false, 1);
+				// expand inserted item
+				setExpanded(tasks_view, child, true, 0);
+			}
+			tasks_view->setExpanded(parent, true);  // expand parent group item
+		}
+	});
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
