@@ -336,15 +336,14 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 
 	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SerialSolution> sorted;
-	SerialContainer::solution_container solution;
-	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
 			InterfaceState::Priority prio(in.first.size() + 1 + out.first.size(),
 			                              in.second + current.cost() + out.second);
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				assert(solution.empty());
+				SerialContainer::solution_container solution;
+				solution.reserve(children.size());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
 				// insert current solution
