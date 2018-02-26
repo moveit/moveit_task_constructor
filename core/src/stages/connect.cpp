@@ -48,6 +48,8 @@ Connect::Connect(std::string name, const solvers::PlannerInterfacePtr& planner)
 	auto& p = properties();
 	p.declare<double>("timeout", 10.0, "planning timeout");
 	p.declare<std::string>("group", "name of planning group");
+	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
+	                                    "constraints to maintain during trajectory");
 }
 
 void Connect::init(const core::RobotModelConstPtr& robot_model)
@@ -63,7 +65,8 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const moveit::core::JointModelGroup* jmg = from.scene()->getRobotModel()->getJointModelGroup(group);
 
 	robot_trajectory::RobotTrajectoryPtr trajectory;
-	if (!planner_->plan(from.scene(), to.scene(), jmg, timeout, trajectory))
+	if (!planner_->plan(from.scene(), to.scene(), jmg, timeout, trajectory,
+	                    props.get<moveit_msgs::Constraints>("path_constraints")))
 		return false;
 
 	connect(from, to, trajectory);

@@ -85,7 +85,8 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
                            const planning_scene::PlanningSceneConstPtr to,
                            const moveit::core::JointModelGroup *jmg,
                            double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result)
+                           robot_trajectory::RobotTrajectoryPtr& result,
+                           const moveit_msgs::Constraints& path_constraints)
 {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
@@ -95,6 +96,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
 	                             to->getCurrentState(), jmg,
 	                             props.get<double>("goal_joint_tolerance"));
+	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
 	if(!planner_->generatePlan(from, req, res))
@@ -109,8 +111,8 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
                            const Eigen::Affine3d& target_eigen,
                            const moveit::core::JointModelGroup *jmg,
                            double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result)
-
+                           robot_trajectory::RobotTrajectoryPtr& result,
+                           const moveit_msgs::Constraints& path_constraints)
 {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
@@ -125,6 +127,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
 	                             link.getName(), target,
 	                             props.get<double>("goal_position_tolerance"),
 	                             props.get<double>("goal_orientation_tolerance"));
+	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
 	if(!planner_->generatePlan(from, req, res))

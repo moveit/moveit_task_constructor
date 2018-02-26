@@ -62,14 +62,16 @@ public:
 	          const planning_scene::PlanningSceneConstPtr to,
 	          const core::JointModelGroup *jmg,
 	          double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result) override;
+	          robot_trajectory::RobotTrajectoryPtr& result,
+	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr from,
 	          const moveit::core::LinkModel &link,
 	          const Eigen::Affine3d& target,
 	          const core::JointModelGroup *jmg,
 	          double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result) override;
+	          robot_trajectory::RobotTrajectoryPtr& result,
+	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
 
 protected:
 	planning_pipeline::PlanningPipelinePtr planner_;

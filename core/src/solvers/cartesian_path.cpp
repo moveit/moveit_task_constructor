@@ -59,8 +59,9 @@ void CartesianPath::init(const core::RobotModelConstPtr &robot_model)
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
                          const planning_scene::PlanningSceneConstPtr to,
                          const moveit::core::JointModelGroup *jmg,
-	                      double timeout,
-                         robot_trajectory::RobotTrajectoryPtr& result)
+                         double timeout,
+                         robot_trajectory::RobotTrajectoryPtr& result,
+                         const moveit_msgs::Constraints& /*path_constraints*/)
 {
 	const moveit::core::LinkModel* link;
 	const std::string& link_name = solvers::getEndEffectorLink(jmg);
@@ -77,8 +78,9 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
                          const moveit::core::LinkModel &link,
                          const Eigen::Affine3d &target,
                          const moveit::core::JointModelGroup *jmg,
-	                      double timeout,
-                         robot_trajectory::RobotTrajectoryPtr &result)
+                         double timeout,
+                         robot_trajectory::RobotTrajectoryPtr &result,
+                         const moveit_msgs::Constraints& /*path_constraints*/)
 {
 	const auto& props = properties();
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
