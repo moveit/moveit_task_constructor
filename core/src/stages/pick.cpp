@@ -17,8 +17,10 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
    : SerialContainer(name)
 {
 	PropertyMap& p = properties();
-	p.declare<std::string>("eef", "end effector name");
 	p.declare<std::string>("object", "name of object to grasp");
+	p.declare<std::string>("eef", "end effector name");
+	p.declare<std::string>("eef_frame", "name of end effector frame");
+
 	// internal properties (cannot be marked as such yet)
 	p.declare<std::string>("eef_group", "JMG of eef");
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
@@ -47,6 +49,7 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 		auto approach = std::make_unique<MoveRelative>("approach object", cartesian_solver_);
 		PropertyMap& p = approach->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
+		p.property("link").configureInitFrom(Stage::PARENT, "eef_frame");
 		p.set("marker_ns", std::string("approach"));
 		approach_stage_ = approach.get();
 		insert(std::move(approach));
@@ -60,6 +63,7 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 		auto lift = std::make_unique<MoveRelative>("lift object", cartesian_solver_);
 		PropertyMap& p = lift->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
+		p.property("link").configureInitFrom(Stage::PARENT, "eef_frame");
 		p.set("marker_ns", std::string("lift"));
 		lift_stage_ = lift.get();
 		insert(std::move(lift));
