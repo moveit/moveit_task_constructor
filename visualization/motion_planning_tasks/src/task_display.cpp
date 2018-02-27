@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Author: Robert Haschke
-	Desc:   Monitor manipulation tasks and visualize their solutions
+   Desc:   Monitor manipulation tasks and visualize their solutions
 */
 
 #include "task_display.h"
@@ -53,6 +53,8 @@
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/ros_topic_property.h>
 #include <rviz/properties/status_property.h>
+#include <rviz/frame_manager.h>
+#include <OgreSceneNode.h>
 #include <QTimer>
 
 namespace moveit_rviz_plugin
@@ -148,12 +150,33 @@ void TaskDisplay::onEnable()
 {
 	Display::onEnable();
 	loadRobotModel();
+	calculateOffsetPosition();
 }
 
 void TaskDisplay::onDisable()
 {
 	Display::onDisable();
 	trajectory_visual_->onDisable();
+}
+
+void TaskDisplay::fixedFrameChanged()
+{
+	Display::fixedFrameChanged();
+	calculateOffsetPosition();
+}
+
+void TaskDisplay::calculateOffsetPosition()
+{
+	if (!robot_model_)
+		return;
+
+	Ogre::Vector3 position;
+	Ogre::Quaternion orientation;
+
+	context_->getFrameManager()->getTransform(robot_model_->getModelFrame(), ros::Time(0), position, orientation);
+
+	scene_node_->setPosition(position);
+	scene_node_->setOrientation(orientation);
 }
 
 void TaskDisplay::update(float wall_dt, float ros_dt)

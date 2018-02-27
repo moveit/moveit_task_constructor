@@ -80,10 +80,6 @@ public:
   virtual void update(float wall_dt, float ros_dt);
   virtual void reset();
 
-  // overrides from Display
-  virtual void onInitialize();
-  virtual void onEnable();
-  virtual void onDisable();
   void setName(const QString& name);
   void setSolutionStatus(bool ok);
 
@@ -91,6 +87,13 @@ public:
   TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
   void clearMarkers();
   void showMarkers(const DisplaySolutionPtr &s);
+
+protected:
+  void onInitialize() override;
+  void onEnable() override;
+  void onDisable() override;
+  void fixedFrameChanged() override;
+  void calculateOffsetPosition();
 
 private Q_SLOTS:
   /**

@@ -92,7 +92,7 @@ void generateMarkers(const moveit::core::RobotState &robot_state,
 	if (!model) return;
 
 	visualization_msgs::Marker m;
-	m.header.frame_id = model->getRoot()->name;
+	m.header.frame_id = robot_state.getRobotModel()->getModelFrame();
 
 	// code adapted from rviz::RobotLink::createVisual() / createCollision()
 	for (const auto &name : *names) {
