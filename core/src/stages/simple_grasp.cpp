@@ -65,7 +65,7 @@ SimpleGrasp::SimpleGrasp(const std::string& name)
 		exposePropertiesOfChild(-1, { "max_ik_solutions", "timeout" });
 	}
 	{
-		auto allow_touch = std::make_unique<ModifyPlanningScene>("enable object collision");
+		auto allow_touch = std::make_unique<ModifyPlanningScene>("allow object collision");
 		PropertyMap& p = allow_touch->properties();
 		p.declare<std::string>("eef");
 		p.declare<std::string>("object");
