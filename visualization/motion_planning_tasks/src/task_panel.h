@@ -97,6 +97,9 @@ class TaskView : public QWidget {
 public:
 	TaskView(QWidget* parent = 0);
 
+	void save(rviz::Config config);
+	void load(const rviz::Config& config);
+
 public Q_SLOTS:
 	void addTask();
 

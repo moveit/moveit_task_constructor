@@ -146,6 +146,16 @@ void TaskDisplay::reset()
 	trajectory_visual_->reset();
 }
 
+void TaskDisplay::save(rviz::Config config) const
+{
+	Display::save(config);
+}
+
+void TaskDisplay::load(const rviz::Config &config)
+{
+	Display::load(config);
+}
+
 void TaskDisplay::onEnable()
 {
 	Display::onEnable();

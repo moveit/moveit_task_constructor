@@ -142,11 +142,13 @@ void TaskPanel::onInitialize()
 void TaskPanel::save(rviz::Config config) const
 {
 	rviz::Panel::save(config);
+	d_ptr->tasks_widget->save(config.mapMakeChild("tasks_view"));
 }
 
 void TaskPanel::load(const rviz::Config& config)
 {
 	rviz::Panel::load(config);
+	d_ptr->tasks_widget->load(config.mapGetChild("tasks_view"));
 }
 
 void TaskPanel::showStageDockWidget()
@@ -245,6 +247,57 @@ TaskView::TaskView(QWidget *parent)
 	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
 
 	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
+}
+
+void TaskView::save(rviz::Config config)
+{
+	auto writeSplitterSizes = [&config](QSplitter* splitter, const QString& key) {
+		rviz::Config group = config.mapMakeChild(key);
+		for (int s : splitter->sizes()) {
+			rviz::Config item = group.listAppendNew();
+			item.setValue(s);
+		}
+	};
+	writeSplitterSizes(d_ptr->tasks_property_splitter, "property_splitter");
+	writeSplitterSizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
+
+	auto writeColumnSizes = [&config](QTreeView* view, const QString& key) {
+		rviz::Config group = config.mapMakeChild(key);
+		for (int c = 0, end = view->header()->count(); c != end; ++c) {
+			rviz::Config item = group.listAppendNew();
+			item.setValue(view->columnWidth(c));
+		}
+	};
+	writeColumnSizes(d_ptr->tasks_view, "tasks_view_columns");
+	writeColumnSizes(d_ptr->solutions_view, "solutions_view_columns");
+}
+
+void TaskView::load(const rviz::Config &config)
+{
+	if (!config.isValid()) return;
+
+	auto readSizes = [&config](const QString& key) {
+		rviz::Config group = config.mapGetChild(key);
+		QList<int> sizes, empty;
+		for (int i = 0; i < group.listLength(); ++i) {
+			rviz::Config item = group.listChildAt(i);
+			if (item.getType() != rviz::Config::Value) return empty;
+			QVariant value = item.getValue();
+			bool ok = false;
+			int int_value = value.toInt(&ok);
+			if (!ok) return empty;
+			sizes << int_value;
+		}
+		return sizes;
+	};
+	d_ptr->tasks_property_splitter->setSizes(readSizes("property_splitter"));
+	d_ptr->tasks_solutions_splitter->setSizes(readSizes("solutions_splitter"));
+
+	int column = 0;
+	for (int w : readSizes("tasks_view_columns"))
+		d_ptr->tasks_view->setColumnWidth(++column, w);
+	for (int w : readSizes("solutions_view_columns"))
+		d_ptr->tasks_view->setColumnWidth(++column, w);
 }
 
 void TaskView::addTask()
