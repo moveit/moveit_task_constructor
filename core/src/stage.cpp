@@ -290,8 +290,10 @@ void ComputeBase::processFailures(const Stage::SolutionProcessor &processor) con
 }
 
 void ComputeBase::reset() {
-	pimpl()->solutions_.clear();
-	pimpl()->failures_.clear();
+	auto impl = pimpl();
+	impl->solutions_.clear();
+	impl->failures_.clear();
+	impl->num_failures_ = 0u;
 	Stage::reset();
 }
 
