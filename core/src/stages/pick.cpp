@@ -1,13 +1,9 @@
 #include <moveit/task_constructor/stages/pick.h>
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
-#include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <moveit/task_constructor/container.h>
-#include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/stages/move_relative.h>
-#include <moveit/task_constructor/stages/connect.h>
-#include <moveit/task_constructor/stages/modify_planning_scene.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -26,24 +22,6 @@ Pick::Pick(Stage::pointer&& grasp_stage, const std::string& name)
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
 
 	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
-	pipeline_solver_ = std::make_shared<solvers::PipelinePlanner>();
-	pipeline_solver_->setTimeout(8.0);
-	pipeline_solver_->setPlannerId("RRTConnectkConfigDefault");
-
-	{
-		auto move = std::make_unique<MoveTo>("open gripper", pipeline_solver_);
-		PropertyMap& p = move->properties();
-		p.property("group").configureInitFrom(Stage::PARENT, "eef_group");
-		move->setGoal("open");  // TODO: retrieve from grasp stage
-		insert(std::move(move));
-	}
-
-	{
-		auto move = std::make_unique<Connect>("move to object", pipeline_solver_);
-		PropertyMap& p = move->properties();
-		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
-		insert(std::move(move));
-	}
 
 	{
 		auto approach = std::make_unique<MoveRelative>("approach object", cartesian_solver_);

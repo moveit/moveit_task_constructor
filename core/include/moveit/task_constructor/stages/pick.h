@@ -44,7 +44,6 @@ namespace moveit { namespace task_constructor {
 
 namespace solvers {
 MOVEIT_CLASS_FORWARD(CartesianPath)
-MOVEIT_CLASS_FORWARD(PipelinePlanner)
 }
 
 namespace stages {
@@ -63,7 +62,6 @@ namespace stages {
  */
 class Pick : public SerialContainer {
 	solvers::CartesianPathPtr cartesian_solver_;
-	solvers::PipelinePlannerPtr pipeline_solver_;
 	Stage* grasp_stage_ = nullptr;
 	Stage* approach_stage_ = nullptr;
 	Stage* lift_stage_ = nullptr;
@@ -81,7 +79,6 @@ public:
 	}
 
 	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
-	solvers::PipelinePlannerPtr pipelineSolver() { return pipeline_solver_; }
 
 	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
 	                       double min_distance, double max_distance);
