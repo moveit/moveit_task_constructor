@@ -46,18 +46,20 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class GenerateGraspPose;
 
-/** Simple Grasp Stage
+/** base class for simple grasping / ungrasping
  *
- * Given a named pre-grasp and grasp posture the stage generates
- * fully-qualified pre-grasp and grasp robot states, connected
- * by a grasping trajectory of the end-effector.
+ * Given a named pre-grasp and grasp posture the stage generates fully-qualified
+ * pre-grasp and grasp robot states, connected by a grasping trajectory of the end-effector.
+ *
+ * Grasping and UnGrasping only differs in the order of subtasks. Hence, the base class
+ * provides the common functionality for grasping (forward = true) and ungrasping (forward = false).
  */
-class SimpleGrasp : public SerialContainer {
+class SimpleGraspBase : public SerialContainer {
 	moveit::core::RobotModelConstPtr model_;
 	GenerateGraspPose* grasp_generator_ = nullptr;
 
 public:
-	SimpleGrasp(const std::string& name = "grasp");
+	SimpleGraspBase(const std::string& name, bool forward);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	void setMonitoredStage(Stage* monitored);
@@ -99,6 +101,20 @@ public:
 	void setTimeout(double timeout) {
 		properties().set("timeout", timeout);
 	}
+};
+
+
+/// specialization of SimpleGraspBase to realize grasping
+class SimpleGrasp : public SimpleGraspBase {
+public:
+	SimpleGrasp(const std::string& name = "grasp") : SimpleGraspBase(name, true) {}
+};
+
+
+/// specialization of SimpleGraspBase to realize ungrasping
+class SimpleUnGrasp : public SimpleGraspBase {
+public:
+	SimpleUnGrasp(const std::string& name = "ungrasp") : SimpleGraspBase(name, false) {}
 };
 
 } } }
