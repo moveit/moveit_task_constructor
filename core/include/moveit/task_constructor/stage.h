@@ -346,10 +346,8 @@ public:
 	void reset() override;
 
 	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
-	void connect(const InterfaceState& from, const InterfaceState& to,
-	             SubTrajectory&& trajectory);
-	void connect(const InterfaceState& from, const InterfaceState& to,
-	             SubTrajectory&& trajectory, double cost) {
+	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory);
+	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory, double cost) {
 		trajectory.setCost(cost);
 		connect(from, to, std::move(trajectory));
 	}

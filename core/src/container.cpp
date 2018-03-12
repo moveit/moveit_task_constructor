@@ -856,7 +856,6 @@ void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
 	auto impl = pimpl();
 	assert(impl->prevEnds() && impl->nextStarts());
 
-	t.setCreator(impl);
 	// store newly created solution (otherwise it's lost)
 	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
 

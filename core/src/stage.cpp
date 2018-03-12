@@ -83,8 +83,10 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	return f;
 }
 
-void StagePrivate::newSolution(const SolutionBase &solution)
+void StagePrivate::newSolution(SolutionBase &solution)
 {
+	solution.setCreator(this);
+
 	if (introspection_)
 		introspection_->registerSolution(solution);
 
@@ -249,7 +251,6 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 }
 
 SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
-	trajectory.setCreator(this);
 	if (!trajectory.isFailure()) {
 		return *solutions_.insert(std::move(trajectory));
 	} else if (me()->storeFailures()) {
@@ -653,8 +654,7 @@ void Connecting::reset()
 	ComputeBase::reset();
 }
 
-void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
-                         SubTrajectory&& t) {
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& t) {
 	auto impl = pimpl();
 	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
 	trajectory.setStartState(from);

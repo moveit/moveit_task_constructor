@@ -103,7 +103,7 @@ public:
 	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
-	void newSolution(const SolutionBase &current);
+	void newSolution(SolutionBase& current);
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
