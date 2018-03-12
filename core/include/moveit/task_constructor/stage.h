@@ -351,6 +351,8 @@ public:
 		trajectory.setCost(cost);
 		connect(from, to, std::move(trajectory));
 	}
+
+	void newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 };
 
 } }

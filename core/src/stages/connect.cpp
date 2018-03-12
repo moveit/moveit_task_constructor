@@ -41,9 +41,9 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-Connect::Connect(std::string name, const solvers::PlannerInterfacePtr& planner)
+Connect::Connect(std::string name, const GroupPlannerVector& planners)
    : Connecting(name)
-   , planner_(planner)
+   , planner_(planners)
 {
 	auto& p = properties();
 	p.declare<double>("timeout", 10.0, "planning timeout");
@@ -52,25 +52,80 @@ Connect::Connect(std::string name, const solvers::PlannerInterfacePtr& planner)
 	                                    "constraints to maintain during trajectory");
 }
 
+void Connect::reset()
+{
+	Connecting::reset();
+	solutions_.clear();
+	subsolutions_.clear();
+	states_.clear();
+}
+
 void Connect::init(const core::RobotModelConstPtr& robot_model)
 {
 	Connecting::init(robot_model);
-	planner_->init(robot_model);
+
+	InitStageException errors;
+	if (planner_.empty())
+		errors.push_back(*this, "empty set of groups");
+
+	for (const GroupPlannerVector::value_type& pair : planner_) {
+		if (!robot_model->hasJointModelGroup(pair.first))
+			errors.push_back(*this, "invalid group: " + pair.first);
+		else if (!pair.second)
+			errors.push_back(*this, "invalid planner for group: " + pair.first);
+		else
+			pair.second->init(robot_model);
+	}
+
+	if (errors)
+		throw errors;
 }
 
 bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
-	const std::string& group = props.get<std::string>("group");
 	double timeout = props.get<double>("timeout");
-	const moveit::core::JointModelGroup* jmg = from.scene()->getRobotModel()->getJointModelGroup(group);
+	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
-	robot_trajectory::RobotTrajectoryPtr trajectory;
-	if (!planner_->plan(from.scene(), to.scene(), jmg, timeout, trajectory,
-	                    props.get<moveit_msgs::Constraints>("path_constraints")))
-		return false;
+	SolutionSequence::container_type subsolutions;
+	planning_scene::PlanningScenePtr start = from.scene()->diff();
+	const moveit::core::RobotState& goal_state = to.scene()->getCurrentState();
 
-	connect(from, to, trajectory);
+	for (const GroupPlannerVector::value_type& pair : planner_) {
+		// set intermediate goal state
+		planning_scene::PlanningScenePtr end = start->diff();
+		const moveit::core::JointModelGroup *jmg = goal_state.getJointModelGroup(pair.first);
+		std::vector<double> positions;
+		goal_state.copyJointGroupPositions(jmg, positions);
+		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
+
+		robot_trajectory::RobotTrajectoryPtr trajectory;
+		bool success = pair.second->plan(start, to.scene(), jmg, timeout, trajectory, path_constraints);
+
+		// store solution
+		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(trajectory));
+		inserted->setCreator(pimpl_);
+		// push back solution pointer
+		subsolutions.push_back(&*inserted);
+
+		// provide meaningful start/end states
+		states_.emplace_back(InterfaceState(start));
+		subsolutions_.back().setStartState(states_.back());
+		states_.emplace_back(InterfaceState(end));
+		subsolutions_.back().setEndState(states_.back());
+		if (!success) return false;
+
+		// continue from reached state
+		start = end;
+	}
+
+	solutions_.emplace_back(SolutionSequence(std::move(subsolutions), 0.0));
+	newSolution(from, to, solutions_.back());
 	return true;
+}
+
+void Connect::processSolutions(const Stage::SolutionProcessor& processor) const
+{
+
 }
 
 } } }

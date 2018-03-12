@@ -655,11 +655,13 @@ void Connecting::reset()
 }
 
 void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& t) {
-	auto impl = pimpl();
-	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
-	trajectory.setStartState(from);
-	trajectory.setEndState(to);
-	impl->newSolution(trajectory);
+	newSolution(from, to, pimpl()->addTrajectory(std::move(t)));
+}
+
+void Connecting::newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
+	solution.setStartState(from);
+	solution.setEndState(to);
+	pimpl()->newSolution(solution);
 }
 
 std::ostream& operator<<(std::ostream& os, const Stage& stage) {

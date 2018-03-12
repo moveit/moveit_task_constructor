@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
+/* Authors: Robert Haschke, Michael Goerner
    Desc:    Connect arbitrary states by motion planning
 */
 
@@ -47,7 +47,8 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class Connect : public Connecting {
 public:
-	Connect(std::string name, const solvers::PlannerInterfacePtr &planner);
+	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
+	Connect(std::string name, const GroupPlannerVector& planners);
 
 	void setTimeout(const ros::Duration& timeout){
 		setProperty("timeout", timeout.toSec());
@@ -57,11 +58,20 @@ public:
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
-	void init(const moveit::core::RobotModelConstPtr& robot_model);
-	bool compute(const InterfaceState &from, const InterfaceState &to);
+	void reset() override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
+	bool compute(const InterfaceState &from, const InterfaceState &to) override;
+
+	size_t numSolutions() const override { return solutions_.size(); }
+	size_t numFailures() const override { return 0; }
+	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override { return; }
 
 protected:
-	solvers::PlannerInterfacePtr planner_;
+	GroupPlannerVector planner_;
+	std::list<SubTrajectory> subsolutions_;
+	std::list<SolutionSequence> solutions_;
+	std::list<InterfaceState> states_;
 };
 
 } } }
