@@ -270,6 +270,11 @@ void TaskView::save(rviz::Config config)
 	};
 	writeColumnSizes(d_ptr->tasks_view, "tasks_view_columns");
 	writeColumnSizes(d_ptr->solutions_view, "solutions_view_columns");
+
+	const QHeaderView *view = d_ptr->solutions_view->header();
+	rviz::Config group = config.mapMakeChild("solution_sorting");
+	group.mapSetValue("column", view->sortIndicatorSection());
+	group.mapSetValue("order", view->sortIndicatorOrder());
 }
 
 void TaskView::load(const rviz::Config &config)
@@ -296,8 +301,15 @@ void TaskView::load(const rviz::Config &config)
 	int column = 0;
 	for (int w : readSizes("tasks_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
+	column = 0;
 	for (int w : readSizes("solutions_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
+
+	QTreeView *view = d_ptr->solutions_view;
+	rviz::Config group = config.mapGetChild("solution_sorting");
+	int order;
+	if (group.mapGetInt("column", &column) && group.mapGetInt("order", &order))
+		view->sortByColumn(column, static_cast<Qt::SortOrder>(order));
 }
 
 void TaskView::addTask()
@@ -339,10 +351,13 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 
 	// update the SolutionModel
 	QTreeView *view = d_ptr->solutions_view;
+	int sort_column = view->header()->sortIndicatorSection();
+	Qt::SortOrder sort_order = view->header()->sortIndicatorOrder();
+
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
-	view->sortByColumn(-1);
 	view->setModel(m);
+	view->sortByColumn(sort_column, sort_order);
 	if (sm) delete sm;  // we don't store the selection model
 	sm = view->selectionModel();
 
