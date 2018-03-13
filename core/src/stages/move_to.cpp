@@ -152,7 +152,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			target_point = frame * target_point;
 
 			// retain link orientation
-			Eigen::Affine3d target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
+			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
 			target_eigen.translation() = target_point;
 		}
 
