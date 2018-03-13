@@ -46,6 +46,9 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 class Connect : public Connecting {
+protected:
+	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
+
 public:
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(std::string name, const GroupPlannerVector& planners);

@@ -339,6 +339,9 @@ protected:
 
 class ConnectingPrivate;
 class Connecting : public ComputeBase {
+protected:
+	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
+
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);

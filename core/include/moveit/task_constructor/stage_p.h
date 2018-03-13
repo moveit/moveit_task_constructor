@@ -235,6 +235,10 @@ class ConnectingPrivate : public ComputeBasePrivate {
 			return x.first->priority() + x.second->priority() < y.first->priority() + y.second->priority();
 		}
 	};
+
+	template<Interface::Direction other>
+	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
+
 public:
 	inline ConnectingPrivate(Connecting *me, const std::string &name);
 
@@ -247,8 +251,8 @@ public:
 
 private:
 	// get informed when new start or end state becomes available
-	void newStartState(Interface::iterator it, bool updated);
-	void newEndState(Interface::iterator it, bool updated);
+	template<Interface::Direction other>
+	void newState(Interface::iterator it, bool updated);
 
 	// ordered list of pending state pairs
 	ordered<StatePair, StatePairLess> pending;

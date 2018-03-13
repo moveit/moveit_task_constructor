@@ -81,6 +81,39 @@ void Connect::init(const core::RobotModelConstPtr& robot_model)
 		throw errors;
 }
 
+bool Connect::compatible(const InterfaceState& from_state, const InterfaceState& to_state) const
+{
+	if (!Connecting::compatible(from_state, to_state))
+		return false;
+
+	const moveit::core::RobotState& from = from_state.scene()->getCurrentState();
+	const moveit::core::RobotState& to = to_state.scene()->getCurrentState();
+
+	// compose set of joint names we plan for
+	std::set<std::string> planned_joint_names;
+	for (const GroupPlannerVector::value_type& pair : planner_) {
+		const moveit::core::JointModelGroup *jmg = from.getJointModelGroup(pair.first);
+		const auto &names = jmg->getJointModelNames();
+		planned_joint_names.insert(names.begin(), names.end());
+	}
+	// all active joints that we don't plan for should match
+	for (const moveit::core::JointModel* jm : from.getRobotModel()->getJointModels()) {
+		if (planned_joint_names.count(jm->getName()))
+			continue;  // ignore joints we plan for
+
+		const unsigned int num = jm->getVariableCount();
+		Eigen::Map<const Eigen::VectorXd> positions_from (from.getJointPositions(jm), num);
+		Eigen::Map<const Eigen::VectorXd> positions_to (to.getJointPositions(jm), num);
+		if (!positions_from.array().isApprox(positions_to.array())) {
+			ROS_INFO_STREAM_ONCE_NAMED("Connect", "Deviation in joint " << jm->getName()
+			                            << ": [" << positions_from.transpose()
+			                            << "] != [" << positions_to.transpose() << "]");
+			return false;
+		}
+	}
+	return true;
+}
+
 bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
 	double timeout = props.get<double>("timeout");
