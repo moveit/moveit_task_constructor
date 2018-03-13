@@ -314,10 +314,6 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	const StagePrivate *creator = current.creator();
 	auto& children = impl->children();
 
-	if (current.isFailure()) {
-		return;  // don't consider failures
-	}
-
 	// find number of stages before and after creator stage
 	size_t num_before = 0, num_after = 0;
 	for (auto it = children.begin(), end = children.end(); it != end; ++it, ++num_before)
@@ -346,6 +342,8 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 			                              in.second + current.cost() + out.second);
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
+				if (std::isinf(prio.cost()))
+					continue;  // don't propagate failures
 				assert(solution.empty());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
