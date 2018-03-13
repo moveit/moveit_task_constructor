@@ -48,26 +48,30 @@ MOVEIT_CLASS_FORWARD(CartesianPath)
 
 namespace stages {
 
-/** Pick wraps a complete pipeline to pick up an object with a given end effector.
+/** PickPlaceBase wraps the pipeline to pick or place an object with a given end effector.
  *
  * Picking consist of the following sub stages:
- * - reaching to the object + "pre-grasp" end effector posture
  * - linearly approaching the object along an approach direction/twist
  * - "grasp" end effector posture
  * - attach object
  * - lift along along a given direction/twist
  *
+ * Placing consist of the inverse order of stages:
+ * - place down along a given direction
+ * - detach the object
+ * - linearly retract end effector
+ *
  * The end effector postures corresponding to pre-grasp and grasp as well as
  * the end effector's Cartesian pose needs to be provided by an external grasp stage.
  */
-class Pick : public SerialContainer {
+class PickPlaceBase : public SerialContainer {
 	solvers::CartesianPathPtr cartesian_solver_;
 	Stage* grasp_stage_ = nullptr;
 	Stage* approach_stage_ = nullptr;
 	Stage* lift_stage_ = nullptr;
 
 public:
-	Pick(Stage::pointer &&grasp_stage, const std::string& name = "pick");
+	PickPlaceBase(Stage::pointer &&grasp_stage, const std::string& name, bool forward);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -80,10 +84,49 @@ public:
 
 	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
 
-	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
-	                       double min_distance, double max_distance);
-	void setLiftMotion(const geometry_msgs::TwistStamped& motion,
-	                   double min_distance, double max_distance);
+	void setApproachRetract(const geometry_msgs::TwistStamped& motion,
+	                        double min_distance, double max_distance);
+	void setLiftPlace(const geometry_msgs::TwistStamped& motion,
+	                  double min_distance, double max_distance);
 };
+
+
+/// specialization of PickPlaceBase to realize picking
+class Pick : public PickPlaceBase {
+public:
+	Pick(Stage::pointer &&grasp_stage, const std::string& name = "pick")
+	   : PickPlaceBase(std::move(grasp_stage), name, true)
+	{}
+
+	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
+	                       double min_distance, double max_distance) {
+		setApproachRetract(motion, min_distance, max_distance);
+	}
+
+	void setLiftMotion(const geometry_msgs::TwistStamped& motion,
+	                   double min_distance, double max_distance) {
+		setLiftPlace(motion, min_distance, max_distance);
+	}
+};
+
+
+/// specialization of PickPlaceBase to realize placing
+class Place : public PickPlaceBase {
+public:
+	Place(Stage::pointer &&ungrasp_stage, const std::string& name = "place")
+	   : PickPlaceBase(std::move(ungrasp_stage), name, false)
+	{}
+
+	void setRetractMotion(const geometry_msgs::TwistStamped& motion,
+	                      double min_distance, double max_distance) {
+		setApproachRetract(motion, min_distance, max_distance);
+	}
+
+	void setPlaceMotion(const geometry_msgs::TwistStamped& motion,
+	                   double min_distance, double max_distance) {
+		setLiftPlace(motion, min_distance, max_distance);
+	}
+};
+
 
 } } }
