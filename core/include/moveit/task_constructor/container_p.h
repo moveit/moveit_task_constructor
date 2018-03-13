@@ -73,9 +73,10 @@ public:
 	inline const container_type& children() const { return children_; }
 
 	/** Retrieve iterator into children_ pointing to indexed element.
-	 * Negative index counts from end(), i.e. -1 is end(), -2 is --end(), etc.
+	 * Negative index counts from end, i.e. -1 is last, -2 is second last, etc. (if !for_insert)
+	 * If for_insert == true, negative indexes are shifted by one: -1 is end(), -2 is --end(), etc.
 	 * Contrary to std::advance(), iterator limits are considered. */
-	const_iterator position(int index) const;
+	const_iterator position(int index, bool for_insert = false) const;
 
 	/// traversing all stages up to max_depth
 	bool traverseStages(const ContainerBase::StageCallback &processor,

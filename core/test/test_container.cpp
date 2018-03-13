@@ -73,30 +73,30 @@ public:
 	}
 };
 
-TEST(ContainerBase, position) {
+TEST(ContainerBase, positionForInsert) {
 	SerialContainer s;
 	SerialContainerPrivate *impl = s.pimpl();
 
-	EXPECT_EQ(impl->position(0), impl->children().end());
-	EXPECT_EQ(impl->position(1), impl->children().end());
-	EXPECT_EQ(impl->position(-1), impl->children().end());
-	EXPECT_EQ(impl->position(-2), impl->children().end());
+	EXPECT_EQ(impl->position(0, true), impl->children().end());
+	EXPECT_EQ(impl->position(1, true), impl->children().end());
+	EXPECT_EQ(impl->position(-1, true), impl->children().end());
+	EXPECT_EQ(impl->position(-2, true), impl->children().end());
 
 	s.insert(std::make_unique<NamedStage>("0"));
-	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
-	EXPECT_EQ(impl->position(-1), impl->children().end());
-	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "0");
-	EXPECT_EQ(impl->position(-3), impl->children().end());
+	EXPECT_STREQ((*impl->position(0, true))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-1, true), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2, true))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-3, true), impl->children().end());
 
 	s.insert(std::make_unique<NamedStage>("1"));
-	EXPECT_STREQ((*impl->position(0))->name().c_str(), "0");
-	EXPECT_STREQ((*impl->position(1))->name().c_str(), "1");
-	EXPECT_EQ(impl->position(2), impl->children().end());
+	EXPECT_STREQ((*impl->position(0, true))->name().c_str(), "0");
+	EXPECT_STREQ((*impl->position(1, true))->name().c_str(), "1");
+	EXPECT_EQ(impl->position(2, true), impl->children().end());
 
-	EXPECT_EQ(impl->position(-1), impl->children().end());
-	EXPECT_STREQ((*impl->position(-2))->name().c_str(), "1");
-	EXPECT_STREQ((*impl->position(-3))->name().c_str(), "0");
-	EXPECT_EQ(impl->position(-4), impl->children().end());
+	EXPECT_EQ(impl->position(-1, true), impl->children().end());
+	EXPECT_STREQ((*impl->position(-2, true))->name().c_str(), "1");
+	EXPECT_STREQ((*impl->position(-3, true))->name().c_str(), "0");
+	EXPECT_EQ(impl->position(-4, true), impl->children().end());
 }
 
 
@@ -154,7 +154,7 @@ protected:
 		ASSERT_TRUE(num == expected.size()) << "different list lengths";
 
 		// validate position()
-		EXPECT_EQ(container->children().begin(), container->position(-(num+1)));
+		EXPECT_EQ(container->children().begin(), container->position(-num));
 		EXPECT_EQ(container->children().end(), container->position(num));
 
 		// validate order
@@ -165,7 +165,7 @@ protected:
 			EXPECT_EQ(child, *exp_it) << "wrong order";
 			EXPECT_EQ(child->parent()->pimpl(), container) << "wrong parent";
 			EXPECT_EQ(it, container->position(pos)) << "bad forward position resolution";
-			EXPECT_EQ(it, container->position(pos-num-1)) << "bad backward position resolution";
+			EXPECT_EQ(it, container->position(pos-num)) << "bad backward position resolution";
 		}
 	}
 };
