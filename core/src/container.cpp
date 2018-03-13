@@ -98,7 +98,9 @@ bool ContainerBasePrivate::compute()
 }
 
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
-	// TODO need to update existing mapping?
+	// TODO: update internal's prio from external's new priority
+	if (updated)
+		return;
 
 	// create a clone of external state within target interface (child's starts() or ends())
 	InterfaceState& internal = *target->clone(*external);
