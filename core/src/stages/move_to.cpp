@@ -38,6 +38,7 @@
 
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -155,6 +156,16 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			Eigen::Affine3d target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
 			target_eigen.translation() = target_point;
 		}
+
+		// frame at current link pose
+		geometry_msgs::PoseStamped pose_msg;
+		pose_msg.header.frame_id = scene->getPlanningFrame();
+		tf::poseEigenToMsg(scene->getCurrentState().getGlobalLinkTransform(link_name), pose_msg.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+
+		// frame at target pose
+		tf::poseEigenToMsg(target_eigen, pose_msg.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory);
 	}
