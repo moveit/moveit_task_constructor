@@ -56,7 +56,7 @@ ContainerBasePrivate::ContainerBasePrivate(ContainerBase *me, const std::string 
 	pending_forward_.reset(new Interface);
 }
 
-ContainerBasePrivate::const_iterator ContainerBasePrivate::position(int index, bool for_insert) const {
+ContainerBasePrivate::const_iterator ContainerBasePrivate::childByIndex(int index, bool for_insert) const {
 	if (!for_insert && index < 0)
 		--index;
 	const_iterator position = children_.begin();
@@ -166,7 +166,7 @@ bool ContainerBase::insert(Stage::pointer &&stage, int before)
 		return false;
 	}
 
-	ContainerBasePrivate::const_iterator where = pimpl()->position(before, true);
+	ContainerBasePrivate::const_iterator where = pimpl()->childByIndex(before, true);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
 	impl->setHierarchy(this, it);
 	return true;
@@ -174,7 +174,7 @@ bool ContainerBase::insert(Stage::pointer &&stage, int before)
 
 bool ContainerBase::remove(int pos)
 {
-	ContainerBasePrivate::const_iterator it = pimpl()->position(pos, false);
+	ContainerBasePrivate::const_iterator it = pimpl()->childByIndex(pos, false);
 	(*it)->pimpl()->setHierarchy(nullptr, ContainerBasePrivate::iterator());
 	pimpl()->children_.erase(it);
 	return true;
@@ -188,7 +188,7 @@ void ContainerBase::clear()
 void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names)
 {
 	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->position(child, false);
+	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
 	if (child_it == impl->children().end())
 		throw std::runtime_error("invalid child index");
 
@@ -203,7 +203,7 @@ void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_
                                             const std::string& parent_property_name)
 {
 	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->position(child, false);
+	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
 	if (child_it == impl->children().end())
 		throw std::runtime_error("invalid child index");
 
