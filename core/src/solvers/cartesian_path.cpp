@@ -97,7 +97,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
 	                              props.get<double>("step_size"),
 	                              props.get<double>("jump_threshold"),
 	                              isValid);
-	if (achieved_fraction >= props.get<double>("min_fraction")) {
+
+	if (!trajectory.empty()) {
 		result.reset(new robot_trajectory::RobotTrajectory(sandbox_scene->getRobotModel(), jmg));
 		for (const auto& waypoint : trajectory)
 			result->addSuffixWayPoint(waypoint, 0.0);
@@ -106,9 +107,9 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
 		timing.computeTimeStamps(*result,
 		                         props.get<double>("max_velocity_scaling_factor"),
 		                         props.get<double>("max_acceleration_scaling_factor"));
-		return true;
 	}
-	return false;
+
+	return achieved_fraction >= props.get<double>("min_fraction");
 }
 
 } } }

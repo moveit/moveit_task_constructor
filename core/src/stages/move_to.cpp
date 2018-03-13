@@ -86,7 +86,7 @@ void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 }
 
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
-                     SubTrajectory &trajectory, Direction dir) {
+                     SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
 	assert(scene->getRobotModel());
 
@@ -163,7 +163,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	if (success || (robot_trajectory && storeFailures())) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD) robot_trajectory->reverse();
-		trajectory.setTrajectory(robot_trajectory);
+		solution.setTrajectory(robot_trajectory);
 	}
 
 	return success;
