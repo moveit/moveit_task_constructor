@@ -51,16 +51,54 @@ public:
 		ModelData(QAbstractItemModel* m) : model_(m) {}
 
 		QAbstractItemModel* model_;
-		// map of proxy=source QModelIndex's internal pointer to source QModelIndex
-		std::map<void*, QPersistentModelIndex> proxy_to_source_mapping_;
+		// map of proxy=source QModelIndex's internal pointer to source parent's QModelIndex
+		typedef std::map<void*, QPersistentModelIndex> ProxyToSourceMap;
+		ProxyToSourceMap proxy_to_source_mapping_;
+		std::vector<ProxyToSourceMap::iterator> invalidated_mappings_;
 
 		inline void storeMapping(void* src_internal_pointer, const QModelIndex &src_parent) {
-			decltype(proxy_to_source_mapping_)::value_type pair (src_internal_pointer, src_parent);
+			ProxyToSourceMap::value_type pair (src_internal_pointer, src_parent);
 			auto it = proxy_to_source_mapping_.insert(std::move(pair)).first;
 #ifndef NDEBUG
-			Q_ASSERT_X(it->second == src_parent, "TreeMergeProxyModel",
+			Q_ASSERT_X(it->second == src_parent, "FlatMergeProxyModel",
 			           "the internal pointer must map to a unique src_parent");
 #endif
+		}
+
+		// collect all invalidated mappings, return true if we are affected at all
+		bool rowsAboutToBeRemoved(const QModelIndex& src_parent, int start, int end) {
+			std::vector<void*> pointers;
+			pointers.reserve(end - start);
+			for (int row = start; row != end; ++row)
+				pointers.emplace_back(model_->index(row, 0, src_parent).internalPointer());
+
+			Q_ASSERT(invalidated_mappings_.empty());
+			for (auto it = proxy_to_source_mapping_.begin(); it != proxy_to_source_mapping_.end(); ++it) {
+				QModelIndex current = it->second;
+				if (src_parent == current) {  // it is on affected level
+					if (std::find(pointers.begin(), pointers.end(), it->first) != pointers.end())
+						invalidated_mappings_.push_back(it);
+				} else {  // not on affected level, check parents
+					while (current.isValid()) {
+						QModelIndex current_parent = current.parent();
+						if (current_parent == src_parent) {  // current on affected level
+							if (current.row() >= start && current.row() < end)
+								invalidated_mappings_.push_back(it);
+							break;
+						}
+						current = current_parent;
+					}
+				}
+			}
+			return !invalidated_mappings_.empty();
+		}
+		bool rowsRemoved() {
+			bool affected = !invalidated_mappings_.empty();
+			// remove invalidated mappings
+			for (auto it : invalidated_mappings_)
+				proxy_to_source_mapping_.erase(it);
+			invalidated_mappings_.clear();
+			return affected;
 		}
 	};
 
@@ -69,6 +107,11 @@ public:
 
 public:
 	FlatMergeProxyModelPrivate(FlatMergeProxyModel* q_ptr) : q_ptr(q_ptr) {}
+
+	std::vector<ModelData>::iterator find(const QObject* model) {
+		Q_ASSERT(model);
+		return std::find_if(data_.begin(), data_.end(), [model](const auto& data) { return data.model_ == model; });
+	}
 
 	int accumulatedRowCount(std::vector<ModelData>::const_iterator start,
 	                        std::vector<ModelData>::const_iterator end) const {
@@ -159,7 +202,7 @@ public:
 	}
 
 	// remove model referenced by it, call indicates that onRemoveModel() should be called
-	bool removeModel(std::vector<ModelData>::iterator& it, bool call);
+	bool removeModel(std::vector<ModelData>::iterator it, bool call);
 
 private:
 	void _q_sourceDestroyed(QObject*model);
@@ -423,9 +466,7 @@ FlatMergeProxyModel::getModel(const QModelIndex &index) const
 
 bool FlatMergeProxyModel::removeModel(QAbstractItemModel *model)
 {
-	auto it = std::find_if(d_ptr->data_.begin(), d_ptr->data_.end(),
-	                       [model](const auto& data) { return data.model_ == model; });
-	return d_ptr->removeModel(it, true);
+	return d_ptr->removeModel(d_ptr->find(model), true);
 }
 
 bool FlatMergeProxyModel::removeModel(int pos)
@@ -465,7 +506,7 @@ void FlatMergeProxyModel::onRemoveModel(QAbstractItemModel *model)
 }
 
 
-bool FlatMergeProxyModelPrivate::removeModel(std::vector<ModelData>::iterator& it, bool call)
+bool FlatMergeProxyModelPrivate::removeModel(std::vector<ModelData>::iterator it, bool call)
 {
 	if (it == data_.end())
 		return false;
@@ -480,9 +521,7 @@ bool FlatMergeProxyModelPrivate::removeModel(std::vector<ModelData>::iterator& i
 
 void FlatMergeProxyModelPrivate::_q_sourceDestroyed(QObject *model)
 {
-	auto it = std::find_if(data_.begin(), data_.end(),
-	                       [model](const auto& data) { return data.model_ == model; });
-	removeModel(it, false);
+	removeModel(find(model), false);
 }
 
 void FlatMergeProxyModelPrivate::_q_sourceRowsAboutToBeInserted(const QModelIndex &parent, int start, int end)
@@ -501,8 +540,12 @@ void FlatMergeProxyModelPrivate::_q_sourceRowsAboutToBeMoved(const QModelIndex &
 
 void FlatMergeProxyModelPrivate::_q_sourceRowsAboutToBeRemoved(const QModelIndex &parent, int start, int end)
 {
-	int offset = parent.isValid() ? 0 : rowOffset(q_ptr->sender());
-	q_ptr->beginRemoveRows(mapFromSource(parent), start+offset, end+offset);
+	auto it = find(q_ptr->sender());
+	Q_ASSERT(it != data_.end());
+	if (it->rowsAboutToBeRemoved(parent, start, end+1)) {
+		int offset = parent.isValid() ? 0 : rowOffset(q_ptr->sender());
+		q_ptr->beginRemoveRows(mapFromSource(parent), start+offset, end+offset);
+	}
 }
 
 void FlatMergeProxyModelPrivate::_q_sourceRowsInserted(const QModelIndex &parent, int start, int end)
@@ -528,7 +571,11 @@ void FlatMergeProxyModelPrivate::_q_sourceRowsRemoved(const QModelIndex &parent,
 	Q_UNUSED(parent)
 	Q_UNUSED(start)
 	Q_UNUSED(end)
-	q_ptr->endRemoveRows();
+
+	auto it = find(q_ptr->sender());
+	Q_ASSERT(it != data_.end());
+	if (it->rowsRemoved())
+		q_ptr->endRemoveRows();
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)

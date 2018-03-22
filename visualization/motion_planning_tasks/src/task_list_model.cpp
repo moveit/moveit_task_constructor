@@ -212,7 +212,6 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 
 	if (!msg.stages.empty() && remote_task && (remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)) {
 		removeModel(remote_task);
-		delete remote_task;
 		created = true; // re-create remote task after it was destroyed beforehand
 	}
 

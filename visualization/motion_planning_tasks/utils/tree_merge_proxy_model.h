@@ -45,7 +45,7 @@ namespace utils {
 class TreeMergeProxyModelPrivate;
 /** The TreeMergeProxyModel merges several models into one.
  *
- *  Each embedded model gets a new top-level item (with a given name)
+ *  Each embedded model becomes a top-level item (with a given name)
  *  and all the model's top-level items will appear as its children.
  */
 class TreeMergeProxyModel : public QAbstractItemModel {

@@ -143,7 +143,7 @@ public:
 		Q_ASSERT(model && model->columnCount() == columnCount());
 		// pass on stage factory
 		model->setStageFactory(stage_factory_);
-		// just wrap the base class method to further constrain the model type
+		// forward to base class method
 		return FlatMergeProxyModel::insertModel(model, pos);
 	}
 
