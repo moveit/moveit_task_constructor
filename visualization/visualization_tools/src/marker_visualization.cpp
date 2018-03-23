@@ -9,6 +9,9 @@
 #include "rviz/default_plugin/markers/shape_marker.h"
 #include "rviz/default_plugin/markers/text_view_facing_marker.h"
 #include "rviz/default_plugin/markers/triangle_list_marker.h"
+
+#include <rviz/display_context.h>
+#include <rviz/frame_manager.h>
 #include <OgreSceneManager.h>
 
 namespace moveit_rviz_plugin {
@@ -89,6 +92,10 @@ void MarkerVisualization::setVisible(const QString &ns, Ogre::SceneNode* parent_
 
 void MarkerVisualization::createMarkers(rviz::DisplayContext *context, Ogre::SceneNode *parent_scene_node)
 {
+	std::string planning_frame;
+	Ogre::Quaternion quat;
+	Ogre::Vector3 pos;
+
 	for (MarkerData& data : markers_) {
 		if (data.second) continue;
 
@@ -98,7 +105,28 @@ void MarkerVisualization::createMarkers(rviz::DisplayContext *context, Ogre::Sce
 			ns_it->second = parent_scene_node->getCreator()->createSceneNode();
 
 		data.second.reset(createMarker(data.first->type, context, ns_it->second));
-		if (data.second) data.second->setMessage(data.first);
+		if (data.second) {
+			// rviz::MarkerBase::setMessage() initializes the marker
+			data.second->setMessage(data.first);
+			// ... and sets its position + orientation relative to rviz' fixed frame
+			// however, we want the marker to be placed w.r.t. planning frame = msg.header.frame_id
+			Q_ASSERT(!data.first->header.frame_id.empty());
+			if (planning_frame.empty()) { // determine transform once
+				planning_frame = data.first->header.frame_id;
+				// transform from fixed frame to planning_frame
+				tf::TransformListener* tf = context->getFrameManager()->getTFClient();
+				tf::StampedTransform tm;
+				tf->lookupTransform(context->getFrameManager()->getFixedFrame(), planning_frame, ros::Time(), tm);
+				auto q = tm.getRotation();
+				auto p = tm.getOrigin();
+				quat = Ogre::Quaternion(q.w(), -q.x(), -q.y(), -q.z());
+				pos = Ogre::Vector3(p.x(), p.y(), p.z());
+			} else {
+				Q_ASSERT(data.first->header.frame_id == planning_frame);
+			}
+			data.second->setOrientation(quat * data.second->getOrientation());
+			data.second->setPosition(quat * (data.second->getPosition()  - pos));
+		}
 	}
 }
 
