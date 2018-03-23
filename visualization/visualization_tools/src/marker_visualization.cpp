@@ -126,20 +126,20 @@ void MarkerVisualizationProperty::clearMarkers()
 {
 	// detach all existing scene nodes
 	marker_scene_node_->removeAllChildren();
-	// clear list of memorized visible markers
-	visible_markers_.clear();
+	// clear list of hosted markers
+	hosted_markers_.clear();
 }
 
-void MarkerVisualizationProperty::showMarkers(MarkerVisualizationPtr markers)
+void MarkerVisualizationProperty::addMarkers(MarkerVisualizationPtr markers)
 {
 	if (!markers) return;
 
-	// memorize that those markers are visible
-	visible_markers_.push_back(markers);
+	// remember that those markers are hosted
+	hosted_markers_.push_back(markers);
 
 	// attach all scene nodes from markers
 	for (const auto& pair : markers->namespaces()) {
-		// create namespace sub property
+		// create sub property for newly encountered namespace, enabling visibility by default
 		auto ns_it = namespaces_.insert(std::make_pair(pair.first, nullptr)).first;
 		if (ns_it->second == nullptr) {
 			ns_it->second = new rviz::BoolProperty(pair.first, true, "Show/hide markers of this namespace", this,
@@ -166,7 +166,8 @@ void MarkerVisualizationProperty::onNSEnableChanged()
 	rviz::BoolProperty *ns_property = static_cast<rviz::BoolProperty*>(sender());
 	const QString &ns = ns_property->getName();
 	bool visible = ns_property->getBool();
-	for (const auto& markers : visible_markers_)
+	// for all hosted markers, set visibility of given namespace
+	for (const auto& markers : hosted_markers_)
 		markers->setVisible(ns, marker_scene_node_, visible);
 }
 

@@ -22,6 +22,11 @@ namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(MarkerVisualization)
 
+/** Container for all markers created from a vector of Marker messages
+ *
+ *  Markers within a specific namespace are created as children of a
+ *  corresponding scene node, which allows for fast toggling of visibility.
+ */
 class MarkerVisualization
 {
 	// list of all markers, attached to scene nodes in namespaces_
@@ -41,6 +46,11 @@ public:
 };
 
 
+/** rviz property allowing to group markers by their namespace
+ *
+ *  The class remembers which MarkerVisualization instances are currently hosted
+ *  and provides the user interaction to toggle marker visibility by namespace.
+ */
 class MarkerVisualizationProperty: public rviz::BoolProperty
 {
 	Q_OBJECT
@@ -48,8 +58,8 @@ class MarkerVisualizationProperty: public rviz::BoolProperty
 	rviz::DisplayContext* context_ = nullptr;
 	Ogre::SceneNode* parent_scene_node_ = nullptr; // scene node provided externally
 	Ogre::SceneNode* marker_scene_node_ = nullptr; // scene node all markers are attached to
-	std::map<QString, rviz::BoolProperty*> namespaces_;
-	std::list<MarkerVisualizationPtr> visible_markers_;
+	std::map<QString, rviz::BoolProperty*> namespaces_; // rviz properties for encountered namespaces
+	std::list<MarkerVisualizationPtr> hosted_markers_; // list of hosted MarkerVisualization instances
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
@@ -57,8 +67,10 @@ public:
 
 	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
 
+	/// remove all hosted markers from display
 	void clearMarkers();
-	void showMarkers(MarkerVisualizationPtr markers);
+	/// add all markers in MarkerVisualization for display
+	void addMarkers(MarkerVisualizationPtr markers);
 
 public Q_SLOTS:
 	void onEnableChanged();

@@ -310,7 +310,7 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection &selected, const 
 	for (const auto& index : selected_rows) {
 		const DisplaySolutionPtr &solution = task->getSolution(index);
 		display->setSolutionStatus(bool(solution));
-		display->showMarkers(solution);
+		display->addMarkers(solution);
 	}
 }
 

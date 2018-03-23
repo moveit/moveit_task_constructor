@@ -86,7 +86,7 @@ public:
   TaskListModel& getTaskListModel() { return *task_list_model_; }
   TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
   void clearMarkers();
-  void showMarkers(const DisplaySolutionPtr &s);
+  void addMarkers(const DisplaySolutionPtr &s);
 
 protected:
   void onInitialize() override;

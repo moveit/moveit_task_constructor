@@ -238,10 +238,10 @@ void TaskDisplay::clearMarkers() {
 	marker_visual_->clearMarkers();
 }
 
-void TaskDisplay::showMarkers(const DisplaySolutionPtr &s) {
+void TaskDisplay::addMarkers(const DisplaySolutionPtr &s) {
 	if (!s) return;
 	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
-		marker_visual_->showMarkers(s->markersOfSubTrajectory(i));
+		marker_visual_->addMarkers(s->markersOfSubTrajectory(i));
 	}
 }
 
