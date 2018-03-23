@@ -18,6 +18,10 @@ class DisplayContext;
 class MarkerBase;
 }
 
+namespace planning_scene {
+MOVEIT_CLASS_FORWARD(PlanningScene)
+}
+
 namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(MarkerVisualization)
@@ -26,6 +30,8 @@ MOVEIT_CLASS_FORWARD(MarkerVisualization)
  *
  *  Markers within a specific namespace are created as children of a
  *  corresponding scene node, which allows for fast toggling of visibility.
+ *  Placement of markers always refers to the frames of a (fixed) planning scene
+ *  and is transformed once w.r.t. its planning frame during construction.
  */
 class MarkerVisualization
 {
@@ -36,7 +42,8 @@ class MarkerVisualization
 	std::map<QString, Ogre::SceneNode*> namespaces_;
 
 public:
-	MarkerVisualization(const std::vector<visualization_msgs::Marker>& markers);
+	MarkerVisualization(const std::vector<visualization_msgs::Marker>& markers,
+	                    const planning_scene::PlanningScene& end_scene);
 	~MarkerVisualization();
 
 	void createMarkers(rviz::DisplayContext* context, Ogre::SceneNode* scene_node);

@@ -121,7 +121,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		ref_scene = ref_scene->diff();
 
 		if (sub.markers.size())
-			data_[i].markers_.reset(new MarkerVisualization(sub.markers));
+			data_[i].markers_.reset(new MarkerVisualization(sub.markers, *ref_scene));
 		else
 			data_[i].markers_.reset();
 		++i;

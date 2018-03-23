@@ -1,4 +1,5 @@
 #include <moveit/visualization_tools/marker_visualization.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <rviz/default_plugin/markers/marker_base.h>
 #include "rviz/default_plugin/markers/arrow_marker.h"
@@ -12,6 +13,8 @@
 
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
+#include <ros/console.h>
+#include <eigen_conversions/eigen_msg.h>
 #include <OgreSceneManager.h>
 
 namespace moveit_rviz_plugin {
@@ -53,13 +56,40 @@ rviz::MarkerBase* createMarker(int marker_type, rviz::DisplayContext* context, O
 	}
 }
 
-MarkerVisualization::MarkerVisualization(const std::vector<visualization_msgs::Marker> &markers)
+namespace {
+// express marker pose relative to planning frame (of end scene)
+bool toPlanningFrame(visualization_msgs::Marker &marker,
+                     const planning_scene::PlanningScene &scene)
+{
+	if (marker.header.frame_id == scene.getPlanningFrame())
+		return true;
+
+	if (!scene.knowsFrameTransform(marker.header.frame_id)) {
+		ROS_WARN_ONCE("unknown frame '%s' for solution marker in namespace '%s'",
+		              marker.header.frame_id.c_str(), marker.ns.c_str());
+		return false;
+	}
+
+	Eigen::Affine3d pose;
+	tf::poseMsgToEigen(marker.pose, pose);
+	const Eigen::Affine3d tm = scene.getFrameTransform(marker.header.frame_id);
+	tf::poseEigenToMsg(tm * pose, marker.pose);
+	marker.header.frame_id = scene.getPlanningFrame();
+	return true;
+}
+}
+
+MarkerVisualization::MarkerVisualization(const std::vector<visualization_msgs::Marker> &markers,
+                                         const planning_scene::PlanningScene &end_scene)
 {
 	// remember marker message, postpone rviz::MarkerBase creation until later
 	for (const auto& marker : markers) {
 		// create MarkerData with nil Marker pointer
 		MarkerData data;
 		data.first.reset(new visualization_msgs::Marker(marker));
+		// express marker pose relative to planning frame of end_scene
+		if (!toPlanningFrame(const_cast<visualization_msgs::Marker&>(*data.first), end_scene))
+			continue;
 		markers_.push_back(std::move(data));
 		// remember namespace name
 		namespaces_.insert(std::make_pair(QString::fromStdString(marker.ns), nullptr));
