@@ -145,14 +145,12 @@ void MarkerVisualizationProperty::addMarkers(MarkerVisualizationPtr markers)
 			ns_it->second = new rviz::BoolProperty(pair.first, true, "Show/hide markers of this namespace", this,
 			                                       SLOT(onNSEnableChanged()), this);
 		}
-		if (!ns_it->second->getBool())
-			continue; // nothing to show for this namespace
-
 		if (!pair.second) // invalid scene node indicates that we still need to create the rviz markers
 			markers->createMarkers(context_, marker_scene_node_);
-
 		Q_ASSERT(pair.second);
-		marker_scene_node_->addChild(pair.second);
+
+		if (ns_it->second->getBool())
+			marker_scene_node_->addChild(pair.second);
 	}
 }
 
