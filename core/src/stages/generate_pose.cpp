@@ -37,12 +37,8 @@
 #include <moveit/task_constructor/stages/generate_pose.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
-#include <rviz_marker_tools/marker_creation.h>
-
 #include <moveit/planning_scene/planning_scene.h>
-
-#include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <rviz_marker_tools/marker_creation.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -68,27 +64,18 @@ bool GeneratePose::canCompute() const {
 	return scenes_.size() > 0;
 }
 
-bool GeneratePose::compute(){
-	const auto& props = properties();
-
-	geometry_msgs::PoseStamped target_pose = props.get<geometry_msgs::PoseStamped>("pose");
-
-	if(scenes_.empty()) throw std::runtime_error("GeneratePose called without checking canCompute.");
-
+bool GeneratePose::compute() {
+	if (scenes_.empty())
+		return false;
 	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
 	scenes_.pop_front();
 
-	// take care of frame transforms
-	const std::string& frame = target_pose.header.frame_id;
-	if( !frame.empty() && frame != scene->getPlanningFrame() ){
-		if ( !scene->knowsFrameTransform(frame) )
-			throw std::runtime_error("GeneratePose does not know frame '" + frame + "'");
-
-		Eigen::Affine3d pose;
-		tf::poseMsgToEigen(target_pose.pose, pose);
-		pose = scene->getFrameTransform(target_pose.header.frame_id) * pose;
-		tf::poseEigenToMsg(pose, target_pose.pose);
+	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();
+	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+		return false;
 	}
 
 	InterfaceState state(scene);
