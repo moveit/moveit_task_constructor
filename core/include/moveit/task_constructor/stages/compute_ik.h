@@ -24,8 +24,8 @@ namespace moveit { namespace task_constructor { namespace stages {
  * by the wrapped stage. This Cartesian pose (PoseStamped msg) is used as a goal
  * pose for inverse kinematics.
  * Usually, the end effector's parent link or the group's tip link is used as
- * the reference frame, which should be moved to the goal frame. However, any other
- * reference frame can be defined (which is linked to the tip of the group).
+ * the IK frame, which should be moved to the goal frame. However, any other
+ * IK frame can be defined (which is linked to the tip of the group).
  */
 class ComputeIK : public WrapperBase {
 public:
@@ -37,16 +37,16 @@ public:
 	void setTimeout(double timeout);
 	void setEndEffector(const std::string& eef);
 
-	/// setters for reference frame
-	void setReferenceFrame(const geometry_msgs::PoseStamped &pose);
-	void setReferenceFrame(const Eigen::Affine3d& pose, const std::string& frame = "");
+	/// setters for IK frame
+	void setIKFrame(const geometry_msgs::PoseStamped &pose);
+	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
 	template <typename T>
-	void setReferenceFrame(const T& p, const std::string& frame = "") {
+	void setIKFrame(const T& p, const std::string& link) {
 		Eigen::Affine3d pose; pose = p;
-		setReferenceFrame(pose, frame);
+		setIKFrame(pose, link);
 	}
-	void setReferenceFrame(const std::string& frame) {
-		setReferenceFrame(Eigen::Affine3d::Identity(), frame);
+	void setIKFrame(const std::string& link) {
+		setIKFrame(Eigen::Affine3d::Identity(), link);
 	}
 
 	/// setters for target pose

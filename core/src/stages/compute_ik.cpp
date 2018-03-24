@@ -30,10 +30,9 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
 
-	// reference_frame and target_pose are read from the interface
-	p.declare<geometry_msgs::PoseStamped>("reference_frame", "frame to be moved towards goal pose");
-	p.configureInitFrom(Stage::INTERFACE, {"reference_frame"});
-	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for reference frame");
+	// ik_frame and target_pose are read from the interface
+	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
+	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for ik frame");
 	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
 }
 
@@ -45,17 +44,17 @@ void ComputeIK::setEndEffector(const std::string &eef){
 	setProperty("eef", eef);
 }
 
-void ComputeIK::setReferenceFrame(const geometry_msgs::PoseStamped &pose)
+void ComputeIK::setIKFrame(const geometry_msgs::PoseStamped &pose)
 {
-	setProperty("reference_frame", pose);
+	setProperty("ik_frame", pose);
 }
 
-void ComputeIK::setReferenceFrame(const Eigen::Affine3d &pose, const std::string &frame)
+void ComputeIK::setIKFrame(const Eigen::Affine3d &pose, const std::string &link)
 {
 	geometry_msgs::PoseStamped pose_msg;
-	pose_msg.header.frame_id = frame;
+	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
-	setReferenceFrame(pose_msg);
+	setIKFrame(pose_msg);
 }
 
 void ComputeIK::setTargetPose(const geometry_msgs::PoseStamped &pose)
@@ -225,9 +224,9 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		target_pose = sandbox_scene->getFrameTransform(target_pose_msg.header.frame_id) * target_pose;
 	}
 
-	// determine IK link from reference_frame
+	// determine IK link from ik_frame
 	const robot_model::LinkModel* link = nullptr;
-	const boost::any& value = props.get("reference_frame");
+	const boost::any& value = props.get("ik_frame");
 	if (value.empty()) { // property undefined
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second)
@@ -236,15 +235,15 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			return;
 		}
 	} else {
-		geometry_msgs::PoseStamped ref_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
-		Eigen::Affine3d ref_pose;
-		tf::poseMsgToEigen(ref_pose_msg.pose, ref_pose);
-		if (!(link = robot_model->getLinkModel(ref_pose_msg.header.frame_id))) {
-			ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown link: " << ref_pose_msg.header.frame_id);
+		geometry_msgs::PoseStamped ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+		Eigen::Affine3d ik_pose;
+		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
+			ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown link: " << ik_pose_msg.header.frame_id);
 			return;
 		}
-		// transform target pose such that reference frame will reach there if link does
-		target_pose = target_pose * ref_pose.inverse();
+		// transform target pose such that ik frame will reach there if link does
+		target_pose = target_pose * ik_pose.inverse();
 	}
 
 	// validate placed link for collisions
