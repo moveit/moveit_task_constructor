@@ -10,7 +10,10 @@
 #include <Eigen/Geometry>
 
 namespace moveit {
-namespace core { MOVEIT_CLASS_FORWARD(RobotState) }
+namespace core {
+MOVEIT_CLASS_FORWARD(RobotState)
+MOVEIT_CLASS_FORWARD(JointModelGroup)
+}
 }
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -19,6 +22,7 @@ class ComputeIK : public WrapperBase {
 public:
 	ComputeIK(const std::string &name, pointer &&child = Stage::pointer());
 
+	void init(const core::RobotModelConstPtr &robot_model);
 	void onNewSolution(const SolutionBase &s) override;
 
 	void setTimeout(double timeout);

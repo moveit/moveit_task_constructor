@@ -25,7 +25,7 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	auto& p = properties();
 	p.declare<double>("timeout", 1.0);
 	p.declare<std::string>("eef", "name of end-effector group");
-	p.declare<std::string>("group", "", "name of active group (derived from eef if not provided)");
+	p.declare<std::string>("group", "name of active group (derived from eef if not provided)");
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
@@ -112,7 +112,61 @@ bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
 	return res.collision;
 }
 
+bool validateEEF(const PropertyMap& props, const moveit::core::RobotModelConstPtr& robot_model,
+                 const moveit::core::JointModelGroup*& jmg, std::string* msg)
+{
+	try {
+		const std::string& eef = props.get<std::string>("eef");
+		if (!robot_model->hasEndEffector(eef)) {
+			if (msg) *msg = "Unknown end effector: " + eef;
+			return false;
+		} else
+			jmg = robot_model->getEndEffector(eef);
+	} catch (const Property::undefined&) {
+	}
+	return true;
+}
+bool validateGroup(const PropertyMap& props, const moveit::core::RobotModelConstPtr& robot_model,
+                   const moveit::core::JointModelGroup* eef_jmg,
+                   const moveit::core::JointModelGroup*& jmg, std::string* msg)
+{
+	try {
+		const std::string& group = props.get<std::string>("group");
+		if (!(jmg = robot_model->getJointModelGroup(group))) {
+			if (msg) *msg = "Unknown group: " + group;
+			return false;
+		}
+	} catch (const Property::undefined&) {
+		if (eef_jmg) {
+			// derive group from eef
+			const auto& parent = eef_jmg->getEndEffectorParentGroup();
+			jmg = robot_model->getJointModelGroup(parent.first);
+		}
+	}
+	return true;
+}
+
 } // anonymous namespace
+
+void ComputeIK::init(const moveit::core::RobotModelConstPtr& robot_model)
+{
+	InitStageException errors;
+	try { WrapperBase::init(robot_model); } catch (InitStageException &e) { errors.append(e); }
+
+	// all properties can be derived from the interface state
+	// however, if they are defined already now, we validate here
+	const auto& props = properties();
+	const moveit::core::JointModelGroup* eef_jmg = nullptr;
+	const moveit::core::JointModelGroup* jmg = nullptr;
+	std::string msg;
+
+	if (!validateEEF(props, robot_model, eef_jmg, &msg))
+		errors.push_back(*this, msg);
+	if (!validateGroup(props, robot_model, eef_jmg, jmg, &msg))
+		errors.push_back(*this, msg);
+
+	if (errors) throw errors;
+}
 
 void ComputeIK::onNewSolution(const SolutionBase &s)
 {
@@ -124,27 +178,39 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
 	const auto& props = properties();
 
-	const std::string& eef = props.get<std::string>("eef");
-	assert(sandbox_scene->getRobotModel()->hasEndEffector(eef) && "The specified end effector is not defined in the srdf");
-
 	const auto& robot_model = sandbox_scene->getRobotModel();
-	const moveit::core::JointModelGroup* eef_jmg = robot_model->getEndEffector(eef);
-	const std::string& link_name = eef_jmg->getEndEffectorParentGroup().second;
+	const moveit::core::JointModelGroup* eef_jmg = nullptr;
+	const moveit::core::JointModelGroup* jmg = nullptr;
+	std::string msg;
 
-	const std::string& group = props.get<std::string>("group");
-	const moveit::core::JointModelGroup* jmg = group.empty() ? robot_model->getJointModelGroup(eef_jmg->getEndEffectorParentGroup().first)
-	                                                         : robot_model->getJointModelGroup(group);
+	if (!validateEEF(props, robot_model, eef_jmg, &msg)) {
+		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		return;
+	}
+	if (!validateGroup(props, robot_model, eef_jmg, jmg, &msg)) {
+		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		return;
+	}
+	if (!eef_jmg && !jmg) {
+		ROS_WARN_STREAM_NAMED("ComputeIK", "Neither eef nor group are well defined");
+		return;
+	}
+	const robot_model::LinkModel* link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second)
+	                                             : jmg->getOnlyOneEndEffectorTip();
+	if (!link) {
+		ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
+		return;
+	}
+	const std::string& link_name = link->getName();
 
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
-	const robot_model::LinkModel* link = sandbox_state.getLinkModel(link_name);
-	if (!link) throw std::runtime_error("requested link '" + link_name + "' does not exist");
 
 	// compute target pose w.r.t. link_name
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
 	Eigen::Affine3d target_pose;
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
 	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
-		const robot_model::LinkModel* ref_link = sandbox_state.getLinkModel(target_pose_msg.header.frame_id);
+		const robot_model::LinkModel* ref_link = robot_model->getLinkModel(target_pose_msg.header.frame_id);
 		if (!ref_link) throw std::runtime_error("requested reference frame '" + target_pose_msg.header.frame_id + "' is not a robot link");
 
 		const Eigen::Affine3d link_pose = sandbox_state.getGlobalLinkTransform(link_name);
