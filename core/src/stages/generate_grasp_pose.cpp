@@ -53,7 +53,6 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name)
 	p.declare<std::string>("eef", "name of end-effector");
 	p.declare<std::string>("pregrasp", "name of end-effector's pregrasp pose");
 	p.declare<std::string>("object");
-	p.declare<geometry_msgs::TransformStamped>("tool_to_grasp_tf", geometry_msgs::TransformStamped(), "transform from robot tool frame to grasp frame");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
 }
 
@@ -67,18 +66,6 @@ void GenerateGraspPose::setNamedPose(const std::string &pose_name){
 
 void GenerateGraspPose::setObject(const std::string &object){
 	setProperty("object", object);
-}
-
-void GenerateGraspPose::setToolToGraspTF(const geometry_msgs::TransformStamped &transform){
-	setProperty("tool_to_grasp_tf", transform);
-}
-
-void GenerateGraspPose::setToolToGraspTF(const Eigen::Affine3d &transform, const std::string &link){
-	geometry_msgs::TransformStamped stamped;
-	stamped.header.frame_id = link;
-	stamped.child_frame_id = "grasp_frame";
-	tf::transformEigenToMsg(transform, stamped.transform);
-	setToolToGraspTF(stamped);
 }
 
 void GenerateGraspPose::setAngleDelta(double delta){
@@ -116,69 +103,28 @@ bool GenerateGraspPose::compute(){
 		robot_state.setToDefaultValues(jmg , joint_pose);
 	}
 
-	geometry_msgs::TransformStamped tool2grasp_msg = props.get<geometry_msgs::TransformStamped>("tool_to_grasp_tf");
-	const std::string &link_name = jmg->getEndEffectorParentGroup().second;
-	if (tool2grasp_msg.header.frame_id.empty()) // if no frame_id is given
-		tool2grasp_msg.header.frame_id = link_name; // interpret the transform w.r.t. eef link frame
-	Eigen::Affine3d to_grasp;
-	Eigen::Affine3d grasp2tool, grasp2link;
-	tf::transformMsgToEigen(tool2grasp_msg.transform, to_grasp);
-	grasp2tool = to_grasp.inverse();
-
-	const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
-	if (!link) throw std::runtime_error("requested link '" + link_name + "' does not exist");
-
-	if (tool2grasp_msg.header.frame_id != link_name) {
-		// convert to_grasp into transform w.r.t. link (instead of tool frame_id)
-		const robot_model::LinkModel* tool_link = robot_state.getLinkModel(tool2grasp_msg.header.frame_id);
-		if (!tool_link) throw std::runtime_error("requested frame '" + tool2grasp_msg.header.frame_id + "' is not a robot link");
-
-		const Eigen::Affine3d link_pose = robot_state.getGlobalLinkTransform(link);
-		const Eigen::Affine3d tool_pose = robot_state.getGlobalLinkTransform(tool_link);
-		to_grasp = link_pose.inverse() * tool_pose * to_grasp;
-		grasp2link = to_grasp.inverse();
-	} else
-		grasp2link = grasp2tool;
-
 	const std::string& object_name = props.get<std::string>("object");
 	if (!scene_->knowsFrameTransform(object_name))
 		throw std::runtime_error("requested object does not exist or could not be retrieved");
-	const Eigen::Affine3d object_pose = scene_->getFrameTransform(object_name);
+
+	geometry_msgs::PoseStamped target_pose_msg;
+	target_pose_msg.header.frame_id = object_name;
 
 	while( canCompute() ) {
 		// rotate object pose about z-axis
-		Eigen::Affine3d grasp_pose = object_pose * Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ());
-		Eigen::Affine3d link_pose = grasp_pose * grasp2link;
+		Eigen::Affine3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
 		current_angle_ += props.get<double>("angle_delta");
 
 		InterfaceState state(scene_);
-		geometry_msgs::PoseStamped goal_pose_msg;
-		goal_pose_msg.header.frame_id = link_name;
-		tf::poseEigenToMsg(link_pose, goal_pose_msg.pose);
-		state.properties().set("target_pose", goal_pose_msg);
+		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+		state.properties().set("target_pose", target_pose_msg);
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
 		trajectory.setName(std::to_string(current_angle_));
 
-		// add frame at grasp pose
-		goal_pose_msg.header.frame_id = scene_->getPlanningFrame();
-		tf::poseEigenToMsg(grasp_pose, goal_pose_msg.pose);
-		rviz_marker_tools::appendFrame(trajectory.markers(), goal_pose_msg, 0.1, "grasp frame");
-
-		// add end-effector marker visualizing the pose of the end-effector, including all rigidly connected parent links
-		const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
-		const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
-		if (parent != link)  // transform pose into pose suitable to place parent
-			link_pose = link_pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
-
-		robot_state.updateStateWithLinkAt(parent, link_pose);
-		auto appender = [&trajectory](visualization_msgs::Marker& marker, const std::string& name) {
-			marker.ns = "grasp eef";
-			marker.color.a *= 0.5;
-			trajectory.markers().push_back(marker);
-		};
-		generateVisualMarkers(robot_state, appender, parent->getParentJointModel()->getDescendantLinkModels());
+		// add frame at target pose
+		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
 
 		spawn(std::move(state), std::move(trajectory));
 		return true;

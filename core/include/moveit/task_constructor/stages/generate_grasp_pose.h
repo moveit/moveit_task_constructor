@@ -39,8 +39,6 @@
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <Eigen/Geometry>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -55,14 +53,6 @@ public:
 	void setEndEffector(const std::string &eef);
 	void setNamedPose(const std::string &pose_name);
 	void setObject(const std::string &object);
-
-	void setToolToGraspTF(const geometry_msgs::TransformStamped &transform);
-	void setToolToGraspTF(const Eigen::Affine3d& transform, const std::string& link = "");
-	template <typename T>
-	void setToolToGraspTF(const T& t, const std::string& link = "") {
-		Eigen::Affine3d transform; transform = t;
-		setToolToGraspTF(transform, link);
-	}
 	void setAngleDelta(double delta);
 
 protected:

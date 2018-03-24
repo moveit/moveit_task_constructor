@@ -86,13 +86,13 @@ int main(int argc, char** argv){
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
 		gengrasp->setNamedPose("open");
 		gengrasp->setObject("object");
-		gengrasp->setToolToGraspTF(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 		gengrasp->setAngleDelta(-.2);
 		gengrasp->setMonitoredStage(initial_stage);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
 		ik->properties().configureInitFrom(Stage::PARENT, {"eef"});
 		ik->setMaxIKSolutions(8);
+		ik->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 		t.add(std::move(ik));
 	}
 
