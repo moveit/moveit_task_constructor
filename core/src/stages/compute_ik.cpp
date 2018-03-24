@@ -84,13 +84,10 @@ typedef std::vector<std::vector<double>> IKSolutions;
 
 namespace {
 
-bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
-                           const robot_model::JointModelGroup* jmg,
-                           Eigen::Affine3d pose,
-                           const robot_model::LinkModel* link)
+bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene,
+                           Eigen::Affine3d pose, const robot_model::LinkModel* link)
 {
-	planning_scene::PlanningScenePtr sandbox_scene = scene->diff();
-	robot_state::RobotState& robot_state = sandbox_scene->getCurrentStateNonConst();
+	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 
 	// consider all rigidly connected parent links as well
 	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
@@ -102,7 +99,7 @@ bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
 	robot_state.updateCollisionBodyTransforms();
 
 	// disable collision checking for parent links (except links fixed to root)
-	auto& acm = sandbox_scene->getAllowedCollisionMatrixNonConst();
+	auto& acm = scene->getAllowedCollisionMatrixNonConst();
 	std::vector<const std::string*> pending_links;  // parent link names that might be rigidly connected to root
 	while (parent) {
 		pending_links.push_back(&parent->getName());
@@ -250,12 +247,11 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	}
 
 	// validate placed link for collisions
-	bool colliding = isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link);
+	bool colliding = isTargetPoseColliding(sandbox_scene, target_pose, link);
 	if (colliding && !storeFailures()) {
 		ROS_ERROR("eef in collision");
 		return;
 	}
-
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	// markers used for failures
