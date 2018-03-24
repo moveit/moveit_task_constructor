@@ -53,6 +53,12 @@ GeneratePose::GeneratePose(const std::string& name)
 	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
 }
 
+void GeneratePose::reset()
+{
+	MonitoringGenerator::reset();
+	scenes_.clear();
+}
+
 void GeneratePose::onNewSolution(const SolutionBase& s)
 {
 	scenes_.push_back(s.end()->scene()->diff());

@@ -47,6 +47,7 @@ class GeneratePose : public MonitoringGenerator {
 public:
 	GeneratePose(const std::string& name);
 
+	void reset() override;
 	bool canCompute() const override;
 	bool compute() override;
 
@@ -57,7 +58,7 @@ public:
 protected:
 	void onNewSolution(const SolutionBase& s) override;
 
-	std::deque<planning_scene::PlanningSceneConstPtr> scenes_;
+	std::deque<planning_scene::PlanningScenePtr> scenes_;
 };
 
 } } }
