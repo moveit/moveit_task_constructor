@@ -30,8 +30,10 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
 
-	// target_pose is read from the interface
-	p.declare<geometry_msgs::PoseStamped>("target_pose");
+	// reference_frame and target_pose are read from the interface
+	p.declare<geometry_msgs::PoseStamped>("reference_frame", "frame to be moved towards goal pose");
+	p.configureInitFrom(Stage::INTERFACE, {"reference_frame"});
+	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for reference frame");
 	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
 }
 
@@ -43,19 +45,31 @@ void ComputeIK::setEndEffector(const std::string &eef){
 	setProperty("eef", eef);
 }
 
+void ComputeIK::setReferenceFrame(const geometry_msgs::PoseStamped &pose)
+{
+	setProperty("reference_frame", pose);
+}
+
+void ComputeIK::setReferenceFrame(const Eigen::Affine3d &pose, const std::string &frame)
+{
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header.frame_id = frame;
+	tf::poseEigenToMsg(pose, pose_msg.pose);
+	setReferenceFrame(pose_msg);
+}
+
 void ComputeIK::setTargetPose(const geometry_msgs::PoseStamped &pose)
 {
 	setProperty("target_pose", pose);
 }
 
-void ComputeIK::setTargetPose(const Eigen::Affine3d &pose, const std::string &link)
+void ComputeIK::setTargetPose(const Eigen::Affine3d &pose, const std::string &frame)
 {
 	geometry_msgs::PoseStamped pose_msg;
-	pose_msg.header.frame_id = link;
+	pose_msg.header.frame_id = frame;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setTargetPose(pose_msg);
 }
-
 
 void ComputeIK::setMaxIKSolutions(uint32_t n){
 	setProperty("max_ik_solutions", n);
