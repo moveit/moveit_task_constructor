@@ -88,13 +88,12 @@ namespace {
 bool isTargetPoseColliding(const planning_scene::PlanningSceneConstPtr& scene,
                            const robot_model::JointModelGroup* jmg,
                            Eigen::Affine3d pose,
-                           const std::string &link_name)
+                           const robot_model::LinkModel* link)
 {
 	planning_scene::PlanningScenePtr sandbox_scene = scene->diff();
 	robot_state::RobotState& robot_state = sandbox_scene->getCurrentStateNonConst();
 
 	// consider all rigidly connected parent links as well
-	const robot_model::LinkModel* link = robot_state.getLinkModel(link_name);
 	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
 	if (parent != link)  // transform pose into pose suitable to place parent
 		pose = pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
@@ -209,36 +208,53 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		ROS_WARN_STREAM_NAMED("ComputeIK", "Neither eef nor group are well defined");
 		return;
 	}
-	const robot_model::LinkModel* link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second)
-	                                             : jmg->getOnlyOneEndEffectorTip();
-	if (!link) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
-		return;
-	}
-	const std::string& link_name = link->getName();
 
-	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
-
-	// compute target pose w.r.t. link_name
+	// extract target_pose
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
+	if (target_pose_msg.header.frame_id.empty())  // if not provided, assume planning frame
+		target_pose_msg.header.frame_id = sandbox_scene->getPlanningFrame();
+
 	Eigen::Affine3d target_pose;
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
-	if (!target_pose_msg.header.frame_id.empty() && target_pose_msg.header.frame_id != link_name) {
-		const robot_model::LinkModel* ref_link = robot_model->getLinkModel(target_pose_msg.header.frame_id);
-		if (!ref_link) throw std::runtime_error("requested reference frame '" + target_pose_msg.header.frame_id + "' is not a robot link");
+	if (target_pose_msg.header.frame_id != sandbox_scene->getPlanningFrame()) {
+		if (!sandbox_scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
+			ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown reference frame for target pose: " << target_pose_msg.header.frame_id);
+			return;
+		}
+		// transform target_pose w.r.t. planning frame
+		target_pose = sandbox_scene->getFrameTransform(target_pose_msg.header.frame_id) * target_pose;
+	}
 
-		const Eigen::Affine3d link_pose = sandbox_state.getGlobalLinkTransform(link_name);
-		const Eigen::Affine3d ref_pose = sandbox_state.getGlobalLinkTransform(target_pose_msg.header.frame_id);
-		// transform target pose such that the link frame will reach there
-		target_pose = target_pose * ref_pose.inverse() * link_pose;
+	// determine IK link from reference_frame
+	const robot_model::LinkModel* link = nullptr;
+	const boost::any& value = props.get("reference_frame");
+	if (value.empty()) { // property undefined
+		//  determine IK link from eef/group
+		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second)
+		                     : jmg->getOnlyOneEndEffectorTip())) {
+			ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
+			return;
+		}
+	} else {
+		geometry_msgs::PoseStamped ref_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+		Eigen::Affine3d ref_pose;
+		tf::poseMsgToEigen(ref_pose_msg.pose, ref_pose);
+		if (!(link = robot_model->getLinkModel(ref_pose_msg.header.frame_id))) {
+			ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown link: " << ref_pose_msg.header.frame_id);
+			return;
+		}
+		// transform target pose such that reference frame will reach there if link does
+		target_pose = target_pose * ref_pose.inverse();
 	}
 
 	// validate placed link for collisions
-	bool colliding = isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link_name);
+	bool colliding = isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link);
 	if (colliding && !storeFailures()) {
 		ROS_ERROR("eef in collision");
 		return;
 	}
+
+	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	// visualize placed end-effector
 	std::deque<visualization_msgs::Marker> placed_link_markers;
@@ -271,9 +287,6 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	} else
 		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
-	// prepare for marker frame usage
-	target_pose_msg.header.frame_id = s.start()->scene()->getPlanningFrame();
-
 	IKSolutions ik_solutions;
 	bool ignore_collisions = props.get<bool>("ignore_collisions");
 	auto isValid = [sandbox_scene, ignore_collisions, &ik_solutions]
@@ -300,7 +313,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		tried_current_state_as_seed= true;
 
 		size_t previous = ik_solutions.size();
-		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link_name, 1, remaining_time, isValid);
+		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link->getName(), 1, remaining_time, isValid);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();

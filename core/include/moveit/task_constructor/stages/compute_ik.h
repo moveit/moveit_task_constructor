@@ -43,10 +43,10 @@ public:
 	template <typename T>
 	void setReferenceFrame(const T& p, const std::string& frame = "") {
 		Eigen::Affine3d pose; pose = p;
-		setTargetPose(pose, frame);
+		setReferenceFrame(pose, frame);
 	}
 	void setReferenceFrame(const std::string& frame) {
-		setTargetPose(Eigen::Affine3d::Identity(), frame);
+		setReferenceFrame(Eigen::Affine3d::Identity(), frame);
 	}
 
 	/// setters for target pose
