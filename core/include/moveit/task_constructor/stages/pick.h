@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2018, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,60 +32,61 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Robert Haschke */
+/* Authors: Robert Haschke */
 
 #pragma once
 
-#include <utils/tree_merge_proxy_model.h>
 #include <moveit/macros/class_forward.h>
-#include <QVector>
+#include <moveit/task_constructor/container.h>
+#include <geometry_msgs/TwistStamped.h>
 
-namespace moveit_rviz_plugin {
+namespace moveit { namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(BaseTaskModel)
-MOVEIT_CLASS_FORWARD(TaskListModel)
-MOVEIT_CLASS_FORWARD(TaskDisplay)
+namespace solvers {
+MOVEIT_CLASS_FORWARD(CartesianPath)
+MOVEIT_CLASS_FORWARD(PipelinePlanner)
+}
 
-/** MetaTaskListModel maintains a model of multiple registered TaskListModels,
- *  which are grouped in a hierarchical fashion according to the name of the
- *  associated display.
+namespace stages {
+
+/** Pick wraps a complete pipeline to pick up an object with a given end effector.
  *
- *  All TaskPanel instances use the singleton instance of this class
- *  to show all tasks known to the system.
+ * Picking consist of the following sub stages:
+ * - reaching to the object + "pre-grasp" end effector posture
+ * - linearly approaching the object along an approach direction/twist
+ * - "grasp" end effector posture
+ * - attach object
+ * - lift along along a given direction/twist
  *
- *  This is a singleton instance.
+ * The end effector postures corresponding to pre-grasp and grasp as well as
+ * the end effector's Cartesian pose needs to be provided by an external grasp stage.
  */
-class MetaTaskListModel : public utils::TreeMergeProxyModel {
-	Q_OBJECT
-
-	// 1:1 correspondence of displays to models
-	QVector<TaskDisplay*> display_;
-
-	/// class is singleton
-	MetaTaskListModel();
-	MetaTaskListModel(const MetaTaskListModel&) = delete;
-	void operator=(const MetaTaskListModel&) = delete;
-
-	// hide this, as we want to offer another API
-	using utils::TreeMergeProxyModel::insertModel;
-
-private Q_SLOTS:
-	void onRowsRemoved(const QModelIndex &parent, int first, int last);
-	void onDisplayNameChanged(const QString &name);
+class Pick : public SerialContainer {
+	solvers::CartesianPathPtr cartesian_solver_;
+	solvers::PipelinePlannerPtr pipeline_solver_;
+	Stage* grasp_stage_ = nullptr;
+	Stage* approach_stage_ = nullptr;
+	Stage* lift_stage_ = nullptr;
 
 public:
-	static MetaTaskListModel& instance();
+	Pick(Stage::pointer &&grasp_stage, const std::string& name = "pick");
 
-	/// insert a new TaskListModel together with it's associated display
-	bool insertModel(TaskListModel* model, TaskDisplay* display);
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool setData(const QModelIndex &index, const QVariant &value, int role) override;
-	bool removeRows(int row, int count, const QModelIndex &parent) override;
+	void setEndEffector(const std::string& eef) {
+		properties().set<std::string>("eef", eef);
+	}
+	void setObject(const std::string& object) {
+		properties().set<std::string>("object", object);
+	}
 
-	/// retrieve TaskListModel and TaskDisplay corresponding to given index
-	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex &index) const;
-	/// retrieve TaskModel and its source index corresponding to given proxy index
-	std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
+	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
+	solvers::PipelinePlannerPtr pipelineSolver() { return pipeline_solver_; }
+
+	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
+	                       double min_distance, double max_distance);
+	void setLiftMotion(const geometry_msgs::TwistStamped& motion,
+	                   double min_distance, double max_distance);
 };
 
-}
+} } }

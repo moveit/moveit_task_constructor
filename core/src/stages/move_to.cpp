@@ -38,6 +38,7 @@
 
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -86,7 +87,7 @@ void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 }
 
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
-                     SubTrajectory &trajectory, Direction dir) {
+                     SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
 	assert(scene->getRobotModel());
 
@@ -156,6 +157,16 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			target_eigen.translation() = target_point;
 		}
 
+		// frame at current link pose
+		geometry_msgs::PoseStamped pose_msg;
+		pose_msg.header.frame_id = scene->getPlanningFrame();
+		tf::poseEigenToMsg(scene->getCurrentState().getGlobalLinkTransform(link_name), pose_msg.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+
+		// frame at target pose
+		tf::poseEigenToMsg(target_eigen, pose_msg.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory);
 	}
 
@@ -163,7 +174,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	if (success || (robot_trajectory && storeFailures())) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD) robot_trajectory->reverse();
-		trajectory.setTrajectory(robot_trajectory);
+		solution.setTrajectory(robot_trajectory);
 	}
 
 	return success;

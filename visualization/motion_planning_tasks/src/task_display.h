@@ -77,8 +77,10 @@ public:
 
   void loadRobotModel();
 
-  virtual void update(float wall_dt, float ros_dt);
-  virtual void reset();
+  void update(float wall_dt, float ros_dt) override;
+  void reset() override;
+  void save(rviz::Config config) const;
+  void load(const rviz::Config &config);
 
   void setName(const QString& name);
   void setSolutionStatus(bool ok);

@@ -48,6 +48,7 @@
 #include <QAbstractItemModel>
 #include <QTreeView>
 #include <memory>
+#include <QPointer>
 
 namespace ros { class ServiceClient; }
 namespace rviz { class PropertyTreeModel; }
@@ -84,6 +85,10 @@ public:
 	virtual void setStageFactory(const StageFactoryPtr &factory) {}
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
 	unsigned int taskFlags() const { return flags_; }
+	static QVariant flowIcon(moveit::task_constructor::InterfaceFlags f);
+
+	/// retrieve model index associated with given stage id
+	virtual QModelIndex indexFromStageId(size_t id) const = 0;
 
 	/// get solution model for given stage index
 	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;
@@ -118,6 +123,9 @@ class TaskListModel : public utils::FlatMergeProxyModel {
 	// factory used to create stages
 	StageFactoryPtr stage_factory_;
 
+	QPointer<BaseTaskModel> active_task_model_;
+	QPersistentModelIndex highlighted_row_index_;
+
 	void onRemoveModel(QAbstractItemModel *model) override;
 
 public:
@@ -126,10 +134,12 @@ public:
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 	void setSolutionClient(ros::ServiceClient* client);
+	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
+	QVariant data(const QModelIndex &index, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
 	void processTaskDescriptionMessage(const std::string &id, const moveit_task_constructor_msgs::TaskDescription &msg);
@@ -152,6 +162,9 @@ public:
 	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
 	Qt::DropActions supportedDropActions() const override;
 	Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+protected Q_SLOTS:
+	void highlightStage(size_t id);
 };
 
 

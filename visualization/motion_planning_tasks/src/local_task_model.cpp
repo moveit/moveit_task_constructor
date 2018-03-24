@@ -221,6 +221,12 @@ bool LocalTaskModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, 
 	return true;
 }
 
+QModelIndex LocalTaskModel::indexFromStageId(size_t id) const
+{
+	// TODO implement
+	return QModelIndex();
+}
+
 QAbstractItemModel *LocalTaskModel::getSolutionModel(const QModelIndex &index)
 {
 	// TODO implement

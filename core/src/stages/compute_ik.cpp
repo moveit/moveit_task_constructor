@@ -156,7 +156,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	// validate placed link for collisions
 	bool colliding = isTargetPoseColliding(sandbox_scene, eef_jmg, target_pose, link_name);
 	if (colliding && !storeFailures()) {
-		ROS_ERROR("eeg in collision");
+		ROS_ERROR("eef in collision");
 		return;
 	}
 
@@ -174,6 +174,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		generateCollisionMarkers(sandbox_state, appender, visualize_links);
 		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));
 		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
+		solution.setName("eef in collision");
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
@@ -260,6 +261,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 		// mark solution as invalid
 		solution.setCost(std::numeric_limits<double>::infinity());
+		solution.setName("no IK found");
 
 		// ik target link placement
 		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));

@@ -95,6 +95,13 @@ bool MetaTaskListModel::setData(const QModelIndex &index, const QVariant &value,
 	return result;
 }
 
+bool MetaTaskListModel::removeRows(int row, int count, const QModelIndex &parent)
+{
+	if (!parent.isValid())  // forbid removal of top-level items (displays)
+		return false;
+	return TreeMergeProxyModel::removeRows(row, count, parent);
+}
+
 std::pair<TaskListModel*, TaskDisplay*>
 MetaTaskListModel::getTaskListModel(const QModelIndex &index) const
 {

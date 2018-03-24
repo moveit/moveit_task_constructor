@@ -54,7 +54,7 @@ bool FixedState::canCompute() const{
 
 bool FixedState::compute() {
 	spawn(InterfaceState(scene_), 0.0);
-	return ran_= true;
+	return ran_ = true;
 }
 
 } } }

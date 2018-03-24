@@ -76,6 +76,8 @@ class DisplaySolution
 		robot_trajectory::RobotTrajectoryPtr trajectory_;
 		/// optional name of the trajectory
 		std::string name_;
+		/// id of creating stage
+		uint32_t creator_id_;
 		/// rviz markers
 		MarkerVisualizationPtr markers_;
 	};
@@ -91,6 +93,7 @@ public:
 	size_t getWayPointCount() const { return steps_; }
 	bool empty() const { return steps_ == 0; }
 
+	/// pair of trajectory part and way point index within part
 	typedef std::pair<size_t, size_t> IndexPair;
 	IndexPair indexPair(size_t index) const;
 
@@ -113,6 +116,8 @@ public:
 	const std::string& name(size_t index) const {
 		return name(indexPair(index));
 	}
+	uint32_t creatorId(const IndexPair& idx_pair) const;
+
 	const MarkerVisualizationPtr markers(const IndexPair& idx_pair) const;
 	const MarkerVisualizationPtr markers(size_t index) const {
 		return markers(indexPair(index));

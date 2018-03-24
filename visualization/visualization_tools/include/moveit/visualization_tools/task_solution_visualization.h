@@ -127,6 +127,9 @@ private Q_SLOTS:
   void changedSceneEnabled();
   void renderCurrentScene();
 
+Q_SIGNALS:
+  void activeStageChanged(size_t);
+
 protected:
   void setVisibility(); // set visibility of main scene node
   void setVisibility(Ogre::SceneNode* node, Ogre::SceneNode* parent, bool visible);

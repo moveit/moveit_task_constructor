@@ -142,11 +142,13 @@ void TaskPanel::onInitialize()
 void TaskPanel::save(rviz::Config config) const
 {
 	rviz::Panel::save(config);
+	d_ptr->tasks_widget->save(config.mapMakeChild("tasks_view"));
 }
 
 void TaskPanel::load(const rviz::Config& config)
 {
 	rviz::Panel::load(config);
+	d_ptr->tasks_widget->load(config.mapGetChild("tasks_view"));
 }
 
 void TaskPanel::showStageDockWidget()
@@ -155,6 +157,21 @@ void TaskPanel::showStageDockWidget()
 	if (dock) dock->show();
 }
 
+
+// expand all children up to given depth
+void setExpanded(QTreeView *view, const QModelIndex &index, bool expand, int depth = -1)
+{
+	if (!index.isValid())
+		return;
+
+	// recursively expand all children
+	if (depth != 0) {
+		for (int row = 0, rows = index.model()->rowCount(index); row < rows; ++row)
+			setExpanded(view, index.child(row, 0), expand, depth-1);
+	}
+
+	view->setExpanded(index, expand);
+}
 
 TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
    : q_ptr(q_ptr)
@@ -165,6 +182,21 @@ TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
 	StageFactoryPtr factory = getStageFactory();
 	if (factory) meta_model->setMimeTypes( { factory->mimeType() } );
 	tasks_view->setModel(meta_model);
+	// auto-expand newly-inserted top-level items
+	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last){
+		if (parent.isValid() && !parent.parent().isValid()) {
+			for (int row = first; row <= last; ++row) {
+				QModelIndex child = parent.child(row, 0);
+				// expand inserted items
+				setExpanded(tasks_view, child, true);
+				// collapse up to first level
+				setExpanded(tasks_view, child, false, 1);
+				// expand inserted item
+				setExpanded(tasks_view, child, true, 0);
+			}
+			tasks_view->setExpanded(parent, true);  // expand parent group item
+		}
+	});
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -217,6 +249,69 @@ TaskView::TaskView(QWidget *parent)
 	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
 }
 
+void TaskView::save(rviz::Config config)
+{
+	auto writeSplitterSizes = [&config](QSplitter* splitter, const QString& key) {
+		rviz::Config group = config.mapMakeChild(key);
+		for (int s : splitter->sizes()) {
+			rviz::Config item = group.listAppendNew();
+			item.setValue(s);
+		}
+	};
+	writeSplitterSizes(d_ptr->tasks_property_splitter, "property_splitter");
+	writeSplitterSizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
+
+	auto writeColumnSizes = [&config](QTreeView* view, const QString& key) {
+		rviz::Config group = config.mapMakeChild(key);
+		for (int c = 0, end = view->header()->count(); c != end; ++c) {
+			rviz::Config item = group.listAppendNew();
+			item.setValue(view->columnWidth(c));
+		}
+	};
+	writeColumnSizes(d_ptr->tasks_view, "tasks_view_columns");
+	writeColumnSizes(d_ptr->solutions_view, "solutions_view_columns");
+
+	const QHeaderView *view = d_ptr->solutions_view->header();
+	rviz::Config group = config.mapMakeChild("solution_sorting");
+	group.mapSetValue("column", view->sortIndicatorSection());
+	group.mapSetValue("order", view->sortIndicatorOrder());
+}
+
+void TaskView::load(const rviz::Config &config)
+{
+	if (!config.isValid()) return;
+
+	auto readSizes = [&config](const QString& key) {
+		rviz::Config group = config.mapGetChild(key);
+		QList<int> sizes, empty;
+		for (int i = 0; i < group.listLength(); ++i) {
+			rviz::Config item = group.listChildAt(i);
+			if (item.getType() != rviz::Config::Value) return empty;
+			QVariant value = item.getValue();
+			bool ok = false;
+			int int_value = value.toInt(&ok);
+			if (!ok) return empty;
+			sizes << int_value;
+		}
+		return sizes;
+	};
+	d_ptr->tasks_property_splitter->setSizes(readSizes("property_splitter"));
+	d_ptr->tasks_solutions_splitter->setSizes(readSizes("solutions_splitter"));
+
+	int column = 0;
+	for (int w : readSizes("tasks_view_columns"))
+		d_ptr->tasks_view->setColumnWidth(++column, w);
+	column = 0;
+	for (int w : readSizes("solutions_view_columns"))
+		d_ptr->tasks_view->setColumnWidth(++column, w);
+
+	QTreeView *view = d_ptr->solutions_view;
+	rviz::Config group = config.mapGetChild("solution_sorting");
+	int order;
+	if (group.mapGetInt("column", &column) && group.mapGetInt("order", &order))
+		view->sortByColumn(column, static_cast<Qt::SortOrder>(order));
+}
+
 void TaskView::addTask()
 {
 	QModelIndex current = d_ptr->tasks_view->currentIndex();
@@ -245,8 +340,8 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 	// adding task is allowed on top-level items and sub-top-level items
 	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
 	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
-	// removing stuff is allowed if there is any selection / any curren item
-	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid());
+	// removing stuff is allowed any valid selection except top-level items
+	d_ptr->actionRemoveTaskTreeRows->setEnabled(current.isValid() && current.parent().isValid());
 
 	BaseTaskModel *task;
 	QModelIndex task_index;
@@ -256,10 +351,13 @@ void TaskView::onCurrentStageChanged(const QModelIndex &current, const QModelInd
 
 	// update the SolutionModel
 	QTreeView *view = d_ptr->solutions_view;
+	int sort_column = view->header()->sortIndicatorSection();
+	Qt::SortOrder sort_order = view->header()->sortIndicatorOrder();
+
 	QItemSelectionModel *sm = view->selectionModel();
 	QAbstractItemModel *m = task ? task->getSolutionModel(task_index) : nullptr;
-	view->sortByColumn(-1);
 	view->setModel(m);
+	view->sortByColumn(sort_column, sort_order);
 	if (sm) delete sm;  // we don't store the selection model
 	sm = view->selectionModel();
 

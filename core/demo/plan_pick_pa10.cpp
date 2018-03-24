@@ -105,7 +105,7 @@ int main(int argc, char** argv){
 	{
 		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
-		gengrasp->setGripperGraspPose("open");
+		gengrasp->setNamedPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setToolToGraspTF(Eigen::Translation3d(0,0,.05)*
 		                           Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),

@@ -85,6 +85,8 @@ TaskDisplay::TaskDisplay() : Display()
 	                                 this, SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
+	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)),
+	        task_list_model_.get(), SLOT(highlightStage(size_t)));
 
 	marker_visual_ = new MarkerVisualizationProperty("Markers", this);
 
@@ -144,6 +146,16 @@ void TaskDisplay::reset()
 	Display::reset();
 	loadRobotModel();
 	trajectory_visual_->reset();
+}
+
+void TaskDisplay::save(rviz::Config config) const
+{
+	Display::save(config);
+}
+
+void TaskDisplay::load(const rviz::Config &config)
+{
+	Display::load(config);
 }
 
 void TaskDisplay::onEnable()

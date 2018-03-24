@@ -215,8 +215,8 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name)
 
 
 Property::error::error(const std::string& msg)
-   : std::runtime_error("Property: " + msg)
-   , msg_(msg)
+   : std::runtime_error(msg)
+   , msg_("Property: " + msg)
 {}
 
 void Property::error::setName(const std::string& name)

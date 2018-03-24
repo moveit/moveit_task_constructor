@@ -1,11 +1,8 @@
 #include <moveit/task_constructor/task.h>
 
 #include <moveit/task_constructor/stages/current_state.h>
-#include <moveit/task_constructor/stages/gripper.h>
-#include <moveit/task_constructor/stages/move.h>
-#include <moveit/task_constructor/stages/generate_grasp_pose.h>
-#include <moveit/task_constructor/stages/cartesian_position_motion.h>
-#include <moveit/task_constructor/stages/compute_ik.h>
+#include <moveit/task_constructor/stages/simple_grasp.h>
+#include <moveit/task_constructor/stages/pick.h>
 
 #include <ros/ros.h>
 #include <moveit_msgs/CollisionObject.h>
@@ -44,78 +41,31 @@ int main(int argc, char** argv){
 	Task t;
 
 	Stage* initial_stage = nullptr;
+	auto initial = std::make_unique<stages::CurrentState>("current state");
+	initial_stage = initial.get();
+	t.add(std::move(initial));
 
-	{
-		auto initial = std::make_unique<stages::CurrentState>("current state");
-		initial_stage = initial.get();
-		t.add(std::move(initial));
-	}
+	auto grasp_generator = std::make_unique<stages::SimpleGrasp>();
+	grasp_generator->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
+	grasp_generator->setAngleDelta(.2);
+	grasp_generator->setPreGraspPose("open");
+	grasp_generator->setGraspPose("closed");
+	grasp_generator->setMonitoredStage(initial_stage);
 
-	{
-		auto move= std::make_unique<stages::Gripper>("open gripper");
-		move->setEndEffector("left_gripper");
-		move->setTo("open");
-		t.add(std::move(move));
-	}
+	auto pick = std::make_unique<stages::Pick>(std::move(grasp_generator));
+	pick->setProperty("eef", std::string("left_gripper"));
+	pick->setProperty("object", std::string("object"));
+	geometry_msgs::TwistStamped approach;
+	approach.header.frame_id = "l_gripper_tool_frame";
+	approach.twist.linear.x = 1.0;
+	pick->setApproachMotion(approach, 0.03, 0.1);
 
-	{
-		auto move= std::make_unique<stages::Move>("move to pre-grasp");
-		move->setGroup("left_arm");
-		move->setPlannerId("RRTConnectkConfigDefault");
-		move->setTimeout(8.0);
-		t.add(std::move(move));
-	}
+	geometry_msgs::TwistStamped lift;
+	lift.header.frame_id = "base_link";
+	lift.twist.linear.z = 1.0;
+	pick->setLiftMotion(lift, 0.03, 0.05);
 
-	{
-		auto move= std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		move->addSolutionCallback(std::bind(&Introspection::publishSolution, &t.introspection(), std::placeholders::_1));
-		move->setGroup("left_arm");
-		move->setLink("l_gripper_tool_frame");
-		move->setMinMaxDistance(.03, 0.1);
-		move->setCartesianStepSize(0.02);
-
-		geometry_msgs::PointStamped target;
-		target.header.frame_id= "object";
-		move->towards(target);
-		t.add(std::move(move));
-	}
-
-	{
-		auto gengrasp= std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
-		gengrasp->setEndEffector("left_gripper");
-		gengrasp->setGripperGraspPose("open");
-		gengrasp->setObject("object");
-		gengrasp->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
-		gengrasp->setAngleDelta(.2);
-		gengrasp->setMonitoredStage(initial_stage);
-
-		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
-		ik->setEndEffector("left_gripper");
-		t.add(std::move(ik));
-	}
-
-	{
-		auto move= std::make_unique<stages::Gripper>("grasp");
-		move->setEndEffector("left_gripper");
-		move->setAttachLink("l_gripper_tool_frame");
-		move->setTo("closed");
-		move->graspObject("object");
-		t.add(std::move(move));
-	}
-
-	{
-		auto move= std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->setGroup("left_arm");
-		move->setLink("l_gripper_tool_frame");
-		move->setMinMaxDistance(0.03, 0.05);
-		move->setCartesianStepSize(0.01);
-
-		geometry_msgs::Vector3Stamped direction;
-		direction.header.frame_id= "base_link";
-		direction.vector.z= 1.0;
-		move->along(direction);
-		t.add(std::move(move));
-	}
+	t.add(std::move(pick));
 
 	try {
 		t.plan();

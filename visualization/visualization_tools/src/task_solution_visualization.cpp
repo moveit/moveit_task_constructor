@@ -446,6 +446,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
   moveit::core::RobotStateConstPtr robot_state;
   planning_scene::PlanningSceneConstPtr scene;
   if (index == displaying_solution_->getWayPointCount()) {
+      // render last state
       scene = displaying_solution_->scene(index);
       renderPlanningScene (scene);
       robot_state.reset(new moveit::core::RobotState(scene->getCurrentState()));
@@ -454,8 +455,11 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
     scene = displaying_solution_->scene(idx_pair);
 
     if (previous_index < 0 ||
-        displaying_solution_->indexPair(previous_index).first != idx_pair.first)
+        displaying_solution_->indexPair(previous_index).first != idx_pair.first) {
+      // switch to new stage: show new planning scene
       renderPlanningScene (scene);
+      Q_EMIT activeStageChanged(displaying_solution_->creatorId(idx_pair));
+    }
     robot_state = displaying_solution_->getWayPointPtr(idx_pair);
   }
 
