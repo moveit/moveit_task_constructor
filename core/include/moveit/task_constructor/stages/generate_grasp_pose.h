@@ -38,16 +38,15 @@
 
 #pragma once
 
-#include <moveit/task_constructor/stage.h>
+#include <moveit/task_constructor/stages/generate_pose.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-class GenerateGraspPose : public MonitoringGenerator {
+class GenerateGraspPose : public GeneratePose {
 public:
 	GenerateGraspPose(const std::string& name);
 
-	void reset() override;
-	bool canCompute() const override;
+	void init(const core::RobotModelConstPtr &robot_model) override;
 	bool compute() override;
 
 	void setEndEffector(const std::string &eef);
@@ -57,10 +56,6 @@ public:
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;
-
-protected:
-	planning_scene::PlanningScenePtr scene_;
-	double current_angle_ = 0.0;
 };
 
 } } }

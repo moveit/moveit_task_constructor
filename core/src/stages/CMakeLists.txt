@@ -4,8 +4,8 @@ add_library(${PROJECT_NAME}_stages
 
 	${PROJECT_INCLUDE}/stages/current_state.h
 	${PROJECT_INCLUDE}/stages/fixed_state.h
-	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
 	${PROJECT_INCLUDE}/stages/generate_pose.h
+	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 
 	${PROJECT_INCLUDE}/stages/connect.h
