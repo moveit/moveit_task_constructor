@@ -226,6 +226,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 	// determine IK link from ik_frame
 	const robot_model::LinkModel* link = nullptr;
+	geometry_msgs::PoseStamped ik_pose_msg;
 	const boost::any& value = props.get("ik_frame");
 	if (value.empty()) { // property undefined
 		//  determine IK link from eef/group
@@ -234,8 +235,10 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
 			return;
 		}
+		ik_pose_msg.header.frame_id = link->getName();
+		ik_pose_msg.pose.orientation.w = 1.0;
 	} else {
-		geometry_msgs::PoseStamped ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+		ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 		Eigen::Affine3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
 		if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
@@ -255,25 +258,29 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
+	// markers used for failures
+	std::deque<visualization_msgs::Marker> failure_markers;
+	// frames at target pose and ik frame
+	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "ik frame");
+	rviz_marker_tools::appendFrame(failure_markers, ik_pose_msg, 0.1, "ik frame");
 	// visualize placed end-effector
-	std::deque<visualization_msgs::Marker> placed_link_markers;
-	auto appender = [&placed_link_markers](visualization_msgs::Marker& marker, const std::string& name) {
+	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& name) {
 		marker.ns = "ik target";
 		marker.color.a *= 0.5;
-		placed_link_markers.push_back(marker);
+		failure_markers.push_back(marker);
 	};
-	const auto& visualize_links = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
-	                              ->getParentJointModel()->getDescendantLinkModels();
+	const auto& link_to_visualize = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
+	                                ->getParentJointModel()->getDescendantLinkModels();
 	if (colliding) {
 		SubTrajectory solution;
-		generateCollisionMarkers(sandbox_state, appender, visualize_links);
-		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));
+		generateCollisionMarkers(sandbox_state, appender, link_to_visualize);
+		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
 		solution.setName("eef in collision");
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
-		generateVisualMarkers(sandbox_state, appender, visualize_links);
+		generateVisualMarkers(sandbox_state, appender, link_to_visualize);
 
 
 	// determine joint values of robot pose to compare IK solution with for costs
@@ -323,8 +330,9 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
 			SubTrajectory solution;
 
-			// frame at target pose
+			// frames at target pose and ik frame
 			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
+			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
 			if (succeeded)
 				// compute cost as distance to compare_pose
@@ -348,15 +356,12 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
 		SubTrajectory solution;
 
-		// frame at target pose
-		rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
-
 		// mark solution as invalid
 		solution.setCost(std::numeric_limits<double>::infinity());
 		solution.setName("no IK found");
 
 		// ik target link placement
-		std::copy(placed_link_markers.begin(), placed_link_markers.end(), std::back_inserter(solution.markers()));
+		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 
 		spawn(InterfaceState(scene), std::move(solution));
 	}
