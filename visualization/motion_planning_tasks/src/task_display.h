@@ -39,6 +39,7 @@
 #pragma once
 
 #include <rviz/display.h>
+#include <moveit/visualization_tools/task_solution_visualization.h>
 
 #ifndef Q_MOC_RUN
 #include "job_queue.h"
@@ -63,8 +64,6 @@ namespace moveit_rviz_plugin
 {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
-class TaskSolutionVisualization;
-class MarkerVisualizationProperty;
 class TaskListModel;
 
 class TaskDisplay : public rviz::Display
@@ -87,8 +86,9 @@ public:
 
   TaskListModel& getTaskListModel() { return *task_list_model_; }
   TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
-  void clearMarkers();
-  void addMarkers(const DisplaySolutionPtr &s);
+
+  inline void clearMarkers() { trajectory_visual_->clearMarkers(); }
+  inline void addMarkers(const DisplaySolutionPtr &s) { trajectory_visual_->addMarkers(s); }
 
 protected:
   void onInitialize() override;
@@ -132,7 +132,6 @@ protected:
   // Properties
   rviz::StringProperty* robot_description_property_;
   rviz::RosTopicProperty* task_solution_topic_property_;
-  MarkerVisualizationProperty* marker_visual_;
   rviz::Property* tasks_property_;
 };
 

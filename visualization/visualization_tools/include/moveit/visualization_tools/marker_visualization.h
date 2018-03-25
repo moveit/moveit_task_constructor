@@ -21,6 +21,9 @@ class MarkerBase;
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(RobotState)
+} }
 
 namespace moveit_rviz_plugin {
 
@@ -36,20 +39,48 @@ MOVEIT_CLASS_FORWARD(MarkerVisualization)
 class MarkerVisualization
 {
 	// list of all markers, attached to scene nodes in namespaces_
-	typedef std::pair<visualization_msgs::MarkerConstPtr, std::shared_ptr<rviz::MarkerBase>> MarkerData;
+	struct MarkerData {
+		visualization_msgs::MarkerPtr msg_;
+		std::shared_ptr<rviz::MarkerBase> marker_;
+
+		MarkerData(const visualization_msgs::Marker& marker);
+	};
+	struct NamespaceData {
+		Ogre::SceneNode* ns_node_ = nullptr;
+		// markers grouped by frame
+		std::map<std::string, Ogre::SceneNode*> frames_;
+	};
+
+	// list of all markers
 	std::deque<MarkerData> markers_;
 	// markers grouped by their namespace
-	std::map<QString, Ogre::SceneNode*> namespaces_;
+	std::map<std::string, NamespaceData> namespaces_;
+
+	// planning_frame_ of scene
+	std::string planning_frame_;
+	// flag indicating that markers were created
+	bool markers_created_ = false;
 
 public:
 	MarkerVisualization(const std::vector<visualization_msgs::Marker>& markers,
 	                    const planning_scene::PlanningScene& end_scene);
 	~MarkerVisualization();
 
-	void createMarkers(rviz::DisplayContext* context, Ogre::SceneNode* scene_node);
-	const std::map<QString, Ogre::SceneNode*>& namespaces() const { return namespaces_; }
+	/// did we successfully created all markers (and scene nodes)?
+	bool created() const { return markers_created_; }
+	/// create markers (placed at planning frame of scene)
+	bool createMarkers(rviz::DisplayContext* context, Ogre::SceneNode* scene_node);
+	/// update marker position/orientation based on frames of given scene + robot_state
+	void update(const planning_scene::PlanningScene &end_scene,
+	            const moveit::core::RobotState &robot_state);
 
+	const std::map<std::string, NamespaceData>& namespaces() const { return namespaces_; }
 	void setVisible(const QString &ns, Ogre::SceneNode* parent_scene_node, bool visible);
+
+private:
+	void update(MarkerData &data,
+	            const planning_scene::PlanningScene &end_scene,
+	            const moveit::core::RobotState &robot_state) const;
 };
 
 
@@ -67,6 +98,7 @@ class MarkerVisualizationProperty: public rviz::BoolProperty
 	Ogre::SceneNode* marker_scene_node_ = nullptr; // scene node all markers are attached to
 	std::map<QString, rviz::BoolProperty*> namespaces_; // rviz properties for encountered namespaces
 	std::list<MarkerVisualizationPtr> hosted_markers_; // list of hosted MarkerVisualization instances
+	rviz::BoolProperty* all_markers_at_once_;
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
@@ -76,12 +108,21 @@ public:
 
 	/// remove all hosted markers from display
 	void clearMarkers();
-	/// add all markers in MarkerVisualization for display
+	/// add markers in MarkerVisualization for display
 	void addMarkers(MarkerVisualizationPtr markers);
+	/// update pose of all markers
+	void update(const planning_scene::PlanningScene &scene,
+	            const moveit::core::RobotState &robot_state);
+
+	bool allAtOnce() const;
 
 public Q_SLOTS:
 	void onEnableChanged();
 	void onNSEnableChanged();
+	void onAllAtOnceChanged();
+
+Q_SIGNALS:
+	void allAtOnceChanged(bool);
 };
 
 } // namespace moveit_rviz_plugin
