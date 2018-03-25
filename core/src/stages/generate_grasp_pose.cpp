@@ -153,9 +153,10 @@ bool GenerateGraspPose::compute(){
 
 		InterfaceState state(scene_);
 		geometry_msgs::PoseStamped goal_pose_msg;
-		goal_pose_msg.header.frame_id = link_name;
+		goal_pose_msg.header.frame_id = scene_->getPlanningFrame();
 		tf::poseEigenToMsg(link_pose, goal_pose_msg.pose);
 		state.properties().set("target_pose", goal_pose_msg);
+		state.properties().set("target_link", link_name);
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
