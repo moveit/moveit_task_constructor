@@ -98,6 +98,7 @@ class MarkerVisualizationProperty: public rviz::BoolProperty
 	Ogre::SceneNode* marker_scene_node_ = nullptr; // scene node all markers are attached to
 	std::map<QString, rviz::BoolProperty*> namespaces_; // rviz properties for encountered namespaces
 	std::list<MarkerVisualizationPtr> hosted_markers_; // list of hosted MarkerVisualization instances
+	rviz::BoolProperty* all_markers_at_once_;
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
@@ -107,15 +108,21 @@ public:
 
 	/// remove all hosted markers from display
 	void clearMarkers();
-	/// add all markers in MarkerVisualization for display
+	/// add markers in MarkerVisualization for display
 	void addMarkers(MarkerVisualizationPtr markers);
 	/// update pose of all markers
 	void update(const planning_scene::PlanningScene &scene,
 	            const moveit::core::RobotState &robot_state);
 
+	bool allAtOnce() const;
+
 public Q_SLOTS:
 	void onEnableChanged();
 	void onNSEnableChanged();
+	void onAllAtOnceChanged();
+
+Q_SIGNALS:
+	void allAtOnceChanged(bool);
 };
 
 } // namespace moveit_rviz_plugin

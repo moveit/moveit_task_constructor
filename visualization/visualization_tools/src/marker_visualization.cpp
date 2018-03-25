@@ -217,6 +217,9 @@ void MarkerVisualization::update(const planning_scene::PlanningScene &end_scene,
 MarkerVisualizationProperty::MarkerVisualizationProperty(const QString &name, rviz::Property *parent)
    : rviz::BoolProperty(name, true, "Enable/disable markers", parent)
 {
+	all_markers_at_once_ = new rviz::BoolProperty("All at once?", false, "Show all markers of multiple subsolutions at once?",
+	                                              this, SLOT(onAllAtOnceChanged()), this);
+
 	connect(this, SIGNAL(changed()), this, SLOT(onEnableChanged()));
 }
 
@@ -278,6 +281,11 @@ void MarkerVisualizationProperty::update(const planning_scene::PlanningScene &sc
 	}
 }
 
+bool MarkerVisualizationProperty::allAtOnce() const
+{
+	return all_markers_at_once_->getBool();
+}
+
 void MarkerVisualizationProperty::onEnableChanged()
 {
 	setVisibility(marker_scene_node_, parent_scene_node_, getBool());
@@ -291,6 +299,11 @@ void MarkerVisualizationProperty::onNSEnableChanged()
 	// for all hosted markers, set visibility of given namespace
 	for (const auto& markers : hosted_markers_)
 		markers->setVisible(ns, marker_scene_node_, visible);
+}
+
+void MarkerVisualizationProperty::onAllAtOnceChanged()
+{
+	Q_EMIT allAtOnceChanged(all_markers_at_once_->getBool());
 }
 
 } // namespace moveit_rviz_plugin

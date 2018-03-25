@@ -155,6 +155,7 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
   octree_coloring_property_->addOption("Cell Probability", OCTOMAP_PROBABLILTY_COLOR);
 
   marker_visual_ = new MarkerVisualizationProperty("Markers", parent);
+  connect(marker_visual_, SIGNAL(allAtOnceChanged(bool)), this, SLOT(onAllAtOnceChanged(bool)));
 }
 
 TaskSolutionVisualization::~TaskSolutionVisualization()
@@ -337,6 +338,18 @@ void TaskSolutionVisualization::interruptCurrentDisplay()
     drop_displaying_solution_ = true;
 }
 
+void TaskSolutionVisualization::onAllAtOnceChanged(bool all_at_once)
+{
+  if (!displaying_solution_)
+    return;
+  clearMarkers();
+
+  if (all_at_once)
+    addMarkers(displaying_solution_);
+  else if (current_state_ >= 0)
+    renderWayPoint(current_state_, -1);
+}
+
 float TaskSolutionVisualization::getStateDisplayTime()
 {
   std::string tm = state_display_time_property_->getStdString();
@@ -465,6 +478,11 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
         displaying_solution_->indexPair(previous_index).first != idx_pair.first) {
       // switch to new stage: show new planning scene
       renderPlanningScene (scene);
+      // switch to markers of next sub trajectory?
+      if (!marker_visual_->allAtOnce()) {
+          marker_visual_->clearMarkers();
+          marker_visual_->addMarkers(displaying_solution_->markersOfSubTrajectory(idx_pair.first));
+      }
       Q_EMIT activeStageChanged(displaying_solution_->creatorId(idx_pair));
     }
     robot_state = displaying_solution_->getWayPointPtr(idx_pair);
@@ -534,8 +552,10 @@ void TaskSolutionVisualization::clearMarkers()
 
 void TaskSolutionVisualization::addMarkers(const moveit_rviz_plugin::DisplaySolutionPtr &s)
 {
-	if (!s) return;
-	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
+	if (!s || (!marker_visual_->allAtOnce() && s->numSubSolutions() > 1))
+		return;
+
+	for (size_t i = 0, end = s->numSubSolutions(); i != end; ++i) {
 		marker_visual_->addMarkers(s->markersOfSubTrajectory(i));
 	}
 }
