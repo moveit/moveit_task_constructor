@@ -38,7 +38,7 @@
 
 #include <moveit/task_constructor/container.h>
 #include <moveit/macros/class_forward.h>
-#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
 
 namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
@@ -76,14 +76,17 @@ public:
 		properties().set<std::string>("grasp", grasp);
 	}
 
-	void setToolToGraspTF(const geometry_msgs::TransformStamped &transform) {
-		properties().set("tool_to_grasp_tf", transform);
+	void setIKFrame(const geometry_msgs::PoseStamped &transform) {
+		properties().set("ik_frame", transform);
 	}
-	void setToolToGraspTF(const Eigen::Affine3d& transform, const std::string& link = "");
+	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
 	template <typename T>
-	void setToolToGraspTF(const T& t, const std::string& link = "") {
+	void setIKFrame(const T& t, const std::string& link) {
 		Eigen::Affine3d transform; transform = t;
-		setToolToGraspTF(transform, link);
+		setIKFrame(transform, link);
+	}
+	void setIKFrame(const std::string& link) {
+		setIKFrame(Eigen::Affine3d::Identity(), link);
 	}
 
 	void setAngleDelta(double angle_delta) {

@@ -57,12 +57,12 @@ SimpleGrasp::SimpleGrasp(const std::string& name)
 		grasp_generator_ = gengrasp.get();
 
 		auto ik = std::make_unique<ComputeIK>("compute ik", std::move(gengrasp));
-		const std::initializer_list<std::string>& grasp_prop_names = { "eef", "pregrasp", "object", "angle_delta", "tool_to_grasp_tf" };
+		const std::initializer_list<std::string>& grasp_prop_names = { "eef", "pregrasp", "object", "angle_delta" };
 		ik->exposePropertiesOfChild(0, grasp_prop_names);
 		insert(std::move(ik));
 
 		exposePropertiesOfChild(-1, grasp_prop_names);
-		exposePropertiesOfChild(-1, { "max_ik_solutions", "timeout" });
+		exposePropertiesOfChild(-1, { "max_ik_solutions", "timeout", "ik_frame" });
 	}
 	{
 		auto allow_touch = std::make_unique<ModifyPlanningScene>("allow object collision");
@@ -124,12 +124,11 @@ void SimpleGrasp::setMonitoredStage(Stage* monitored)
 	grasp_generator_->setMonitoredStage(monitored);
 }
 
-void SimpleGrasp::setToolToGraspTF(const Eigen::Affine3d& transform, const std::string& link) {
-	geometry_msgs::TransformStamped stamped;
-	stamped.header.frame_id = link;
-	stamped.child_frame_id = "grasp_frame";
-	tf::transformEigenToMsg(transform, stamped.transform);
-	setToolToGraspTF(stamped);
+void SimpleGrasp::setIKFrame(const Eigen::Affine3d& pose, const std::string& link) {
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header.frame_id = link;
+	tf::poseEigenToMsg(pose, pose_msg.pose);
+	setIKFrame(pose_msg);
 }
 
 } } }

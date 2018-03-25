@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 	t.add(std::move(initial));
 
 	auto grasp_generator = std::make_unique<stages::SimpleGrasp>();
-	grasp_generator->setToolToGraspTF(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
+	grasp_generator->setIKFrame(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
 	grasp_generator->setAngleDelta(.2);
 	grasp_generator->setPreGraspPose("open");
 	grasp_generator->setGraspPose("closed");
