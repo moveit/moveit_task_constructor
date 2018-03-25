@@ -88,8 +88,6 @@ TaskDisplay::TaskDisplay() : Display()
 	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)),
 	        task_list_model_.get(), SLOT(highlightStage(size_t)));
 
-	marker_visual_ = new MarkerVisualizationProperty("Markers", this);
-
 	tasks_property_ =
 	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
@@ -103,7 +101,6 @@ void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
-	marker_visual_->onInitialize(scene_node_, context_);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	// displays are loaded before panels, hence wait a little bit for the panel to be loaded
@@ -246,16 +243,6 @@ void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionCon
 	});
 }
 
-void TaskDisplay::clearMarkers() {
-	marker_visual_->clearMarkers();
-}
-
-void TaskDisplay::addMarkers(const DisplaySolutionPtr &s) {
-	if (!s) return;
-	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
-		marker_visual_->addMarkers(s->markersOfSubTrajectory(i));
-	}
-}
 
 void TaskDisplay::changedTaskSolutionTopic()
 {

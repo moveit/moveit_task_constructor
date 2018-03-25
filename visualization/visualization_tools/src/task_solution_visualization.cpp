@@ -36,6 +36,7 @@
 
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/visualization_tools/task_solution_panel.h>
 
 #include <moveit/rviz_plugin_render_tools/planning_scene_render.h>
@@ -152,6 +153,8 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 
   octree_coloring_property_->addOption("Z-Axis", OCTOMAP_Z_AXIS_COLOR);
   octree_coloring_property_->addOption("Cell Probability", OCTOMAP_PROBABLILTY_COLOR);
+
+  marker_visual_ = new MarkerVisualizationProperty("Markers", parent);
 }
 
 TaskSolutionVisualization::~TaskSolutionVisualization()
@@ -164,6 +167,8 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
   robot_render_.reset();
   if (slider_dock_panel_)
     delete slider_dock_panel_;
+
+  delete marker_visual_;
 
   if (main_scene_node_)
     main_scene_node_->getCreator()->destroySceneNode(main_scene_node_);
@@ -187,6 +192,8 @@ void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::
 
   scene_render_.reset(new PlanningSceneRender(main_scene_node_, context_, RobotStateVisualizationPtr()));
   scene_render_->getGeometryNode()->setVisible(scene_enabled_property_->getBool());
+
+  marker_visual_->onInitialize(main_scene_node_, context_);
 
   rviz::WindowManagerInterface* window_context = context_->getWindowManager();
   if (window_context)
@@ -473,6 +480,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
   planning_scene::ObjectColorMap color_map;
   scene->getKnownObjectColors(color_map);
   robot_render_->update(robot_state, color, color_map);
+  marker_visual_->update(*scene, *robot_state);
 
   if (slider_panel_ && index >= 0)
     slider_panel_->setSliderPosition(index);
@@ -502,7 +510,7 @@ void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msg
   showTrajectory(s, false);
 }
 
-void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s, bool lock_display)
+void TaskSolutionVisualization::showTrajectory(const DisplaySolutionPtr& s, bool lock_display)
 {
   if (lock_display || !s->empty()) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
@@ -516,7 +524,20 @@ void TaskSolutionVisualization::showTrajectory(DisplaySolutionPtr s, bool lock_d
 
 void TaskSolutionVisualization::unlock()
 {
-  locked_ = false;
+    locked_ = false;
+}
+
+void TaskSolutionVisualization::clearMarkers()
+{
+    marker_visual_->clearMarkers();
+}
+
+void TaskSolutionVisualization::addMarkers(const moveit_rviz_plugin::DisplaySolutionPtr &s)
+{
+	if (!s) return;
+	for (size_t i=0, end = s->numSubSolutions(); i != end; ++i) {
+		marker_visual_->addMarkers(s->markersOfSubTrajectory(i));
+	}
 }
 
 void TaskSolutionVisualization::changedRobotColor()

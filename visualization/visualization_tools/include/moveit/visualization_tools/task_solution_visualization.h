@@ -80,6 +80,7 @@ MOVEIT_CLASS_FORWARD(PlanningSceneRender)
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 
 class TaskSolutionPanel;
+class MarkerVisualizationProperty;
 class TaskSolutionVisualization : public QObject
 {
   Q_OBJECT
@@ -105,8 +106,11 @@ public:
 
   planning_scene::PlanningSceneConstPtr getScene() const { return scene_; }
   void showTrajectory(const moveit_task_constructor_msgs::Solution& msg);
-  void showTrajectory(moveit_rviz_plugin::DisplaySolutionPtr s, bool lock);
+  void showTrajectory(const moveit_rviz_plugin::DisplaySolutionPtr& s, bool lock);
   void unlock();
+
+  void clearMarkers();
+  void addMarkers(const moveit_rviz_plugin::DisplaySolutionPtr &s);
 
 public Q_SLOTS:
   void interruptCurrentDisplay();
@@ -142,6 +146,8 @@ protected:
   PlanningSceneRenderPtr scene_render_;
   // render the robot
   RobotStateVisualizationPtr robot_render_;
+  // render markers
+  MarkerVisualizationProperty* marker_visual_;
 
   // Handle colouring of robot
   void setRobotColor(rviz::Robot* robot, const QColor& color);
