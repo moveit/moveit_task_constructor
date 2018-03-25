@@ -112,6 +112,12 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
 	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
 
+	const std::string& object_name = props.get<std::string>("object");
+	if (!scene->knowsFrameTransform(object_name)) {
+		ROS_WARN_STREAM_NAMED("GenerateGraspPose", "unknown object: " << object_name);
+		return;
+	}
+
 	scenes_.push_back(scene);
 }
 
@@ -122,12 +128,9 @@ bool GenerateGraspPose::compute() {
 	scenes_.pop_front();
 
 	const auto& props = properties();
-	const std::string& object_name = props.get<std::string>("object");
-	if (!scene->knowsFrameTransform(object_name))
-		throw std::runtime_error("unknown object: " + object_name);
 
 	geometry_msgs::PoseStamped target_pose_msg;
-	target_pose_msg.header.frame_id = object_name;
+	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
 	double current_angle_ = 0.0;
 	while (current_angle_ < 2.*M_PI && current_angle_ > -2.*M_PI) {
