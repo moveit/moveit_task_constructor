@@ -61,7 +61,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
                          const moveit::core::JointModelGroup *jmg,
                          double timeout,
                          robot_trajectory::RobotTrajectoryPtr& result,
-                         const moveit_msgs::Constraints& /*path_constraints*/)
+                         const moveit_msgs::Constraints& path_constraints)
 {
 	const moveit::core::LinkModel* link;
 	const std::string& link_name = solvers::getEndEffectorLink(jmg);
@@ -71,7 +71,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
 	}
 
 	// reach pose of forward kinematics
-	return plan(from, *link, to->getCurrentState().getGlobalLinkTransform(link), jmg, timeout, result);
+	return plan(from, *link, to->getCurrentState().getGlobalLinkTransform(link),
+	            jmg, timeout, result, path_constraints);
 }
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
@@ -80,17 +81,21 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
                          const moveit::core::JointModelGroup *jmg,
                          double timeout,
                          robot_trajectory::RobotTrajectoryPtr &result,
-                         const moveit_msgs::Constraints& /*path_constraints*/)
+                         const moveit_msgs::Constraints& path_constraints)
 {
 	const auto& props = properties();
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
 
-	auto isValid = [&sandbox_scene](moveit::core::RobotState* state,
+	kinematic_constraints::KinematicConstraintSet kcs(sandbox_scene->getRobotModel());
+	kcs.add(path_constraints, sandbox_scene->getTransforms());
+
+	auto isValid = [&sandbox_scene, &kcs](moveit::core::RobotState* state,
 	      const moveit::core::JointModelGroup* jmg,
 	      const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName());
+		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName())
+		      && kcs.decide(*state).satisfied;
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
