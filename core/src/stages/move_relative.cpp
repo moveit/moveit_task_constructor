@@ -57,6 +57,9 @@ MoveRelative::MoveRelative(std::string name, const solvers::PlannerInterfacePtr&
 
 	p.declare<geometry_msgs::TwistStamped>("twist", "Cartesian twist transform");
 	p.declare<geometry_msgs::Vector3Stamped>("direction", "Cartesian translation direction");
+
+	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
+	                                    "constraints to maintain during trajectory");
 }
 
 void MoveRelative::setGroup(const std::string& group){
@@ -204,7 +207,8 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	}
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
-	bool success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory);
+	bool success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory,
+	                              props.get<moveit_msgs::Constraints>("path_constraints"));
 
 	// min_distance reached?
 	if (success && min_distance > 0.0) {

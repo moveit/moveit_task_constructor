@@ -55,6 +55,9 @@ MoveTo::MoveTo(std::string name, const solvers::PlannerInterfacePtr& planner)
 	p.declare<geometry_msgs::PoseStamped>("pose", "Cartesian target pose");
 	p.declare<geometry_msgs::PointStamped>("point", "Cartesian target point");
 	p.declare<std::string>("joint_pose", "named joint pose");
+
+	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
+	                                    "constraints to maintain during trajectory");
 }
 
 void MoveTo::setGroup(const std::string& group){
@@ -108,6 +111,8 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		return false;
 	}
 
+	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
@@ -118,7 +123,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			ROS_WARN("MoveTo: unknown joint pose '%s' for jmg '%s'", named_joint_pose.c_str(), group.c_str());
 			return false;
 		}
-		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory);
+		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
 		// Cartesian targets require the link name
 		std::string link_name = props.get<std::string>("link");
@@ -167,7 +172,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		tf::poseEigenToMsg(target_eigen, pose_msg.pose);
 		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
 
-		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory);
+		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 	}
 
 	// store result

@@ -41,11 +41,21 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/solvers/planner_interface.h>
 
+#include <moveit_msgs/Constraints.h>
+
 namespace moveit { namespace task_constructor { namespace stages {
 
 class Connect : public Connecting {
 public:
 	Connect(std::string name, const solvers::PlannerInterfacePtr &planner);
+
+	void setTimeout(const ros::Duration& timeout){
+		setProperty("timeout", timeout.toSec());
+	}
+
+	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+		setProperty("path_constraints", std::move(path_constraints));
+	}
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model);
 	bool compute(const InterfaceState &from, const InterfaceState &to);
