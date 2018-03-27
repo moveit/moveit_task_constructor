@@ -109,15 +109,15 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM("MoveTo: invalid joint model group: " << group);
+        ROS_WARN_STREAM("MoveRelative: invalid joint model group: " << group);
 		return false;
 	}
 
 	// only allow single target
 	size_t count_goals = props.countDefined({"twist", "direction"});
 	if (count_goals != 1) {
-		if (count_goals == 0) ROS_WARN("MoveTo: no goal defined");
-		else ROS_WARN("MoveTo: cannot plan to multiple goals");
+        if (count_goals == 0) ROS_WARN("MoveRelative: no goal defined");
+        else ROS_WARN("MoveRelative: cannot plan to multiple goals");
 		return false;
 	}
 
@@ -127,7 +127,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	if (link_name.empty())
 		link_name = solvers::getEndEffectorLink(jmg);
 	if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-		ROS_WARN_STREAM("MoveTo: no or invalid link name specified: " << link_name);
+        ROS_WARN_STREAM("MoveRelative: no or invalid link name specified: " << link_name);
 		return false;
 	}
 
