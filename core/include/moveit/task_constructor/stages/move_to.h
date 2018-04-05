@@ -61,8 +61,10 @@ public:
 	void setGoal(const geometry_msgs::PoseStamped& pose);
 	/// move link to given point, keeping current orientation
 	void setGoal(const geometry_msgs::PointStamped& point);
-	/// move joint model group to given named pose
-	void setGoal(const std::string& joint_pose);
+    /// move joint model group to given named pose
+    void setGoal(const std::string& joint_pose);
+    /// move joints specified in msg to their target values
+    void setGoal(const moveit_msgs::RobotState& robot_state);
 
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
 		setProperty("path_constraints", std::move(path_constraints));
