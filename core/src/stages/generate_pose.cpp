@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2017, Bielefeld + Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,30 +32,62 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner
-   Desc:    Generator Stage for simple grasp poses
-*/
-
-#pragma once
+/* Authors: Robert Haschke, Michael Goerner */
 
 #include <moveit/task_constructor/stages/generate_pose.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/marker_tools.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <rviz_marker_tools/marker_creation.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-class GenerateGraspPose : public GeneratePose {
-public:
-	GenerateGraspPose(const std::string& name);
+GeneratePose::GeneratePose(const std::string& name)
+   : MonitoringGenerator(name)
+{
+	auto& p = properties();
+	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
+}
 
-	void init(const core::RobotModelConstPtr &robot_model) override;
-	bool compute() override;
+void GeneratePose::reset()
+{
+	MonitoringGenerator::reset();
+	scenes_.clear();
+}
 
-	void setEndEffector(const std::string &eef);
-	void setNamedPose(const std::string &pose_name);
-	void setObject(const std::string &object);
-	void setAngleDelta(double delta);
+void GeneratePose::onNewSolution(const SolutionBase& s)
+{
+	scenes_.push_back(s.end()->scene()->diff());
+}
 
-protected:
-	void onNewSolution(const SolutionBase& s) override;
-};
+bool GeneratePose::canCompute() const {
+	return scenes_.size() > 0;
+}
+
+bool GeneratePose::compute() {
+	if (scenes_.empty())
+		return false;
+	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
+	scenes_.pop_front();
+
+	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	if (target_pose.header.frame_id.empty())
+		target_pose.header.frame_id = scene->getPlanningFrame();
+	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+		return false;
+	}
+
+	InterfaceState state(scene);
+	state.properties().set("target_pose", target_pose);
+
+	SubTrajectory trajectory;
+	trajectory.setCost(0.0);
+
+	rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "pose frame");
+
+	spawn(std::move(state), std::move(trajectory));
+	return true;
+}
 
 } } }

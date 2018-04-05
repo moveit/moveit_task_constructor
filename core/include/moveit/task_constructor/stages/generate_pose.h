@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2018, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -33,29 +33,32 @@
  *********************************************************************/
 
 /* Authors: Michael Goerner
-   Desc:    Generator Stage for simple grasp poses
+   Desc:    Generator Stage for poses
 */
 
 #pragma once
 
-#include <moveit/task_constructor/stages/generate_pose.h>
+#include <moveit/task_constructor/stage.h>
+#include <geometry_msgs/PoseStamped.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-class GenerateGraspPose : public GeneratePose {
+class GeneratePose : public MonitoringGenerator {
 public:
-	GenerateGraspPose(const std::string& name);
+	GeneratePose(const std::string& name);
 
-	void init(const core::RobotModelConstPtr &robot_model) override;
+	void reset() override;
+	bool canCompute() const override;
 	bool compute() override;
 
-	void setEndEffector(const std::string &eef);
-	void setNamedPose(const std::string &pose_name);
-	void setObject(const std::string &object);
-	void setAngleDelta(double delta);
+	void setPose(const geometry_msgs::PoseStamped pose){
+		setProperty("pose", std::move(pose));
+	}
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;
+
+	std::deque<planning_scene::PlanningScenePtr> scenes_;
 };
 
 } } }
