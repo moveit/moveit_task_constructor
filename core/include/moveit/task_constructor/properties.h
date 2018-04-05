@@ -271,5 +271,19 @@ public:
 template <>
 void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value);
 
+// provide a serialization method for std::map
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::map<std::string, T>& m) {
+    os << "{";
+    bool first = true;
+    for (const auto& pair : m) {
+        if (!first)
+            os << ", ";
+        os << pair.first << " : " << pair.second;
+        first = false;
+    }
+    os << "}";
+}
+
 } // namespace task_constructor
 } // namespace moveit
