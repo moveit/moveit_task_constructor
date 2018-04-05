@@ -1,0 +1,133 @@
+/*********************************************************************
+ * Software License Agreement (BSD License)
+ *
+ *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2017, Bielefeld University
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *   * Neither the name of Bielefeld University nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ *********************************************************************/
+
+/* Authors: Luca Lach, Robert Haschke */
+
+#include <moveit/task_constructor/merge.h>
+
+namespace moveit { namespace task_constructor {
+
+moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups)
+{
+	if (groups.size() <= 1)
+		throw std::runtime_error("Expected multiple groups");
+
+	const moveit::core::RobotModel* const robot_model = &groups[0]->getParentModel();
+
+	std::set<const moveit::core::JointModel*> jset;
+	std::vector<std::string> names;
+	for (const moveit::core::JointModelGroup* jmg : groups) {
+		// sanity check: all groups must share the same robot model
+		if (&jmg->getParentModel() != robot_model)
+			throw std::runtime_error("groups refer to different robot models");
+
+		const auto& joints = jmg->getJointModels();
+		jset.insert(joints.cbegin(), joints.cend());
+		names.push_back(jmg->getName());
+	}
+
+	std::vector<const moveit::core::JointModel*> joints(jset.cbegin(), jset.cend());
+	// attention: do not use getConfig()
+	return new moveit::core::JointModelGroup("", srdf::Model::Group(), joints, robot_model);
+}
+
+robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+                                           moveit::core::JointModelGroup*& merged_group)
+{
+	if (sub_trajectories.size() <= 1)
+		throw std::runtime_error("Expected multiple sub solutions");
+
+	const std::vector<const moveit::core::JointModel*> *merged_joints
+	      = merged_group ? &merged_group->getJointModels() : nullptr;
+	std::set<const moveit::core::JointModel*> jset;
+
+	// sanity checks: all sub solutions must share the same robot model and use disjoint joint sets
+	const moveit::core::RobotModelConstPtr& robot_model = sub_trajectories[0]->getRobotModel();
+	size_t max_num_joints = 0;  // maximum number of joints in sub groups
+	for (const robot_trajectory::RobotTrajectoryPtr& sub : sub_trajectories) {
+		if (sub->getRobotModel() != robot_model)
+			throw std::runtime_error("subsolutions refer to multiple robot models");
+
+		const moveit::core::JointModelGroup* jmg = sub->getGroup();
+		const auto& joints = jmg->getJointModels();
+		if (merged_joints) {  // validate that the joint model is known in merged_group
+			for (const moveit::core::JointModel* jm : joints) {
+				if (std::find(merged_joints->cbegin(), merged_joints->cend(), jm) == merged_joints->cend())
+					throw std::runtime_error("subsolutions refers to unknown joint: " + jm->getName());
+			}
+		}
+		max_num_joints = std::max(max_num_joints, joints.size());
+		size_t expected_size = jset.size() + joints.size();
+		jset.insert(joints.cbegin(), joints.cend());
+		if (jset.size() != expected_size)
+			throw std::runtime_error("joint sets of subsolutions are not disjoint");
+	}
+
+	// create merged_group if necessary
+	if (!merged_group) {
+		std::vector<const moveit::core::JointModel*> joints(jset.cbegin(), jset.cend());
+		merged_group = new moveit::core::JointModelGroup("", srdf::Model::Group(), joints, robot_model.get());
+	}
+
+	// do the actual trajectory merging
+	auto merged_traj = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, merged_group);
+	std::vector<double> values;
+	values.reserve(max_num_joints);
+
+	while (true) {
+		bool finished = true;
+		size_t index = merged_traj->getWayPointCount();
+		auto merged_state = index == 0 ? std::make_shared<robot_state::RobotState>(robot_model)
+		                               : std::make_shared<robot_state::RobotState>(merged_traj->getLastWayPoint());
+		for (const robot_trajectory::RobotTrajectoryPtr& sub : sub_trajectories) {
+			if (index >= sub->getWayPointCount())
+				continue;  // no more waypoints in this sub solution
+
+			finished = false;  // there was a waypoint, continue while loop
+			const robot_state::RobotState& sub_state = sub->getWayPoint(index);
+			sub_state.copyJointGroupPositions(sub->getGroup(), values);
+			merged_state->setJointGroupPositions(sub->getGroup(), values);
+		}
+		if (finished)
+			break;
+
+		// add waypoint without timing
+		merged_state->update();
+		merged_traj->addSuffixWayPoint(merged_state, 0.0);
+	}
+	return merged_traj;
+}
+
+} }
