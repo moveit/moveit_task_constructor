@@ -50,6 +50,13 @@ public:
 	void setGroup(const std::string &group) { setProperty("group", group); }
 	void setTimeout(double timeout) { setProperty("timeout", timeout); }
 
+	void setStepSize(double step_size) { setProperty("step_size", step_size); }
+	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
+	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
+
+	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
+	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
+
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr from,
