@@ -225,8 +225,31 @@ robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_traj
 	return trajectory;
 }
 
+size_t Connect::numSolutions() const
+{
+	return solutions_.size() + Connecting::numSolutions();
+}
+
 void Connect::processSolutions(const Stage::SolutionProcessor& processor) const
 {
+	// TODO: This is not nice, but necessary to process simple SubTrajectory + SolutionSequence
+	for (const auto& s : solutions_) {
+		if (s.isFailure()) continue;
+		if (!processor(s))
+			break;
+	}
+	Connecting::processSolutions(processor);
+}
+
+void Connect::processFailures(const Stage::SolutionProcessor &processor) const
+{
+	// TODO: This is not nice, but necessary to process simple SubTrajectory + SolutionSequence
+	for (const auto& s : solutions_) {
+		if (!s.isFailure()) continue;
+		if (!processor(s))
+			break;
+	}
+	Connecting::processFailures(processor);
 }
 
 } } }

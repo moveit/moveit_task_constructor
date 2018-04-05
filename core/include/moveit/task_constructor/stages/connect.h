@@ -65,10 +65,9 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool compute(const InterfaceState &from, const InterfaceState &to) override;
 
-	size_t numSolutions() const override { return solutions_.size(); }
-	size_t numFailures() const override { return 0; }
+	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
-	void processFailures(const SolutionProcessor &processor) const override { return; }
+	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
 	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
@@ -79,6 +78,7 @@ protected:
 protected:
 	GroupPlannerVector planner_;
 	moveit::core::JointModelGroupPtr merged_jmg_;
+	// TODO: ComputeBase should handle any SolutionBase -> shared_ptr
 	std::list<SubTrajectory> subsolutions_;
 	std::list<SolutionSequence> solutions_;
 	std::list<InterfaceState> states_;
