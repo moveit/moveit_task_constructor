@@ -37,6 +37,7 @@
 */
 
 #include <moveit/task_constructor/stages/connect.h>
+#include <moveit/task_constructor/merge.h>
 #include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -55,6 +56,7 @@ Connect::Connect(std::string name, const GroupPlannerVector& planners)
 void Connect::reset()
 {
 	Connecting::reset();
+	merged_jmg_.reset();
 	solutions_.clear();
 	subsolutions_.clear();
 	states_.clear();
@@ -68,13 +70,25 @@ void Connect::init(const core::RobotModelConstPtr& robot_model)
 	if (planner_.empty())
 		errors.push_back(*this, "empty set of groups");
 
+	size_t num_joints = 0;
+	std::vector<const moveit::core::JointModelGroup*> groups;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		if (!robot_model->hasJointModelGroup(pair.first))
 			errors.push_back(*this, "invalid group: " + pair.first);
 		else if (!pair.second)
 			errors.push_back(*this, "invalid planner for group: " + pair.first);
-		else
+		else {
 			pair.second->init(robot_model);
+
+			auto jmg = robot_model->getJointModelGroup(pair.first);
+			groups.push_back(jmg);
+			num_joints += jmg->getJointModels().size();
+		}
+	}
+	if (!errors && groups.size() >= 2) {
+		merged_jmg_.reset(task_constructor::merge(groups));
+		if (merged_jmg_->getJointModels().size() != num_joints)
+			errors.push_back(*this, "overlapping joint groups");
 	}
 
 	if (errors)
@@ -119,46 +133,92 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	double timeout = props.get<double>("timeout");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
-	SolutionSequence::container_type subsolutions;
+	std::vector<robot_trajectory::RobotTrajectoryPtr> sub_trajectories;
 	planning_scene::PlanningScenePtr start = from.scene()->diff();
 	const moveit::core::RobotState& goal_state = to.scene()->getCurrentState();
 
+	std::vector<planning_scene::PlanningScenePtr> intermediate_scenes;
+	intermediate_scenes.push_back(start);
+
+	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
 		planning_scene::PlanningScenePtr end = start->diff();
+		intermediate_scenes.push_back(end);
 		const moveit::core::JointModelGroup *jmg = goal_state.getJointModelGroup(pair.first);
-		std::vector<double> positions;
 		goal_state.copyJointGroupPositions(jmg, positions);
 		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		bool success = pair.second->plan(start, to.scene(), jmg, timeout, trajectory, path_constraints);
+		if (!pair.second->plan(start, to.scene(), jmg, timeout, trajectory, path_constraints))
+			break;
 
-		// store solution
-		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(trajectory));
+		sub_trajectories.push_back(trajectory);
+		// continue from reached state
+		start = end;
+	}
+
+	SolutionBase* solution = nullptr;
+	if (sub_trajectories.size() != planner_.size())  { // error during sequential planning
+		if (!storeFailures())
+			return false;
+		sub_trajectories.push_back(robot_trajectory::RobotTrajectoryPtr());
+		solution = storeSequential(sub_trajectories, intermediate_scenes);
+		// mark solution as failure
+		solution->setCost(std::numeric_limits<double>::infinity());
+	} else {
+		robot_trajectory::RobotTrajectoryPtr t = merge(sub_trajectories, intermediate_scenes);
+		if (t) {
+			connect(from, to, SubTrajectory(t));
+			return true;
+		}
+		// merging failed, store sequentially
+		solution = storeSequential(sub_trajectories, intermediate_scenes);
+	}
+
+	newSolution(from, to, *solution);
+	return solution->isFailure();
+}
+
+SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+                                       const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes)
+{
+	assert(sub_trajectories.size() + 1 == intermediate_scenes.size());
+	auto scene_it = intermediate_scenes.begin();
+	planning_scene::PlanningScenePtr start = *scene_it;
+
+	SolutionSequence::container_type sub_solutions;
+	for (const auto &sub : sub_trajectories) {
+		planning_scene::PlanningScenePtr end = *++scene_it;
+
+		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
 		inserted->setCreator(pimpl_);
 		// push back solution pointer
-		subsolutions.push_back(&*inserted);
+		sub_solutions.push_back(&*inserted);
 
 		// provide meaningful start/end states
 		states_.emplace_back(InterfaceState(start));
 		subsolutions_.back().setStartState(states_.back());
 		states_.emplace_back(InterfaceState(end));
 		subsolutions_.back().setEndState(states_.back());
-		if (!success) return false;
 
-		// continue from reached state
 		start = end;
 	}
 
-	solutions_.emplace_back(SolutionSequence(std::move(subsolutions), 0.0));
-	newSolution(from, to, solutions_.back());
-	return true;
+	solutions_.emplace_back(SolutionSequence(std::move(sub_solutions)));
+	return &solutions_.back();
+}
+
+robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+                                                    const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes)
+{
+	auto jmg = merged_jmg_.get();
+	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, jmg);
+	return trajectory;
 }
 
 void Connect::processSolutions(const Stage::SolutionProcessor& processor) const
 {
-
 }
 
 } } }

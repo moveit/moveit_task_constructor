@@ -71,7 +71,14 @@ public:
 	void processFailures(const SolutionProcessor &processor) const override { return; }
 
 protected:
+	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
+	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
+
+protected:
 	GroupPlannerVector planner_;
+	moveit::core::JointModelGroupPtr merged_jmg_;
 	std::list<SubTrajectory> subsolutions_;
 	std::list<SolutionSequence> solutions_;
 	std::list<InterfaceState> states_;
