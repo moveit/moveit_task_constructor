@@ -63,6 +63,8 @@ public:
 	void setMaxDistance(double distance);
 	void setMinMaxDistance(double min_distance, double max_distance);
 
+    void setRelativeJointSpaceGoal(const std::map<std::string, double>& goal);
+
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
 		setProperty("path_constraints", std::move(path_constraints));
 	}
@@ -78,6 +80,7 @@ protected:
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
+    bool joint_space_goal_ = false;
 };
 
 } } }

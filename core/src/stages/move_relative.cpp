@@ -57,9 +57,14 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 
 	p.declare<geometry_msgs::TwistStamped>("twist", "Cartesian twist transform");
 	p.declare<geometry_msgs::Vector3Stamped>("direction", "Cartesian translation direction");
+    p.declare<std::map<std::string, double>>("relative_joint_space_goal", "Relative joint space goal");
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
+}
+
+void MoveRelative::setRelativeJointSpaceGoal(const std::map<std::string, double>& goal){
+    setProperty("relative_joint_space_goal", goal);
 }
 
 void MoveRelative::setGroup(const std::string& group){
@@ -114,7 +119,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	}
 
 	// only allow single target
-	size_t count_goals = props.countDefined({"twist", "direction"});
+    size_t count_goals = props.countDefined({"twist", "direction", "relative_joint_space_goal"});
 	if (count_goals != 1) {
         if (count_goals == 0) ROS_WARN("MoveRelative: no goal defined");
         else ROS_WARN("MoveRelative: cannot plan to multiple goals");
@@ -207,9 +212,35 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		target_eigen.translation() += linear;
 	}
 
-	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
-	bool success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory,
-	                              props.get<moveit_msgs::Constraints>("path_constraints"));
+    goal = props.get("relative_joint_space_goal");
+    if (!goal.empty()) {
+
+        const auto &start_state = scene->getCurrentState();
+        auto& current_state = scene->getCurrentStateNonConst();
+        joint_space_goal_ = true;
+
+        const std::map<std::string, double>& relative_joint_position_map = boost::any_cast<std::map<std::string, double>>(goal);
+
+        for (auto j : relative_joint_position_map) {
+            double new_pos = (start_state.getVariablePosition(j.first) + j.second);
+            current_state.setVariablePosition(j.first, new_pos);
+
+            auto jm = scene->getRobotModel()->getJointModel(j.first);
+            current_state.enforceBounds(jm);
+            current_state.update(true);
+        }
+    }
+
+    robot_trajectory::RobotTrajectoryPtr robot_trajectory;
+    bool success = false;
+
+    if (joint_space_goal_) {
+        success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory,
+                                 props.get<moveit_msgs::Constraints>("path_constraints"));
+    } else {
+        success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory,
+                                      props.get<moveit_msgs::Constraints>("path_constraints"));
+    }
 
 	// min_distance reached?
 	if (min_distance > 0.0) {
