@@ -145,6 +145,15 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			// transform target into global frame
 			const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
 			target_eigen = frame * target_eigen;
+
+			// frame at target pose
+			rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
+
+			// frame at link
+			geometry_msgs::PoseStamped pose_msg;
+			pose_msg.header.frame_id = link_name;
+			pose_msg.pose.orientation.w = 1.0;
+			rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
 		}
 
 		goal = props.get("point");
@@ -161,16 +170,6 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
 			target_eigen.translation() = target_point;
 		}
-
-		// frame at current link pose
-		geometry_msgs::PoseStamped pose_msg;
-		pose_msg.header.frame_id = scene->getPlanningFrame();
-		tf::poseEigenToMsg(scene->getCurrentState().getGlobalLinkTransform(link_name), pose_msg.pose);
-		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
-
-		// frame at target pose
-		tf::poseEigenToMsg(target_eigen, pose_msg.pose);
-		rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 	}
