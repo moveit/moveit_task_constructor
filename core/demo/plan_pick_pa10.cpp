@@ -41,6 +41,7 @@ int main(int argc, char** argv){
 	spinner.start();
 
 	Task t;
+	t.loadRobotModel();
 	// define global properties used by most stages
 	t.setProperty("group", std::string("left_arm"));
 	t.setProperty("eef", std::string("la_tool_mount"));

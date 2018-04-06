@@ -74,6 +74,10 @@ public:
 
 	std::string id() const;
 	const moveit::core::RobotModelConstPtr getRobotModel() const { return robot_model_; }
+	/// setting the robot model also resets the task
+	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
+	/// load robot model from given parameter
+	void loadRobotModel(const std::string& robot_description = "robot_description");
 
 	void add(Stage::pointer &&stage);
 	void clear() override;
@@ -92,7 +96,7 @@ public:
 	/// reset all stages
 	void reset() override;
 	/// initialize all stages with given scene
-	void init(const moveit::core::RobotModelConstPtr& model) override;
+	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan();

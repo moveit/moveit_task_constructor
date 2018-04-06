@@ -53,11 +53,6 @@ namespace moveit { namespace task_constructor {
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
    : WrapperBase(std::string(), std::move(container)), id_(id)
 {
-	robot_model_loader::RobotModelLoader rml;
-	robot_model_ = rml.getModel();
-	if (!robot_model_)
-		throw Exception("Task failed to construct RobotModel");
-
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default
@@ -88,6 +83,19 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 Task::~Task()
 {
 	reset();
+}
+
+void Task::setRobotModel(const core::RobotModelConstPtr& robot_model)
+{
+	reset();
+	robot_model_ = robot_model;
+}
+
+void Task::loadRobotModel(const std::string& robot_description) {
+	robot_model_loader::RobotModelLoader rml(robot_description);
+	setRobotModel(rml.getModel());
+	if (!robot_model_)
+		throw Exception("Task failed to construct RobotModel");
 }
 
 void Task::add(pointer &&stage) {
@@ -144,8 +152,11 @@ void Task::reset()
 	WrapperBase::reset();
 }
 
-void Task::init(const moveit::core::RobotModelConstPtr& model)
+void Task::init()
 {
+	if (!robot_model_)
+		loadRobotModel();
+
 	auto impl = pimpl();
 	// initialize push connections of wrapped child
 	StagePrivate *child = wrapped()->pimpl();
@@ -153,7 +164,7 @@ void Task::init(const moveit::core::RobotModelConstPtr& model)
 	child->setNextStarts(impl->pendingForward());
 
 	// and *afterwards* initialize all children recursively
-	stages()->init(model);
+	stages()->init(robot_model_);
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->pruneInterface(InterfaceFlags({GENERATE}));
 	// and *finally* validate connectivity
@@ -183,7 +194,7 @@ bool Task::compute()
 bool Task::plan()
 {
 	reset();
-	init(robot_model_);
+	init();
 
 	while(ros::ok() && canCompute()) {
 		if (compute()) {
