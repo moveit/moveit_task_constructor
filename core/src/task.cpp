@@ -55,8 +55,9 @@ Task::Task(const std::string& id, ContainerBase::pointer &&container)
 {
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
-	// enable introspection by default
-	enableIntrospection(true);
+	// enable introspection by default, but only if ros::init() was called
+	if (ros::isInitialized())
+		enableIntrospection(true);
 }
 
 planning_pipeline::PlanningPipelinePtr
