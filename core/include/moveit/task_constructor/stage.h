@@ -197,7 +197,7 @@ protected:
 	Stage(const Stage&) = delete;
 
 protected:
-	StagePrivate* const pimpl_; // constness guarantees one initial write
+	StagePrivate* pimpl_;
 };
 std::ostream& operator<<(std::ostream& os, const Stage& stage);
 

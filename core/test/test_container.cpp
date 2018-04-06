@@ -1,5 +1,6 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/stage_p.h>
+#include <moveit/task_constructor/task.h>
 
 #include "gtest_value_printers.h"
 #include <gtest/gtest.h>
@@ -449,4 +450,16 @@ TEST_F(ParallelTest, init_mismatching) {
 	EXPECT_INIT_FAILURE(true, false, BOTH, GEN);
 	EXPECT_INIT_FAILURE(false, true, BOTH, GEN);
 	EXPECT_INIT_FAILURE(true, true, BOTH, GEN);
+}
+
+
+TEST(Task, move) {
+	Task t1("foo");
+	t1.add(std::make_unique<GeneratorMockup>());
+	t1.add(std::make_unique<GeneratorMockup>());
+	EXPECT_EQ(t1.stages()->numChildren(), 2);
+
+	Task t2 = std::move(t1);
+	EXPECT_EQ(t2.stages()->numChildren(), 2);
+	EXPECT_EQ(t1.stages()->numChildren(), 0);
 }
