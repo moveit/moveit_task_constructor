@@ -1,14 +1,12 @@
 #include <moveit/task_constructor/task.h>
 
 #include <moveit/task_constructor/stages/current_state.h>
-#include <moveit/task_constructor/stages/gripper.h>
-#include <moveit/task_constructor/stages/move.h>
-#include <moveit/task_constructor/stages/generate_grasp_pose.h>
-#include <moveit/task_constructor/stages/cartesian_position_motion.h>
-#include <moveit/task_constructor/stages/compute_ik.h>
+#include <moveit/task_constructor/stages/simple_grasp.h>
+#include <moveit/task_constructor/stages/pick.h>
+#include <moveit/task_constructor/stages/connect.h>
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <ros/ros.h>
-
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 using namespace moveit::task_constructor;
@@ -40,82 +38,45 @@ int main(int argc, char** argv){
 	spawnObject();
 
 	Task t;
-	// define global properties used by most stages
-	t.setProperty("group", std::string("arm"));
-	t.setProperty("eef", std::string("gripper"));
-	t.setProperty("planner", std::string("RRTConnectkConfigDefault"));
-	t.setProperty("link", std::string("s_model_tool0"));
 
 	Stage* initial_stage = nullptr;
+	auto initial = std::make_unique<stages::CurrentState>("current state");
+	initial_stage = initial.get();
+	t.add(std::move(initial));
 
-	{
-		auto initial = std::make_unique<stages::CurrentState>("current state");
-		initial_stage = initial.get();
-		t.add(std::move(initial));
-	}
+	// planner used for connect
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	pipeline->setTimeout(8.0);
+	pipeline->setPlannerId("RRTConnectkConfigDefault");
+	// connect to pick
+	stages::Connect::GroupPlannerVector planners = {{"arm", pipeline}, {"gripper", pipeline}};
+	auto connect = std::make_unique<stages::Connect>("connect", planners);
+	connect->properties().configureInitFrom(Stage::PARENT);
+	t.add(std::move(connect));
 
-	{
-		auto move = std::make_unique<stages::Gripper>("open gripper");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTo("open");
-		t.add(std::move(move));
-	}
+	// grasp generator
+	auto grasp_generator = std::make_unique<stages::SimpleGrasp>();
+	grasp_generator->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
+	grasp_generator->setMaxIKSolutions(8);
+	grasp_generator->setAngleDelta(.2);
+	grasp_generator->setPreGraspPose("open");
+	grasp_generator->setGraspPose("closed");
+	grasp_generator->setMonitoredStage(initial_stage);
 
-	{
-		auto move = std::make_unique<stages::Move>("move to pre-grasp");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTimeout(8.0);
-		t.add(std::move(move));
-	}
+	auto pick = std::make_unique<stages::Pick>(std::move(grasp_generator));
+	pick->setProperty("eef", std::string("gripper"));
+	pick->setProperty("object", std::string("object"));
+	geometry_msgs::TwistStamped approach;
+	approach.header.frame_id = "s_model_tool0";
+	approach.twist.linear.x = 1.0;
+	pick->setApproachMotion(approach, 0.03, 0.1);
 
-	{
-		auto move = std::make_unique<stages::CartesianPositionMotion>("proceed to grasp pose");
-		// move->addSolutionCallback(std::bind(&Introspection::publishSolution, &t.introspection(), std::placeholders::_1));
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setMinMaxDistance(.03, 0.1);
-		move->setCartesianStepSize(0.02);
+	geometry_msgs::TwistStamped lift;
+	lift.header.frame_id = "world";
+	lift.twist.linear.z = 1.0;
+	pick->setLiftMotion(lift, 0.03, 0.05);
 
-		geometry_msgs::PointStamped target;
-		target.header.frame_id= "object";
-		move->towards(target);
-		t.add(std::move(move));
-	}
-
-	{
-		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
-		gengrasp->properties().configureInitFrom(Stage::PARENT);
-		gengrasp->setNamedPose("open");
-		gengrasp->setObject("object");
-		gengrasp->setAngleDelta(-.2);
-		gengrasp->setMonitoredStage(initial_stage);
-
-		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
-		ik->properties().configureInitFrom(Stage::PARENT, {"eef"});
-		ik->setMaxIKSolutions(8);
-		ik->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
-		t.add(std::move(ik));
-	}
-
-	{
-		auto move = std::make_unique<stages::Gripper>("grasp");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setTo("closed");
-		move->graspObject("object");
-		t.add(std::move(move));
-	}
-
-	{
-		auto move = std::make_unique<stages::CartesianPositionMotion>("lift object");
-		move->properties().configureInitFrom(Stage::PARENT);
-		move->setMinMaxDistance(0.03, 0.05);
-		move->setCartesianStepSize(0.01);
-
-		geometry_msgs::Vector3Stamped direction;
-		direction.header.frame_id= "world";
-		direction.vector.z= 1.0;
-		move->along(direction);
-		t.add(std::move(move));
-	}
+	t.add(std::move(pick));
 
 	try {
 		t.plan();

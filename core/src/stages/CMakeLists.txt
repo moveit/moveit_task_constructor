@@ -15,10 +15,6 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/simple_grasp.h
 	${PROJECT_INCLUDE}/stages/pick.h
 
-	${PROJECT_INCLUDE}/stages/cartesian_position_motion.h
-	${PROJECT_INCLUDE}/stages/gripper.h
-	${PROJECT_INCLUDE}/stages/move.h
-
 	modify_planning_scene.cpp
 	fix_collision_objects.cpp
 
@@ -34,10 +30,6 @@ add_library(${PROJECT_NAME}_stages
 
 	simple_grasp.cpp
 	pick.cpp
-
-	cartesian_position_motion.cpp
-	gripper.cpp
-	move.cpp
 )
 target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
 
