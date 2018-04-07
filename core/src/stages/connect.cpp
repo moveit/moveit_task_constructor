@@ -141,7 +141,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	double timeout = props.get<double>("timeout");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
-	std::vector<robot_trajectory::RobotTrajectoryPtr> sub_trajectories;
+	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
 	planning_scene::PlanningScenePtr start = from.scene()->diff();
 	const moveit::core::RobotState& goal_state = to.scene()->getCurrentState();
 
@@ -188,7 +188,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	return !solution->isFailure();
 }
 
-SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                                        const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes)
 {
 	assert(sub_trajectories.size() + 1 == intermediate_scenes.size());
@@ -217,7 +217,7 @@ SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::Robot
 	return &solutions_.back();
 }
 
-robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                                                     const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes)
 {
 	auto jmg = merged_jmg_.get();

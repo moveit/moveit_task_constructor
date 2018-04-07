@@ -95,7 +95,7 @@ bool Move::compute(const InterfaceState &from, const InterfaceState &to) {
 		return false;
 
 	// finish stage
-	connect(from, to, res.trajectory_);
+	connect(from, to, SubTrajectory(res.trajectory_));
 
 	return true;
 }

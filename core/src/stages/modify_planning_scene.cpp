@@ -65,13 +65,13 @@ void ModifyPlanningScene::enableCollisions(const std::string &first, const movei
 }
 
 bool ModifyPlanningScene::computeForward(const InterfaceState &from){
-	sendForward(from, apply(from, false), robot_trajectory::RobotTrajectoryPtr());
+	sendForward(from, apply(from, false), SubTrajectory());
 	return true;
 }
 
 bool ModifyPlanningScene::computeBackward(const InterfaceState &to)
 {
-	sendBackward(apply(to, true), to, robot_trajectory::RobotTrajectoryPtr());
+	sendBackward(apply(to, true), to, SubTrajectory());
 	return true;
 }
 

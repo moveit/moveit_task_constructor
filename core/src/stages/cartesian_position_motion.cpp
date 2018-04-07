@@ -189,7 +189,7 @@ bool CartesianPositionMotion::computeForward(const InterfaceState &from){
 		      = std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addSuffixWayPoint(tp, 0.0);
-		sendForward(from, InterfaceState(result_scene), traj);
+		sendForward(from, InterfaceState(result_scene), SubTrajectory(traj));
 	}
 
 	return succeeded;
@@ -256,7 +256,7 @@ bool CartesianPositionMotion::computeBackward(const InterfaceState &to){
 		robot_trajectory::RobotTrajectoryPtr traj= std::make_shared<robot_trajectory::RobotTrajectory>(robot_state.getRobotModel(), jmg);
 		for( auto& tp : trajectory_steps )
 			traj->addPrefixWayPoint(tp, 0.0);
-		sendBackward(InterfaceState(result_scene), to, traj);
+		sendBackward(InterfaceState(result_scene), to, SubTrajectory(traj));
 	}
 
 	return succeeded;

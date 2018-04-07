@@ -88,7 +88,7 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
 	return duplicates.size() > 0;
 }
 
-robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                                            moveit::core::JointModelGroup*& merged_group)
 {
 	if (sub_trajectories.size() <= 1)
@@ -105,7 +105,7 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	size_t max_num_joints = 0;  // maximum number of joints in sub groups
 	size_t num_joints = 0;  // sum of joints in all sub groups
 
-	for (const robot_trajectory::RobotTrajectoryPtr& sub : sub_trajectories) {
+	for (const robot_trajectory::RobotTrajectoryConstPtr& sub : sub_trajectories) {
 		if (sub->getRobotModel() != robot_model)
 			throw std::runtime_error("subsolutions refer to multiple robot models");
 
@@ -153,7 +153,7 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 		size_t index = merged_traj->getWayPointCount();
 		auto merged_state = index == 0 ? std::make_shared<robot_state::RobotState>(robot_model)
 		                               : std::make_shared<robot_state::RobotState>(merged_traj->getLastWayPoint());
-		for (const robot_trajectory::RobotTrajectoryPtr& sub : sub_trajectories) {
+		for (const robot_trajectory::RobotTrajectoryConstPtr& sub : sub_trajectories) {
 			if (index >= sub->getWayPointCount())
 				continue;  // no more waypoints in this sub solution
 

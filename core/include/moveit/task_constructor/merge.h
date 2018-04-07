@@ -63,7 +63,7 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
  * or created on the fly. This JMG needs to stay alive during the lifetime of the trajectory.
  * For now, only the trajectory path is considered. Timings, velocities, etc. are ignored.
  */
-robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
-                                           core::JointModelGroup*& merged_group);
+robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+                                           moveit::core::JointModelGroup*& merged_group);
 
 } }
