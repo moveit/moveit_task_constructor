@@ -7,7 +7,6 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <ros/ros.h>
-
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 using namespace moveit::task_constructor;
