@@ -63,6 +63,31 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 	return new moveit::core::JointModelGroup("", srdf::Model::Group(), joints, robot_model);
 }
 
+bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
+                    std::vector<const moveit::core::JointModel*> joints,
+                    std::vector<const moveit::core::JointModel*>& duplicates,
+                    std::string& names)
+{
+	duplicates.clear();
+	names.clear();
+	for (const moveit::core::JointModelGroup* jmg : groups) {
+		for (const moveit::core::JointModel* jm : jmg->getJointModels()) {
+			auto it = std::find(joints.begin(), joints.end(), jm);
+			if (it == joints.end()) {  // jm not found anymore -> duplicate
+				if (jm->getType() != moveit::core::JointModel::FIXED &&  // fixed joints are OK
+				    std::find(duplicates.begin(), duplicates.end(), jm) == duplicates.end()) {
+					duplicates.push_back(jm);
+					if (!names.empty()) names.append(", ");
+					names.append(jm->getName());
+				}
+				continue;
+			} else
+				joints.erase(it);  // remove from list as processed
+		}
+	}
+	return duplicates.size() > 0;
+}
+
 robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
                                            moveit::core::JointModelGroup*& merged_group)
 {
@@ -72,27 +97,44 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	const std::vector<const moveit::core::JointModel*> *merged_joints
 	      = merged_group ? &merged_group->getJointModels() : nullptr;
 	std::set<const moveit::core::JointModel*> jset;
+	std::vector<const moveit::core::JointModelGroup*> groups;
+	groups.reserve(sub_trajectories.size());
 
 	// sanity checks: all sub solutions must share the same robot model and use disjoint joint sets
 	const moveit::core::RobotModelConstPtr& robot_model = sub_trajectories[0]->getRobotModel();
 	size_t max_num_joints = 0;  // maximum number of joints in sub groups
+	size_t num_joints = 0;  // sum of joints in all sub groups
+
 	for (const robot_trajectory::RobotTrajectoryPtr& sub : sub_trajectories) {
 		if (sub->getRobotModel() != robot_model)
 			throw std::runtime_error("subsolutions refer to multiple robot models");
 
 		const moveit::core::JointModelGroup* jmg = sub->getGroup();
+		groups.push_back(jmg);
 		const auto& joints = jmg->getJointModels();
 		if (merged_joints) {  // validate that the joint model is known in merged_group
 			for (const moveit::core::JointModel* jm : joints) {
 				if (std::find(merged_joints->cbegin(), merged_joints->cend(), jm) == merged_joints->cend())
 					throw std::runtime_error("subsolutions refers to unknown joint: " + jm->getName());
 			}
-		}
+		} else // accumulate set of joints
+			jset.insert(joints.cbegin(), joints.cend());
+
 		max_num_joints = std::max(max_num_joints, joints.size());
-		size_t expected_size = jset.size() + joints.size();
-		jset.insert(joints.cbegin(), joints.cend());
-		if (jset.size() != expected_size)
-			throw std::runtime_error("joint sets of subsolutions are not disjoint");
+		num_joints += joints.size();
+	}
+
+	size_t num_merged = merged_joints ? merged_joints->size() : jset.size();
+	if (num_merged != num_joints) {
+		// overlapping joint groups: analyse in more detail
+		std::vector<const moveit::core::JointModel*> joints;
+		if (merged_joints) joints = *merged_joints;
+		else joints.insert(joints.end(), jset.cbegin(), jset.cend());
+
+		std::vector<const moveit::core::JointModel*> duplicates;
+		std::string names;
+		if (findDuplicates(groups, joints, duplicates, names))
+			throw std::runtime_error("overlapping joint groups: " + names);
 	}
 
 	// create merged_group if necessary
