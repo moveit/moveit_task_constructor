@@ -85,10 +85,18 @@ void Connect::init(const core::RobotModelConstPtr& robot_model)
 			num_joints += jmg->getJointModels().size();
 		}
 	}
-	if (!errors && groups.size() >= 2) {
+
+	if (!errors && groups.size() >= 2) {  // enable merging?
 		merged_jmg_.reset(task_constructor::merge(groups));
-		if (merged_jmg_->getJointModels().size() != num_joints)
-			errors.push_back(*this, "overlapping joint groups");
+		if (merged_jmg_->getJointModels().size() != num_joints) {
+			// overlapping joint groups: analyse in more detail
+			std::vector<const moveit::core::JointModel*> duplicates;
+			std::string names;
+			if (findDuplicates(groups, merged_jmg_->getJointModels(), duplicates, names)) {
+				ROS_INFO_STREAM_NAMED("Connect", this->name() << ": overlapping joint groups: " << names << ". Disabling merging.");
+				merged_jmg_.reset();  // fallback to serial connect
+			}
+		}
 	}
 
 	if (errors)
