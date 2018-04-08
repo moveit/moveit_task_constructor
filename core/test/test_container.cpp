@@ -462,4 +462,8 @@ TEST(Task, move) {
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2);
 	EXPECT_EQ(t1.stages()->numChildren(), 0);
+
+	t1 = std::move(t2);
+	EXPECT_EQ(t1.stages()->numChildren(), 2);
+	EXPECT_EQ(t2.stages()->numChildren(), 0);
 }

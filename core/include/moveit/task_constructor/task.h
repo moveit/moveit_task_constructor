@@ -71,6 +71,7 @@ public:
 	Task(const std::string& id = "",
 	     Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task &&other);
+	Task& operator=(Task&& other);
 	~Task();
 
 	std::string id() const;
