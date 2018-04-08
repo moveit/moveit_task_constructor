@@ -53,15 +53,15 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 	o.insert(o.end(), objects.begin(), objects.end());
 }
 
-void ModifyPlanningScene::enableCollisions(const Names& first, const Names& second, bool enable_collision) {
-	collision_matrix_edits_.push_back(CollisionMatrixPairs({first, second, enable_collision}));
+void ModifyPlanningScene::allowCollisions(const Names& first, const Names& second, bool allow) {
+	collision_matrix_edits_.push_back(CollisionMatrixPairs({first, second, allow}));
 }
 
-void ModifyPlanningScene::enableCollisions(const std::string &first, const moveit::core::JointModelGroup &jmg, bool enable_collision)
+void ModifyPlanningScene::allowCollisions(const std::string &first, const moveit::core::JointModelGroup &jmg, bool allow)
 {
 	const auto& links = jmg.getLinkModelNamesWithCollisionGeometry();
 	if (!links.empty())
-		enableCollisions(Names({first}), links, enable_collision);
+		allowCollisions(Names({first}), links, allow);
 }
 
 bool ModifyPlanningScene::computeForward(const InterfaceState &from){
@@ -91,21 +91,21 @@ void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene &scene,
 	}
 }
 
-void ModifyPlanningScene::enableCollisions(planning_scene::PlanningScene &scene,
+void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene &scene,
                                         const CollisionMatrixPairs& pairs,
                                         bool invert)
 {
 	collision_detection::AllowedCollisionMatrix& acm = scene.getAllowedCollisionMatrixNonConst();
-	bool enable = invert ? !pairs.enable : pairs.enable;
+	bool allow = invert ? !pairs.allow : pairs.allow;
 	if (pairs.second.empty()) {
 		for (const auto &name : pairs.first)
-			acm.setEntry(name, enable);
+			acm.setEntry(name, allow);
 	} else
-		acm.setEntry(pairs.first, pairs.second, enable);
+		acm.setEntry(pairs.first, pairs.second, allow);
 }
 
 // invert indicates, whether to detach instead of attach (and vice versa)
-// as well as to disable instead of enable collision (and vice versa)
+// as well as to forbid instead of allow collision (and vice versa)
 InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool invert)
 {
 	planning_scene::PlanningScenePtr scene = from.scene()->diff();
@@ -115,9 +115,9 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 	for (const auto &pair : attach_objects_)
 		attachObjects(*scene, pair, invert);
 
-	// enable/disable collisions
+	// allow/forbid collisions
 	for (const auto &pairs : collision_matrix_edits_)
-		enableCollisions(*scene, pairs, invert);
+		allowCollisions(*scene, pairs, invert);
 
 	if (callback_)
 		callback_(scene, properties());

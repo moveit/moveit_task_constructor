@@ -86,27 +86,27 @@ public:
 		attachObjects(Names(objects.cbegin(), objects.cend()), link, false);
 	}
 
-	/// enable / disable collisions for each combination of pairs in first and second lists
-	void enableCollisions(const Names& first, const Names& second, bool enable_collision);
-	/// enable / disable all collisions for given object
-	void enableCollisions(const std::string& object, bool enable_collision) {
-		enableCollisions(Names({object}), Names(), enable_collision);
+	/// allow / forbid collisions for each combination of pairs in first and second lists
+	void allowCollisions(const Names& first, const Names& second, bool allow);
+	/// allow / forbid all collisions for given object
+	void allowCollisions(const std::string& object, bool allow) {
+		allowCollisions(Names({object}), Names(), allow);
 	}
 
 	/// conveniency method accepting arbitrary container types
 	template <typename T1, typename T2,
 	          typename E1 = typename std::enable_if_t<is_container<T1>::value && std::is_base_of<std::string, typename T1::value_type>::value>,
 	          typename E2 = typename std::enable_if_t<is_container<T2>::value && std::is_base_of<std::string, typename T2::value_type>::value>>
-	inline void enableCollisions(const T1& first, const T2& second, bool enable_collision) {
-		enableCollisions(Names(first.cbegin(), first.cend()), Names(second.cbegin(), second.cend()), enable_collision);
+	inline void allowCollisions(const T1& first, const T2& second, bool enable_collision) {
+		allowCollisions(Names(first.cbegin(), first.cend()), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and an arbitrary container of names
 	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
-	inline void enableCollisions(const std::string& first, const T& second, bool enable_collision) {
-		enableCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
+	inline void allowCollisions(const std::string& first, const T& second, bool enable_collision) {
+		allowCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and JointModelGroup
-	void enableCollisions(const std::string& first, const moveit::core::JointModelGroup& jmg, bool enable_collision);
+	void allowCollisions(const std::string& first, const moveit::core::JointModelGroup& jmg, bool allow);
 
 protected:
 	// list of objects to attach (true) / detach (false) to a given link
@@ -116,7 +116,7 @@ protected:
 	struct CollisionMatrixPairs {
 		Names first;
 		Names second;
-		bool enable;
+		bool allow;
 	};
 	std::list<CollisionMatrixPairs> collision_matrix_edits_;
 	ApplyCallback callback_;
@@ -125,7 +125,7 @@ protected:
 	// apply stored modifications to scene
 	InterfaceState apply(const InterfaceState &from, bool invert);
 	void attachObjects(planning_scene::PlanningScene &scene, const std::pair<std::string, std::pair<Names, bool> >& pair, bool invert);
-	void enableCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
+	void allowCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
 };
 
 

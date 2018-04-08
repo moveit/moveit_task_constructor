@@ -115,10 +115,10 @@ int main(int argc, char** argv){
 	}
 
 	{
-		auto move = std::make_unique<stages::ModifyPlanningScene>("enable object collision");
+		auto move = std::make_unique<stages::ModifyPlanningScene>("allow object collision");
 		move->restrictDirection(stages::ModifyPlanningScene::FORWARD);
 
-		move->enableCollisions("object", t.getRobotModel()->getJointModelGroup("left_hand")->getLinkModelNamesWithCollisionGeometry(), true);
+		move->allowCollisions("object", t.getRobotModel()->getJointModelGroup("left_hand")->getLinkModelNamesWithCollisionGeometry(), true);
 		t.add(std::move(move));
 	}
 
