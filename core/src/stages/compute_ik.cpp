@@ -117,9 +117,10 @@ typedef std::vector<std::vector<double>> IKSolutions;
 namespace {
 
 // ??? TODO: provide callback methods in PlanningScene class / probably not very useful here though...
-// move into MoveIt! core
+// TODO: move into MoveIt! core, lift active_components_only_ from fcl to common interface
 bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene,
-                           Eigen::Affine3d pose, const robot_model::LinkModel* link)
+                           Eigen::Affine3d pose, const robot_model::LinkModel* link,
+                           collision_detection::CollisionResult* collision_result = nullptr)
 {
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 
@@ -150,9 +151,23 @@ bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene,
 
 	// check collision with the world using the padded version
 	collision_detection::CollisionRequest req;
-	collision_detection::CollisionResult res;
+	collision_detection::CollisionResult result;
+	req.contacts = (collision_result != nullptr);
+	collision_detection::CollisionResult& res = collision_result ? *collision_result : result;
 	scene->checkCollision(req, res, robot_state, acm);
 	return res.collision;
+}
+
+std::string listCollisionPairs(const collision_detection::CollisionResult::ContactMap &contacts,
+                               const std::string& separator)
+{
+	std::string result;
+	for (const auto& contact : contacts) {
+		if (!result.empty())
+			result.append(separator);
+		result.append(contact.first.first).append(" - ").append(contact.first.second);
+	}
+	return result;
 }
 
 bool validateEEF(const PropertyMap& props, const moveit::core::RobotModelConstPtr& robot_model,
@@ -283,9 +298,10 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	}
 
 	// validate placed link for collisions
-	bool colliding = isTargetPoseColliding(sandbox_scene, target_pose, link);
+	collision_detection::CollisionResult collisions;
+	bool colliding = isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
 	if (colliding && !storeFailures()) {
-		ROS_ERROR("eef in collision");
+		ROS_WARN_STREAM("eef in collision: " << listCollisionPairs(collisions.contacts, "\n"));
 		return;
 	}
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
@@ -308,7 +324,8 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		generateCollisionMarkers(sandbox_state, appender, link_to_visualize);
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
-		solution.setName("eef in collision");
+		// TODO: visualize collisions
+		solution.setName("eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
