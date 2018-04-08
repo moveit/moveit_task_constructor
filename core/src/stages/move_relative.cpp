@@ -43,7 +43,7 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-MoveRelative::MoveRelative(std::string name, const solvers::PlannerInterfacePtr& planner)
+MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner)
    : PropagatingEitherWay(name)
    , planner_(planner)
 {

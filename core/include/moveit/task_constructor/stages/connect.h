@@ -55,7 +55,7 @@ protected:
 
 public:
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
-	Connect(std::string name, const GroupPlannerVector& planners);
+	Connect(const std::string& name, const GroupPlannerVector& planners);
 
 	void setTimeout(const ros::Duration& timeout){
 		setProperty("timeout", timeout.toSec());

@@ -42,7 +42,7 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-Connect::Connect(std::string name, const GroupPlannerVector& planners)
+Connect::Connect(const std::string& name, const GroupPlannerVector& planners)
    : Connecting(name)
    , planner_(planners)
 {

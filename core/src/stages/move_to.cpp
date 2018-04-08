@@ -43,7 +43,7 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-MoveTo::MoveTo(std::string name, const solvers::PlannerInterfacePtr& planner)
+MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner)
    : PropagatingEitherWay(name)
    , planner_(planner)
 {
