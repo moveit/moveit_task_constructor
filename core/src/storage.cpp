@@ -127,7 +127,6 @@ void SolutionBase::setCost(double cost) {
 
 
 
-
 void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
                                 Introspection *introspection) const {
 	msg.sub_trajectory.emplace_back();
@@ -147,6 +146,35 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 	std::copy(markers.begin(), markers.end(), std::back_inserter(t.markers));
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
+}
+
+
+
+void SolutionSequence::push_back(const SolutionBase& solution)
+{
+	subsolutions_.push_back(&solution);
+}
+
+void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
+                                   Introspection* introspection) const
+{
+	moveit_task_constructor_msgs::SubSolution sub_msg;
+	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
+	sub_msg.cost = this->cost();
+
+	const Introspection *ci = introspection;
+	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+
+	sub_msg.sub_solution_id.reserve(subsolutions_.size());
+	if (introspection) {
+		for (const SolutionBase* s : subsolutions_)
+			sub_msg.sub_solution_id.push_back(introspection->solutionId(*s));
+		msg.sub_solution.push_back(sub_msg);
+	}
+
+	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
+	for (const SolutionBase* s : subsolutions_)
+		s->fillMessage(msg, introspection);
 }
 
 

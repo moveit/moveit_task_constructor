@@ -172,11 +172,9 @@ private:
 
 
 class StagePrivate;
-class SubTrajectory;
 
-/// SolutionTrajectory is composed of a series of SubTrajectories
-typedef std::vector<const SubTrajectory*> SolutionTrajectory;
 
+/// abstract base class for solutions (primitive and sequences)
 class SolutionBase {
 public:
 	inline const InterfaceState* start() const { return start_; }
@@ -241,7 +239,7 @@ private:
 };
 
 
-// SubTrajectory connects interface states of ComputeStages
+/// SubTrajectory connects interface states of ComputeStages
 class SubTrajectory : public SolutionBase {
 public:
 	SubTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory = robot_trajectory::RobotTrajectoryPtr())
@@ -259,6 +257,35 @@ private:
 	robot_trajectory::RobotTrajectoryPtr trajectory_;
 };
 
+
+/** Sequence of individual sub solutions
+ *
+ * A solution sequence describes a solution that is composed from several individual
+ * sub solutions that need to be chained together to yield the overall solutions.
+ */
+class SolutionSequence : public SolutionBase {
+public:
+	typedef std::vector<const SolutionBase*> container_type;
+
+	explicit SolutionSequence()
+	   : SolutionBase()
+	{}
+	SolutionSequence(container_type&& subsolutions, double cost = 0.0, StagePrivate* creator = nullptr)
+	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
+	{}
+
+	void push_back(const SolutionBase& solution);
+
+	/// append all subsolutions to solution
+	void fillMessage(moveit_task_constructor_msgs::Solution &msg, Introspection *introspection) const override;
+
+	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
+	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
+
+private:
+	/// series of sub solutions
+	container_type subsolutions_;
+};
 
 template <> inline
 const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {

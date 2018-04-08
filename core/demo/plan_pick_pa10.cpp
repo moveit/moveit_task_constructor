@@ -73,16 +73,10 @@ int main(int argc, char** argv){
 		stage->setMaxPenetration(0.1);
 		t.add(std::move(stage));
 	}
-	{
-		auto move = std::make_unique<stages::MoveTo>("open gripper", pipeline);
-		move->restrictDirection(stages::MoveTo::FORWARD);
-		move->properties().property("group").configureInitFrom(Stage::PARENT, "gripper");
-		move->setGoal("open");
-		t.add(std::move(move));
-	}
 
 	{
-		auto move = std::make_unique<stages::Connect>("move to object", pipeline);
+		stages::Connect::GroupPlannerVector planners = {{"left_hand", pipeline}, {"left_arm", pipeline}};
+		auto move = std::make_unique<stages::Connect>("connect", planners);
 		move->properties().configureInitFrom(Stage::PARENT);
 		t.add(std::move(move));
 	}

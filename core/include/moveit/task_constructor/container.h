@@ -107,14 +107,11 @@ public:
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
 
-	/// container used to represent a serial solution
-	typedef std::vector<const SolutionBase*> solution_container;
-
 protected:
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase &s) override;
 
-	typedef std::function<void(const solution_container& trace,
+	typedef std::function<void(const SolutionSequence::container_type &trace,
 	                           double trace_accumulated_cost)> SolutionProcessor;
 
 	/// Traverse all solution pathes starting at start and going in given direction dir
@@ -123,7 +120,7 @@ protected:
 	/// the full trace (from start to end, but not including start) and its accumulated costs
 	template<Interface::Direction dir>
 	void traverse(const SolutionBase &start, const SolutionProcessor &cb,
-	              solution_container &trace, double trace_cost = 0);
+	              SolutionSequence::container_type &trace, double trace_cost = 0);
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);

@@ -3,10 +3,10 @@
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
 #include <moveit/task_constructor/stages/pick.h>
+#include <moveit/task_constructor/stages/connect.h>
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <ros/ros.h>
-#include <moveit_msgs/CollisionObject.h>
-#include <shape_msgs/SolidPrimitive.h>
 
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
@@ -45,6 +45,17 @@ int main(int argc, char** argv){
 	initial_stage = initial.get();
 	t.add(std::move(initial));
 
+	// planner used for connect
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	pipeline->setTimeout(8.0);
+	pipeline->setPlannerId("RRTConnectkConfigDefault");
+	// connect to pick
+	stages::Connect::GroupPlannerVector planners = {{"left_arm", pipeline}, {"left_gripper", pipeline}};
+	auto connect = std::make_unique<stages::Connect>("connect", planners);
+	connect->properties().configureInitFrom(Stage::PARENT);
+	t.add(std::move(connect));
+
+	// grasp generator
 	auto grasp_generator = std::make_unique<stages::SimpleGrasp>();
 	grasp_generator->setIKFrame(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
 	grasp_generator->setAngleDelta(.2);
@@ -52,6 +63,7 @@ int main(int argc, char** argv){
 	grasp_generator->setGraspPose("closed");
 	grasp_generator->setMonitoredStage(initial_stage);
 
+	// pick stage
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp_generator));
 	pick->setProperty("eef", std::string("left_gripper"));
 	pick->setProperty("object", std::string("object"));

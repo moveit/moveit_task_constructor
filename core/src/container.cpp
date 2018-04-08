@@ -283,18 +283,18 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 struct SolutionCollector {
 	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
 
-	void operator()(const SerialContainer::solution_container& trace, double cost) {
+	void operator()(const SolutionSequence::container_type& trace, double cost) {
 		// traced path should not extend past container boundaries
 		assert(trace.size() <= max_depth);
 		solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
-	typedef std::list<std::pair<SerialContainer::solution_container, double>> SolutionCostPairs;
+	typedef std::list<std::pair<SolutionSequence::container_type, double>> SolutionCostPairs;
 	SolutionCostPairs solutions;
 	const size_t max_depth;
 };
 
-void updateStateCosts(const SerialContainer::solution_container &partial_solution_path,
+void updateStateCosts(const SolutionSequence::container_type &partial_solution_path,
                       const InterfaceState::Priority &prio) {
 	for (const SolutionBase* solution : partial_solution_path) {
 		// here it suffices to update the start state, because the end state is the start state
@@ -322,7 +322,7 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	assert(num_before < children.size());  // creator should be one of our children
 	num_after = children.size()-1 - num_before;
 
-	SerialContainer::solution_container trace; trace.reserve(children.size());
+	SolutionSequence::container_type trace; trace.reserve(children.size());
 
 	// find all incoming solution paths ending at current solution
 	SolutionCollector incoming(num_before);
@@ -333,8 +333,8 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 	traverse<Interface::FORWARD>(current, std::ref(outgoing), trace);
 
 	// collect (and sort) all solutions spanning from start to end of this container
-	ordered<SerialSolution> sorted;
-	SerialContainer::solution_container solution;
+	ordered<SolutionSequence> sorted;
+	SolutionSequence::container_type solution;
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
@@ -352,7 +352,7 @@ void SerialContainer::onNewSolution(const SolutionBase &current)
 				// insert outgoing solutions in normal order
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
-				sorted.insert(SerialSolution(impl, std::move(solution), prio.cost()));
+				sorted.insert(SolutionSequence(std::move(solution), prio.cost(), impl));
 			} else if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
 				updateStateCosts(in.first, prio);
@@ -655,7 +655,7 @@ void SerialContainer::processSolutions(const ContainerBase::SolutionProcessor &p
 
 template <Interface::Direction dir>
 void SerialContainer::traverse(const SolutionBase &start, const SolutionProcessor &cb,
-                               solution_container &trace, double trace_cost)
+                               SolutionSequence::container_type &trace, double trace_cost)
 {
 	const InterfaceState::Solutions& solutions = start.trajectories<dir>();
 	if (solutions.empty())  // if we reached the end, call the callback
@@ -669,28 +669,6 @@ void SerialContainer::traverse(const SolutionBase &start, const SolutionProcesso
 		trace_cost -= successor->cost();
 		trace.pop_back();
 	}
-}
-
-void SerialSolution::fillMessage(moveit_task_constructor_msgs::Solution &msg,
-                                 Introspection* introspection) const
-{
-	moveit_task_constructor_msgs::SubSolution sub_msg;
-	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
-	sub_msg.cost = this->cost();
-
-	const Introspection *ci = introspection;
-	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
-
-	sub_msg.sub_solution_id.reserve(subsolutions_.size());
-	if (introspection) {
-		for (const SolutionBase* s : subsolutions_)
-			sub_msg.sub_solution_id.push_back(introspection->solutionId(*s));
-		msg.sub_solution.push_back(sub_msg);
-	}
-
-	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
-	for (const SolutionBase* s : subsolutions_)
-		s->fillMessage(msg, introspection);
 }
 
 
@@ -878,7 +856,6 @@ void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
 	auto impl = pimpl();
 	assert(impl->prevEnds() && impl->nextStarts());
 
-	t.setCreator(impl);
 	// store newly created solution (otherwise it's lost)
 	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
 
