@@ -61,24 +61,12 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
+	p.declare<std::set<std::string>>("forward_properties", "to-be-forwarded properties from input");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for ik frame");
 	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
-}
-
-void ComputeIK::setTimeout(double timeout){
-	setProperty("timeout", timeout);
-}
-
-void ComputeIK::setEndEffector(const std::string &eef){
-	setProperty("eef", eef);
-}
-
-void ComputeIK::setIKFrame(const geometry_msgs::PoseStamped &pose)
-{
-	setProperty("ik_frame", pose);
 }
 
 void ComputeIK::setIKFrame(const Eigen::Affine3d &pose, const std::string &link)
@@ -89,26 +77,12 @@ void ComputeIK::setIKFrame(const Eigen::Affine3d &pose, const std::string &link)
 	setIKFrame(pose_msg);
 }
 
-void ComputeIK::setTargetPose(const geometry_msgs::PoseStamped &pose)
-{
-	setProperty("target_pose", pose);
-}
-
 void ComputeIK::setTargetPose(const Eigen::Affine3d &pose, const std::string &frame)
 {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = frame;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setTargetPose(pose_msg);
-}
-
-void ComputeIK::setMaxIKSolutions(uint32_t n){
-	setProperty("max_ik_solutions", n);
-}
-
-void ComputeIK::setIgnoreCollisions(bool flag)
-{
-	setProperty("ignore_collisions", flag);
 }
 
 // found IK solutions with a flag indicating validity
@@ -394,7 +368,14 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
 			robot_state.update();
 
-			spawn(InterfaceState(scene), std::move(solution));
+			InterfaceState state(scene);
+			const boost::any &forwards = props.get("forward_properties");
+			if (!forwards.empty()) {
+				auto p = s.start()->properties();
+				p.exposeTo(state.properties(), boost::any_cast<std::set<std::string>>(forwards));
+			}
+
+			spawn(std::move(state), std::move(solution));
 		}
 
 		// TODO: magic constant should be a property instead ("current_seed_only", or equivalent)
