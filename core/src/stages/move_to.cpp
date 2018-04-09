@@ -40,6 +40,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
+#include <moveit/robot_state/conversions.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -54,8 +55,8 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 
 	p.declare<geometry_msgs::PoseStamped>("pose", "Cartesian target pose");
 	p.declare<geometry_msgs::PointStamped>("point", "Cartesian target point");
-    p.declare<std::string>("joint_pose", "named joint pose");
-    p.declare<moveit_msgs::RobotState>("robot_state", "target robot state");
+    p.declare<std::string>("named_joint_pose", "named joint pose");
+    p.declare<moveit_msgs::RobotState>("joint_pose", "joint pose as robot state message");
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
@@ -81,18 +82,46 @@ void MoveTo::setGoal(const geometry_msgs::PointStamped &point)
 
 void MoveTo::setGoal(const std::string &joint_pose)
 {
-    setProperty("joint_pose", joint_pose);
+    setProperty("named_joint_pose", joint_pose);
 }
 
 void MoveTo::setGoal(const moveit_msgs::RobotState &robot_state)
 {
-    setProperty("robot_state", robot_state);
+    setProperty("joint_pose", robot_state);
 }
 
 void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
+    InitStageException errors;
+
 	PropagatingEitherWay::init(robot_model);
 	planner_->init(robot_model);
+
+    const auto& props = properties();
+
+    // check if named_joint_pose is set. if so, convert to robot state msg
+    boost::any goal = props.get("named_joint_pose");
+    if (!goal.empty()) {
+        const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
+        robot_state::RobotState state(robot_model);
+
+        const std::string& group = props.get<std::string>("group");
+        const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
+
+        if (!state.setToDefaultValues(jmg, named_joint_pose)) {
+            ROS_WARN("MoveTo: unknown joint pose '%s' for jmg '%s'.", named_joint_pose.c_str(), group.c_str());
+            errors.push_back(*this, "MoveTo: unknown joint pose.");
+        } else {
+            ROS_INFO("MoveTo: setting joint pose '%s' for jmg '%s' as goal.", named_joint_pose.c_str(), group.c_str());
+
+            moveit_msgs::RobotState state_msg;
+            robot_state::robotStateToRobotStateMsg(state, state_msg);
+
+            setGoal(state_msg);
+        }
+    }
+
+    if (errors) throw errors;
 }
 
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
@@ -110,7 +139,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	}
 
 	// only allow single target
-    size_t count_goals = props.countDefined({"joint_pose", "robot_state", "pose", "point"});
+    size_t count_goals = props.countDefined({"joint_pose", "pose", "point"});
 	if (count_goals != 1) {
 		if (count_goals == 0) ROS_WARN("MoveTo: no goal defined");
 		else ROS_WARN("MoveTo: cannot plan to multiple goals");
@@ -122,20 +151,10 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-    boost::any goal = props.get("robot_state");
+    boost::any goal = props.get("joint_pose");
     if (!goal.empty()) {
         const moveit_msgs::RobotState& target_state = boost::any_cast<moveit_msgs::RobotState>(goal);
         scene->setCurrentState(target_state);
-        success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
-    }
-
-    goal = props.get("joint_pose");
-    if (!goal.empty()) {
-        const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
-        if (!scene->getCurrentStateNonConst().setToDefaultValues(jmg, named_joint_pose)) {
-            ROS_WARN("MoveTo: unknown joint pose '%s' for jmg '%s'", named_joint_pose.c_str(), group.c_str());
-            return false;
-        }
         success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
     } else {
 		// Cartesian targets require the link name
