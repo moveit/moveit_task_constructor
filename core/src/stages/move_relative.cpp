@@ -109,7 +109,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getJointModelGroup(group);
 	if (!jmg) {
-        ROS_WARN_STREAM("MoveRelative: invalid joint model group: " << group);
+		ROS_WARN_STREAM("MoveRelative: invalid joint model group: " << group);
 		return false;
 	}
 
@@ -127,7 +127,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	if (link_name.empty())
 		link_name = solvers::getEndEffectorLink(jmg);
 	if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-        ROS_WARN_STREAM("MoveRelative: no or invalid link name specified: " << link_name);
+		ROS_WARN_STREAM("MoveRelative: no or invalid link name specified: " << link_name);
 		return false;
 	}
 
@@ -211,15 +211,24 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	                              props.get<moveit_msgs::Constraints>("path_constraints"));
 
 	// min_distance reached?
-	if (success && min_distance > 0.0) {
-		const robot_state::RobotState& reached_state = robot_trajectory->getLastWayPoint();
-		Eigen::Affine3d reached_pose = reached_state.getGlobalLinkTransform(link);
-		if (use_rotation_distance) {
-			Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
-			success = rotation.angle() > min_distance;
-		} else
-			success = (reached_pose.translation() - link_pose.translation()).norm() > min_distance;
-	} else if (!success && min_distance == 0.0) { // if min_distance is zero, we succeed in any case
+	if (min_distance > 0.0) {
+		double distance = 0.0;
+		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
+			const robot_state::RobotState& reached_state = robot_trajectory->getLastWayPoint();
+			Eigen::Affine3d reached_pose = reached_state.getGlobalLinkTransform(link);
+			if (use_rotation_distance) {
+				Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
+				distance = rotation.angle();
+			} else
+				distance = (reached_pose.translation() - link_pose.translation()).norm();
+		}
+		success = distance >= min_distance;
+		if (!success) {
+			char msg[100];
+			snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
+			trajectory.setName(msg);
+		}
+	} else if (min_distance == 0.0) { // if min_distance is zero, we succeed in any case
 		success = true;
 	}
 
