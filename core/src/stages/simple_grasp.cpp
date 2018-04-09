@@ -94,7 +94,7 @@ SimpleGraspBase::SimpleGraspBase(const std::string& name, bool forward)
 			return boost::any(jmg->getName());
 		});
 		insert(std::move(move), insertion_position);
-		exposePropertyOfChildAs(insertion_position, "joint_pose", forward ? "grasp" : "pregrasp");
+        exposePropertyOfChildAs(insertion_position, "named_joint_pose", forward ? "grasp" : "pregrasp");
 	}
 	{
 		auto attach = std::make_unique<ModifyPlanningScene>(forward ? "attach object" : "detach object");
