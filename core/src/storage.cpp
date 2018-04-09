@@ -50,8 +50,8 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
 {
 }
 
-InterfaceState::InterfaceState(const InterfaceState &existing)
-   : scene_(existing.scene_), properties_(existing.properties_)
+InterfaceState::InterfaceState(const InterfaceState &other)
+   : scene_(other.scene_), properties_(other.properties_)
 {
 }
 
@@ -69,7 +69,7 @@ Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incomin
 	// move state to a list node
 	std::list<InterfaceState> container;
 	auto it = container.insert(container.end(), std::move(state));
-	assert(it->owner_ == nullptr);
+	assert(it->owner_ == nullptr);  // state can only be added once to an interface
 	it->owner_ = this;
 
 	// configure state: inherit priority from other end's state and add current solution's cost

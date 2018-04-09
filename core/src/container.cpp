@@ -867,7 +867,7 @@ void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
 		it->setEndState(*state_it);
 		impl->failures_.push_back(&*it);
 	} else {
-		// directly spawn states in push interfaces
+		// directly spawn states into push interfaces
 		impl->prevEnds()->add(InterfaceState(state), NULL, &*it);
 		impl->nextStarts()->add(std::move(state), &*it, NULL);
 		impl->solutions_.insert(&*it);

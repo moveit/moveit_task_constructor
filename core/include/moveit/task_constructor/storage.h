@@ -106,7 +106,7 @@ public:
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
-	InterfaceState(const InterfaceState& existing);
+	InterfaceState(const InterfaceState& other);
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
