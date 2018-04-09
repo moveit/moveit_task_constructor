@@ -339,6 +339,9 @@ protected:
 
 class ConnectingPrivate;
 class Connecting : public ComputeBase {
+protected:
+	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
+
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name);
@@ -346,13 +349,13 @@ public:
 	void reset() override;
 
 	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
-	void connect(const InterfaceState& from, const InterfaceState& to,
-	             SubTrajectory&& trajectory);
-	void connect(const InterfaceState& from, const InterfaceState& to,
-	             SubTrajectory&& trajectory, double cost) {
+	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory);
+	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory, double cost) {
 		trajectory.setCost(cost);
 		connect(from, to, std::move(trajectory));
 	}
+
+	void newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 };
 
 } }

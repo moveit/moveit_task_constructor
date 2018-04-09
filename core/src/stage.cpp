@@ -38,11 +38,11 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit/planning_scene/planning_scene.h>
 #include <iostream>
 #include <iomanip>
 #include <ros/console.h>
 
-using namespace std::placeholders;
 namespace moveit { namespace task_constructor {
 
 void InitStageException::push_back(const Stage &stage, const std::string &msg)
@@ -83,8 +83,10 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	return f;
 }
 
-void StagePrivate::newSolution(const SolutionBase &solution)
+void StagePrivate::newSolution(SolutionBase &solution)
 {
+	solution.setCreator(this);
+
 	if (introspection_)
 		introspection_->registerSolution(solution);
 
@@ -249,7 +251,6 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 }
 
 SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
-	trajectory.setCreator(this);
 	if (!trajectory.isFailure()) {
 		return *solutions_.insert(std::move(trajectory));
 	} else if (me()->storeFailures()) {
@@ -309,14 +310,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 {
 	if (dir & PropagatingEitherWay::FORWARD) {
 		if (!starts_)  // keep existing interface if possible
-			starts_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, this, _1)));
+			starts_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, this, std::placeholders::_1)));
 	} else {
 		starts_.reset();
 	}
 
 	if (dir & PropagatingEitherWay::BACKWARD) {
 		if (!ends_)  // keep existing interface if possible
-			ends_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, this, _1)));
+			ends_.reset(new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, this, std::placeholders::_1)));
 	} else {
 		ends_.reset();
 	}
@@ -572,7 +573,7 @@ void MonitoringGenerator::init(const moveit::core::RobotModelConstPtr& robot_mod
 	if (!impl->monitored_)
 		throw InitStageException(*this, "no monitored stage defined");
 	if (!impl->registered_) {  // register only once
-		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGenerator::onNewSolution, this, _1));
+		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGenerator::onNewSolution, this, std::placeholders::_1));
 		impl->registered_ = true;
 	}
 }
@@ -581,15 +582,27 @@ void MonitoringGenerator::init(const moveit::core::RobotModelConstPtr& robot_mod
 ConnectingPrivate::ConnectingPrivate(Connecting *me, const std::string &name)
    : ComputeBasePrivate(me, name)
 {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newStartState, this, _1, _2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newEndState, this, _1, _2)));
+	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1, std::placeholders::_2)));
+	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2)));
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
 	return InterfaceFlags(CONNECT);
 }
 
-void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
+template <>
+ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::BACKWARD>
+(Interface::const_iterator first, Interface::const_iterator second) {
+	return std::make_pair(first, second);
+}
+template <>
+ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>
+(Interface::const_iterator first, Interface::const_iterator second) {
+	return std::make_pair(second, first);
+}
+
+template <Interface::Direction other>
+void ConnectingPrivate::newState(Interface::iterator it, bool updated)
 {
 	// TODO: only consider interface states with priority depth > threshold
 	if (!std::isfinite(it->priority().cost())) {
@@ -602,30 +615,12 @@ void ConnectingPrivate::newStartState(Interface::iterator it, bool updated)
 		// many pairs might be affected: sort
 		pending.sort();
 	} else { // new state: insert all pairs with other interface
-		for (auto oit = ends_->begin(), oend = ends_->end(); oit != oend; ++oit) {
+		InterfacePtr other_interface = pullInterface(other);
+		for (auto oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!std::isfinite(oit->priority().cost()))
 				break;
-			pending.insert(std::make_pair(it, oit));
-		}
-	}
-}
-
-void ConnectingPrivate::newEndState(Interface::iterator it, bool updated)
-{
-	if (!std::isfinite(it->priority().cost())) {
-		// remove pending pairs, if cost updated to infinity
-		if (updated)
-			pending.remove_if([it](const StatePair& p) { return p.second == it; });
-		return;
-	}
-	if (updated) {
-		// many pairs might be affected: sort
-		pending.sort();
-	} else { // new state: insert all pairs with other interface
-		for (auto oit = starts_->begin(), oend = starts_->end(); oit != oend; ++oit) {
-			if (!std::isfinite(oit->priority().cost()))
-				break;
-			pending.insert(std::make_pair(oit, it));
+			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
+				pending.insert(make_pair<other>(it, oit));
 		}
 	}
 }
@@ -653,13 +648,38 @@ void Connecting::reset()
 	ComputeBase::reset();
 }
 
-void Connecting::connect(const InterfaceState& from, const InterfaceState& to,
-                         SubTrajectory&& t) {
-	auto impl = pimpl();
-	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
-	trajectory.setStartState(from);
-	trajectory.setEndState(to);
-	impl->newSolution(trajectory);
+/// compare consistency of planning scenes
+bool Connecting::compatible(const InterfaceState& from_state, const InterfaceState& to_state) const
+{
+	const planning_scene::PlanningSceneConstPtr& from = from_state.scene();
+	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
+
+	if (from->getWorld()->size() != to->getWorld()->size())
+		return false;  // different number of collision objects
+
+	// both scenes should have the same set of collision objects, at the same location
+	for (const auto& from_object_pair : *from->getWorld()) {
+		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
+		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_pair.first);
+		if (!to_object) return false;  // object missing
+		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) return false;  // shapes not matching
+
+		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
+		     to_it = to_object->shape_poses_.cbegin(); from_it != from_end; ++from_it, ++to_it)
+			if (!from_it->matrix().array().isApprox(to_it->matrix().array()))
+				return false;  // transforms do not match
+	}
+	return true;
+}
+
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& t) {
+	newSolution(from, to, pimpl()->addTrajectory(std::move(t)));
+}
+
+void Connecting::newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
+	solution.setStartState(from);
+	solution.setEndState(to);
+	pimpl()->newSolution(solution);
 }
 
 std::ostream& operator<<(std::ostream& os, const Stage& stage) {

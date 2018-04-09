@@ -47,7 +47,7 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 GenerateGraspPose::GenerateGraspPose(const std::string& name)
-   : MonitoringGenerator(name)
+   : GeneratePose(name)
 {
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector");
@@ -56,15 +56,15 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name)
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
 }
 
-void GenerateGraspPose::setEndEffector(const std::string &eef){
+void GenerateGraspPose::setEndEffector(const std::string &eef) {
 	setProperty("eef", eef);
 }
 
-void GenerateGraspPose::setNamedPose(const std::string &pose_name){
+void GenerateGraspPose::setNamedPose(const std::string &pose_name) {
 	setProperty("pregrasp", pose_name);
 }
 
-void GenerateGraspPose::setObject(const std::string &object){
+void GenerateGraspPose::setObject(const std::string &object) {
 	setProperty("object", object);
 }
 
@@ -72,50 +72,73 @@ void GenerateGraspPose::setAngleDelta(double delta){
 	setProperty("angle_delta", delta);
 }
 
-void GenerateGraspPose::reset()
+void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
 {
-	scene_.reset();
-	current_angle_ = 0.0;
-	MonitoringGenerator::reset();
+	InitStageException errors;
+	try { GeneratePose::init(robot_model); }
+	catch (InitStageException &e) { errors.append(e); }
+
+	const auto& props = properties();
+
+	// check angle_delta
+	if (props.get<double>("angle_delta") == 0.)
+		errors.push_back(*this, "angle_delta must be non-zero");
+
+	// check availability of eef
+	const std::string& eef = props.get<std::string>("eef");
+	if (!robot_model->hasEndEffector(eef))
+		errors.push_back(*this, "unknown end effector: " + eef);
+	else {
+		// check availability of eef pose
+		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+		const std::string& name = props.get<std::string>("pregrasp");
+		std::map<std::string, double> m;
+		if (!jmg->getVariableDefaultPositions(name, m))
+			errors.push_back(*this, "unknown end effector pose: " + name);
+	}
+
+	if (errors) throw errors;
 }
 
 void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 {
-	if (scene_)
-		ROS_WARN_NAMED("GenerateGraspPose", "got additional solution from monitored stage");
-	scene_ = s.end()->scene()->diff();
-}
+	planning_scene::PlanningScenePtr scene = s.end()->scene()->diff();
 
-bool GenerateGraspPose::canCompute() const{
-	return scene_ && current_angle_ < 2*M_PI && current_angle_ > -2*M_PI;
-}
-
-bool GenerateGraspPose::compute(){
+	// set end effector pose
 	const auto& props = properties();
 	const std::string& eef = props.get<std::string>("eef");
+	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	assert(scene_->getRobotModel()->hasEndEffector(eef) && "The specified end effector is not defined in the srdf");
-	const moveit::core::JointModelGroup* jmg = scene_->getRobotModel()->getEndEffector(eef);
-
-	robot_state::RobotState &robot_state = scene_->getCurrentStateNonConst();
-	const std::string& joint_pose = props.get<std::string>("pregrasp");
-	if(!joint_pose.empty()){
-		robot_state.setToDefaultValues(jmg , joint_pose);
-	}
+	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
+	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
 
 	const std::string& object_name = props.get<std::string>("object");
-	if (!scene_->knowsFrameTransform(object_name))
-		throw std::runtime_error("requested object does not exist or could not be retrieved");
+	if (!scene->knowsFrameTransform(object_name)) {
+		ROS_WARN_STREAM_NAMED("GenerateGraspPose", "unknown object: " << object_name);
+		return;
+	}
+
+	scenes_.push_back(scene);
+}
+
+bool GenerateGraspPose::compute() {
+	if (scenes_.empty())
+		return false;
+	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
+	scenes_.pop_front();
+
+	const auto& props = properties();
 
 	geometry_msgs::PoseStamped target_pose_msg;
-	target_pose_msg.header.frame_id = object_name;
+	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
-	while( canCompute() ) {
+	double current_angle_ = 0.0;
+	while (current_angle_ < 2.*M_PI && current_angle_ > -2.*M_PI) {
 		// rotate object pose about z-axis
 		Eigen::Affine3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
 		current_angle_ += props.get<double>("angle_delta");
 
-		InterfaceState state(scene_);
+		InterfaceState state(scene);
 		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
 		state.properties().set("target_pose", target_pose_msg);
 
@@ -127,10 +150,8 @@ bool GenerateGraspPose::compute(){
 		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
 
 		spawn(std::move(state), std::move(trajectory));
-		return true;
 	}
-
-	return false;
+	return true;
 }
 
 } } }

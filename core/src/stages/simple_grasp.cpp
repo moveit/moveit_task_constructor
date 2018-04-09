@@ -49,23 +49,24 @@
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-SimpleGrasp::SimpleGrasp(const std::string& name)
+SimpleGraspBase::SimpleGraspBase(const std::string& name, bool forward)
    : SerialContainer(name)
 {
+	int insertion_position = forward ? -1 : 0; // insert children at end / front, i.e. normal or reverse order
 	{
-		auto gengrasp = std::make_unique<GenerateGraspPose>("generate grasp pose");
+		auto gengrasp = std::make_unique<GenerateGraspPose>(forward ? "generate grasp pose" : "generate release pose");
 		grasp_generator_ = gengrasp.get();
 
 		auto ik = std::make_unique<ComputeIK>("compute ik", std::move(gengrasp));
 		const std::initializer_list<std::string>& grasp_prop_names = { "eef", "pregrasp", "object", "angle_delta" };
 		ik->exposePropertiesOfChild(0, grasp_prop_names);
-		insert(std::move(ik));
+		insert(std::move(ik), insertion_position);
 
-		exposePropertiesOfChild(-1, grasp_prop_names);
-		exposePropertiesOfChild(-1, { "max_ik_solutions", "timeout", "ik_frame" });
+		exposePropertiesOfChild(insertion_position, grasp_prop_names);
+		exposePropertiesOfChild(insertion_position, { "max_ik_solutions", "timeout", "ik_frame" });
 	}
 	{
-		auto allow_touch = std::make_unique<ModifyPlanningScene>("allow object collision");
+		auto allow_touch = std::make_unique<ModifyPlanningScene>(forward ? "allow object collision" : "forbid object collision");
 		PropertyMap& p = allow_touch->properties();
 		p.declare<std::string>("eef");
 		p.declare<std::string>("object");
@@ -78,53 +79,54 @@ SimpleGrasp::SimpleGrasp(const std::string& name)
 			acm.setEntry(object, scene->getRobotModel()->getEndEffector(eef)
 			             ->getLinkModelNamesWithCollisionGeometry(), true);
 		});
-		insert(std::move(allow_touch));
+		insert(std::move(allow_touch), insertion_position);
 	}
 	{
 		auto pipeline = std::make_shared<solvers::PipelinePlanner>();
 		pipeline->setTimeout(8.0);
 		pipeline->setPlannerId("RRTConnectkConfigDefault");
 
-		auto move = std::make_unique<MoveTo>("close gripper", pipeline);
+		auto move = std::make_unique<MoveTo>(forward ? "close gripper" : "open gripper", pipeline);
 		PropertyMap& p = move->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, [this](const PropertyMap& parent_map){
 			const std::string& eef = parent_map.get<std::string>("eef");
 			const moveit::core::JointModelGroup* jmg = model_->getEndEffector(eef);
 			return boost::any(jmg->getName());
 		});
-		insert(std::move(move));
-		exposePropertyOfChildAs(-1, "joint_pose", "grasp");
+		insert(std::move(move), insertion_position);
+		exposePropertyOfChildAs(insertion_position, "joint_pose", forward ? "grasp" : "pregrasp");
 	}
 	{
-		auto attach = std::make_unique<ModifyPlanningScene>("attach object");
+		auto attach = std::make_unique<ModifyPlanningScene>(forward ? "attach object" : "detach object");
 		PropertyMap& p = attach->properties();
 		p.declare<std::string>("eef");
 		p.declare<std::string>("object");
 		p.configureInitFrom(Stage::PARENT, { "eef", "object" });
-		attach->setCallback([this](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
+		attach->setCallback([this, forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 				const std::string& eef = p.get<std::string>("eef");
 				moveit_msgs::AttachedCollisionObject obj;
-				obj.object.operation = moveit_msgs::CollisionObject::ADD;
+				obj.object.operation = forward ? (int8_t) moveit_msgs::CollisionObject::ADD
+				                               : (int8_t) moveit_msgs::CollisionObject::REMOVE;
 				obj.link_name = scene->getRobotModel()->getEndEffector(eef)->getEndEffectorParentGroup().second;
 				obj.object.id = p.get<std::string>("object");
 				scene->processAttachedCollisionObjectMsg(obj);
 			});
-		insert(std::move(attach));
+		insert(std::move(attach), insertion_position);
 	}
 }
 
-void SimpleGrasp::init(const moveit::core::RobotModelConstPtr& robot_model)
+void SimpleGraspBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	model_ = robot_model;
 	SerialContainer::init(robot_model);
 }
 
-void SimpleGrasp::setMonitoredStage(Stage* monitored)
+void SimpleGraspBase::setMonitoredStage(Stage* monitored)
 {
 	grasp_generator_->setMonitoredStage(monitored);
 }
 
-void SimpleGrasp::setIKFrame(const Eigen::Affine3d& pose, const std::string& link) {
+void SimpleGraspBase::setIKFrame(const Eigen::Affine3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);

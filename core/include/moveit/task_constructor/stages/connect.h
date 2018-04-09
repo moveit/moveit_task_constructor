@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
+/* Authors: Robert Haschke, Michael Goerner
    Desc:    Connect arbitrary states by motion planning
 */
 
@@ -46,8 +46,12 @@
 namespace moveit { namespace task_constructor { namespace stages {
 
 class Connect : public Connecting {
+protected:
+	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
+
 public:
-	Connect(std::string name, const solvers::PlannerInterfacePtr &planner);
+	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
+	Connect(std::string name, const GroupPlannerVector& planners);
 
 	void setTimeout(const ros::Duration& timeout){
 		setProperty("timeout", timeout.toSec());
@@ -57,11 +61,27 @@ public:
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
-	void init(const moveit::core::RobotModelConstPtr& robot_model);
-	bool compute(const InterfaceState &from, const InterfaceState &to);
+	void reset() override;
+	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
+	bool compute(const InterfaceState &from, const InterfaceState &to) override;
+
+	size_t numSolutions() const override;
+	void processSolutions(const SolutionProcessor &processor) const override;
+	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
-	solvers::PlannerInterfacePtr planner_;
+	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
+	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
+
+protected:
+	GroupPlannerVector planner_;
+	moveit::core::JointModelGroupPtr merged_jmg_;
+	// TODO: ComputeBase should handle any SolutionBase -> shared_ptr
+	std::list<SubTrajectory> subsolutions_;
+	std::list<SolutionSequence> solutions_;
+	std::list<InterfaceState> states_;
 };
 
 } } }

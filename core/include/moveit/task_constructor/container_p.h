@@ -136,27 +136,6 @@ protected:
 };
 PIMPL_FUNCTIONS(ContainerBase)
 
-/** Representation of a single, full solution path of a SerialContainer.
- *
- * A serial solution describes a full solution path through all children
- * of a SerialContainer. This is a vector (of children().size()) of pointers
- * to all solutions of the children. Hence, we don't need to copy those solutions. */
-class SerialSolution : public SolutionBase {
-public:
-	explicit SerialSolution(StagePrivate* creator, SerialContainer::solution_container&& subsolutions, double cost)
-	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
-	{}
-	/// append all subsolutions to solution
-	void fillMessage(moveit_task_constructor_msgs::Solution &msg, Introspection *introspection) const override;
-
-	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
-	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
-
-private:
-	/// series of sub solutions
-	SerialContainer::solution_container subsolutions_;
-};
-
 
 /* A solution of a SerialContainer needs to connect start to end via a full path.
  * The solution of a single child stage is usually disconnected to the container's start or end.
@@ -188,7 +167,7 @@ private:
 	                     InterfaceFlags accepted);
 
 	// set of all solutions
-	ordered<SerialSolution> solutions_;
+	ordered<SolutionSequence> solutions_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 

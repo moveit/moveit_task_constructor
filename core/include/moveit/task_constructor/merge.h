@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2017, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,30 +32,38 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner
-   Desc:    Generator Stage for simple grasp poses
-*/
+/* Authors: Luca Lach, Robert Haschke */
 
 #pragma once
 
-#include <moveit/task_constructor/stages/generate_pose.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit { namespace task_constructor {
 
-class GenerateGraspPose : public GeneratePose {
-public:
-	GenerateGraspPose(const std::string& name);
 
-	void init(const core::RobotModelConstPtr &robot_model) override;
-	bool compute() override;
+/// create a new JointModelGroup comprising all joints of the given groups
+moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups);
 
-	void setEndEffector(const std::string &eef);
-	void setNamedPose(const std::string &pose_name);
-	void setObject(const std::string &object);
-	void setAngleDelta(double delta);
+/** find duplicate, non-fixed joints
+ *
+ * Merging is only allowed for disjoint joint sets. Fixed joints are tolerated.
+ * Assumes that \e joints is the the union of the joint sets of all \e groups (w/o duplicates).
+ * The list of duplicate joints is returned in \e duplicates and in \e names (as a comma-separated list) */
+bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
+                    std::vector<const moveit::core::JointModel*> joints,
+                    std::vector<const moveit::core::JointModel*>& duplicates,
+                    std::string& names);
 
-protected:
-	void onNewSolution(const SolutionBase& s) override;
-};
+/** merge all sub trajectories into a single RobotTrajectory for parallel execution
+ *
+ * As the RobotTrajectory maintains a pointer to the underlying JointModelGroup
+ * (to know about the involved joint names), a merged JointModelGroup needs to be passed
+ * or created on the fly. This JMG needs to stay alive during the lifetime of the trajectory.
+ * For now, only the trajectory path is considered. Timings, velocities, etc. are ignored.
+ */
+robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+                                           core::JointModelGroup*& merged_group);
 
-} } }
+} }
