@@ -89,7 +89,7 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
 }
 
 robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                           moveit::core::JointModelGroup*& merged_group)
+                                           const robot_state::RobotState& base_state, moveit::core::JointModelGroup*& merged_group)
 {
 	if (sub_trajectories.size() <= 1)
 		throw std::runtime_error("Expected multiple sub solutions");
@@ -101,7 +101,7 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	groups.reserve(sub_trajectories.size());
 
 	// sanity checks: all sub solutions must share the same robot model and use disjoint joint sets
-	const moveit::core::RobotModelConstPtr& robot_model = sub_trajectories[0]->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = base_state.getRobotModel();
 	size_t max_num_joints = 0;  // maximum number of joints in sub groups
 	size_t num_joints = 0;  // sum of joints in all sub groups
 
@@ -148,11 +148,11 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	std::vector<double> values;
 	values.reserve(max_num_joints);
 
+	auto merged_state = std::make_shared<robot_state::RobotState>(base_state);
 	while (true) {
 		bool finished = true;
 		size_t index = merged_traj->getWayPointCount();
-		auto merged_state = index == 0 ? std::make_shared<robot_state::RobotState>(robot_model)
-		                               : std::make_shared<robot_state::RobotState>(merged_traj->getLastWayPoint());
+
 		for (const robot_trajectory::RobotTrajectoryConstPtr& sub : sub_trajectories) {
 			if (index >= sub->getWayPointCount())
 				continue;  // no more waypoints in this sub solution
@@ -161,13 +161,15 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 			const robot_state::RobotState& sub_state = sub->getWayPoint(index);
 			sub_state.copyJointGroupPositions(sub->getGroup(), values);
 			merged_state->setJointGroupPositions(sub->getGroup(), values);
+			merged_state->update();
 		}
 		if (finished)
 			break;
 
 		// add waypoint without timing
-		merged_state->update();
 		merged_traj->addSuffixWayPoint(merged_state, 0.0);
+		// create new RobotState for next waypoint
+		merged_state = std::make_shared<robot_state::RobotState>(*merged_state);
 	}
 	return merged_traj;
 }

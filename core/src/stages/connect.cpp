@@ -176,7 +176,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		// mark solution as failure
 		solution->setCost(std::numeric_limits<double>::infinity());
 	} else {
-		robot_trajectory::RobotTrajectoryPtr t = merge(sub_trajectories, intermediate_scenes);
+		robot_trajectory::RobotTrajectoryPtr t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
 		if (t) {
 			connect(from, to, SubTrajectory(t));
 			return true;
@@ -219,10 +219,12 @@ SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::Robot
 }
 
 robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                                    const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes)
+                                                    const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+                                                    const moveit::core::RobotState& state)
 {
 	auto jmg = merged_jmg_.get();
-	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, jmg);
+	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg);
+	// TODO: check merged trajectory for collisions
 	return trajectory;
 }
 

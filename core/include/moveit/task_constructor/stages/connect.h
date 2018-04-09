@@ -43,6 +43,10 @@
 
 #include <moveit_msgs/Constraints.h>
 
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(RobotState)
+} }
+
 namespace moveit { namespace task_constructor { namespace stages {
 
 class Connect : public Connecting {
@@ -73,7 +77,8 @@ protected:
 	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
 	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
 	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
+	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+	                                           const moveit::core::RobotState& state);
 
 protected:
 	GroupPlannerVector planner_;
