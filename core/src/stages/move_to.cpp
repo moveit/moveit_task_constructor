@@ -48,7 +48,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
    , planner_(planner)
 {
 	auto& p = properties();
-	p.declare<double>("timeout", 10.0, "planning timeout"); // TODO: make this private in Stage
+	p.declare<double>("timeout", 10.0, "planning timeout"); // TODO: make this a common property in Stage
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<std::string>("link", "", "link to move (default is tip of jmg)");
 
@@ -184,7 +184,8 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	return success;
 }
 
-// TODO: move these as default implementation to PropagateEitherWay?
+// -1 TODO: move these as default implementation to PropagateEitherWay?
+// Essentially, here compute() is a class-specific worker function
 bool MoveTo::computeForward(const InterfaceState &from){
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
