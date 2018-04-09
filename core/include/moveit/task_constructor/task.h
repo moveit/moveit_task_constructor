@@ -64,12 +64,14 @@ MOVEIT_CLASS_FORWARD(Task)
  */
 class Task : protected WrapperBase {
 public:
-	Task(const std::string& id = "",
-        Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
 	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
 	                                                            const std::string &ns = "move_group",
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
+	Task(const std::string& id = "",
+	     Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
+	Task(Task &&other);
+	Task& operator=(Task&& other);
 	~Task();
 
 	std::string id() const;

@@ -242,8 +242,9 @@ private:
 /// SubTrajectory connects interface states of ComputeStages
 class SubTrajectory : public SolutionBase {
 public:
-	SubTrajectory(const robot_trajectory::RobotTrajectoryPtr& trajectory = robot_trajectory::RobotTrajectoryPtr())
-	   : SolutionBase(), trajectory_(trajectory)
+	SubTrajectory(const robot_trajectory::RobotTrajectoryConstPtr& trajectory = robot_trajectory::RobotTrajectoryConstPtr(),
+	              double cost = 0.0)
+	   : SolutionBase(nullptr, cost), trajectory_(trajectory)
 	{}
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
@@ -254,7 +255,7 @@ public:
 
 private:
 	// actual trajectory, might be empty
-	robot_trajectory::RobotTrajectoryPtr trajectory_;
+	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
 };
 
 

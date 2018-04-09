@@ -145,7 +145,7 @@ bool Gripper::computeForward(const InterfaceState &from){
 
 	if (!compute(from, to, trajectory, cost, FORWARD))
 		return false;
-	sendForward(from, InterfaceState(to), trajectory, cost);
+	sendForward(from, InterfaceState(to), SubTrajectory(trajectory, cost));
 	return true;
 }
 
@@ -157,7 +157,7 @@ bool Gripper::computeBackward(const InterfaceState &to)
 
 	if (!compute(to, from, trajectory, cost, BACKWARD))
 		return false;
-	sendBackward(InterfaceState(from), to, trajectory, cost);
+	sendBackward(InterfaceState(from), to, SubTrajectory(trajectory, cost));
 	return true;
 }
 

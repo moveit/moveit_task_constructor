@@ -70,9 +70,9 @@ public:
 	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
-	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
 	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
-	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryPtr>& sub_trajectories,
+	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
 	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
 
 protected:

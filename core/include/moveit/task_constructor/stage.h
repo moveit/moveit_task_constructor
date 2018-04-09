@@ -197,7 +197,7 @@ protected:
 	Stage(const Stage&) = delete;
 
 protected:
-	StagePrivate* const pimpl_; // constness guarantees one initial write
+	StagePrivate* pimpl_;
 };
 std::ostream& operator<<(std::ostream& os, const Stage& stage);
 
@@ -244,21 +244,6 @@ public:
 	void sendBackward(InterfaceState&& from,
 	                  const InterfaceState& to,
 	                  SubTrajectory&& trajectory);
-
-	void sendForward(const InterfaceState& from,
-	                 InterfaceState&& to,
-	                 SubTrajectory&& trajectory,
-	                 double cost) {
-		trajectory.setCost(cost);
-		sendForward(from, std::move(to), std::move(trajectory));
-	}
-	void sendBackward(InterfaceState&& from,
-	                  const InterfaceState& to,
-	                  SubTrajectory&& trajectory,
-	                  double cost) {
-		trajectory.setCost(cost);
-		sendBackward(std::move(from), to, std::move(trajectory));
-	}
 
 protected:
 	// constructor for use in derived classes

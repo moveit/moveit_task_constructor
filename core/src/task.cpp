@@ -60,6 +60,22 @@ Task::Task(const std::string& id, ContainerBase::pointer &&container)
 		enableIntrospection(true);
 }
 
+Task::Task(Task&& other)
+   : WrapperBase(std::string(), std::make_unique<SerialContainer>())
+{
+	*this = std::move(other);
+}
+
+Task& Task::operator=(Task&& other)
+{
+	id_ = std::move(other.id_);
+	robot_model_ = std::move(other.robot_model_);
+	introspection_ = std::move(other.introspection_);
+	task_cbs_ = std::move(other.task_cbs_);
+	std::swap(pimpl_, other.pimpl_);
+	return *this;
+}
+
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
                     const std::string& planning_plugin_param_name,
