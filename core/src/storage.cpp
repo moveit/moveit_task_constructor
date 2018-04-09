@@ -165,16 +165,35 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 	const Introspection *ci = introspection;
 	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
 
+	// Usually subsolutions originate from another stage than this solution.
+	// However, the Connect stage will announce sub solutions created by itself
+	// (only in case of merge failure). To not confuse the display's SolutionModel
+	// we do not publish own IDs for them, but set those IDs to zero.
 	sub_msg.sub_solution_id.reserve(subsolutions_.size());
 	if (introspection) {
-		for (const SolutionBase* s : subsolutions_)
+		for (const SolutionBase* s : subsolutions_) {
+			// skip sub solutions with same creator as this
+			if (s->creator() == this->creator())
+				continue;
 			sub_msg.sub_solution_id.push_back(introspection->solutionId(*s));
+		}
 		msg.sub_solution.push_back(sub_msg);
 	}
 
 	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
-	for (const SolutionBase* s : subsolutions_)
+	for (const SolutionBase* s : subsolutions_) {
+		size_t current = msg.sub_trajectory.size();
 		s->fillMessage(msg, introspection);
+
+		// zero IDs of sub solutions with same creator as this
+		if (s->creator() == this->creator()) {
+			auto it = msg.sub_trajectory.begin();
+			auto end = msg.sub_trajectory.end();
+			std::advance(it, current);
+			for (; it != end; ++it)
+				it->id = 0;
+		}
+	}
 }
 
 

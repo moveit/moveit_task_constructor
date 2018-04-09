@@ -170,6 +170,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	if (sub_trajectories.size() != planner_.size())  { // error during sequential planning
 		if (!storeFailures())
 			return false;
+		// push back a dummy solution to also show the target scene of the failed attempt
 		sub_trajectories.push_back(robot_trajectory::RobotTrajectoryPtr());
 		solution = storeSequential(sub_trajectories, intermediate_scenes);
 		// mark solution as failure
