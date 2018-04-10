@@ -267,9 +267,7 @@ void TaskSolutionVisualization::changedLoopDisplay()
 void TaskSolutionVisualization::changedTrail()
 {
   clearTrail();
-  DisplaySolutionPtr t = next_solution_to_display_;
-  if (!t)
-    t = displaying_solution_;
+  DisplaySolutionPtr t = displaying_solution_;
 
   if (!t || !trail_display_property_->getBool()) {
     setVisibility(trail_scene_node_, main_scene_node_, false);
@@ -280,8 +278,7 @@ void TaskSolutionVisualization::changedTrail()
   setVisibility(trail_scene_node_, main_scene_node_, true);
 
   int stepsize = trail_step_size_property_->getInt();
-  // always include last trajectory point
-  trail_.resize((int)std::ceil((t->getWayPointCount() + stepsize - 1) / (float)stepsize));
+  trail_.resize(t->getWayPointCount() / stepsize);
   for (std::size_t i = 0; i < trail_.size(); i++)
   {
     int waypoint_i = std::min(i * stepsize, t->getWayPointCount() - 1);  // limit to last trajectory point
@@ -466,11 +463,14 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
 
   renderWayPoint(current_state_, previous_state);
 
-  // render trail up to current_state_
+  // show / hide trail between start .. end
   int stepsize = trail_step_size_property_->getInt();
-  for (int i = std::max(0, previous_state / stepsize),
-       end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
-    trail_[i]->setVisible(true);
+  int start = std::max(0, previous_state / stepsize);
+  int end = current_state_ / stepsize;
+  bool show = start <= end;
+  if (!show) std::swap(start, end);
+  end = std::min<int>(end, trail_.size());
+  for (; start < end; ++start) trail_[start]->setVisible(show);
 
   setVisibility();
 }
