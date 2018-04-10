@@ -161,7 +161,7 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 TaskSolutionVisualization::~TaskSolutionVisualization()
 {
   clearTrail();
-  solution_to_display_.reset();
+  next_solution_to_display_.reset();
   displaying_solution_.reset();
 
   scene_render_.reset();
@@ -233,7 +233,7 @@ void TaskSolutionVisualization::onRobotModelLoaded(robot_model::RobotModelConstP
 void TaskSolutionVisualization::reset()
 {
   clearTrail();
-  solution_to_display_.reset();
+  next_solution_to_display_.reset();
   displaying_solution_.reset();
   animating_ = false;
 
@@ -260,7 +260,7 @@ void TaskSolutionVisualization::changedLoopDisplay()
 void TaskSolutionVisualization::changedTrail()
 {
   clearTrail();
-  DisplaySolutionPtr t = solution_to_display_;
+  DisplaySolutionPtr t = next_solution_to_display_;
   if (!t)
     t = displaying_solution_;
 
@@ -386,12 +386,12 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     boost::mutex::scoped_lock lock(display_solution_mutex_);
 
     // new trajectory available to display?
-    if (solution_to_display_ && (!locked_ || !displaying_solution_)) {
+    if (next_solution_to_display_ && (!locked_ || !displaying_solution_)) {
       animating_ = true;
-      displaying_solution_ = solution_to_display_;
+      displaying_solution_ = next_solution_to_display_;
       changedTrail();
       if (slider_panel_)
-        slider_panel_->update(solution_to_display_->getWayPointCount());
+        slider_panel_->update(next_solution_to_display_->getWayPointCount());
     }
     else if (displaying_solution_) {
       if (loop_display_property_->getBool()) {
@@ -404,7 +404,7 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       } else if (locked_)
         return;
     }
-    solution_to_display_.reset();
+    next_solution_to_display_.reset();
 
     if (animating_)
     {
@@ -532,7 +532,7 @@ void TaskSolutionVisualization::showTrajectory(const DisplaySolutionPtr& s, bool
 {
   if (lock_display || !s->empty()) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
-    solution_to_display_ = s;
+    next_solution_to_display_ = s;
     if (lock_display)
       locked_ = drop_displaying_solution_ = true;
     else if (interrupt_display_property_->getBool())

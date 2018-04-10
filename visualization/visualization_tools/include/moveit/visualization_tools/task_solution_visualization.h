@@ -156,7 +156,7 @@ protected:
   void unsetRobotColor(rviz::Robot* robot);
 
   DisplaySolutionPtr displaying_solution_;
-  DisplaySolutionPtr solution_to_display_;
+  DisplaySolutionPtr next_solution_to_display_;
   std::vector<rviz::Robot*> trail_;
   bool animating_ = false;
   bool drop_displaying_solution_ = false;
