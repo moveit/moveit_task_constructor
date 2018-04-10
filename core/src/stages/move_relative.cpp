@@ -122,6 +122,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	}
 
 	// Cartesian targets require the link name
+	// TODO: use ik_frame property as in ComputeIK
 	std::string link_name = props.get<std::string>("link");
 	const moveit::core::LinkModel* link;
 	if (link_name.empty())
