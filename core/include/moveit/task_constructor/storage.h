@@ -94,6 +94,14 @@ public:
 			                this->cost() + other.cost());
 		}
 		inline bool operator<(const Priority& other) const {
+			/* infinite cost should always be last */
+			if (std::isinf(this->cost()) && std::isinf(other.cost()))
+				return this->depth() > other.depth();
+			else if (std::isinf(this->cost()))
+				return false;
+			else if (std::isinf(other.cost()))
+				return true;
+
 			if (this->depth() == other.depth())
 				return this->cost() < other.cost();
 			else
@@ -155,7 +163,7 @@ public:
 	/// remove a state from the interface and return it as a one-element list
 	container_type remove(iterator it);
 
-	/// update state's priority if new priority is smaller and call notify_
+	/// update state's priority if new priority is smaller or became infeasible and call notify_
 	void updatePriority(InterfaceState *state, const InterfaceState::Priority &priority);
 
 private:
