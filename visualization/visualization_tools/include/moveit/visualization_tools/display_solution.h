@@ -108,7 +108,7 @@ public:
 	}
 	const planning_scene::PlanningSceneConstPtr& scene(const IndexPair& idx_pair) const;
 	const planning_scene::PlanningSceneConstPtr& scene(size_t index) const {
-		if (index == steps_)
+		if (index >= steps_)
 			return data_.back().scene_;
 		return scene(indexPair(index));
 	}

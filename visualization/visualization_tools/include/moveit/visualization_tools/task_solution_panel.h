@@ -88,7 +88,6 @@ protected:
   QPushButton* button_;
 
   bool paused_;
-  int last_way_point_;
 };
 
 }  // namespace moveit_rviz_plugin

@@ -235,7 +235,9 @@ void TaskSolutionVisualization::reset()
   clearTrail();
   next_solution_to_display_.reset();
   displaying_solution_.reset();
-  animating_ = false;
+  current_state_ = -1;
+  if (slider_panel_)
+    slider_panel_->update(-1);
 
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
@@ -253,8 +255,13 @@ void TaskSolutionVisualization::clearTrail()
 
 void TaskSolutionVisualization::changedLoopDisplay()
 {
-  if (loop_display_property_->getBool() && slider_panel_)
+  // restart animation if current_state_ is at end and looping got activated
+  if (displaying_solution_ && loop_display_property_->getBool() &&
+      slider_panel_ && slider_panel_->isVisible() &&
+      current_state_+1 >= (int)displaying_solution_->getWayPointCount()) {
+    current_state_ = -1;
     slider_panel_->pauseButton(false);
+  }
 }
 
 void TaskSolutionVisualization::changedTrail()
@@ -325,7 +332,8 @@ void TaskSolutionVisualization::onDisable()
     parent_scene_node_->removeChild(main_scene_node_);
 
   displaying_solution_.reset();
-  animating_ = false;
+  next_solution_to_display_.reset();
+  current_state_ = -1;
   if (slider_panel_) {
     slider_panel_was_visible_ = slider_panel_->isVisible();
     slider_panel_->onDisable();
@@ -374,107 +382,111 @@ float TaskSolutionVisualization::getStateDisplayTime()
 
 void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
 {
-  if (drop_displaying_solution_)
-  {
-    animating_ = false;
+  if (drop_displaying_solution_) {
+    current_state_ = -1;
     displaying_solution_.reset();
-    slider_panel_->update(0);
+    if (slider_panel_) slider_panel_->update(-1);
     drop_displaying_solution_ = false;
   }
-  if (!animating_)
-  {  // finished last animation
+  if (current_state_ < 0 ||  // last animation finished
+      (slider_panel_ && slider_panel_->isPaused())) {
     boost::mutex::scoped_lock lock(display_solution_mutex_);
 
     // new trajectory available to display?
     if (next_solution_to_display_ && (!locked_ || !displaying_solution_)) {
+      current_state_ = -1;
       animating_ = true;
       displaying_solution_ = next_solution_to_display_;
       changedTrail();
       if (slider_panel_)
         slider_panel_->update(next_solution_to_display_->getWayPointCount());
     }
-    else if (displaying_solution_) {
-      if (loop_display_property_->getBool()) {
-        animating_ = true;
-      } else if (slider_panel_ && slider_panel_->isVisible()) {
-        if (slider_panel_->getSliderPosition() >= (int)displaying_solution_->getWayPointCount() - 1)
-          return;  // nothing more to do
-        else
-          animating_ = true;
-      } else if (locked_)
-        return;
-    }
+    // also reset if locked_
     next_solution_to_display_.reset();
-
-    if (animating_)
-    {
-      // restart animation
-      current_state_ = -1;
-      trail_scene_node_->setVisible(false);
-    }
+  }
+  if (!displaying_solution_) {
+    animating_ = false;
+    setVisibility();
+    return;
   }
 
-  if (animating_)
-  {
-    int previous_state = current_state_;
-    int waypoint_count = displaying_solution_->getWayPointCount();
+  int previous_state = current_state_;
+  int waypoint_count = displaying_solution_->getWayPointCount();
+  if (slider_panel_ && slider_panel_->isVisible()) {
+    animating_ = !slider_panel_->isPaused();
+    if (current_state_ >= 0)
+      // user can override current_state_ at any time with slider
+      current_state_ = slider_panel_->getSliderPosition();
+  } else if (current_state_ < waypoint_count)
+    animating_ = true;  // auto-activate animation if slider_panel_ is hidden
+
+  QString msg = "no change";
+  if (animating_ && current_state_ == previous_state) {
+    // auto-advance current_state_ based on time progress
     current_state_time_ += wall_dt;
 
     float tm = getStateDisplayTime();
-    if (slider_panel_ && slider_panel_->isVisible() && slider_panel_->isPaused())
-      current_state_ = slider_panel_->getSliderPosition();
-    else if (current_state_ < 0) {  // special case indicating restart of animation
+    if (current_state_ < 0) {  // special case indicating restart of animation
       current_state_ = 0;
       current_state_time_ = 0.0;
+      trail_scene_node_->setVisible(false);
+      msg = "restart";
     } else if (tm < 0.0) {  // using realtime: skip to next waypoint based on elapsed display time
       while (current_state_ < waypoint_count &&
              (tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1)) < current_state_time_) {
-          current_state_time_ -= tm;
           ++current_state_;
+          current_state_time_ -= tm;
       }
     } else if (current_state_time_ > tm) {  // fixed display time per state
+        ++current_state_;
       current_state_time_ = 0.0;
-      ++current_state_;
+      msg = "progress";
     }
+  } else if (current_state_ != previous_state) {  // current_state_ changed from slider
+    current_state_time_ = 0.0;
+    msg = "slider";
+  }
 
-    if (current_state_ == previous_state)
-      return;
-
-    if (current_state_ < waypoint_count)
-    {
-      renderWayPoint(current_state_, previous_state);
-
-      int stepsize = trail_step_size_property_->getInt();
-      for (int i = std::max(0, previous_state / stepsize),
-           end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
-        trail_[i]->setVisible(true);
-    }
-    else
-    {
-      animating_ = false;  // animation finished
-      if (!loop_display_property_->getBool() && slider_panel_)
+  if (current_state_ >= waypoint_count) {  // animation finished?
+    if (loop_display_property_->getBool())
+      current_state_ = -1;  // restart in next cycle
+    else {
+      current_state_ = waypoint_count;
+      if (slider_panel_)
         slider_panel_->pauseButton(true);
-      // ensure to render end state
-      renderWayPoint(waypoint_count, previous_state);
     }
+    setVisibility();
+    return;
+  }
+  if (current_state_ == previous_state)
+    return;
+
+  if (current_state_ < waypoint_count) {
+    renderWayPoint(current_state_, previous_state);
+
+    int stepsize = trail_step_size_property_->getInt();
+    for (int i = std::max(0, previous_state / stepsize),
+        end = std::min(current_state_ / stepsize, ((int)trail_.size()) - 1); i <= end; ++i)
+      trail_[i]->setVisible(true);
   }
   setVisibility();
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 {
+  size_t waypoint_count = displaying_solution_->getWayPointCount();
   moveit::core::RobotStateConstPtr robot_state;
   planning_scene::PlanningSceneConstPtr scene;
-  if (index == displaying_solution_->getWayPointCount()) {
+  if (index+1 >= waypoint_count) {
       // render last state
-      scene = displaying_solution_->scene(index);
+      scene = displaying_solution_->scene(waypoint_count);
       renderPlanningScene (scene);
       robot_state.reset(new moveit::core::RobotState(scene->getCurrentState()));
   } else {
     auto idx_pair = displaying_solution_->indexPair(index);
     scene = displaying_solution_->scene(idx_pair);
 
-    if (previous_index < 0 ||
+    if (previous_index < 0 || previous_index >= (int)waypoint_count ||
         displaying_solution_->indexPair(previous_index).first != idx_pair.first) {
       // switch to new stage: show new planning scene
       renderPlanningScene (scene);
