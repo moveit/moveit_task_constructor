@@ -158,7 +158,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		if (!pair.second->plan(start, to.scene(), jmg, timeout, trajectory, path_constraints))
+		if (!pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints))
 			break;
 
 		sub_trajectories.push_back(trajectory);
