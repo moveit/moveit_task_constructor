@@ -176,7 +176,12 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		// mark solution as failure
 		solution->setCost(std::numeric_limits<double>::infinity());
 	} else {
-		robot_trajectory::RobotTrajectoryPtr t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
+		robot_trajectory::RobotTrajectoryConstPtr t = nullptr;
+		if(sub_trajectories.size() >= 2)
+			t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
+		else
+			t = sub_trajectories[0];
+
 		if (t) {
 			connect(from, to, SubTrajectory(t));
 			return true;
