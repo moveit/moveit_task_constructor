@@ -3,6 +3,7 @@ sudo: required
 dist: trusty
 services:
   - docker
+
 language: generic
 compiler:
   - gcc
@@ -13,12 +14,13 @@ notifications:
       - rhaschke@techfak.uni-bielefeld.de
       - me@v4hn.de
 env:
-  - BEFORE_SCRIPT=.prepare_overlay.sh
   matrix:
     - ROS_DISTRO=kinetic  ROS_REPO=ros
     - ROS_DISTRO=kinetic  ROS_REPO=ros-shadow-fixed
 
 before_script:
   - git clone -q https://github.com/ros-planning/moveit_ci.git .moveit_ci
+  - . .prepare_overlay.sh
+
 script:
   - source .moveit_ci/travis.sh
