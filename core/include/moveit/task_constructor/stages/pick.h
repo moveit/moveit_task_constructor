@@ -88,6 +88,8 @@ public:
 	                        double min_distance, double max_distance);
 	void setLiftPlace(const geometry_msgs::TwistStamped& motion,
 	                  double min_distance, double max_distance);
+
+    void setRelativeJointSpaceGoal(const std::map<std::string, double>& relative_joint_space_goal);
 };
 
 
@@ -107,6 +109,10 @@ public:
 	                   double min_distance, double max_distance) {
 		setLiftPlace(motion, min_distance, max_distance);
 	}
+
+    void setRelativeJointSpaceLiftGoal(const std::map<std::string, double>& relative_joint_space_goal) {
+        setRelativeJointSpaceGoal(relative_joint_space_goal);
+    }
 };
 
 
