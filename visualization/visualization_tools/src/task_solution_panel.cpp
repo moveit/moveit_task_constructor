@@ -41,6 +41,7 @@ namespace moveit_rviz_plugin
 {
 TaskSolutionPanel::TaskSolutionPanel(QWidget* parent) : Panel(parent)
 {
+  empty_ = false;
 }
 
 TaskSolutionPanel::~TaskSolutionPanel()
@@ -92,14 +93,15 @@ void TaskSolutionPanel::onDisable()
 
 void TaskSolutionPanel::update(int way_point_count)
 {
-  int max_way_point = std::max(0, way_point_count - 1);
+  int max_way_point = std::max(1, way_point_count - 1);
+  empty_ = (way_point_count == 0);
 
   slider_->setEnabled(way_point_count >= 0);
   button_->setEnabled(way_point_count >= 0);
 
   paused_ = false;
   slider_->setMaximum(max_way_point);
-  maximum_label_->setText(way_point_count >= 0 ? QString::number(max_way_point) : "");
+  maximum_label_->setText(way_point_count >= 0 ? QString::number(way_point_count) : "");
   slider_->setSliderPosition(0);
 }
 
@@ -128,7 +130,8 @@ void TaskSolutionPanel::sliderValueChanged(int value)
 {
   QString text;
   if (!slider_->isEnabled()) text = "";
-  else text = QString::number(value);
+  else if (empty_) text = value == 0 ? "S" : "E";
+  else text = QString::number(value+1);
   minimum_label_->setText(text);
 }
 

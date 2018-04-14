@@ -106,6 +106,7 @@ public:
 	const moveit::core::RobotStatePtr& getWayPointPtr(size_t index) const {
 		return getWayPointPtr(indexPair(index));
 	}
+	const planning_scene::PlanningSceneConstPtr& startScene() const { return start_scene_; }
 	const planning_scene::PlanningSceneConstPtr& scene(const IndexPair& idx_pair) const;
 	const planning_scene::PlanningSceneConstPtr& scene(size_t index) const {
 		if (index >= steps_)
