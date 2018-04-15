@@ -126,7 +126,7 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 		const unsigned int num = jm->getVariableCount();
 		Eigen::Map<const Eigen::VectorXd> positions_from (from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to (to.getJointPositions(jm), num);
-		if (!positions_from.array().isApprox(positions_to.array())) {
+		if (!positions_from.array().isApprox(positions_to.array(), 1e-4)) {
 			ROS_INFO_STREAM_ONCE_NAMED("Connect", "Deviation in joint " << jm->getName()
 			                            << ": [" << positions_from.transpose()
 			                            << "] != [" << positions_to.transpose() << "]");
