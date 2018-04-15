@@ -126,7 +126,7 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 		const unsigned int num = jm->getVariableCount();
 		Eigen::Map<const Eigen::VectorXd> positions_from (from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to (to.getJointPositions(jm), num);
-		if (!positions_from.array().isApprox(positions_to.array())) {
+		if (!positions_from.array().isApprox(positions_to.array(), 1e-4)) {
 			ROS_INFO_STREAM_ONCE_NAMED("Connect", "Deviation in joint " << jm->getName()
 			                            << ": [" << positions_from.transpose()
 			                            << "] != [" << positions_to.transpose() << "]");
@@ -158,7 +158,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		if (!pair.second->plan(start, to.scene(), jmg, timeout, trajectory, path_constraints))
+		if (!pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints))
 			break;
 
 		sub_trajectories.push_back(trajectory);
@@ -176,7 +176,7 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		// mark solution as failure
 		solution->setCost(std::numeric_limits<double>::infinity());
 	} else {
-		robot_trajectory::RobotTrajectoryPtr t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
+		auto t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
 		if (t) {
 			connect(from, to, SubTrajectory(t));
 			return true;
@@ -218,11 +218,16 @@ SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::Robot
 	return &solutions_.back();
 }
 
-robot_trajectory::RobotTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                                    const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
-                                                    const moveit::core::RobotState& state)
+robot_trajectory::RobotTrajectoryConstPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+                                                         const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+                                                         const moveit::core::RobotState& state)
 {
+	// no need to merge if there is only a single sub trajectory
+	if (sub_trajectories.size() == 1)
+		return sub_trajectories[0];
+
 	auto jmg = merged_jmg_.get();
+	assert(jmg);
 	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg);
 	// TODO: check merged trajectory for collisions
 	return trajectory;

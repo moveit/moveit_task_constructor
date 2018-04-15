@@ -76,9 +76,9 @@ public:
 protected:
 	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
 	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
-	robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                                           const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
-	                                           const moveit::core::RobotState& state);
+	robot_trajectory::RobotTrajectoryConstPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+	                                                const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+	                                                const moveit::core::RobotState& state);
 
 protected:
 	GroupPlannerVector planner_;

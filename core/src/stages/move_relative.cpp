@@ -122,6 +122,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	}
 
 	// Cartesian targets require the link name
+	// TODO: use ik_frame property as in ComputeIK
 	std::string link_name = props.get<std::string>("link");
 	const moveit::core::LinkModel* link;
 	if (link_name.empty())
@@ -241,10 +242,12 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 	// add an arrow marker
 	visualization_msgs::Marker m;
+	// +1 TODO: make "marker" a common property of all stages. However, I would stick with "marker_ns"
 	m.ns = props.get<std::string>("marker_ns");
 	if (!m.ns.empty()) {
 		m.header.frame_id = scene->getPlanningFrame();
 		if (linear_norm > 1e-3) {
+			// +1 TODO: arrow could be split into "valid" and "invalid" part (as red cylinder)
 			rviz_marker_tools::setColor(m.color, success ? rviz_marker_tools::LIME_GREEN
 			                                             : rviz_marker_tools::RED);
 			rviz_marker_tools::makeArrow(m, linear_norm);

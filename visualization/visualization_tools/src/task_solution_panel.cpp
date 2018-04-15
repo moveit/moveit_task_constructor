@@ -41,6 +41,7 @@ namespace moveit_rviz_plugin
 {
 TaskSolutionPanel::TaskSolutionPanel(QWidget* parent) : Panel(parent)
 {
+  empty_ = false;
 }
 
 TaskSolutionPanel::~TaskSolutionPanel()
@@ -92,16 +93,16 @@ void TaskSolutionPanel::onDisable()
 
 void TaskSolutionPanel::update(int way_point_count)
 {
-  int max_way_point = std::max(0, way_point_count - 1);
+  int max_way_point = std::max(1, way_point_count - 1);
+  empty_ = (way_point_count == 0);
 
-  slider_->setEnabled(way_point_count != 0);
-  button_->setEnabled(way_point_count != 0);
+  slider_->setEnabled(way_point_count >= 0);
+  button_->setEnabled(way_point_count >= 0);
 
-  last_way_point_ = max_way_point;
   paused_ = false;
-  slider_->setSliderPosition(0);
   slider_->setMaximum(max_way_point);
-  maximum_label_->setText(QString::number(max_way_point));
+  maximum_label_->setText(way_point_count >= 0 ? QString::number(way_point_count) : "");
+  slider_->setSliderPosition(0);
 }
 
 void TaskSolutionPanel::pauseButton(bool pause)
@@ -115,7 +116,7 @@ void TaskSolutionPanel::pauseButton(bool pause)
   {
     button_->setText("Pause");
     paused_ = false;
-    if (slider_->sliderPosition() == last_way_point_)
+    if (slider_->sliderPosition() == slider_->maximum())
       slider_->setSliderPosition(0);
   }
 }
@@ -127,7 +128,11 @@ void TaskSolutionPanel::setSliderPosition(int position)
 
 void TaskSolutionPanel::sliderValueChanged(int value)
 {
-  minimum_label_->setText(QString::number(value));
+  QString text;
+  if (!slider_->isEnabled()) text = "";
+  else if (empty_) text = value == 0 ? "S" : "E";
+  else text = QString::number(value+1);
+  minimum_label_->setText(text);
 }
 
 void TaskSolutionPanel::buttonClicked()
