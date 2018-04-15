@@ -62,34 +62,6 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	                                    "constraints to maintain during trajectory");
 }
 
-void MoveTo::setGroup(const std::string& group){
-	setProperty("group", group);
-}
-
-void MoveTo::setLink(const std::string& link){
-	setProperty("link", link);
-}
-
-void MoveTo::setGoal(const geometry_msgs::PoseStamped &pose)
-{
-	setProperty("pose", pose);
-}
-
-void MoveTo::setGoal(const geometry_msgs::PointStamped &point)
-{
-	setProperty("point", point);
-}
-
-void MoveTo::setGoal(const std::string &named_joint_pose)
-{
-	setProperty("named_joint_pose", named_joint_pose);
-}
-
-void MoveTo::setGoal(const moveit_msgs::RobotState& robot_state)
-{
-	setProperty("joint_pose", robot_state);
-}
-
 void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	PropagatingEitherWay::init(robot_model);
@@ -115,7 +87,7 @@ bool MoveTo::getJointStateGoal(moveit::core::RobotState& state,
 	if (!goal.empty()) {
 		const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
 		if (!state.setToDefaultValues(jmg, named_joint_pose))
-			throw InitStageException(*this, "Unknown joint pose:" + named_joint_pose);
+			throw InitStageException(*this, "Unknown joint pose: " + named_joint_pose);
 		return true;
 	}
 
