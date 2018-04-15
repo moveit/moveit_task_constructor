@@ -55,8 +55,8 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 
 	p.declare<geometry_msgs::PoseStamped>("pose", "Cartesian target pose");
 	p.declare<geometry_msgs::PointStamped>("point", "Cartesian target point");
-    p.declare<std::string>("named_joint_pose", "named joint pose");
-    p.declare<moveit_msgs::RobotState>("joint_pose", "joint pose as robot state message");
+	p.declare<std::string>("named_joint_pose", "named joint pose");
+	p.declare<moveit_msgs::RobotState>("joint_pose", "joint pose");
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
@@ -80,48 +80,64 @@ void MoveTo::setGoal(const geometry_msgs::PointStamped &point)
 	setProperty("point", point);
 }
 
-void MoveTo::setGoal(const std::string &joint_pose)
+void MoveTo::setGoal(const std::string &named_joint_pose)
 {
-    setProperty("named_joint_pose", joint_pose);
+	setProperty("named_joint_pose", named_joint_pose);
 }
 
-void MoveTo::setGoal(const moveit_msgs::RobotState &robot_state)
+void MoveTo::setGoal(const moveit_msgs::RobotState& robot_state)
 {
-    setProperty("joint_pose", robot_state);
+	setProperty("joint_pose", robot_state);
 }
 
 void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
-    InitStageException errors;
-
 	PropagatingEitherWay::init(robot_model);
 	planner_->init(robot_model);
 
-    const auto& props = properties();
+	// Check if named_joint_pose is well-defined in JMG.
+	robot_state::RobotState state(robot_model);
+	getJointStateGoal(state, robot_model);
+}
 
-    // check if named_joint_pose is set. if so, convert to robot state msg
-    boost::any goal = props.get("named_joint_pose");
-    if (!goal.empty()) {
-        const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
-        robot_state::RobotState state(robot_model);
+bool MoveTo::getJointStateGoal(moveit::core::RobotState& state,
+                               const robot_model::RobotModelConstPtr& robot_model) {
+	const auto& props = properties();
+	if (props.countDefined({"named_joint_pose", "joint_pose"}) == 2)
+		throw InitStageException(*this, "Cannot define both, named_joint_pose and joint_pose");
 
-        const std::string& group = props.get<std::string>("group");
-        const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
+	const std::string& group = props.get<std::string>("group");
+	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
+	if (!jmg)
+		throw InitStageException(*this, "Unknown joint model group: " + group);
 
-        if (!state.setToDefaultValues(jmg, named_joint_pose)) {
-            ROS_WARN("MoveTo: unknown joint pose '%s' for jmg '%s'.", named_joint_pose.c_str(), group.c_str());
-            errors.push_back(*this, "MoveTo: unknown joint pose.");
-        } else {
-            ROS_INFO("MoveTo: setting joint pose '%s' for jmg '%s' as goal.", named_joint_pose.c_str(), group.c_str());
+	boost::any goal = props.get("named_joint_pose");
+	if (!goal.empty()) {
+		const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
+		if (!state.setToDefaultValues(jmg, named_joint_pose))
+			throw InitStageException(*this, "Unknown joint pose:" + named_joint_pose);
+		return true;
+	}
 
-            moveit_msgs::RobotState state_msg;
-            robot_state::robotStateToRobotStateMsg(state, state_msg);
+	goal = props.get("joint_pose");
+	if (!goal.empty()) {
+		const moveit_msgs::RobotState& msg = boost::any_cast<moveit_msgs::RobotState>(goal);
+		if (!msg.is_diff)
+			throw InitStageException(*this, "Expecting a diff state");
 
-            setGoal(state_msg);
-        }
-    }
+		// validate specified joints
+		const auto& accepted = jmg->getJointModelNames();
+		for (const auto &name : msg.joint_state.name)
+			if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
+				throw InitStageException(*this, "Joint '" + name + "' is not part of group '" + group + "'");
+		for (const auto &name : msg.multi_dof_joint_state.joint_names)
+			if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
+				throw InitStageException(*this, "Joint '" + name + "' is not part of group '" + group + "'");
 
-    if (errors) throw errors;
+		moveit::core::robotStateMsgToRobotState(msg, state, false);
+		return true;
+	}
+	return false;
 }
 
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
@@ -134,76 +150,78 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM("MoveTo: invalid joint model group: " << group);
-		return false;
-	}
-
-	// only allow single target
-    size_t count_goals = props.countDefined({"joint_pose", "pose", "point"});
-	if (count_goals != 1) {
-		if (count_goals == 0) ROS_WARN("MoveTo: no goal defined");
-		else ROS_WARN("MoveTo: cannot plan to multiple goals");
+		ROS_WARN_STREAM_NAMED("MoveTo", "Invalid joint model group: " << group);
 		return false;
 	}
 
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
-
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-    boost::any goal = props.get("joint_pose");
-    if (!goal.empty()) {
-        const moveit_msgs::RobotState& target_state = boost::any_cast<moveit_msgs::RobotState>(goal);
-        scene->setCurrentState(target_state);
-        success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
-    } else {
-		// Cartesian targets require the link name
-		std::string link_name = props.get<std::string>("link");
-		const moveit::core::LinkModel* link;
-		if (link_name.empty())
-			link_name = solvers::getEndEffectorLink(jmg);
-		if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-			ROS_WARN_STREAM("MoveTo: no or invalid link name specified: " << link_name);
-			return false;
-		}
+	try {
+		size_t cartesian_goals = props.countDefined({"pose", "point"});
+		if (getJointStateGoal(scene->getCurrentStateNonConst(), scene->getRobotModel())) {
+			if (cartesian_goals > 0)
+				ROS_WARN_NAMED("MoveTo", "Ignoring Cartesian goals in favour of joint space goal");
+			// plan to joint-space target
+			success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		} else if (cartesian_goals == 1) {
+			const moveit::core::LinkModel* link;
+			Eigen::Affine3d target_eigen;
 
-		Eigen::Affine3d target_eigen;
+			// Cartesian targets require the link name
+			// TODO: use ik_frame property as in ComputeIK
+			std::string link_name = props.get<std::string>("link");
+			if (link_name.empty())
+				link_name = solvers::getEndEffectorLink(jmg);
+			if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
+				ROS_WARN_STREAM_NAMED("MoveTo", "No or invalid link name specified: " << link_name);
+				return false;
+			}
 
-		goal = props.get("pose");
-		if (!goal.empty()) {
-			const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
-			tf::poseMsgToEigen(target.pose, target_eigen);
+			boost::any goal = props.get("pose");
+			if (!goal.empty()) {
+				const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
+				tf::poseMsgToEigen(target.pose, target_eigen);
 
-			// transform target into global frame
-			const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
-			target_eigen = frame * target_eigen;
+				// transform target into global frame
+				const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+				target_eigen = frame * target_eigen;
 
-			// frame at target pose
-			rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
+				// frame at target pose
+				rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
 
-			// frame at link
-			geometry_msgs::PoseStamped pose_msg;
-			pose_msg.header.frame_id = link_name;
-			pose_msg.pose.orientation.w = 1.0;
-			rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
-		}
+				// frame at link
+				geometry_msgs::PoseStamped pose_msg;
+				pose_msg.header.frame_id = link_name;
+				pose_msg.pose.orientation.w = 1.0;
+				rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+			}
 
-		goal = props.get("point");
-		if (!goal.empty()) {
-			const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
-			Eigen::Vector3d target_point;
-			tf::pointMsgToEigen(target.point, target_point);
+			goal = props.get("point");
+			if (!goal.empty()) {
+				const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
+				Eigen::Vector3d target_point;
+				tf::pointMsgToEigen(target.point, target_point);
 
-			// transform target into global frame
-			const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
-			target_point = frame * target_point;
+				// transform target into global frame
+				const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+				target_point = frame * target_point;
 
-			// retain link orientation
-			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
-			target_eigen.translation() = target_point;
-		}
+				// retain link orientation
+				target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
+				target_eigen.translation() = target_point;
+			}
 
-		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+			// plan to Cartesian target
+			success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		} else if (cartesian_goals > 1)
+			ROS_WARN_NAMED("MoveTo", "Cannot plan to multiple goals");
+		else if (cartesian_goals == 0)
+			ROS_WARN_NAMED("MoveTo", "No goal defined");
+	} catch (const InitStageException &e) {
+		ROS_WARN_STREAM_NAMED("MoveTo", e.what());
+		return false;
 	}
 
 	// store result
