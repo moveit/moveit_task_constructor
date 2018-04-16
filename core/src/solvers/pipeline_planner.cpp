@@ -74,6 +74,7 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
 	req.allowed_planning_time = timeout;
+	req.start_state.is_diff = true;  // we don't specify an extra start state
 
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
 	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
