@@ -36,6 +36,7 @@
 /* Authors: Luca Lach, Robert Haschke */
 
 #include <moveit/task_constructor/merge.h>
+#include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
 namespace moveit { namespace task_constructor {
 
@@ -171,6 +172,10 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 		// create new RobotState for next waypoint
 		merged_state = std::make_shared<robot_state::RobotState>(*merged_state);
 	}
+
+	// add timing
+	trajectory_processing::IterativeParabolicTimeParameterization timing;
+	timing.computeTimeStamps(*merged_traj, 1.0, 1.0);
 	return merged_traj;
 }
 
