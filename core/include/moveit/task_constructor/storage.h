@@ -93,20 +93,7 @@ public:
 			return Priority(this->depth() + other.depth(),
 			                this->cost() + other.cost());
 		}
-		inline bool operator<(const Priority& other) const {
-			/* infinite cost should always be last */
-			if (std::isinf(this->cost()) && std::isinf(other.cost()))
-				return this->depth() > other.depth();
-			else if (std::isinf(this->cost()))
-				return false;
-			else if (std::isinf(other.cost()))
-				return true;
-
-			if (this->depth() == other.depth())
-				return this->cost() < other.cost();
-			else
-				return this->depth() > other.depth();
-		}
+		bool operator<(const Priority& other) const;
 	};
 	typedef std::deque<SolutionBase*> Solutions;
 

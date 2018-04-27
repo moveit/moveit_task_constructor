@@ -55,6 +55,23 @@ InterfaceState::InterfaceState(const InterfaceState &other)
 {
 }
 
+
+bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
+	// infinite costs go always last
+	if (std::isinf(this->cost()) && std::isinf(other.cost()))
+		return this->depth() > other.depth();
+	else if (std::isinf(this->cost()))
+		return false;
+	else if (std::isinf(other.cost()))
+		return true;
+
+	if (this->depth() == other.depth())
+		return this->cost() < other.cost();
+	else
+		return this->depth() > other.depth();
+}
+
+
 Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
 {}
