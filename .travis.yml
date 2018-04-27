@@ -3,10 +3,8 @@ sudo: required
 dist: trusty
 services:
   - docker
-
-language: generic
-compiler:
-  - gcc
+language: cpp
+compiler: gcc
 cache: ccache
 
 notifications:
@@ -24,4 +22,4 @@ before_script:
   - . .prepare_overlay.sh
 
 script:
-  - source .moveit_ci/travis.sh
+  - .moveit_ci/travis.sh
