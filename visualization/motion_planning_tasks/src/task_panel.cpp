@@ -249,6 +249,11 @@ TaskView::TaskView(QWidget *parent)
 	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
 }
 
+TaskView::~TaskView()
+{
+	delete d_ptr;
+}
+
 void TaskView::save(rviz::Config config)
 {
 	auto writeSplitterSizes = [&config](QSplitter* splitter, const QString& key) {
@@ -423,6 +428,11 @@ TaskSettings::TaskSettings(QWidget *parent)
    : QWidget(parent), d_ptr(new TaskSettingsPrivate(this))
 {
 	Q_D(TaskSettings);
+}
+
+TaskSettings::~TaskSettings()
+{
+	delete d_ptr;
 }
 
 }

@@ -96,6 +96,7 @@ class TaskView : public QWidget {
 
 public:
 	TaskView(QWidget* parent = 0);
+	~TaskView();
 
 	void save(rviz::Config config);
 	void load(const rviz::Config& config);
@@ -119,6 +120,7 @@ class TaskSettings : public QWidget {
 
 public:
 	TaskSettings(QWidget* parent = 0);
+	~TaskSettings();
 };
 
 }
