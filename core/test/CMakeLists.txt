@@ -20,4 +20,7 @@ if (CATKIN_ENABLE_TESTING)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-cost_queue test_cost_queue.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-cost_queue ${PROJECT_NAME} gtest_main)
+
+	catkin_add_gtest(${PROJECT_NAME}-test-interface_state test_interface_state.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-interface_state ${PROJECT_NAME} gtest_main)
 endif()
