@@ -150,7 +150,7 @@ public:
 	/// remove a state from the interface and return it as a one-element list
 	container_type remove(iterator it);
 
-	/// update state's priority if new priority is smaller or became infeasible and call notify_
+	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState *state, const InterfaceState::Priority &priority);
 
 private:
