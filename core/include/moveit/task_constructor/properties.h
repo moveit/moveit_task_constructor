@@ -49,6 +49,14 @@
 namespace moveit {
 namespace task_constructor {
 
+// hasSerialize<T>::value provides a true/false constexpr depending on whether operator<< is supported.
+// This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
+template <typename T, typename = std::ostream&>
+struct hasSerialize : std::false_type {};
+
+template <typename T>
+struct hasSerialize<T, decltype(std::declval<std::ostringstream&>() << std::declval<T>())> : std::true_type {};
+
 class Property;
 class PropertyMap;
 
@@ -74,11 +82,16 @@ class Property {
 	         const Property::SerializeFunction &serialize);
 
 	template <typename T>
-	static std::string serialize(const boost::any& value) {
+	static typename std::enable_if<hasSerialize<T>::value, std::string>::type serialize(const boost::any& value) {
 		if (value.empty()) return "";
 		std::ostringstream oss;
 		oss << boost::any_cast<T>(value);
 		return oss.str();
+	}
+
+	template <typename T>
+	static typename std::enable_if<!hasSerialize<T>::value, std::string>::type serialize(const boost::any& value) {
+		throw std::runtime_error (std::string("no operator<< for type ") + typeid(T).name());
 	}
 
 public:

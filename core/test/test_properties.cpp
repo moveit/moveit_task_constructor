@@ -80,9 +80,13 @@ TEST(Property, reset) {
 TEST(Property, serialize) {
 	PropertyMap props;
 	props.declare<int>("int");
-	EXPECT_STREQ(props.property("int").serialize().c_str(), "");
+	EXPECT_EQ(props.property("int").serialize(), "");
 	props.set("int", 42);
-	EXPECT_STREQ(props.property("int").serialize().c_str(), "42");
+	EXPECT_EQ(props.property("int").serialize(), "42");
+
+	// std::map doesn't provide operator<< serialization
+	props.declare<std::map<int, int>>("map", std::map<int, int>());
+	EXPECT_THROW(props.property("map").serialize(), std::runtime_error);
 }
 
 class InitFromTest : public ::testing::Test {
