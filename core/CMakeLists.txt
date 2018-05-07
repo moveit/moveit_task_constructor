@@ -37,6 +37,7 @@ set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 include_directories(${catkin_INCLUDE_DIRS})
 
 add_subdirectory(src)
+add_subdirectory(python)
 add_subdirectory(demo)
 add_subdirectory(test)
 
