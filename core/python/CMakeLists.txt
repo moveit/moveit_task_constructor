@@ -4,8 +4,10 @@ find_package(Boost REQUIRED COMPONENTS python)
 include_directories(${PYTHON_INCLUDE_PATH})
 
 add_library(_core SHARED
+	conversions.cpp
 	core.cpp
 	ros_init.cpp
+	properties.cpp
 	task.cpp
 )
 

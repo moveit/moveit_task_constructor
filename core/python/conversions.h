@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 
+#include <ros/serialization.h>
+
 namespace moveit {
 namespace python {
 
@@ -45,6 +47,59 @@ boost::python::dict toDict(const std::map<std::string, T>& v)
   for (const std::pair<std::string, T>& p : v)
     d[p.first] = p.second;
   return d;
+}
+
+
+/// convert a ROS msg to a string
+template <typename T>
+std::string serializeMsg(const T& msg)
+{
+	static_assert(sizeof(uint8_t) == sizeof(char), "Assuming char has same size as uint8_t");
+	std::size_t size = ros::serialization::serializationLength(msg);
+	std::string result(size, '\0');
+	if (size)
+	{
+		ros::serialization::OStream stream(reinterpret_cast<uint8_t*>(&result[0]), size);
+		ros::serialization::serialize(stream, msg);
+	}
+	return result;
+}
+
+/// convert a string to a ROS message
+template <typename T>
+void deserializeMsg(const std::string& data, T& msg)
+{
+	ros::serialization::IStream stream(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&data[0])), data.size());
+	ros::serialization::deserialize(stream, msg);
+}
+
+
+/// convert a ROS message (from python) to a string
+std::string _serializeMsg(const boost::python::object& msg);
+
+/// convert a string to a python ROS message of given type
+boost::python::object _deserializeMsg(const std::string& data, const std::string& python_type_name);
+
+
+/// convert a python type name (extracted from __class__.__module__) to form package/msg
+std::string rosMsgName(const std::string& python_type_name);
+
+/// convert a ROS message from python to C++
+template <typename T>
+T fromPython(const boost::python::object &o)
+{
+	std::string serialized = _serializeMsg(o);
+	T result;
+	deserializeMsg(serialized, result);
+	return result;
+}
+
+/// convert a ROS message from C++ to python
+template <typename T>
+boost::python::object toPython(const std::string& python_type_name, const T& msg)
+{
+	std::string serialized = serializeMsg(msg);
+	return _deserializeMsg(serialized, python_type_name);
 }
 
 } }
