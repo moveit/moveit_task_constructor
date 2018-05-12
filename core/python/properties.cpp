@@ -1,6 +1,7 @@
-#include <moveit/task_constructor/task.h>
-#include <boost/python.hpp>
+#include "properties.h"
 #include "conversions.h"
+
+#include <geometry_msgs/PoseStamped.h>
 
 namespace bp = boost::python;
 using namespace moveit::task_constructor;

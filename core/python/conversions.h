@@ -5,8 +5,17 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include <ros/serialization.h>
+
+/// make boost::python understand std::shared_ptr
+namespace boost {
+
+template<class T>
+T* get_pointer(std::shared_ptr<T> p) { return p.get(); }
+
+}
 
 namespace moveit {
 namespace python {
