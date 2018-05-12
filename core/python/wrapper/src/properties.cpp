@@ -1,5 +1,5 @@
-#include "properties.h"
-#include "conversions.h"
+#include <moveit/python/python_tools/conversions.h>
+#include <moveit/python/task_constructor/properties.h>
 
 #include <geometry_msgs/PoseStamped.h>
 

@@ -9,7 +9,6 @@ using namespace moveit::task_constructor;
 namespace moveit {
 namespace python {
 
-void export_ros_init();
 void export_properties();
 void export_solvers();
 
@@ -51,9 +50,8 @@ void export_core()
 
 } }
 
-BOOST_PYTHON_MODULE(_core)
+BOOST_PYTHON_MODULE(@CORE_LIB_NAME@)
 {
-	moveit::python::export_ros_init();
 	moveit::python::export_properties();
 	moveit::python::export_solvers();
 	moveit::python::export_core();

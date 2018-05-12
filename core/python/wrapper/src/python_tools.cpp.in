@@ -1,0 +1,15 @@
+#include <boost/python.hpp>
+
+namespace bp = boost::python;
+
+namespace moveit {
+namespace python {
+
+void export_ros_init();
+
+} }
+
+BOOST_PYTHON_MODULE(@TOOLS_LIB_NAME@)
+{
+	moveit::python::export_ros_init();
+}

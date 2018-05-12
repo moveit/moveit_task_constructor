@@ -9,6 +9,7 @@
 
 	<buildtool_depend>catkin</buildtool_depend>
 
+	<build_depend>roslint</build_depend>
 	<build_depend>eigen_conversions</build_depend>
 	<build_depend>geometry_msgs</build_depend>
 	<build_depend>roscpp</build_depend>

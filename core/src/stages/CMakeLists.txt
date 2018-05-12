@@ -31,7 +31,7 @@ add_library(${PROJECT_NAME}_stages
 	simple_grasp.cpp
 	pick.cpp
 )
-target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_stages PUBLIC ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME}_stages
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

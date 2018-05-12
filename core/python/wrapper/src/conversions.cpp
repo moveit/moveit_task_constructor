@@ -1,4 +1,4 @@
-#include "conversions.h"
+#include <moveit/python/python_tools/conversions.h>
 #include <ros/serialization.h>
 
 namespace moveit {

@@ -1,6 +1,6 @@
 #include <boost/python.hpp>
 
-#include "properties.h"
+#include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 

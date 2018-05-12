@@ -23,7 +23,7 @@ Connect* initConnect(const std::string& name, const bp::list& l) {
 
 } // anonymous namespace
 
-BOOST_PYTHON_MODULE(_stages)
+BOOST_PYTHON_MODULE(@STAGES_LIB_NAME@)
 {
 	bp::class_<CurrentState, bp::bases<Stage>, boost::noncopyable>
 	      ("CurrentState", bp::init<bp::optional<const std::string&>>())

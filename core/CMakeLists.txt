@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(moveit_task_constructor_core)
 
 find_package(catkin REQUIRED COMPONENTS
+	roslint
 	eigen_conversions
 	geometry_msgs
 	moveit_core
@@ -12,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
 	visualization_msgs
 	rviz_marker_tools
 )
+
+catkin_python_setup()
 
 catkin_package(
 	LIBRARIES
