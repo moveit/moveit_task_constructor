@@ -12,7 +12,7 @@ namespace properties {
 
 /** Extension for boost::python::class_ to allow convienient definition of properties
  *
- * New method add_property<PropertyType>(const char* name) adds a property getter.
+ * New method add_property<PropertyType>(const char* name) adds a property getter/setter.
  */
 
 template <

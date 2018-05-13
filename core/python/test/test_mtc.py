@@ -49,5 +49,26 @@ class TestPropertyMap(unittest.TestCase):
         self.assertEqual(props["group"], "other")
 
 
+class TestTask(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestTask, self).__init__(*args, **kwargs)
+
+    def test(self):
+        task = core.Task("task")
+        self.assertEqual(task.id, "task")
+
+        current = stages.CurrentState("current")
+        self.assertEqual(current.name, "current")
+
+        task.add(current)
+
+        # ownership of current was passed to task
+        with self.assertRaises(TypeError):
+            current.name
+
+        task.add(stages.Connect("connect", []))
+        task.add(stages.FixedState())
+
+
 if __name__ == '__main__':
     unittest.main()

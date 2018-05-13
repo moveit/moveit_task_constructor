@@ -9,13 +9,22 @@
 
 #include <ros/serialization.h>
 
-/// make boost::python understand std::shared_ptr
+/// Tag std::shared_ptr and std::unique_ptr as smart pointers
 namespace boost {
 
 template<class T>
 T* get_pointer(std::shared_ptr<T> p) { return p.get(); }
 
-}
+template<class T>
+T* get_pointer(std::unique_ptr<T> p) { return p.get(); }
+
+namespace python {
+
+template <class T> struct pointee<std::shared_ptr<T> > { typedef T type; };
+//template <class T> struct pointee<std::unique_ptr<T> > { typedef T type; };
+
+} }
+
 
 namespace moveit {
 namespace python {

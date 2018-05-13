@@ -24,7 +24,7 @@ void Task_add(Task& self, std::auto_ptr<Stage> stage) {
 void export_core()
 {
 	PropertyMap& (Stage::*Stage_getPropertyMap)() = &Stage::properties;  // resolve method ambiguity
-	bp::class_<Stage, boost::noncopyable>("Stage", bp::no_init)
+	bp::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>("Stage", bp::no_init)
 	      // expose name as writeable property, returned string reference will be copied
 	      .add_property("name",
 	                    bp::make_function(&Stage::name, bp::return_value_policy<bp::copy_const_reference>()),
