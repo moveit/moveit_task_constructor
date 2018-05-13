@@ -64,6 +64,7 @@ class PlannerInterface {
 
 public:
 	PlannerInterface() {}
+	virtual ~PlannerInterface() {}
 
 	PropertyMap& properties() { return properties_; }
 	const PropertyMap& properties() const { return properties_; }

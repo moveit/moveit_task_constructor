@@ -29,6 +29,17 @@ void export_solvers()
 	      .add_property<std::string>("planner")
 	      .add_property<double>("timeout")
 	      ;
+
+	properties::class_<CartesianPath, CartesianPathPtr, bp::bases<PlannerInterface>>
+	      ("CartesianPath", bp::init<>())
+	      .add_property<std::string>("group")
+	      .add_property<double>("timeout")
+	      .add_property<double>("step_size")
+	      .add_property<double>("jump_threshold")
+	      .add_property<double>("min_fraction")
+	      .add_property<double>("max_velocity_scaling_factor")
+	      .add_property<double>("max_acceleration_scaling_factor")
+	      ;
 }
 
 } }

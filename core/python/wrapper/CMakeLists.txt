@@ -54,6 +54,7 @@ add_library(${CORE_LIB_NAME} SHARED
 
 	src/properties.cpp
 	src/solvers.cpp
+	src/core.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/core.cpp
 )
 target_include_directories(${CORE_LIB_NAME}
@@ -65,6 +66,7 @@ target_link_libraries(${CORE_LIB_NAME} PUBLIC ${PROJECT_NAME} moveit_python_tool
 set(STAGES_LIB_NAME _stages)
 configure_file(src/stages.cpp.in stages.cpp @ONLY)
 add_library(${STAGES_LIB_NAME} SHARED
+	src/stages.cpp
 	${CMAKE_CURRENT_BINARY_DIR}/stages.cpp
 )
 target_link_libraries(${STAGES_LIB_NAME} ${CORE_LIB_NAME} ${PROJECT_NAME}_stages)

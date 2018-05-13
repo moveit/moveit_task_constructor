@@ -1,7 +1,5 @@
 #include <boost/python.hpp>
 
-namespace bp = boost::python;
-
 namespace moveit {
 namespace python {
 

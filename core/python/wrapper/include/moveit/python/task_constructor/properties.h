@@ -34,11 +34,18 @@ public:
 			const moveit::task_constructor::PropertyMap& props = me.properties();
 			return props.get<PropertyType>(name);
 		};
+		auto setter = [name](W& me, const PropertyType& value) {
+			moveit::task_constructor::PropertyMap& props = me.properties();
+			props.setCurrent(name, boost::any(value));
+		};
+
 		boost::python::class_<W, X1, X2, X3>::add_property
 		      (name, boost::python::make_function
-		       (getter,
-		        boost::python::default_call_policies(),
+		       (getter, boost::python::default_call_policies(),
 		        boost::mpl::vector<PropertyType, const W&>()),
+		       boost::python::make_function
+		       (setter, boost::python::default_call_policies(),
+		        boost::mpl::vector<void, W&, const PropertyType&>()),
 		       docstr);
 		return *this;
 	}

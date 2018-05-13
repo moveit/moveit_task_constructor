@@ -16,6 +16,9 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 	const boost::any& value = prop.value();
 	const std::string& type_name = value.type().name();
 
+	/// TODO Jan (later): replace this list with boost::python's type conversion mechanism
+	/// https://sixty-north.com/blog/how-to-write-boost-python-type-converters.html
+
 	/// type-casting for selected primitive types
 	if (type_name == typeid(bool).name())
 		return bp::object(boost::any_cast<bool>(value));
@@ -29,6 +32,8 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 		return bp::object(boost::any_cast<float>(value));
 	else if (type_name == typeid(double).name())
 		return bp::object(boost::any_cast<double>(value));
+	else if (type_name == typeid(std::string).name())
+		return bp::object(boost::any_cast<std::string>(value));
 
 	/// type-casting for selected ROS msg types
 	else if (type_name == typeid(geometry_msgs::Pose).name())
@@ -65,6 +70,10 @@ void export_properties()
 	bp::class_<PropertyMap, boost::noncopyable>("PropertyMap")
 	      .def("__getitem__", &PropertyMap_get)
 	      .def("__setitem__", &PropertyMap_set)
+	      .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
+	      // TODO Jan: implement iterator API returning a tuples (string, value)
+	      // https://wiki.python.org/moin/boost.python/iterator
+	      // TODO Jan: implement dict.update(**kwargs)
 	;
 }
 

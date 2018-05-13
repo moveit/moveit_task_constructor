@@ -258,7 +258,7 @@ public:
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
 
-	/// Gt the value of a property. Throws undeclared if unknown name
+	/// Get the value of a property. Throws undeclared if unknown name
 	const boost::any& get(const std::string& name) const;
 
 	/// Get typed value of property. Throws undeclared, undefined, or bad_any_cast.
@@ -286,7 +286,7 @@ public:
 	void performInitFrom(Property::SourceId source, const PropertyMap& other, bool enforce = false);
 };
 
-// boost::any needs a specialization to avoid recursion
+// boost::any needs a specialization to avoid infinite recursion
 template <>
 void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value);
 

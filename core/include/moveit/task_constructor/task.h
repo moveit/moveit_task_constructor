@@ -75,7 +75,6 @@ public:
 	Task& operator=(Task&& other);
 	~Task();
 
-	using Stage::name;
 	std::string id() const;
 
 	const moveit::core::RobotModelConstPtr getRobotModel() const { return robot_model_; }
