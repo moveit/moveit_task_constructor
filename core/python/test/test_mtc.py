@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from moveit.task_constructor import PropertyMap
+from moveit.task_constructor.core import PropertyMap
 from geometry_msgs.msg import Pose
 import unittest
 
