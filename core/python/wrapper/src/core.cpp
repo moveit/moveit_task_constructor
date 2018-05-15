@@ -27,7 +27,7 @@ void export_core()
 	PropertyMap& (Stage::*Stage_getPropertyMap)() = &Stage::properties;  // resolve method ambiguity
 	properties::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>("Stage", bp::no_init)
 	      // expose name as writeable property, returned string reference will be copied
-	      .add_property<double>("timeout")
+	      .property<double>("timeout")
 	      .add_property("name",
 	                    bp::make_function(&Stage::name, bp::return_value_policy<bp::copy_const_reference>()),
 	                    &Stage::setName)
@@ -36,7 +36,7 @@ void export_core()
 	;
 
 	PropertyMap& (Task::*Task_getPropertyMap)() = &Task::properties;
-	bp::class_<Task, boost::noncopyable>("Task", bp::init<bp::optional<const std::string&>>())
+	bp::class_<Task, boost::noncopyable>("Task", bp::init<bp::optional<const std::string& /* TODO the ContainerBase::pointer&& is currently omitted */>>())
 	      .add_property("id", &Task::id)
 	      .add_property("properties", bp::make_function(Task_getPropertyMap, bp::return_internal_reference<>()))
 

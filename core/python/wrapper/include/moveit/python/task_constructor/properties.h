@@ -12,7 +12,7 @@ namespace properties {
 
 /** Extension for boost::python::class_ to allow convienient definition of properties
  *
- * New method add_property<PropertyType>(const char* name) adds a property getter/setter.
+ * New method property<PropertyType>(const char* name) adds a property getter/setter.
  */
 
 template <
@@ -29,7 +29,7 @@ public:
 	using boost::python::class_<W, X1, X2, X3>::class_;
 
 	template <typename PropertyType>
-	self& add_property(const char* name, const char* docstr = 0) {
+	self& property(const char* name, const char* docstr = 0) {
 		auto getter = [name](const W& me) {
 			const moveit::task_constructor::PropertyMap& props = me.properties();
 			return props.get<PropertyType>(name);
