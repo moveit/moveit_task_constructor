@@ -1,6 +1,7 @@
 #include <boost/python.hpp>
 #include <boost/python/stl_iterator.hpp>
 
+#include <moveit/python/python_tools/conversions.h>
 #include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/current_state.h>
@@ -35,6 +36,9 @@ Connect* initConnect(const std::string& name, const bp::list& l) {
 
 void export_stages()
 {
+	ROSMsgConverter<geometry_msgs::PoseStamped>();
+	ROSMsgConverter<geometry_msgs::Pose>();
+
 	properties::class_<CurrentState, std::auto_ptr<CurrentState>, bp::bases<Stage>, boost::noncopyable>
 	      ("CurrentState", bp::init<bp::optional<const std::string&>>())
 	      ;
@@ -55,3 +59,5 @@ void export_stages()
 }
 
 } }
+
+

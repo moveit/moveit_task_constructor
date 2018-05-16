@@ -92,32 +92,58 @@ void deserializeMsg(const std::string& data, T& msg)
 }
 
 
-/// convert a ROS message (from python) to a string
-std::string _serializeMsg(const boost::python::object& msg);
+/// Convert a ROS message (from python) to a string
+std::string fromPython(const boost::python::object& msg);
 
-/// convert a string to a python ROS message of given type
-boost::python::object _deserializeMsg(const std::string& data, const std::string& python_type_name);
+/// Convert a string to a python ROS message of given type
+PyObject* toPython(const std::string& data, const boost::python::type_info& type_info);
 
 
-/// convert a python type name (extracted from __class__.__module__) to form package/msg
-std::string rosMsgName(const std::string& python_type_name);
+/// non-templated base class for ROSMsgConverter<T> providing common methods
+class ROSMsgConverterBase {
+protected:
+	/// Register type internally and return true if registered first time
+	static bool insert(const boost::python::type_info& type_info, const std::string& message);
 
-/// convert a ROS message from python to C++
+	/// Determine if python object can be converted into C++ msg type
+	static void* convertible(PyObject* object);
+};
+
+/// converter type to be registered with boost::python type conversion
+/// https://sixty-north.com/blog/how-to-write-boost-python-type-converters.html
 template <typename T>
-T fromPython(const boost::python::object &o)
-{
-	std::string serialized = _serializeMsg(o);
-	T result;
-	deserializeMsg(serialized, result);
-	return result;
-}
+struct ROSMsgConverter : ROSMsgConverterBase {
+	/// constructor registers the type converter
+	ROSMsgConverter(const std::string& message = "") {
+		auto type_info = boost::python::type_id<T>();
+		if (insert(type_info, message)) {
+			/// register type with boost::python converter system
+			boost::python::converter::registry::push_back(&convertible, &construct, type_info);
+			boost::python::to_python_converter<T, ROSMsgConverter<T>>();
+		}
+	}
 
-/// convert a ROS message from C++ to python
-template <typename T>
-boost::python::object toPython(const std::string& python_type_name, const T& msg)
-{
-	std::string serialized = serializeMsg(msg);
-	return _deserializeMsg(serialized, python_type_name);
-}
+	/// Conversion from Python object to C++ object, using pre-allocated memory block
+	static void construct(PyObject* object,
+	                      boost::python::converter::rvalue_from_python_stage1_data* data)
+	{
+		// serialize python msgs into string
+		std::string serialized = fromPython(boost::python::object(boost::python::borrowed(object)));
+
+		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
+		void* storage = reinterpret_cast<boost::python::converter::rvalue_from_python_storage<T>*>(data)->storage.bytes;
+		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's convertible variable.
+		T* result = new (storage) T();
+		data->convertible = result;
+
+		// deserialize string into C++ msg
+		deserializeMsg(serialized, *result);
+	}
+
+	/// Conversion from C++ object to Python object
+	static PyObject* convert(const T& msg) {
+		return toPython(serializeMsg(msg), typeid(T));
+	}
+};
 
 } }

@@ -1,6 +1,7 @@
 #include <boost/python.hpp>
 
 #include <moveit/python/python_tools/conversions.h>
+#include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/task.h>
 
@@ -24,8 +25,9 @@ void Task_add(Task& self, std::auto_ptr<Stage> stage) {
 void export_core()
 {
 	PropertyMap& (Stage::*Stage_getPropertyMap)() = &Stage::properties;  // resolve method ambiguity
-	bp::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>("Stage", bp::no_init)
+	properties::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>("Stage", bp::no_init)
 	      // expose name as writeable property, returned string reference will be copied
+	      .add_property<double>("timeout")
 	      .add_property("name",
 	                    bp::make_function(&Stage::name, bp::return_value_policy<bp::copy_const_reference>()),
 	                    &Stage::setName)

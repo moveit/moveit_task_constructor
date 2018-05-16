@@ -11,6 +11,7 @@ add_library(${TOOLS_LIB_NAME} SHARED
 
 	src/conversions.cpp
 	src/ros_init.cpp
+	src/ros_types.cpp
 )
 target_include_directories(${TOOLS_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

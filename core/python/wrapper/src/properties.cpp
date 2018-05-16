@@ -16,9 +16,6 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 	const boost::any& value = prop.value();
 	const std::string& type_name = value.type().name();
 
-	/// TODO Jan (later): replace this list with boost::python's type conversion mechanism
-	/// https://sixty-north.com/blog/how-to-write-boost-python-type-converters.html
-
 	/// type-casting for selected primitive types
 	if (type_name == typeid(bool).name())
 		return bp::object(boost::any_cast<bool>(value));
@@ -37,7 +34,7 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 
 	/// type-casting for selected ROS msg types
 	else if (type_name == typeid(geometry_msgs::Pose).name())
-		return toPython("geometry_msgs/Pose", boost::any_cast<geometry_msgs::Pose>(value));
+		return bp::object(boost::any_cast<geometry_msgs::Pose>(value));
 
 	throw std::runtime_error("No conversion for: " + type_name);
 }
@@ -55,9 +52,8 @@ void PropertyMap_set(PropertyMap& self, const std::string& name, const bp::objec
 
 	else {
 		std::string python_type_name = bp::extract<std::string>(value.attr("__class__").attr("__module__"));
-		std::string ros_msg_name = rosMsgName(python_type_name);
-		if (ros_msg_name == "geometry_msgs/Pose")
-			self.set(name, fromPython<geometry_msgs::Pose>(value));
+		if (python_type_name == "geometry_msgs.msg._Pose")
+			self.set<geometry_msgs::Pose>(name, boost::python::extract<geometry_msgs::Pose>(value));
 		else
 			throw std::runtime_error("No conversion for: " + python_type_name);
 	}

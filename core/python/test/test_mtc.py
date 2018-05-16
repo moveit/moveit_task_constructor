@@ -59,6 +59,8 @@ class TestTask(unittest.TestCase):
 
         current = stages.CurrentState("current")
         self.assertEqual(current.name, "current")
+        current.timeout = 1.23
+        self.assertEqual(current.timeout, 1.23)
 
         task.add(current)
 
