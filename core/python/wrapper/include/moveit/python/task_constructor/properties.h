@@ -36,7 +36,7 @@ public:
 		};
 		auto setter = [name](W& me, const PropertyType& value) {
 			moveit::task_constructor::PropertyMap& props = me.properties();
-			props.setCurrent(name, boost::any(value));
+			props.set(name, boost::any(value));
 		};
 
 		boost::python::class_<W, X1, X2, X3>::add_property

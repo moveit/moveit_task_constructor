@@ -19,6 +19,7 @@ namespace {
 void Task_add(Task& self, std::auto_ptr<Stage> stage) {
 	return self.add(std::unique_ptr<Stage>{stage.release()});
 }
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task::enableIntrospection, 0, 1)
 
 }
 
@@ -41,7 +42,7 @@ void export_core()
 	      .add_property("properties", bp::make_function(Task_getPropertyMap, bp::return_internal_reference<>()))
 
 	      .def("loadRobotModel", &Task::loadRobotModel)
-	      .def("enableIntrospection", &Task::enableIntrospection)
+	      .def("enableIntrospection", &Task::enableIntrospection, Task_enableIntrospection_overloads())
 	      .def("clear", &Task::clear)
 	      .def("reset", &Task::reset)
 	      .def("init", &Task::init)
