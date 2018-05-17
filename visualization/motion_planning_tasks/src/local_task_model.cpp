@@ -84,7 +84,7 @@ LocalTaskModel::LocalTaskModel(QObject *parent)
 	flags_ |= LOCAL_MODEL;
 }
 
-LocalTaskModel::LocalTaskModel(Stage::pointer &&container, QObject *parent)
+LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, QObject *parent)
    : BaseTaskModel(parent)
    , Task("", std::move(container))
 {

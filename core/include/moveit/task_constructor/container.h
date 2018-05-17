@@ -48,6 +48,7 @@ class ContainerBase : public Stage
 {
 public:
 	PRIVATE_CLASS(ContainerBase)
+	typedef std::unique_ptr<ContainerBase> pointer;
 
 	size_t numChildren() const;
 
@@ -227,7 +228,7 @@ class WrapperBase : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(WrapperBase)
-	WrapperBase(const std::string &name, pointer &&child = Stage::pointer());
+	WrapperBase(const std::string &name, Stage::pointer &&child = Stage::pointer());
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
@@ -242,7 +243,7 @@ public:
 	bool compute() override;
 
 protected:
-	WrapperBase(WrapperBasePrivate* impl, pointer &&child = Stage::pointer());
+	WrapperBase(WrapperBasePrivate* impl, Stage::pointer &&child = Stage::pointer());
 
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase &s) override = 0;

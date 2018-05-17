@@ -60,7 +60,7 @@ namespace moveit { namespace task_constructor { namespace stages {
  */
 class ComputeIK : public WrapperBase {
 public:
-	ComputeIK(const std::string &name, pointer &&child = Stage::pointer());
+	ComputeIK(const std::string &name, Stage::pointer &&child = Stage::pointer());
 
 	void init(const core::RobotModelConstPtr &robot_model);
 	void onNewSolution(const SolutionBase &s) override;

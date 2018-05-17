@@ -115,7 +115,7 @@ void Task::loadRobotModel(const std::string& robot_description) {
 		throw Exception("Task failed to construct RobotModel");
 }
 
-void Task::add(pointer &&stage) {
+void Task::add(Stage::pointer &&stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 

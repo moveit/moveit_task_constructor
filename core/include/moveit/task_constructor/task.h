@@ -70,7 +70,7 @@ public:
 	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
 	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
 	Task(const std::string& id = "",
-	     Stage::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
+	     ContainerBase::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task &&other);
 	Task& operator=(Task&& other);
 	~Task();
