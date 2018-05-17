@@ -86,7 +86,7 @@ TEST(Property, serialize) {
 
 	// std::map doesn't provide operator<< serialization
 	props.declare<std::map<int, int>>("map", std::map<int, int>());
-	EXPECT_THROW(props.property("map").serialize(), std::runtime_error);
+	EXPECT_EQ(props.property("map").serialize(), "");
 }
 
 class InitFromTest : public ::testing::Test {

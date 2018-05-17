@@ -91,7 +91,7 @@ class Property {
 
 	template <typename T>
 	static typename std::enable_if<!hasSerialize<T>::value, std::string>::type serialize(const boost::any& value) {
-		throw std::runtime_error (std::string("no operator<< for type ") + typeid(T).name());
+		return "";
 	}
 
 public:
