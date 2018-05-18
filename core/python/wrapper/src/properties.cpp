@@ -70,7 +70,7 @@ void export_properties()
 	      // TODO Jan: implement iterator API returning a tuples (string, value)
 	      // https://wiki.python.org/moin/boost.python/iterator
 	      // TODO Jan: implement dict.update(**kwargs)
-	;
+	      ;
 }
 
 } }
