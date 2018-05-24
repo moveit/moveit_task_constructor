@@ -11,6 +11,10 @@ namespace python {
 
 namespace {
 
+// Used to pass an iterator to its own __iter__ function
+inline boost::any identity(const boost::any& self) { return self; }
+
+
 bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 	const Property& prop = self.property(name);
 	const boost::any& value = prop.value();
@@ -59,17 +63,59 @@ void PropertyMap_set(PropertyMap& self, const std::string& name, const bp::objec
 	}
 }
 
+void PropertyMap_update(PropertyMap& self, bp::dict values) {
+	for (boost::python::stl_input_iterator<boost::python::tuple> it(values.iteritems()), end; it != end; ++it) {
+		const std::string& key = boost::python::extract<std::string>((*it)[0]);
+		const bp::object& value = boost::python::extract<bp::object>((*it)[1]);
+		PropertyMap_set(self, key, value);
+	}
+}
+
+class PropertyMapIterator {
+	PropertyMap& pm;
+	std::map<std::string, Property>::iterator iterator;
+	std::map<std::string, Property>::iterator end;
+
+public:
+	PropertyMapIterator(PropertyMap& pm_)  : pm(pm_) {
+		iterator = pm.begin();
+		// TODO Robert: get end of iterator here or for each call of next function?
+		end = pm.end();
+	}
+
+	bp::tuple next() {
+		if (iterator == end) {
+			PyErr_SetString(PyExc_StopIteration, "Iterator exhausted.");
+			bp::throw_error_already_set();
+		} else {
+			const std::string& name = (*iterator).first;
+			iterator++;
+			return bp::make_tuple<std::string, bp::object>(name, PropertyMap_get(pm, name));
+		}
+	}
+};
+
+PropertyMapIterator* PropertyMap_getIterator(PropertyMap& self) {
+	return new PropertyMapIterator(self);
+}
+
 } // anonymous namespace
 
 void export_properties()
 {
-	bp::class_<PropertyMap, boost::noncopyable>("PropertyMap")
+	bp::class_<PropertyMapIterator, boost::noncopyable>
+	      ("PropertyMapIterator", bp::init<PropertyMap&>())
+	      .def("__iter__", &identity)
+	      .def("next", &PropertyMapIterator::next)
+	;
+
+	bp::class_<PropertyMap, boost::noncopyable>
+	      ("PropertyMap")
 	      .def("__getitem__", &PropertyMap_get)
 	      .def("__setitem__", &PropertyMap_set)
 	      .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
-	      // TODO Jan: implement iterator API returning a tuples (string, value)
-	      // https://wiki.python.org/moin/boost.python/iterator
-	      // TODO Jan: implement dict.update(**kwargs)
+	      .def("__iter__", &PropertyMap_getIterator, bp::return_internal_reference<1>())
+	      .def("update", &PropertyMap_update)
 	      ;
 }
 

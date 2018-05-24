@@ -61,10 +61,10 @@ std::map<std::string, T> fromDict(const boost::python::dict& values)
 template <typename T>
 boost::python::dict toDict(const std::map<std::string, T>& v)
 {
-  boost::python::dict d;
-  for (const std::pair<std::string, T>& p : v)
-    d[p.first] = p.second;
-  return d;
+	boost::python::dict d;
+	for (const std::pair<std::string, T>& p : v)
+		d[p.first] = p.second;
+	return d;
 }
 
 
