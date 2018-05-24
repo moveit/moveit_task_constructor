@@ -144,7 +144,7 @@ bool GenerateGraspPose::compute() {
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
-		trajectory.setName(std::to_string(current_angle_));
+		trajectory.setComment(std::to_string(current_angle_));
 
 		// add frame at target pose
 		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");

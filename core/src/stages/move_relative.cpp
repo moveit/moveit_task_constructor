@@ -239,7 +239,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			if (!success) {
 				char msg[100];
 				snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
-				trajectory.setName(msg);
+				trajectory.setComment(msg);
 			}
 		} else if (min_distance == 0.0) { // if min_distance is zero, we succeed in any case
 			success = true;

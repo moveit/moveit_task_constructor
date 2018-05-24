@@ -4,8 +4,8 @@ uint32 id
 # associated cost
 float32 cost
 
-# optional associated name of sub trajectory
-string name
+# associated comment, usually providing failure hint
+string comment
 
 # id of stage that created this trajectory
 uint32 stage_id

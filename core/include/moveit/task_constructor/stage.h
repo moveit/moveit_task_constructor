@@ -149,9 +149,6 @@ public:
 	 *
 	 * When called, properties configured for initialization from parent are already defined.
 	 * Push interfaces are not yet defined!
-	 *
-	 * The planning scene is the initial planning scene of the task. Use it as is or
-	 * to learn about the robot model.
 	 */
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model);
 

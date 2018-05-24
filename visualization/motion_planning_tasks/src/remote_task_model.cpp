@@ -315,7 +315,7 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 	for (const auto& sub : msg.sub_trajectory) {
 		if (sub.id == 0) continue;
 		if (RemoteSolutionModel *m = getSolutionModel(sub.stage_id))
-			m->setSolutionData(sub.id, sub.cost, QString::fromStdString(sub.name));
+			m->setSolutionData(sub.id, sub.cost, QString::fromStdString(sub.comment));
 	}
 
 	// caching is only enabled for top-level solutions (stage_id == 1)
@@ -435,7 +435,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 			switch (section) {
 			case 0: return tr("#");
 			case 1: return tr("cost");
-			case 2: return tr("name");
+			case 2: return tr("comment");
 			}
 		case Qt::TextAlignmentRole:
 			return section == 2 ? Qt::AlignLeft : Qt::AlignRight;
@@ -463,7 +463,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
 			if (std::isinf(item.cost)) return tr(u8"∞");
 			if (std::isnan(item.cost)) return QVariant();
 			return item.cost;
-		case 2: return item.name;
+		case 2: return item.comment;
 		}
 
 	case Qt::ForegroundRole:
@@ -477,12 +477,12 @@ QVariant RemoteSolutionModel::data(const QModelIndex &index, int role) const
 	return QVariant();
 }
 
-void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString &name)
+void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString &comment)
 {
 	// retrieve iterator and row corresponding to id
 	auto sit = detail::findById(sorted_, id);
 	int row = (sit != sorted_.end()) ? sit - sorted_.begin() : -1;
-	auto it = (sit != sorted_.end()) ? *sit : detail::insert(data_, Data(id, cost, 0, name));
+	auto it = (sit != sorted_.end()) ? *sit : detail::insert(data_, Data(id, cost, 0, comment));
 
 	QModelIndex tl, br;
 	Data &item = *it;
@@ -490,8 +490,8 @@ void RemoteSolutionModel::setSolutionData(uint32_t id, float cost, const QString
 		item.cost = cost;
 		tl = br = index(row, 1);
 	}
-	if (item.name != name) {
-		item.name = name;
+	if (item.comment != comment) {
+		item.comment = comment;
 		br = index(row, 2);
 		if (!tl.isValid())
 			tl = br;
@@ -532,8 +532,8 @@ void RemoteSolutionModel::sortInternal()
 				if (left->cost_rank < right->cost_rank) comp = -1;
 				else if (left->cost_rank > right->cost_rank) comp = 1;
 				break;
-			case 2:  // name
-				comp = left->name.compare(right->name);
+			case 2:  // comment
+				comp = left->comment.compare(right->comment);
 				break;
 			}
 			if (comp == 0)  // if still undecided, id decides

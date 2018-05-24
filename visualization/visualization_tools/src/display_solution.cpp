@@ -79,9 +79,9 @@ const planning_scene::PlanningSceneConstPtr &DisplaySolution::scene(const IndexP
 	return data_[idx_pair.first].scene_->getParent();
 }
 
-const std::string &DisplaySolution::name(const IndexPair &idx_pair) const
+const std::string &DisplaySolution::comment(const IndexPair &idx_pair) const
 {
-	return data_[idx_pair.first].name_;
+	return data_[idx_pair.first].comment_;
 }
 
 uint32_t DisplaySolution::creatorId(const DisplaySolution::IndexPair &idx_pair) const
@@ -116,7 +116,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	for (const auto& sub : msg.sub_trajectory) {
 		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
 		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
-		data_[i].name_ = sub.name;
+		data_[i].comment_ = sub.comment;
 		data_[i].creator_id_ = sub.stage_id;
 		steps_ += data_[i].trajectory_->getWayPointCount();
 

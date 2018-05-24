@@ -74,8 +74,8 @@ class DisplaySolution
 		planning_scene::PlanningSceneConstPtr scene_;
 		/// sub trajectories, might be empty
 		robot_trajectory::RobotTrajectoryPtr trajectory_;
-		/// optional name of the trajectory
-		std::string name_;
+		/// comment of the trajectory
+		std::string comment_;
 		/// id of creating stage
 		uint32_t creator_id_;
 		/// rviz markers
@@ -113,9 +113,9 @@ public:
 			return data_.back().scene_;
 		return scene(indexPair(index));
 	}
-	const std::string& name(const IndexPair& idx_pair) const;
-	const std::string& name(size_t index) const {
-		return name(indexPair(index));
+	const std::string& comment(const IndexPair& idx_pair) const;
+	const std::string& comment(size_t index) const {
+		return comment(indexPair(index));
 	}
 	uint32_t creatorId(const IndexPair& idx_pair) const;
 

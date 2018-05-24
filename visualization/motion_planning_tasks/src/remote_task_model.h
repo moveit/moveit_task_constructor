@@ -99,12 +99,12 @@ class RemoteSolutionModel : public QAbstractTableModel {
 	struct Data {
 		uint32_t id;
 		double cost;  // nan if unknown, inf if failed
-		QString name;
+		QString comment;
 		uint32_t creation_rank;  // rank, ordered by creation
 		uint32_t cost_rank;  // rank, ordering by cost
 
 		Data(uint32_t id, float cost, uint32_t cost_rank, const QString& name=QString())
-		   : id(id), cost(cost), name(name), creation_rank(0), cost_rank(cost_rank) {}
+		   : id(id), cost(cost), comment(name), creation_rank(0), cost_rank(cost_rank) {}
 
 		inline bool operator<(const Data& other) const {
 			return this->id < other.id;
@@ -138,7 +138,7 @@ public:
 	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 	void sort(int column, Qt::SortOrder order) override;
 
-	void setSolutionData(uint32_t id, float cost, const QString &name);
+	void setSolutionData(uint32_t id, float cost, const QString &comment);
 	void processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
 };
 

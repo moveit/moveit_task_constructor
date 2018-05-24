@@ -302,7 +302,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
 		// TODO: visualize collisions
-		solution.setName("eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
+		solution.setComment("eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
@@ -394,7 +394,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 		// mark solution as invalid
 		solution.setCost(std::numeric_limits<double>::infinity());
-		solution.setName("no IK found");
+		solution.setComment("no IK found");
 
 		// ik target link placement
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));

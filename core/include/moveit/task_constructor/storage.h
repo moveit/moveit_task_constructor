@@ -197,8 +197,8 @@ public:
 	void setCost(double cost);
 	inline bool isFailure() const { return !std::isfinite(cost_); }
 
-	const std::string& name() const { return name_; }
-	void setName(const std::string& name) { name_ = name; }
+	const std::string& comment() const { return comment_; }
+	void setComment(const std::string& comment) { comment_ = comment; }
 
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
@@ -223,9 +223,9 @@ private:
 	StagePrivate *creator_;
 	// associated cost
 	double cost_;
-	// trajectories could have a name, e.g. a generator could name its solutions
-	std::string name_;
-	// additional markers
+	// comment for this solution, e.g. explanation of failure
+	std::string comment_;
+	// markers for this solution, e.g. target frame or collision indicators
 	std::deque<visualization_msgs::Marker> markers_;
 
 	// begin and end InterfaceState of this solution/trajectory

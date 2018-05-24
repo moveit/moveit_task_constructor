@@ -151,7 +151,7 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
 	t.id = introspection ? introspection->solutionId(*this) : 0;
 	t.cost = this->cost();
-	t.name = this->name();
+	t.comment = this->comment();
 
 	const Introspection *ci = introspection;
 	t.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
