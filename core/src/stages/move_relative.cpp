@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
+/* Authors: Robert Haschke, Michael Goerner
    Desc:    Move link along Cartesian direction
 */
 
@@ -49,9 +49,10 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 {
 	auto& p = properties();
 	p.declare<double>("timeout", 10.0, "planning timeout");
+	// +1 TODO: make "marker" a common property of all stages. However, I would stick with "marker_ns"
 	p.declare<std::string>("marker_ns", "", "marker namespace");
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<std::string>("link", "", "link to move (default is tip of jmg)");
+	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
@@ -63,6 +64,14 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	                                    "constraints to maintain during trajectory");
 }
 
+void MoveRelative::setIKFrame(const Eigen::Affine3d& pose, const std::string& link)
+{
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header.frame_id = link;
+	tf::poseEigenToMsg(pose, pose_msg.pose);
+	setIKFrame(pose_msg);
+}
+
 void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	PropagatingEitherWay::init(robot_model);
@@ -72,12 +81,13 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 bool MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory &trajectory, Direction dir) {
 	scene = state.scene()->diff();
-	assert(scene->getRobotModel());
+	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	assert(robot_model);
 
 	const auto& props = properties();
 	double timeout = props.get<double>("timeout");
 	const std::string& group = props.get<std::string>("group");
-	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getJointModelGroup(group);
+	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
 		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
 		return false;
@@ -105,7 +115,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(goal);
 		for (const auto& j : joints) {
 			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
-			auto jm = scene->getRobotModel()->getJointModel(index);
+			auto jm = robot_model->getJointModel(index);
 			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end()) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Cannot plan joint target for joint '" << j.first << "' that is not part of group '" << group << "'");
 				return false;
@@ -116,15 +126,24 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		robot_state.update();
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
-		// Cartesian targets require the link name
-		// TODO: use ik_frame property as in ComputeIK
-		std::string link_name = props.get<std::string>("link");
+		// Cartesian targets require an IK reference frame
+		geometry_msgs::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
-		if (link_name.empty())
-			link_name = solvers::getEndEffectorLink(jmg);
-		if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-			ROS_WARN_STREAM_NAMED("MoveRelative", "No or invalid link name specified: " << link_name);
-			return false;
+		const boost::any& value = props.get("ik_frame");
+		if (value.empty()) { // property undefined
+			//  determine IK link from group
+			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
+				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
+				return false;
+			}
+			ik_pose_msg.header.frame_id = link->getName();
+			ik_pose_msg.pose.orientation.w = 1.0;
+		} else {
+			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
+				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
+				return false;
+			}
 		}
 
 		bool use_rotation_distance = false;  // measure achieved distance as rotation?
@@ -133,7 +152,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		double linear_norm = 0.0, angular_norm = 0.0;
 
 		Eigen::Affine3d target_eigen;
-		Eigen::Affine3d link_pose = scene->getFrameTransform(link_name);  // take a copy here, pose will change on success
+		Eigen::Affine3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		boost::any goal = props.get("twist");
 		if (!goal.empty()) {
@@ -197,6 +216,11 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			target_eigen.translation() += linear;
 		}
 
+		// transform target pose such that ik frame will reach there if link does
+		Eigen::Affine3d ik_pose;
+		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		target_eigen = target_eigen * ik_pose.inverse();
+
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
 		// min_distance reached?
@@ -223,7 +247,6 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 		// add an arrow marker
 		visualization_msgs::Marker m;
-		// +1 TODO: make "marker" a common property of all stages. However, I would stick with "marker_ns"
 		m.ns = props.get<std::string>("marker_ns");
 		if (!m.ns.empty()) {
 			m.header.frame_id = scene->getPlanningFrame();

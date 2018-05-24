@@ -92,6 +92,4 @@ public:
 	                  const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) = 0;
 };
 
-std::string getEndEffectorLink(const moveit::core::JointModelGroup *jmg);
-
 } } }

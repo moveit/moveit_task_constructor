@@ -24,11 +24,22 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
 	int insertion_position = forward ? -1 : 0; // insert children at end / front, i.e. normal or reverse order
 
+	auto init_ik_frame = [](const PropertyMap& other) -> boost::any {
+		geometry_msgs::PoseStamped pose;
+		const boost::any& frame = other.get("eef_frame");
+		if (frame.empty())
+			return boost::any();
+
+		pose.header.frame_id = boost::any_cast<std::string>("eef_frame");
+		pose.pose.orientation.w = 1.0;
+		return pose;
+	};
+
 	{
 		auto approach = std::make_unique<MoveRelative>(forward ? "approach object" : "retract", cartesian_solver_);
 		PropertyMap& p = approach->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
-		p.property("link").configureInitFrom(Stage::PARENT, "eef_frame");
+		p.property("ik_frame").configureInitFrom(Stage::PARENT, init_ik_frame);
 		p.set("marker_ns", std::string(forward ? "approach" : "retract"));
 		approach_stage_ = approach.get();
 		insert(std::move(approach), insertion_position);
@@ -42,7 +53,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 		auto lift = std::make_unique<MoveRelative>(forward ? "lift object" : "place object", cartesian_solver_);
 		PropertyMap& p = lift->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
-		p.property("link").configureInitFrom(Stage::PARENT, "eef_frame");
+		p.property("ik_frame").configureInitFrom(Stage::PARENT, init_ik_frame);
 		p.set("marker_ns", std::string(forward ? "lift" : "place"));
 		lift_stage_ = lift.get();
 		insert(std::move(lift), insertion_position);

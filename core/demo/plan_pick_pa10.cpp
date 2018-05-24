@@ -46,7 +46,6 @@ int main(int argc, char** argv){
 	t.setProperty("group", std::string("left_arm"));
 	t.setProperty("eef", std::string("la_tool_mount"));
 	t.setProperty("gripper", std::string("left_hand"));
-	t.setProperty("link", std::string("la_tool_mount"));
 
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
 	pipeline->setTimeout(8.0);
@@ -87,7 +86,7 @@ int main(int argc, char** argv){
 		move->restrictDirection(stages::MoveRelative::BACKWARD);
 		move->properties().configureInitFrom(Stage::PARENT);
 		move->properties().set("marker_ns", std::string("approach"));
-		move->properties().set("link", std::string("lh_tool_frame"));
+		move->setIKFrame("lh_tool_frame");
 		move->setMinMaxDistance(0.05, 0.1);
 
 		geometry_msgs::Vector3Stamped direction;
@@ -142,7 +141,7 @@ int main(int argc, char** argv){
 		move->properties().configureInitFrom(Stage::PARENT, {"group"});
 		move->setMinMaxDistance(0.03, 0.05);
 		move->properties().set("marker_ns", std::string("lift"));
-		move->properties().set("link", std::string("lh_tool_frame"));
+		move->setIKFrame("lh_tool_frame");
 
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
@@ -156,7 +155,7 @@ int main(int argc, char** argv){
 		move->properties().configureInitFrom(Stage::PARENT, {"group"});
 		move->setMinMaxDistance(0.1, 0.2);
 		move->properties().set("marker_ns", std::string("lift"));
-		move->properties().set("link", std::string("lh_tool_frame"));
+		move->setIKFrame("lh_tool_frame");
 
 		geometry_msgs::TwistStamped twist;
 		twist.header.frame_id = "object";

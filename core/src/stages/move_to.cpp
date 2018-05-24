@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
+/* Authors: Robert Haschke, Michael Goerner
    Desc:    Move to joint-state or Cartesian goal pose
 */
 
@@ -51,7 +51,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	auto& p = properties();
 	p.declare<double>("timeout", 10.0, "planning timeout"); // TODO: make this a common property in Stage
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<std::string>("link", "", "link to move (default is tip of jmg)");
+	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 
 	p.declare<geometry_msgs::PoseStamped>("pose", "Cartesian target pose");
 	p.declare<geometry_msgs::PointStamped>("point", "Cartesian target point");
@@ -60,6 +60,14 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
+}
+
+void MoveTo::setIKFrame(const Eigen::Affine3d& pose, const std::string& link)
+{
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header.frame_id = link;
+	tf::poseEigenToMsg(pose, pose_msg.pose);
+	setIKFrame(pose_msg);
 }
 
 void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
@@ -114,12 +122,13 @@ bool MoveTo::getJointStateGoal(moveit::core::RobotState& state) {
 bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
                      SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
-	assert(scene->getRobotModel());
+	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	assert(robot_model);
 
 	const auto& props = properties();
 	double timeout = props.get<double>("timeout");
 	const std::string& group = props.get<std::string>("group");
-	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getJointModelGroup(group);
+	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
 		ROS_WARN_STREAM_NAMED("MoveTo", "Invalid joint model group: " << group);
 		return false;
@@ -161,14 +170,23 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		const moveit::core::LinkModel* link;
 		Eigen::Affine3d target_eigen;
 
-		// Cartesian targets require the link name
-		// TODO: use ik_frame property as in ComputeIK
-		std::string link_name = props.get<std::string>("link");
-		if (link_name.empty())
-			link_name = solvers::getEndEffectorLink(jmg);
-		if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-			ROS_WARN_STREAM_NAMED("MoveTo", "No or invalid link name specified: " << link_name);
-			return false;
+		// Cartesian targets require an IK reference frame
+		geometry_msgs::PoseStamped ik_pose_msg;
+		const boost::any& value = props.get("ik_frame");
+		if (value.empty()) { // property undefined
+			// determine IK link from group
+			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
+				ROS_WARN_STREAM_NAMED("MoveTo", "Failed to derive IK target link");
+				return false;
+			}
+			ik_pose_msg.header.frame_id = link->getName();
+			ik_pose_msg.pose.orientation.w = 1.0;
+		} else {
+			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
+				ROS_WARN_STREAM_NAMED("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
+				return false;
+			}
 		}
 
 		boost::any goal = props.get("pose");
@@ -184,10 +202,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
 
 			// frame at link
-			geometry_msgs::PoseStamped pose_msg;
-			pose_msg.header.frame_id = link_name;
-			pose_msg.pose.orientation.w = 1.0;
-			rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 		}
 
 		goal = props.get("point");
@@ -201,9 +216,14 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			target_point = frame * target_point;
 
 			// retain link orientation
-			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
+			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link);
 			target_eigen.translation() = target_point;
 		}
+
+		// transform target pose such that ik frame will reach there if link does
+		Eigen::Affine3d ik_pose;
+		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		target_eigen = target_eigen * ik_pose.inverse();
 
 		// plan to Cartesian target
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);

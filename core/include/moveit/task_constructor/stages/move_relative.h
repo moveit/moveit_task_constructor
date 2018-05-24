@@ -58,8 +58,18 @@ public:
 	void setGroup(const std::string& group) {
 		setProperty("group", group);
 	}
-	void setLink(const std::string& link) {
-		setProperty("link", link);
+	/// setters for IK frame
+	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
+		setProperty("ik_frame", pose);
+	}
+	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	template <typename T>
+	void setIKFrame(const T& p, const std::string& link) {
+		Eigen::Affine3d pose; pose = p;
+		setIKFrame(pose, link);
+	}
+	void setIKFrame(const std::string& link) {
+		setIKFrame(Eigen::Affine3d::Identity(), link);
 	}
 
 	/// set minimum / maximum distance to move

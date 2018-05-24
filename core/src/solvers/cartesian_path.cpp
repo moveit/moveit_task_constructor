@@ -63,9 +63,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
                          robot_trajectory::RobotTrajectoryPtr& result,
                          const moveit_msgs::Constraints& path_constraints)
 {
-	const moveit::core::LinkModel* link;
-	const std::string& link_name = solvers::getEndEffectorLink(jmg);
-	if (!(link = from->getRobotModel()->getLinkModel(link_name))) {
+	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
+	if (!link) {
 		ROS_WARN_STREAM("no unique tip for joint model group: " << jmg->getName());
 		return false;
 	}
