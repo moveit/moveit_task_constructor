@@ -64,9 +64,9 @@ bool GeneratePose::canCompute() const {
 	return scenes_.size() > 0;
 }
 
-bool GeneratePose::compute() {
+void GeneratePose::compute() {
 	if (scenes_.empty())
-		return false;
+		return;
 	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
 	scenes_.pop_front();
 
@@ -75,7 +75,7 @@ bool GeneratePose::compute() {
 		target_pose.header.frame_id = scene->getPlanningFrame();
 	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
 		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
-		return false;
+		return;
 	}
 
 	InterfaceState state(scene);
@@ -87,7 +87,6 @@ bool GeneratePose::compute() {
 	rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "pose frame");
 
 	spawn(std::move(state), std::move(trajectory));
-	return true;
 }
 
 } } }

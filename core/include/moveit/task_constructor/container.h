@@ -74,7 +74,7 @@ public:
 	virtual void validateConnectivity() const;
 
 	virtual bool canCompute() const = 0;
-	virtual bool compute() = 0;
+	virtual void compute() = 0;
 
 	size_t numFailures() const override { return 0; }
 	void processFailures(const SolutionProcessor&) const override {}
@@ -103,7 +103,7 @@ public:
 	void validateConnectivity() const override;
 
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;
@@ -192,7 +192,7 @@ public:
 	Alternatives(const std::string &name = "alternatives") : ParallelContainerBase(name) {}
 
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 };
 
 
@@ -212,7 +212,7 @@ public:
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 };
 
 
@@ -227,7 +227,7 @@ public:
 	void reset() override;
 	void init(const core::RobotModelConstPtr &robot_model) override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 protected:
 	Merger(MergerPrivate* impl);
@@ -263,7 +263,7 @@ public:
 	}
 
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 protected:
 	WrapperBase(WrapperBasePrivate* impl, Stage::pointer &&child = Stage::pointer());

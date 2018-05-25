@@ -67,7 +67,7 @@ public:
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	bool compute(const InterfaceState &from, const InterfaceState &to) override;
+	void compute(const InterfaceState &from, const InterfaceState &to) override;
 
 	size_t numSolutions() const override;
 	void processSolutions(const SolutionProcessor &processor) const override;

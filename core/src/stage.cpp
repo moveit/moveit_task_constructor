@@ -161,11 +161,6 @@ void Stage::setName(const std::string& name)
 	pimpl_->name_ = name;
 }
 
-bool Stage::storeFailures() const
-{
-	return pimpl_->introspection_ != nullptr;
-}
-
 Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionCallback &&cb)
 {
 	auto impl = pimpl();
@@ -251,14 +246,14 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 }
 
 SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
-	if (!trajectory.isFailure()) {
+	if (!trajectory.isFailure())
 		return *solutions_.insert(std::move(trajectory));
-	} else if (me()->storeFailures()) {
-		// only store failures when introspection is enabled
-		auto it = failures_.insert(failures_.end(), std::move(trajectory));
-		return *it;
-	} else
-		return trajectory;
+
+	++num_failures_;
+	if (storeFailures())
+		return *failures_.insert(failures_.end(), std::move(trajectory));
+
+	return trajectory;
 }
 
 
@@ -382,26 +377,22 @@ bool PropagatingEitherWayPrivate::canCompute() const
 	return hasStartState() || hasEndState();
 }
 
-bool PropagatingEitherWayPrivate::compute()
+void PropagatingEitherWayPrivate::compute()
 {
 	PropagatingEitherWay* me = static_cast<PropagatingEitherWay*>(me_);
 
-	bool result = false;
 	if (hasStartState()) {
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (countFailures(me->computeForward(state)))
-			result |= true;
+		me->computeForward(state);
 	}
 	if (hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
 		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
-		if (countFailures(me->computeBackward(state)))
-			result |= true;
+		me->computeBackward(state);
 	}
-	return result;
 }
 
 
@@ -479,7 +470,7 @@ PropagatingForward::PropagatingForward(const std::string& name)
    : PropagatingEitherWay(new PropagatingForwardPrivate(this, name))
 {}
 
-bool PropagatingForward::computeBackward(const InterfaceState &to)
+void PropagatingForward::computeBackward(const InterfaceState &to)
 {
 	assert(false); // This should never be called
 }
@@ -497,7 +488,7 @@ PropagatingBackward::PropagatingBackward(const std::string &name)
    : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name))
 {}
 
-bool PropagatingBackward::computeForward(const InterfaceState &from)
+void PropagatingBackward::computeForward(const InterfaceState &from)
 {
 	assert(false); // This should never be called
 }
@@ -515,8 +506,8 @@ bool GeneratorPrivate::canCompute() const {
 	return static_cast<Generator*>(me_)->canCompute();
 }
 
-bool GeneratorPrivate::compute() {
-	return countFailures(static_cast<Generator*>(me_)->compute());
+void GeneratorPrivate::compute() {
+	static_cast<Generator*>(me_)->compute();
 }
 
 
@@ -629,11 +620,11 @@ bool ConnectingPrivate::canCompute() const{
 	return !pending.empty();
 }
 
-bool ConnectingPrivate::compute() {
+void ConnectingPrivate::compute() {
 	const StatePair& top = pending.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
-	return countFailures(static_cast<Connecting*>(me_)->compute(from, to));
+	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
 

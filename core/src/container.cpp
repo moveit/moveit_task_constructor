@@ -94,10 +94,10 @@ bool ContainerBasePrivate::canCompute() const
 	return static_cast<ContainerBase*>(me_)->canCompute();
 }
 
-bool ContainerBasePrivate::compute()
+void ContainerBasePrivate::compute()
 {
 	// call the method of the public interface
-	return static_cast<ContainerBase*>(me_)->compute();
+	static_cast<ContainerBase*>(me_)->compute();
 }
 
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
@@ -619,31 +619,26 @@ void SerialContainer::validateConnectivity() const
 
 bool SerialContainer::canCompute() const
 {
-	size_t num_finished = 0;
 	for(const auto& stage : pimpl()->children()) {
-		if (!stage->pimpl()->canCompute())
-			++num_finished;
+		if (stage->pimpl()->canCompute())
+			return true;
 	}
-	return num_finished < pimpl()->children().size();
+	return false;
 }
 
-bool SerialContainer::compute()
+void SerialContainer::compute()
 {
-	bool computed = false;
 	for(const auto& stage : pimpl()->children()) {
 		try {
 			if(!stage->pimpl()->canCompute())
 				continue;
 
-			ROS_INFO("Computing stage '%s'", stage->name().c_str());
-			bool success = stage->pimpl()->compute();
-			computed = true;
-			ROS_INFO("Stage '%s': %s", stage->name().c_str(), success ? "succeeded" : "failed");
+			ROS_DEBUG("Computing stage '%s'", stage->name().c_str());
+			stage->pimpl()->compute();
 		} catch (const Property::error &e) {
 			stage->reportPropertyError(e);
 		}
 	}
-	return computed;
 }
 
 size_t SerialContainer::numSolutions() const
@@ -954,16 +949,13 @@ bool WrapperBase::canCompute() const
 	return wrapped()->pimpl()->canCompute();
 }
 
-bool WrapperBase::compute()
+void WrapperBase::compute()
 {
 	try {
-		size_t num_before = numSolutions();
 		wrapped()->pimpl()->compute();
-		return numSolutions() > num_before;
 	} catch (const Property::error &e) {
 		wrapped()->reportPropertyError(e);
 	}
-	return false;
 }
 
 
@@ -975,17 +967,15 @@ bool Alternatives::canCompute() const
 	return false;
 }
 
-bool Alternatives::compute()
+void Alternatives::compute()
 {
-	bool success = false;
 	for (const auto& stage : pimpl()->children()) {
 		try {
-			success |= stage->pimpl()->compute();
+			stage->pimpl()->compute();
 		} catch (const Property::error &e) {
 			stage->reportPropertyError(e);
 		}
 	}
-	return success;
 }
 
 
@@ -1014,17 +1004,16 @@ bool Fallbacks::canCompute() const
 	return false;
 }
 
-bool Fallbacks::compute()
+void Fallbacks::compute()
 {
 	if (!active_child_)
-		return false;
+		return;
 
 	try {
-		return active_child_->pimpl()->compute();
+		active_child_->pimpl()->compute();
 	} catch (const Property::error &e) {
 		active_child_->reportPropertyError(e);
 	}
-	return false;
 }
 
 
@@ -1092,17 +1081,15 @@ bool Merger::canCompute() const
 	return false;
 }
 
-bool Merger::compute()
+void Merger::compute()
 {
-	bool success = false;
 	for (const auto& stage : pimpl()->children()) {
 		try {
-			success |= stage->pimpl()->compute();
+			stage->pimpl()->compute();
 		} catch (const Property::error &e) {
 			stage->reportPropertyError(e);
 		}
 	}
-	return success;
 }
 
 void Merger::onNewSolution(const SolutionBase& s)

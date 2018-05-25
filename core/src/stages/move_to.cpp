@@ -119,7 +119,7 @@ bool MoveTo::getJointStateGoal(moveit::core::RobotState& state) {
 	return false;
 }
 
-bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
+void MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
                      SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
@@ -131,7 +131,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
 		ROS_WARN_STREAM_NAMED("MoveTo", "Invalid joint model group: " << group);
-		return false;
+		return;
 	}
 
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
@@ -143,24 +143,24 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		has_joint_state_goal= getJointStateGoal(scene->getCurrentStateNonConst());
 	} catch (const InitStageException &e) {
 		ROS_WARN_STREAM_NAMED("MoveTo", e.what());
-		return false;
+		return;
 	}
 
 	size_t cartesian_goals = props.countDefined({"pose", "point"});
 
 	if (cartesian_goals > 1){
 		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Multiple Cartesian goals defined");
-		return false;
+		return;
 	}
 
 	if (cartesian_goals > 0 && has_joint_state_goal){
 		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Cartesian goals and joint state goals defined");
-		return false;
+		return;
 	}
 
 	if (cartesian_goals == 0 && !has_joint_state_goal){
 		ROS_WARN_NAMED("MoveTo", "No goal defined");
-		return false;
+		return;
 	}
 
 	if (has_joint_state_goal) {
@@ -177,7 +177,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
 				ROS_WARN_STREAM_NAMED("MoveTo", "Failed to derive IK target link");
-				return false;
+				return;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
 			ik_pose_msg.pose.orientation.w = 1.0;
@@ -185,7 +185,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
 				ROS_WARN_STREAM_NAMED("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
-				return false;
+				return;
 			}
 		}
 
@@ -230,36 +230,32 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	}
 
 	// store result
-	if (success || (robot_trajectory && storeFailures())) {
+	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD) robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
+		if (!success)
+			solution.markAsFailure();
 	}
-
-	return success;
 }
 
 // -1 TODO: move these as default implementation to PropagateEitherWay?
 // Essentially, here compute() is a class-specific worker function
-bool MoveTo::computeForward(const InterfaceState &from){
+void MoveTo::computeForward(const InterfaceState &from){
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
 
-	bool success = compute(from, to, trajectory, FORWARD);
-	if (!success) trajectory.setCost(std::numeric_limits<double>::infinity());
+	compute(from, to, trajectory, FORWARD);
 	sendForward(from, InterfaceState(to), std::move(trajectory));
-	return success;
 }
 
-bool MoveTo::computeBackward(const InterfaceState &to)
+void MoveTo::computeBackward(const InterfaceState &to)
 {
 	planning_scene::PlanningScenePtr from;
 	SubTrajectory trajectory;
 
-	bool success = compute(to, from, trajectory, BACKWARD);
-	if (!success) trajectory.setCost(std::numeric_limits<double>::infinity());
+	compute(to, from, trajectory, BACKWARD);
 	sendBackward(InterfaceState(from), to, std::move(trajectory));
-	return success;
 }
 
 } } }

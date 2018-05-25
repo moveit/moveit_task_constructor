@@ -158,8 +158,6 @@ public:
 	virtual size_t numSolutions() const = 0;
 	virtual size_t numFailures() const = 0;
 
-	bool storeFailures() const;
-
 	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
 	/// process all solutions in cost order, calling the callback for each of them
 	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
@@ -232,8 +230,8 @@ public:
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	virtual bool computeForward(const InterfaceState& from) = 0;
-	virtual bool computeBackward(const InterfaceState& to) = 0;
+	virtual void computeForward(const InterfaceState& from) = 0;
+	virtual void computeBackward(const InterfaceState& to) = 0;
 
 	void sendForward(const InterfaceState& from,
 	                 InterfaceState&& to,
@@ -256,7 +254,7 @@ public:
 
 private:
 	// restrict access to backward method to provide compile-time check
-	bool computeBackward(const InterfaceState &to) override;
+	void computeBackward(const InterfaceState &to) override;
 	using PropagatingEitherWay::sendBackward;
 };
 
@@ -269,7 +267,7 @@ public:
 
 private:
 	// restrict access to forward method to provide compile-time check
-	bool computeForward(const InterfaceState &from) override;
+	void computeForward(const InterfaceState &from) override;
 	using PropagatingEitherWay::sendForward;
 };
 
@@ -281,7 +279,7 @@ public:
 	Generator(const std::string& name);
 
 	virtual bool canCompute() const = 0;
-	virtual bool compute() = 0;
+	virtual void compute() = 0;
 	void spawn(InterfaceState &&state, SubTrajectory &&trajectory);
 	void spawn(InterfaceState &&state, double cost) {
 		SubTrajectory trajectory;
@@ -330,7 +328,7 @@ public:
 
 	void reset() override;
 
-	virtual bool compute(const InterfaceState& from, const InterfaceState& to) = 0;
+	virtual void compute(const InterfaceState& from, const InterfaceState& to) = 0;
 	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory);
 	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory, double cost) {
 		trajectory.setCost(cost);

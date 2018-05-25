@@ -203,9 +203,9 @@ bool Task::canCompute() const
 	return stages()->canCompute();
 }
 
-bool Task::compute()
+void Task::compute()
 {
-	return stages()->compute();
+	stages()->compute();
 }
 
 bool Task::plan()
@@ -214,13 +214,11 @@ bool Task::plan()
 	init();
 
 	while(ros::ok() && canCompute()) {
-		if (compute()) {
-			for (const auto& cb : task_cbs_)
-				cb(*this);
-			if (introspection_)
-				introspection_->publishTaskState();
-		} else
-			break;
+		compute();
+		for (const auto& cb : task_cbs_)
+			cb(*this);
+		if (introspection_)
+			introspection_->publishTaskState();
 	}
 	printState();
 	return numSolutions() > 0;

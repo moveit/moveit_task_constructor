@@ -51,7 +51,7 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	void setTimeout(const ros::Duration& timeout) {
 		setProperty("timeout", timeout);

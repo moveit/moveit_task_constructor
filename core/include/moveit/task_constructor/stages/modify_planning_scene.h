@@ -63,8 +63,8 @@ public:
 	typedef std::function<void(const planning_scene::PlanningScenePtr& scene, const PropertyMap& properties)> ApplyCallback;
 	ModifyPlanningScene(const std::string& name = "modify planning scene");
 
-	bool computeForward(const InterfaceState& from) override;
-	bool computeBackward(const InterfaceState& to) override;
+	void computeForward(const InterfaceState& from) override;
+	void computeBackward(const InterfaceState& to) override;
 
 	/// call an arbitrary function
 	void setCallback(const ApplyCallback& cb) { callback_ = cb; }

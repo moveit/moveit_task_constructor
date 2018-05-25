@@ -64,7 +64,7 @@ bool CurrentState::canCompute() const{
 	return !scene_;
 }
 
-bool CurrentState::compute() {
+void CurrentState::compute() {
 	scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
 	ros::NodeHandle h;
@@ -90,11 +90,10 @@ bool CurrentState::compute() {
 		if (client.call(req, res)) {
 			scene_->setPlanningSceneMsg(res.scene);
 			spawn(InterfaceState(scene_), 0.0);
-			return true;
+			return;
 		}
 	}
 	ROS_WARN("failed to acquire current PlanningScene");
-	return false;
 }
 
 } } }

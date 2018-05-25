@@ -61,30 +61,29 @@ void FixCollisionObjects::setMaxPenetration(double penetration)
 	setProperty("max_penetration", penetration);
 }
 
-bool FixCollisionObjects::computeForward(const InterfaceState &from)
+void FixCollisionObjects::computeForward(const InterfaceState &from)
 {
 	planning_scene::PlanningScenePtr to = from.scene()->diff();
 	SubTrajectory solution;
 	bool success = fixCollisions(*to, solution.markers());
-	if (!success) solution.setCost(std::numeric_limits<double>::infinity());
+	if (!success) solution.markAsFailure();
 	sendForward(from, InterfaceState(to), std::move(solution));
-	return success;
 }
 
-bool FixCollisionObjects::computeBackward(const InterfaceState &to)
+void FixCollisionObjects::computeBackward(const InterfaceState &to)
 {
 	planning_scene::PlanningScenePtr from = to.scene()->diff();
 	SubTrajectory solution;
 	bool success = fixCollisions(*from, solution.markers());
-	if (!success) solution.setCost(std::numeric_limits<double>::infinity());
+	if (!success) solution.markAsFailure();
 	sendBackward(InterfaceState(from), to, std::move(solution));
-	return success;
 }
 
 bool FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &scene, std::deque<visualization_msgs::Marker> &markers) const
 {
 	const auto& props = properties();
 	double penetration = props.get<double>("max_penetration");
+	(void) penetration;
 
 	collision_detection::CollisionRequest req;
 	collision_detection::CollisionResult res;

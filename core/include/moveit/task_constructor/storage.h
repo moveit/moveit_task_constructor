@@ -195,6 +195,7 @@ public:
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
+	void markAsFailure() { setCost(std::numeric_limits<double>::infinity()); }
 	inline bool isFailure() const { return !std::isfinite(cost_); }
 
 	const std::string& comment() const { return comment_; }

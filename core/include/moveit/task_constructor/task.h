@@ -131,7 +131,7 @@ public:
 
 protected:
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 	void onNewSolution(const SolutionBase &s) override;
 
 private:

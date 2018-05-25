@@ -50,7 +50,7 @@ public:
 	void setState(const planning_scene::PlanningScenePtr& scene);
 
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 protected:
 	planning_scene::PlanningScenePtr scene_;

@@ -56,6 +56,7 @@ class StagePrivate {
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
 
 public:
+	// container type used to store children
 	typedef std::list<Stage::pointer> container_type;
 	StagePrivate(Stage* me, const std::string& name);
 	virtual ~StagePrivate() = default;
@@ -68,7 +69,7 @@ public:
 	virtual void pruneInterface(InterfaceFlags accepted) {}
 
 	virtual bool canCompute() const = 0;
-	virtual bool compute() = 0;
+	virtual void compute() = 0;
 
 	inline const Stage* me() const { return me_; }
 	inline Stage* me() { return me_; }
@@ -104,6 +105,7 @@ public:
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
 	void newSolution(SolutionBase& current);
+	bool storeFailures() const { return introspection_ != nullptr; }
 
 protected:
 	Stage* const me_; // associated/owning Stage instance
@@ -143,12 +145,6 @@ public:
 	// store trajectory in internal trajectories_ list
 	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
 
-	// countFailures() serves as a filter before returning the result of compute()
-	inline bool countFailures(bool success) {
-		if (!success) ++num_failures_;
-		return success;
-	}
-
 private:
 	ordered<SubTrajectory> solutions_;
 	std::list<SubTrajectory> failures_;
@@ -174,7 +170,7 @@ public:
 	void pruneInterface(InterfaceFlags accepted) override;
 
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	bool hasStartState() const;
 	const InterfaceState &fetchStartState();
@@ -210,7 +206,7 @@ public:
 
 	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 };
 PIMPL_FUNCTIONS(Generator)
 
@@ -244,7 +240,7 @@ public:
 
 	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	void connect(const robot_trajectory::RobotTrajectoryPtr& t,
 	             const InterfaceStatePair& state_pair, double cost);

@@ -28,11 +28,10 @@ public:
 	}
 
 	bool canCompute() const override { return true; }
-	bool compute() override {
+	void compute() override {
 		InterfaceState state(ps);
 		state.properties().set("target_pose", geometry_msgs::PoseStamped());
 		spawn(std::move(state), 0.0);
-		return true;
 	}
 };
 

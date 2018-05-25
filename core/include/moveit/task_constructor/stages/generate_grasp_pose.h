@@ -47,7 +47,7 @@ public:
 	GenerateGraspPose(const std::string& name);
 
 	void init(const core::RobotModelConstPtr &robot_model) override;
-	bool compute() override;
+	void compute() override;
 
 	void setEndEffector(const std::string &eef);
 	void setNamedPose(const std::string &pose_name);

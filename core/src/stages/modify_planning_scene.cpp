@@ -64,15 +64,13 @@ void ModifyPlanningScene::allowCollisions(const std::string &first, const moveit
 		allowCollisions(Names({first}), links, allow);
 }
 
-bool ModifyPlanningScene::computeForward(const InterfaceState &from){
+void ModifyPlanningScene::computeForward(const InterfaceState &from){
 	sendForward(from, apply(from, false), SubTrajectory());
-	return true;
 }
 
-bool ModifyPlanningScene::computeBackward(const InterfaceState &to)
+void ModifyPlanningScene::computeBackward(const InterfaceState &to)
 {
 	sendBackward(apply(to, true), to, SubTrajectory());
-	return true;
 }
 
 void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene &scene,

@@ -13,7 +13,7 @@ class GeneratorMockup : public Generator {
 public:
 	GeneratorMockup(int runs = 0) : Generator("generator"), runs(runs) {}
 	bool canCompute() const override { return runs > 0; }
-	bool compute() override { return --runs >= 0 ? true : false; }
+	void compute() override { if (runs > 0) --runs; }
 };
 
 class PropagatorMockup : public PropagatingEitherWay {
@@ -21,8 +21,8 @@ class PropagatorMockup : public PropagatingEitherWay {
 	int bw_runs = 0;
 public:
 	PropagatorMockup(int fw = 0, int bw = 0) : PropagatingEitherWay("either way"), fw_runs(fw), bw_runs(bw) {}
-	bool computeForward(const InterfaceState &from) override { return --fw_runs >= 0 ? true : false; }
-	bool computeBackward(const InterfaceState &from) override { return --bw_runs >= 0 ? true : false; }
+	void computeForward(const InterfaceState &from) override { if (fw_runs > 0) --fw_runs; }
+	void computeBackward(const InterfaceState &from) override { if (bw_runs > 0) --bw_runs; }
 };
 class ForwardMockup : public PropagatorMockup {
 public:
@@ -43,7 +43,7 @@ class ConnectMockup : public Connecting {
 	int runs = 0;
 public:
 	ConnectMockup(int runs = 0) : Connecting("connect"), runs(runs) {}
-	bool compute(const InterfaceState& from, const InterfaceState& to) override { return --runs >= 0 ? true : false; }
+	void compute(const InterfaceState& from, const InterfaceState& to) override { if (runs > 0) --runs; }
 };
 
 

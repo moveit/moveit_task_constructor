@@ -277,10 +277,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	// validate placed link for collisions
 	collision_detection::CollisionResult collisions;
 	bool colliding = isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
-	if (colliding && !storeFailures()) {
-		ROS_WARN_STREAM("eef in collision: " << listCollisionPairs(collisions.contacts, "\n"));
-		return;
-	}
+
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	// markers used for failures
@@ -300,7 +297,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		SubTrajectory solution;
 		generateCollisionMarkers(sandbox_state, appender, link_to_visualize);
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
-		solution.setCost(std::numeric_limits<double>::infinity());  // mark solution as failure
+		solution.markAsFailure();
 		// TODO: visualize collisions
 		solution.setComment("eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
@@ -351,7 +348,8 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 
-		if (succeeded || (storeFailures() && ik_solutions.size() > previous)) {
+		// for all new solutions (successes and failures)
+		for (size_t i = previous; i != ik_solutions.size(); ++i) {
 			// create a new scene for each solution as they will have different robot states
 			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
 			SubTrajectory solution;
@@ -360,11 +358,11 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
 			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
-			if (succeeded)
+			if (succeeded && i+1 == ik_solutions.size())
 				// compute cost as distance to compare_pose
 				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
 			else // found an IK solution, but this was not valid
-				solution.setCost(std::numeric_limits<double>::infinity());
+				solution.markAsFailure();
 
 			// set scene's robot state
 			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
@@ -388,12 +386,11 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			break;  // first and only attempt failed
 	}
 
-	if (ik_solutions.empty() && storeFailures()) {  // failed to find any solution
+	if (ik_solutions.empty()) {  // failed to find any solution
 		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
 		SubTrajectory solution;
 
-		// mark solution as invalid
-		solution.setCost(std::numeric_limits<double>::infinity());
+		solution.markAsFailure();
 		solution.setComment("no IK found");
 
 		// ik target link placement

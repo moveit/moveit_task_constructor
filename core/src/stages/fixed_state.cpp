@@ -52,9 +52,9 @@ bool FixedState::canCompute() const{
 	return !ran_ && scene_;
 }
 
-bool FixedState::compute() {
+void FixedState::compute() {
 	spawn(InterfaceState(scene_), 0.0);
-	return ran_ = true;
+	ran_ = true;
 }
 
 } } }

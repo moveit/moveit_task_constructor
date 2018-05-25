@@ -121,9 +121,9 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 	scenes_.push_back(scene);
 }
 
-bool GenerateGraspPose::compute() {
+void GenerateGraspPose::compute() {
 	if (scenes_.empty())
-		return false;
+		return;
 	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
 	scenes_.pop_front();
 
@@ -151,7 +151,6 @@ bool GenerateGraspPose::compute() {
 
 		spawn(std::move(state), std::move(trajectory));
 	}
-	return true;
 }
 
 } } }

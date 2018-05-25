@@ -49,8 +49,8 @@ class FixCollisionObjects : public PropagatingEitherWay {
 public:
 	FixCollisionObjects(const std::string& name = "fix collisions of objects");
 
-	bool computeForward(const InterfaceState& from) override;
-	bool computeBackward(const InterfaceState& to) override;
+	void computeForward(const InterfaceState& from) override;
+	void computeBackward(const InterfaceState& to) override;
 
 	void setMaxPenetration(double penetration);
 

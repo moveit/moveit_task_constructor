@@ -49,7 +49,7 @@ public:
 
 	void reset() override;
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	void setPose(const geometry_msgs::PoseStamped pose){
 		setProperty("pose", std::move(pose));

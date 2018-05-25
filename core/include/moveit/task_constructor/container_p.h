@@ -99,7 +99,7 @@ public:
 
 	// forward these methods to the public interface for containers
 	bool canCompute() const override;
-	bool compute() override;
+	void compute() override;
 
 	InterfacePtr pendingBackward() const { return pending_backward_; }
 	InterfacePtr pendingForward() const { return pending_forward_; }

@@ -52,8 +52,8 @@ public:
 	MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	bool computeForward(const InterfaceState& from) override;
-	bool computeBackward(const InterfaceState& to) override;
+	void computeForward(const InterfaceState& from) override;
+	void computeBackward(const InterfaceState& to) override;
 
 	void setGroup(const std::string& group) {
 		setProperty("group", group);
@@ -103,7 +103,7 @@ public:
 
 
 protected:
-	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
+	void compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
 
 protected:

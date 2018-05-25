@@ -136,7 +136,7 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 	return true;
 }
 
-bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
+void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
 	double timeout = props.get<double>("timeout");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
@@ -167,26 +167,22 @@ bool Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	}
 
 	SolutionBase* solution = nullptr;
-	if (sub_trajectories.size() != planner_.size())  { // error during sequential planning
-		if (!storeFailures())
-			return false;
+	if (sub_trajectories.size() != planner_.size()) {  // error during sequential planning
 		// push back a dummy solution to also show the target scene of the failed attempt
 		sub_trajectories.push_back(robot_trajectory::RobotTrajectoryPtr());
 		solution = storeSequential(sub_trajectories, intermediate_scenes);
-		// mark solution as failure
-		solution->setCost(std::numeric_limits<double>::infinity());
+		solution->markAsFailure();
 	} else {
 		auto t = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
 		if (t) {
 			connect(from, to, SubTrajectory(t));
-			return true;
+			return;
 		}
 		// merging failed, store sequentially
 		solution = storeSequential(sub_trajectories, intermediate_scenes);
 	}
 
 	newSolution(from, to, *solution);
-	return !solution->isFailure();
 }
 
 SolutionBase* Connect::storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
