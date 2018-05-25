@@ -134,18 +134,47 @@ private:
 };
 
 
+/// compare InterfaceState* by value
+struct InterfaceStateLess {
+	inline bool operator()(const InterfaceState* x, const InterfaceState* y) const {
+		return *x < *y;
+	}
+};
+
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
-class Interface : public ordered<InterfaceState> {
+class Interface : public ordered<InterfaceState*, InterfaceStateLess> {
+	typedef ordered<InterfaceState*, InterfaceStateLess> base_type;
+
 public:
+	// iterators providing convinient access to stored InterfaceState
+	class iterator : public base_type::iterator {
+	public:
+		iterator(base_type::iterator other) : base_type::iterator(other) {}
+
+		InterfaceState& operator*() const noexcept
+		{ return *base_type::iterator::operator*(); }
+
+		InterfaceState* operator->() const noexcept
+		{ return base_type::iterator::operator*(); }
+	};
+	class const_iterator : public base_type::const_iterator {
+	public:
+		const_iterator(base_type::const_iterator other) : base_type::const_iterator(other) {}
+		const_iterator(base_type::iterator other) : base_type::const_iterator(other) {}
+
+		const InterfaceState& operator*() const noexcept
+		{ return *base_type::const_iterator::operator*(); }
+
+		const InterfaceState* operator->() const noexcept
+		{ return base_type::const_iterator::operator*(); }
+	};
+
 	enum Direction { FORWARD, BACKWARD, START=FORWARD, END=BACKWARD };
 	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
 	Interface(const NotifyFunction &notify = NotifyFunction());
 
-	/// add a new InterfaceState, connect the trajectory (either incoming or outgoing) to the newly created state
-	iterator add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing);
-
-	/// clone an existing InterfaceState, but without its incoming/outgoing connections
-	iterator clone(const InterfaceState &state);
+	/// add a new InterfaceState
+	void add(InterfaceState &state);
 
 	/// remove a state from the interface and return it as a one-element list
 	container_type remove(iterator it);
@@ -158,17 +187,15 @@ private:
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
-	using ordered<InterfaceState>::moveTo;
-	using ordered<InterfaceState>::moveFrom;
-	using ordered<InterfaceState>::insert;
-	using ordered<InterfaceState>::erase;
-	using ordered<InterfaceState>::remove_if;
+	using base_type::moveTo;
+	using base_type::moveFrom;
+	using base_type::insert;
+	using base_type::erase;
+	using base_type::remove_if;
 };
 
 
 class StagePrivate;
-
-
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase {
 public:
@@ -179,13 +206,15 @@ public:
 	inline const InterfaceState::Solutions& trajectories() const;
 
 	inline void setStartState(const InterfaceState& state){
-		assert(start_ == NULL);  // only allow setting once (by Stage)
+		// only allow setting once (by Stage)
+		assert(start_ == NULL || start_ == &state);
 		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state){
-		assert(end_ == NULL);  // only allow setting once (by Stage)
+		// only allow setting once (by Stage)
+		assert(end_ == NULL || end_ == &state);
 		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
@@ -233,6 +262,7 @@ private:
 	const InterfaceState* start_ = nullptr;
 	const InterfaceState* end_ = nullptr;
 };
+MOVEIT_CLASS_FORWARD(SolutionBase)
 
 
 /// SubTrajectory connects interface states of ComputeStages
@@ -253,6 +283,7 @@ private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
 };
+MOVEIT_CLASS_FORWARD(SubTrajectory)
 
 
 /** Sequence of individual sub solutions
@@ -283,6 +314,7 @@ private:
 	/// series of sub solutions
 	container_type subsolutions_;
 };
+MOVEIT_CLASS_FORWARD(SolutionSequence)
 
 template <> inline
 const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {

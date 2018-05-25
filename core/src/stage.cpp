@@ -83,19 +83,96 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	return f;
 }
 
-void StagePrivate::newSolution(SolutionBase &solution)
+bool StagePrivate::storeSolution(const SolutionBasePtr& solution)
 {
-	solution.setCreator(this);
-
+	solution->setCreator(this);
 	if (introspection_)
-		introspection_->registerSolution(solution);
+		introspection_->registerSolution(*solution);
 
+	if (solution->isFailure()) {
+		++num_failures_;
+		if (!storeFailures())
+			return false;  // drop solution
+		failures_.push_back(solution);
+	} else {
+		solutions_.insert(solution);
+	}
+	return true;
+}
+
+void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution)
+{
+	assert(nextStarts());
+	if (!storeSolution(solution))
+		return;  // solution dropped
+
+	auto to_it = states_.insert(states_.end(), std::move(to));
+
+	solution->setStartState(from);
+	solution->setEndState(*to_it);
+
+	if (!solution->isFailure())
+		nextStarts()->add(*to_it);
+
+	newSolution(solution);
+}
+
+void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution)
+{
+	assert(prevEnds());
+	if (!storeSolution(solution))
+		return;  // solution dropped
+
+	auto from_it = states_.insert(states_.end(), std::move(from));
+
+	solution->setStartState(*from_it);
+	solution->setEndState(to);
+
+	if (!solution->isFailure())
+		prevEnds()->add(*from_it);
+
+	newSolution(solution);
+}
+
+void StagePrivate::spawn(InterfaceState&& state, SolutionBasePtr solution)
+{
+	assert(prevEnds() && nextStarts());
+	if (!storeSolution(solution))
+		return;  // solution dropped
+
+	auto from = states_.insert(states_.end(), InterfaceState(state)); // copy
+	auto to = states_.insert(states_.end(), std::move(state));
+
+	solution->setStartState(*from);
+	solution->setEndState(*to);
+
+	if (!solution->isFailure()) {
+		prevEnds()->add(*from);
+		nextStarts()->add(*to);
+	}
+
+	newSolution(solution);
+}
+
+void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution)
+{
+	if (!storeSolution(solution))
+		return;  // solution dropped
+
+	solution->setStartState(from);
+	solution->setEndState(to);
+
+	newSolution(solution);
+}
+
+void StagePrivate::newSolution(const SolutionBasePtr& solution)
+{
 	// call solution callbacks for both, valid solutions and failures
 	for (const auto& cb : solution_cbs_)
-		cb(solution);
+		cb(*solution);
 
 	if (parent())
-		parent()->onNewSolution(solution);
+		parent()->onNewSolution(*solution);
 }
 
 Stage::Stage(StagePrivate *impl)
@@ -120,6 +197,11 @@ Stage::operator const StagePrivate*() const {
 void Stage::reset()
 {
 	auto impl = pimpl();
+	// clear solutions + associated states
+	impl->solutions_.clear();
+	impl->failures_.clear();
+	impl->num_failures_ = 0u;
+	impl->states_.clear();
 	// clear pull interfaces
 	if (impl->starts_) impl->starts_->clear();
 	if (impl->ends_) impl->ends_->clear();
@@ -171,6 +253,22 @@ void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which)
 {
 	pimpl()->solution_cbs_.erase(which);
 }
+
+const ordered<SolutionBaseConstPtr>& Stage::solutions() const
+{
+	return pimpl()->solutions_;
+}
+
+const std::list<SolutionBaseConstPtr>& Stage::failures() const
+{
+	return pimpl()->failures_;
+}
+
+size_t Stage::numFailures() const
+{
+	return pimpl()->num_failures_;
+}
+
 
 PropertyMap &Stage::properties()
 {
@@ -232,7 +330,7 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	}
 	// trajectories
 	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(impl)
-	   << std::setw(3) << impl.me()->numSolutions()
+	   << std::setw(3) << impl.solutions_.size()
 	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(impl);
 	// ends
 	for (const InterfaceConstPtr& i : {impl.ends(), impl.nextStarts()}) {
@@ -245,54 +343,11 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	return os;
 }
 
-SubTrajectory& ComputeBasePrivate::addTrajectory(SubTrajectory&& trajectory) {
-	if (!trajectory.isFailure())
-		return *solutions_.insert(std::move(trajectory));
-
-	++num_failures_;
-	if (storeFailures())
-		return *failures_.insert(failures_.end(), std::move(trajectory));
-
-	return trajectory;
-}
-
 
 ComputeBase::ComputeBase(ComputeBasePrivate *impl)
    : Stage(impl)
 {
 }
-
-size_t ComputeBase::numSolutions() const {
-	return pimpl()->solutions_.size();
-}
-
-size_t ComputeBase::numFailures() const
-{
-	return pimpl()->num_failures_;
-}
-
-void ComputeBase::processSolutions(const Stage::SolutionProcessor &processor) const
-{
-	for (const auto& s : pimpl()->solutions_)
-		if (!processor(s))
-			return;
-}
-
-void ComputeBase::processFailures(const Stage::SolutionProcessor &processor) const
-{
-	for (const auto& s : pimpl()->failures_)
-		if (!processor(s))
-			return;
-}
-
-void ComputeBase::reset() {
-	auto impl = pimpl();
-	impl->solutions_.clear();
-	impl->failures_.clear();
-	impl->num_failures_ = 0u;
-	Stage::reset();
-}
-
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay *me, PropagatingEitherWay::Direction dir, const std::string &name)
    : ComputeBasePrivate(me, name), required_interface_dirs_(dir)
@@ -340,14 +395,12 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 }
 
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
-	// move infinite-cost states to processed list
 	if (std::isinf(state->priority().cost()))
-		processed.splice(processed.end(), starts_->remove(state));
+		starts_->remove(state);
 }
 void PropagatingEitherWayPrivate::dropFailedEnds(Interface::iterator state) {
-	// move infinite-cost states to processed list
 	if (std::isinf(state->priority().cost()))
-		processed.splice(processed.end(), ends_->remove(state));
+		ends_->remove(state);
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const{
@@ -356,9 +409,7 @@ inline bool PropagatingEitherWayPrivate::hasStartState() const{
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState(){
 	assert(hasStartState());
-	// move state to end of processed list
-	processed.splice(processed.end(), starts_->remove(starts_->begin()));
-	return processed.back();
+	return *starts_->remove(starts_->begin()).front();
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const{
@@ -367,9 +418,7 @@ inline bool PropagatingEitherWayPrivate::hasEndState() const{
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState(){
 	assert(hasEndState());
-	// move state to processed list
-	processed.splice(processed.end(), ends_->remove(ends_->begin()));
-	return processed.back();
+	return *ends_->remove(ends_->begin()).front();
 }
 
 bool PropagatingEitherWayPrivate::canCompute() const
@@ -416,12 +465,6 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	impl->initInterface(impl->required_interface_dirs_);
 }
 
-void PropagatingEitherWay::reset()
-{
-	pimpl()->processed.clear();
-	ComputeBase::reset();
-}
-
 void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	Stage::init(robot_model);
@@ -440,21 +483,13 @@ void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_mo
 void PropagatingEitherWay::sendForward(const InterfaceState& from,
                                        InterfaceState&& to,
                                        SubTrajectory&& t) {
-	auto impl = pimpl();
-	SubTrajectory &trajectory = impl->addTrajectory(std::move(t));
-	trajectory.setStartState(from);
-	impl->nextStarts()->add(std::move(to), &trajectory, NULL);
-	impl->newSolution(trajectory);
+	pimpl()->sendForward(from, std::move(to), std::make_shared<SubTrajectory>(std::move(t)));
 }
 
 void PropagatingEitherWay::sendBackward(InterfaceState&& from,
                                         const InterfaceState& to,
                                         SubTrajectory&& t) {
-	auto impl = pimpl();
-	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
-	trajectory.setEndState(to);
-	impl->prevEnds()->add(std::move(from), NULL, &trajectory);
-	impl->newSolution(trajectory);
+	pimpl()->sendBackward(std::move(from), to, std::make_shared<SubTrajectory>(std::move(t)));
 }
 
 
@@ -520,15 +555,7 @@ Generator::Generator(const std::string &name)
 
 void Generator::spawn(InterfaceState&& state, SubTrajectory&& t)
 {
-	assert(state.incomingTrajectories().empty() &&
-	       state.outgoingTrajectories().empty());
-	assert(!t.trajectory());
-
-	auto impl = pimpl();
-	SubTrajectory& trajectory = impl->addTrajectory(std::move(t));
-	impl->prevEnds()->add(InterfaceState(state), NULL, &trajectory);
-	impl->nextStarts()->add(std::move(state), &trajectory, NULL);
-	impl->newSolution(trajectory);
+	pimpl()->spawn(std::move(state), std::make_shared<SubTrajectory>(std::move(t)));
 }
 
 
@@ -607,7 +634,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated)
 		pending.sort();
 	} else { // new state: insert all pairs with other interface
 		InterfacePtr other_interface = pullInterface(other);
-		for (auto oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
+		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!std::isfinite(oit->priority().cost()))
 				break;
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
@@ -663,14 +690,8 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	return true;
 }
 
-void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& t) {
-	newSolution(from, to, pimpl()->addTrajectory(std::move(t)));
-}
-
-void Connecting::newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
-	solution.setStartState(from);
-	solution.setEndState(to);
-	pimpl()->newSolution(solution);
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr s) {
+	pimpl()->connect(from, to, s);
 }
 
 std::ostream& operator<<(std::ostream& os, const Stage& stage) {

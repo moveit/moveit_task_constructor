@@ -51,7 +51,7 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
 }
 
 InterfaceState::InterfaceState(const InterfaceState &other)
-   : scene_(other.scene_), properties_(other.properties_)
+   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_)
 {
 }
 
@@ -76,41 +76,35 @@ Interface::Interface(const Interface::NotifyFunction &notify)
    : notify_(notify)
 {}
 
-// Function used by sendForward()/sendBackward()/spawn() to create a new interface state
-Interface::iterator Interface::add(InterfaceState &&state, SolutionBase* incoming, SolutionBase* outgoing) {
-	if (!state.incomingTrajectories().empty() || !state.outgoingTrajectories().empty())
-		throw std::runtime_error("expecting empty incoming/outgoing trajectories");
-	if (!state.scene())
-		throw std::runtime_error("expecting valid planning scene in InterfaceState");
+// Announce a new InterfaceState
+void Interface::add(InterfaceState &state) {
+	// require valid scene
+	assert(state.scene());
+	// incoming and outgoing must not contain elements both
+	assert(state.incomingTrajectories().empty() || state.outgoingTrajectories().empty());
+	// if non-empty, incoming or outgoing should have exactly one solution element
+	assert(state.incomingTrajectories().empty() || state.incomingTrajectories().size() == 1);
+	assert(state.outgoingTrajectories().empty() || state.outgoingTrajectories().size() == 1);
+	// state can only be added once to an interface
+	assert(state.owner_ == nullptr);
 
 	// move state to a list node
-	std::list<InterfaceState> container;
-	auto it = container.insert(container.end(), std::move(state));
-	assert(it->owner_ == nullptr);  // state can only be added once to an interface
+	std::list<InterfaceState*> container;
+	Interface::iterator it = container.insert(container.end(), &state);
 	it->owner_ = this;
 
-	// configure state: inherit priority from other end's state and add current solution's cost
-	assert(bool(incoming) ^ bool(outgoing)); // either incoming or outgoing is set
-	if (incoming) {
-		it->priority_ = InterfaceState::Priority(1, incoming->cost());
-		incoming->setEndState(*it);
-	} else if (outgoing) {
-		it->priority_ = InterfaceState::Priority(1, outgoing->cost());
-		outgoing->setStartState(*it);
-	}
+	// if either incoming or outgoing is defined, derive priority from there
+	if (!state.incomingTrajectories().empty())
+		it->priority_ = InterfaceState::Priority(1, state.incomingTrajectories().front()->cost());
+	else if (!state.outgoingTrajectories().empty())
+		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
+	else // otherwise, assume priority was well defined before
+		assert(it->priority_ >= InterfaceState::Priority(1, 0.0));
+
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);
 	// and finally call notify callback
 	if (notify_) notify_(it, false);
-	return it;
-}
-
-Interface::iterator Interface::clone(const InterfaceState &state)
-{
-	iterator it = insert(InterfaceState(state));
-	it->owner_ = this;
-	if (notify_) notify_(it, false);
-	return it;
 }
 
 Interface::container_type Interface::remove(iterator it)
@@ -124,7 +118,7 @@ Interface::container_type Interface::remove(iterator it)
 void Interface::updatePriority(InterfaceState *state, const InterfaceState::Priority& priority)
 {
 	if (priority != state->priority()) {
-		auto it = std::find_if(begin(), end(), [state](const InterfaceState& other) { return state == &other; });
+		auto it = std::find_if(begin(), end(), [state](const InterfaceState* other) { return state == other; });
 		// state should be part of the interface
 		assert(it != end());
 		state->priority_ = priority;

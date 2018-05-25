@@ -155,14 +155,6 @@ public:
 	const ContainerBase* parent() const;
 	const std::string& name() const;
 	void setName(const std::string& name);
-	virtual size_t numSolutions() const = 0;
-	virtual size_t numFailures() const = 0;
-
-	typedef std::function<bool(const SolutionBase&)> SolutionProcessor;
-	/// process all solutions in cost order, calling the callback for each of them
-	virtual void processSolutions(const SolutionProcessor &processor) const = 0;
-	/// process all failures, calling the callback for each of them
-	virtual void processFailures(const SolutionProcessor &processor) const = 0;
 
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
@@ -170,6 +162,10 @@ public:
 	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback &&cb);
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
+
+	const ordered<SolutionBaseConstPtr>& solutions() const;
+	const std::list<SolutionBaseConstPtr>& failures() const;
+	size_t numFailures() const;
 
 	/// get the stage's property map
 	PropertyMap& properties();
@@ -201,11 +197,6 @@ class ComputeBasePrivate;
 class ComputeBase : public Stage {
 public:
 	PRIVATE_CLASS(ComputeBase)
-	void reset() override;
-	virtual size_t numSolutions() const override;
-	virtual size_t numFailures() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
-	void processFailures(const SolutionProcessor &processor) const override;
 
 protected:
 	/// ComputeBase can only be instantiated by derived classes in stage.cpp
@@ -227,7 +218,6 @@ public:
 	};
 	void restrictDirection(Direction dir);
 
-	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	virtual void computeForward(const InterfaceState& from) = 0;
@@ -329,13 +319,19 @@ public:
 	void reset() override;
 
 	virtual void compute(const InterfaceState& from, const InterfaceState& to) = 0;
-	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory);
+
+protected:
+	/// register solution as a solution connecting states from -> to
+	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+
+	/// convienency methods consuming a SubTrajectory
+	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory) {
+		connect(from, to, std::make_shared<SubTrajectory>(std::move(trajectory)));
+	}
 	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory, double cost) {
 		trajectory.setCost(cost);
 		connect(from, to, std::move(trajectory));
 	}
-
-	void newSolution(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 };
 
 } }

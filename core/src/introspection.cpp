@@ -152,24 +152,16 @@ void Introspection::publishSolution(const SolutionBase &s)
 
 void Introspection::publishAllSolutions(bool wait)
 {
-	moveit_task_constructor_msgs::Solution msg;
-
-	Stage::SolutionProcessor processor = [this, &msg, wait](const SolutionBase& s) {
-		msg.sub_solution.clear();
-		msg.sub_trajectory.clear();
-		fillSolution(msg, s);
-		impl->solution_publisher_.publish(msg);
+	for (const auto& solution : impl->task_.solutions()) {
+		publishSolution(*solution);
 
 		if (wait) {
 			std::cout << "Press <Enter> to continue ..." << std::endl;
 			int ch = getchar();
 			if (ch == 'q' || ch == 'Q')
-				return false;
+				break;
 		}
-		return true;
 	};
-
-	impl->task_.processSolutions(processor);
 }
 
 bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Request  &req,
@@ -204,18 +196,13 @@ uint32_t Introspection::solutionId(const SolutionBase& s)
 void Introspection::fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::StageStatistics& s)
 {
 	// successfull solutions
-	Stage::SolutionProcessor solutionProcessor = [this, &s](const SolutionBase& solution) {
-		s.solved.push_back(solutionId(solution));
-		return true;
-	};
-	stage.processSolutions(solutionProcessor);
+	for (const auto& solution : stage.solutions())
+		s.solved.push_back(solutionId(*solution));
 
 	// failed solution attempts
-	solutionProcessor = [this, &s](const SolutionBase& solution) {
-		s.failed.push_back(solutionId(solution));
-		return true;
-	};
-	stage.processFailures(solutionProcessor);
+	for (const auto& solution : stage.failures())
+		s.failed.push_back(solutionId(*solution));
+
 	s.num_failed = stage.numFailures();
 }
 

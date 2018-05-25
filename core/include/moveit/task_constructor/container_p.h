@@ -124,7 +124,7 @@ protected:
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 	/// lift solution from internal to external level
-	void liftSolution(SolutionBase& solution,
+	void liftSolution(SolutionBasePtr solution,
 	                  const InterfaceState *internal_from, const InterfaceState *internal_to);
 
 	auto& internalToExternalMap() { return internal_to_external_; }
@@ -134,7 +134,7 @@ private:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
-	std::map<const InterfaceState*, Interface::iterator> internal_to_external_;
+	std::map<const InterfaceState*, InterfaceState*> internal_to_external_;
 
 	/* TODO: these interfaces don't need to be priority-sorted.
 	 * Introduce base class UnsortedInterface (which is a plain list) for this use case. */
@@ -174,9 +174,6 @@ private:
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end,
 	                     InterfaceFlags accepted);
-
-	// set of all solutions
-	ordered<SolutionSequence> solutions_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
@@ -214,32 +211,9 @@ public:
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
 
-	// grant access to protected methods in ParallelContainerBase
-	inline void spawn(InterfaceState &&state, SubTrajectory&& t) {
-		static_cast<ParallelContainerBase*>(me_)->spawn(std::move(state), std::move(t));
-	}
-	inline void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
-		static_cast<ParallelContainerBase*>(me_)->sendForward(from, std::move(to), std::move(t));
-	}
-	inline void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t) {
-		static_cast<ParallelContainerBase*>(me_)->sendBackward(std::move(from), to, std::move(t));
-	}
-
 private:
 	/// callback for new externally received states
 	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
-
-	// buffer for wrapped solutions
-	std::list<WrappedSolution> wrapped_solutions_;
-	// buffer for newly created (not wrapped) solutions
-	std::list<SubTrajectory> created_solutions_;
-	// buffer of created states (for use in created solutions)
-	std::list<InterfaceState> states_;
-
-	// cost-ordered set of solutions (pointers into wrapped or created)
-	ordered<SolutionBase*> solutions_;
-	// buffer for failures (pointers into wrapped or created)
-	std::list<SolutionBase*> failures_;
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 

@@ -49,6 +49,14 @@ MOVEIT_CLASS_FORWARD(RobotState)
 
 namespace moveit { namespace task_constructor { namespace stages {
 
+/** Connect arbitrary InterfaceStates by motion planning
+ *
+ * The states may differ in various planning groups.
+ * To connect both states, the planners provided for individual sub groups are applied in the
+ * specified order. Each planner only plan for joints within the corresponding planning group.
+ * Finally, an attempt is made to merge the sub trajectories of individual planning results.
+ * If this fails, the sequential planning result is returned.
+ */
 class Connect : public Connecting {
 protected:
 	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
@@ -57,11 +65,11 @@ public:
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(const std::string& name, const GroupPlannerVector& planners);
 
-	void setTimeout(const ros::Duration& timeout){
+	void setTimeout(const ros::Duration& timeout) {
 		setProperty("timeout", timeout.toSec());
 	}
 
-	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
@@ -69,23 +77,17 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	void compute(const InterfaceState &from, const InterfaceState &to) override;
 
-	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
-	void processFailures(const SolutionProcessor &processor) const override;
-
 protected:
-	SolutionBase* storeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                              const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes);
-	robot_trajectory::RobotTrajectoryConstPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                                                const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
-	                                                const moveit::core::RobotState& state);
+	SolutionSequencePtr makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+	                                   const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes, const InterfaceState& from, const InterfaceState& to);
+	SubTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+	                       const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+	                       const moveit::core::RobotState& state);
 
 protected:
 	GroupPlannerVector planner_;
 	moveit::core::JointModelGroupPtr merged_jmg_;
-	// TODO: ComputeBase should handle any SolutionBase -> shared_ptr
 	std::list<SubTrajectory> subsolutions_;
-	std::list<SolutionSequence> solutions_;
 	std::list<InterfaceState> states_;
 };
 

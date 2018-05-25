@@ -224,16 +224,6 @@ bool Task::plan()
 	return numSolutions() > 0;
 }
 
-size_t Task::numSolutions() const
-{
-	return stages()->numSolutions();
-}
-
-void Task::processSolutions(const ContainerBase::SolutionProcessor &processor) const
-{
-	stages()->processSolutions(processor);
-}
-
 void Task::publishAllSolutions(bool wait)
 {
 	enableIntrospection(true);

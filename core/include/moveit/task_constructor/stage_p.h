@@ -104,7 +104,14 @@ public:
 	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
-	void newSolution(SolutionBase& current);
+	// methods to spawn new solutions
+	void sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution);
+	void sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution);
+	void spawn(InterfaceState&& state, SolutionBasePtr solution);
+	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+
+	bool storeSolution(const SolutionBasePtr& solution);
+	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 
 protected:
@@ -117,6 +124,11 @@ protected:
 
 	// functions called for each new solution
 	std::list<Stage::SolutionCallback> solution_cbs_;
+
+	std::list<InterfaceState> states_;  // storage for created states
+	ordered<SolutionBaseConstPtr> solutions_;
+	std::list<SolutionBaseConstPtr> failures_;
+	size_t num_failures_ = 0;  // num of failures if not stored
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
@@ -142,20 +154,13 @@ public:
 	   : StagePrivate(me, name)
 	{}
 
-	// store trajectory in internal trajectories_ list
-	SubTrajectory& addTrajectory(SubTrajectory&& trajectory);
-
 private:
-	ordered<SubTrajectory> solutions_;
-	std::list<SubTrajectory> failures_;
-	size_t num_failures_ = 0;  // num of failures if not stored
 };
 PIMPL_FUNCTIONS(ComputeBase)
 
 
 class PropagatingEitherWayPrivate : public ComputeBasePrivate {
 	friend class PropagatingEitherWay;
-	std::list<Interface::value_type> processed;  // already processed states
 
 public:
 	PropagatingEitherWay::Direction required_interface_dirs_;
@@ -241,9 +246,6 @@ public:
 	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
 	void compute() override;
-
-	void connect(const robot_trajectory::RobotTrajectoryPtr& t,
-	             const InterfaceStatePair& state_pair, double cost);
 
 private:
 	// get informed when new start or end state becomes available

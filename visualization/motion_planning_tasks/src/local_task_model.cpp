@@ -148,7 +148,7 @@ QVariant LocalTaskModel::data(const QModelIndex &index, int role) const
 	case Qt::DisplayRole:
 		switch (index.column()) {
 		case 0: return QString::fromStdString(n->name());
-		case 1: return	(uint)n->me()->numSolutions();
+		case 1: return	(uint)n->me()->solutions().size();
 		case 2: return 0;
 		}
 		break;

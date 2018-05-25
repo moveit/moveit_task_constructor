@@ -107,8 +107,9 @@ public:
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream &os = std::cout) const;
 
-	size_t numSolutions() const override;
-	void processSolutions(const ContainerBase::SolutionProcessor &processor) const override;
+	size_t numSolutions() const { return solutions().size(); }
+	const ordered<SolutionBaseConstPtr>& solutions() const { return stages()->solutions(); }
+	const std::list<SolutionBaseConstPtr>& failures() const { return stages()->failures(); }
 
 	/// publish all top-level solutions
 	void publishAllSolutions(bool wait = true);

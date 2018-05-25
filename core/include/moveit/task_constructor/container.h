@@ -76,9 +76,6 @@ public:
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
 
-	size_t numFailures() const override { return 0; }
-	void processFailures(const SolutionProcessor&) const override {}
-
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;
 
@@ -96,7 +93,6 @@ public:
 	PRIVATE_CLASS(SerialContainer)
 	SerialContainer(const std::string& name = "serial container");
 
-	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	/// validate connectivity of children (after init() was done)
@@ -104,9 +100,6 @@ public:
 
 	bool canCompute() const override;
 	void compute() override;
-
-	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
 
 protected:
 	/// called by a (direct) child when a new solution becomes available
@@ -143,38 +136,23 @@ public:
 	PRIVATE_CLASS(ParallelContainerBase)
 	ParallelContainerBase(const std::string &name);
 
-	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	/// validate connectivity of children (after init() was done)
 	void validateConnectivity() const override;
 
-	size_t numSolutions() const override;
-	void processSolutions(const SolutionProcessor &processor) const override;
-	size_t numFailures() const override;
-	void processFailures(const SolutionProcessor &processor) const override;
-
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
-	/// method called if any child found a new (internal) solution
-	virtual void onNewSolution(const SolutionBase& s) override;
-
 	/// lift unmodified child solution (useful for simple filtering)
-	void liftSolution(const SolutionBase* solution) {
-		liftSolution(solution, solution->cost());
+	inline void liftSolution(const SolutionBase& solution) {
+		liftSolution(solution, solution.cost());
 	}
-	/// lift child solution, but allow for modifying costs
-	void liftSolution(const SolutionBase* solution, double cost);
+	/// lift child solution to external interface, adapting the costs
+	void liftSolution(const SolutionBase& solution, double cost);
 
 	/// spawn a new solution with given state as start and end
 	void spawn(InterfaceState &&state, SubTrajectory&& trajectory);
-	/// convience method spawning an empty SubTrajectory with given cost
-	void spawn(InterfaceState &&state, double cost) {
-		SubTrajectory trajectory;
-		trajectory.setCost(cost);
-		spawn(std::move(state), std::move(trajectory));
-	}
 	/// propagate a solution forwards
 	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
 	/// propagate a solution backwards
@@ -193,6 +171,8 @@ public:
 
 	bool canCompute() const override;
 	void compute() override;
+
+	void onNewSolution(const SolutionBase& s) override;
 };
 
 
@@ -213,6 +193,8 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	void compute() override;
+
+	void onNewSolution(const SolutionBase& s) override;
 };
 
 
@@ -242,10 +224,6 @@ class WrapperBasePrivate;
  * called when the child has generated a new solution.
  * The wrapper may reject the solution or create one or multiple derived solutions,
  * potentially adapting the cost, as well as its start and end states.
- *
- * Care needs to be taken to not modify pulled states, but only pushed ones!
- * liftFor each new solution, liftSolution() should be called, which comes in various
- * flavours to allow for handing in new states (or not).
  */
 class WrapperBase : public ParallelContainerBase
 {
@@ -267,9 +245,6 @@ public:
 
 protected:
 	WrapperBase(WrapperBasePrivate* impl, Stage::pointer &&child = Stage::pointer());
-
-	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(const SolutionBase &s) override = 0;
 };
 
 } }
