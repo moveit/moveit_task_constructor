@@ -54,8 +54,8 @@ namespace moveit { namespace task_constructor { namespace stages {
 ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
    : WrapperBase(name, std::move(child))
 {
+	setTimeout(1.0);
 	auto& p = properties();
-	p.declare<double>("timeout", 1.0);
 	p.declare<std::string>("eef", "name of end-effector group");
 	p.declare<std::string>("group", "name of active group (derived from eef if not provided)");
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
@@ -334,7 +334,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
 	bool tried_current_state_as_seed = false;
 
-	double remaining_time = props.get<double>("timeout");
+	double remaining_time = timeout();
 	auto start_time = std::chrono::steady_clock::now();
 	while (ik_solutions.size() < max_ik_solutions && remaining_time > 0) {
 		if(tried_current_state_as_seed)

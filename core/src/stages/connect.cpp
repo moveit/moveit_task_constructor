@@ -46,8 +46,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners)
    : Connecting(name)
    , planner_(planners)
 {
+	setTimeout(1.0);
 	auto& p = properties();
-	p.declare<double>("timeout", 10.0, "planning timeout");
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
@@ -137,7 +137,7 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 
 void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
-	double timeout = props.get<double>("timeout");
+	double timeout = this->timeout();
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;

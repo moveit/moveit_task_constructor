@@ -65,10 +65,6 @@ public:
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(const std::string& name, const GroupPlannerVector& planners);
 
-	void setTimeout(const ros::Duration& timeout) {
-		setProperty("timeout", timeout.toSec());
-	}
-
 	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}

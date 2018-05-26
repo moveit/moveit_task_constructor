@@ -63,6 +63,7 @@ class PropertyMap;
 /// initializer function, using given name from the passed property map
 boost::any fromName(const PropertyMap& other, const std::string& other_name);
 
+
 /** Property is a wrapper for a boost::any value, also providing a default value and a description.
  *
  * Properties can be configured to be initialized from another PropertyMap - if still undefined.
@@ -82,7 +83,8 @@ class Property {
 	         const Property::SerializeFunction &serialize);
 
 	template <typename T>
-	static typename std::enable_if<hasSerialize<T>::value, std::string>::type serialize(const boost::any& value) {
+	static typename std::enable_if<hasSerialize<T>::value, std::string>::type
+	serialize(const boost::any& value) {
 		if (value.empty()) return "";
 		std::ostringstream oss;
 		oss << boost::any_cast<T>(value);
@@ -90,7 +92,8 @@ class Property {
 	}
 
 	template <typename T>
-	static typename std::enable_if<!hasSerialize<T>::value, std::string>::type serialize(const boost::any& value) {
+	static typename std::enable_if<!hasSerialize<T>::value, std::string>::type
+	serialize(const boost::any& value) {
 		return "";
 	}
 
@@ -129,6 +132,8 @@ public:
 
 	/// get description text
 	const std::string& description() const { return description_; }
+	void setDescription(const std::string& desc) { description_ = desc; }
+
 	/// get typename
 	std::string typeName() const { return type_index_.name(); }
 

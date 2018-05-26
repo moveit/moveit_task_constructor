@@ -50,7 +50,9 @@ CurrentState::CurrentState(const std::string &name)
    : Generator(name)
 {
 	auto &p = properties();
-	p.declare<ros::Duration>("timeout", ros::Duration(-1), "max time to wait for get_planning_scene service");
+	Property& timeout = p.property("timeout");
+	timeout.setDescription("max time to wait for get_planning_scene service");
+	timeout.setValue(-1.0);
 }
 
 void CurrentState::init(const moveit::core::RobotModelConstPtr& robot_model)
@@ -70,7 +72,7 @@ void CurrentState::compute() {
 	ros::NodeHandle h;
 	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
 
-	ros::Duration timeout = properties().get<ros::Duration>("timeout");
+	ros::Duration timeout(this->timeout());
 	if (client.waitForExistence(timeout)) {
 		moveit_msgs::GetPlanningScene::Request req;
 		moveit_msgs::GetPlanningScene::Response res;

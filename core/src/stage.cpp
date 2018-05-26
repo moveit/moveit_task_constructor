@@ -179,6 +179,9 @@ Stage::Stage(StagePrivate *impl)
    : pimpl_(impl)
 {
 	assert(impl);
+	auto& p = properties();
+	p.declare<double>("timeout", "timeout per run (s)");
+	p.declare<std::string>("marker_ns", "marker namespace");
 }
 
 Stage::~Stage()

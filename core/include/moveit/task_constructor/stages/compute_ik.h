@@ -69,9 +69,6 @@ public:
 	void init(const core::RobotModelConstPtr &robot_model);
 	void onNewSolution(const SolutionBase &s) override;
 
-	void setTimeout(double timeout) {
-		setProperty("timeout", timeout);
-	}
 	void setEndEffector(const std::string& eef) {
 		setProperty("eef", eef);
 	}

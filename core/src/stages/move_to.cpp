@@ -48,8 +48,8 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
    : PropagatingEitherWay(name)
    , planner_(planner)
 {
+	setTimeout(10.0);
 	auto& p = properties();
-	p.declare<double>("timeout", 10.0, "planning timeout"); // TODO: make this a common property in Stage
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 
@@ -126,7 +126,7 @@ void MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	assert(robot_model);
 
 	const auto& props = properties();
-	double timeout = props.get<double>("timeout");
+	double timeout = this->timeout();
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {

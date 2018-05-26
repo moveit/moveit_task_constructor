@@ -156,6 +156,9 @@ public:
 	const std::string& name() const;
 	void setName(const std::string& name);
 
+	void setTimeout(double timeout) { setProperty("timeout", timeout); }
+	double timeout() const { return properties().get<double>("timeout"); }
+
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
 	/// add function to be called for every newly found solution or failure

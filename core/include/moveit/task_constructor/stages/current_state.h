@@ -53,10 +53,6 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
-	void setTimeout(const ros::Duration& timeout) {
-		setProperty("timeout", timeout);
-	}
-
 protected:
 	moveit::core::RobotModelConstPtr robot_model_;
 	planning_scene::PlanningScenePtr scene_;

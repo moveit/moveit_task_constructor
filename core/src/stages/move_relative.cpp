@@ -47,10 +47,8 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
    : PropagatingEitherWay(name)
    , planner_(planner)
 {
+	setTimeout(10.0);
 	auto& p = properties();
-	p.declare<double>("timeout", 10.0, "planning timeout");
-	// +1 TODO: make "marker" a common property of all stages. However, I would stick with "marker_ns"
-	p.declare<std::string>("marker_ns", "", "marker namespace");
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
@@ -85,7 +83,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	assert(robot_model);
 
 	const auto& props = properties();
-	double timeout = props.get<double>("timeout");
+	double timeout = this->timeout();
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
