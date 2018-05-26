@@ -227,7 +227,9 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 	if (!trajectory)
 		return SubTrajectoryPtr();
 
-	// TODO: check merged trajectory for collisions
+	// check merged trajectory for collisions
+	if (!intermediate_scenes.front()->isPathValid(*trajectory, properties().get<moveit_msgs::Constraints>("path_constraints")))
+		return SubTrajectoryPtr();
 
 	return std::make_shared<SubTrajectory>(trajectory);
 }

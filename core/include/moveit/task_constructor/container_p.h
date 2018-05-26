@@ -245,12 +245,12 @@ public:
 	void onNewPropagateSolution(const SolutionBase& s);
 	void onNewGeneratorSolution(const SolutionBase& s);
 	void mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
-	                         const moveit::core::RobotState& state, const Spawner& spawner);
-	void merge(const ChildSolutionList& sub_solutions, const moveit::core::RobotState& state, const Spawner& spawner);
+	                         const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner);
+	void merge(const ChildSolutionList& sub_solutions,
+	           const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner);
 
 	void sendForward(SubTrajectory&& t, const InterfaceState* from);
 	void sendBackward(SubTrajectory&& t, const InterfaceState* to);
-	void spawn(SubTrajectory&& t);
 };
 PIMPL_FUNCTIONS(Merger)
 

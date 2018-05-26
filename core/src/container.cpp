@@ -1031,7 +1031,7 @@ void MergerPrivate::onNewPropagateSolution(const SolutionBase& s)
 
 	// combine the new solution with all solutions from other children
 	auto spawner = dir == PROPAGATE_FORWARDS ? &MergerPrivate::sendForward : &MergerPrivate::sendBackward;
-	mergeAnyCombination(all_solutions, s, external_source_state->scene()->getCurrentState(),
+	mergeAnyCombination(all_solutions, s, external_source_state->scene(),
 	                    std::bind(spawner, this, std::placeholders::_1, external_source_state));
 }
 
@@ -1053,16 +1053,11 @@ void MergerPrivate::sendBackward(SubTrajectory&& t, const InterfaceState* to)
 
 void MergerPrivate::onNewGeneratorSolution(const SolutionBase& s)
 {
-	// TODO
-}
-
-void MergerPrivate::spawn(SubTrajectory&& t)
-{
-
+	// TODO: implement in similar fashion as onNewPropagateSolution(), but also merge start/end states
 }
 
 void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
-                                        const moveit::core::RobotState& state, const Spawner& spawner)
+                                        const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner)
 {
 	std::vector<size_t> indeces; // which solution index was considered last for i-th child?
 	indeces.reserve(children().size());
@@ -1077,7 +1072,7 @@ void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, c
 		sub_solutions.push_back(pair.second[indeces.back()]);
 	}
 	while (true) {
-		merge(sub_solutions, state, spawner);
+		merge(sub_solutions, start_scene, spawner);
 
 		// compose next combination
 		size_t child = 0;
@@ -1097,7 +1092,8 @@ void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, c
 	}
 }
 
-void MergerPrivate::merge(const ChildSolutionList& sub_solutions, const moveit::core::RobotState& state, const Spawner& spawner)
+void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
+                          const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner)
 {
 	// transform vector of SubTrajectories into vector of RobotTrajectories
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
@@ -1110,10 +1106,14 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions, const moveit::
 	}
 
 	moveit::core::JointModelGroup *jmg = jmg_merged_.get();
-	robot_trajectory::RobotTrajectoryPtr merged = task_constructor::merge(sub_trajectories, state, jmg);
+	robot_trajectory::RobotTrajectoryPtr merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
 	if (jmg_merged_.get() != jmg)
 		jmg_merged_.reset(jmg);
 	if (!merged) return;
+
+	// check merged trajectory for collisions
+	if (!start_scene->isPathValid(*merged))
+		return;
 
 	SubTrajectory t(merged);
 	// accumulate costs and markers
