@@ -58,15 +58,9 @@ ComputeIK* ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
 	return new ComputeIK(name, std::unique_ptr<Stage>{stage.release()});
 }
 
-// 1 of 2 arguments given
-ComputeIK* ComputeIK_init_1(const std::string& name) {
-	return new ComputeIK(name);
-}
-
 bp::list ComputeIK_getForwardedProperties(ComputeIK& self) {
-	std::set<std::string> forward_properties = self.properties().get<std::set<std::string>>("forward_properties");
 	bp::list l;
-	for (const std::string& value : forward_properties)
+	for (const std::string& value : self.properties().get<std::set<std::string>>("forward_properties"))
 		l.append(value);
 	return l;
 }
@@ -100,8 +94,6 @@ Connect* Connect_init(const std::string& name, const bp::list& l) {
 Pick* Pick_init(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
 	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()}, name);
 }
-
-// 1 of 2 arguments given
 Pick* Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
 	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()});
 }
@@ -110,8 +102,6 @@ Pick* Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
 Place* Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
 	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}, name);
 }
-
-// 1 of 2 arguments given
 Place* Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
 	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()});
 }
@@ -166,8 +156,8 @@ void export_stages()
 	      .property<geometry_msgs::PoseStamped>("target_pose")
 	      // methods of base class boost::python::class_ need to be called last!
 	      .def("__init__", bp::make_constructor(&ComputeIK_init))
-	      .def("__init__", bp::make_constructor(&ComputeIK_init_1))
-	      .add_property("forward_properties", &ComputeIK_getForwardedProperties, &ComputeIK_setForwardedProperties) // TODO test
+	      .def(bp::init<bp::optional<const std::string&>>())
+	      .add_property("forward_properties", &ComputeIK_getForwardedProperties, &ComputeIK_setForwardedProperties)
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
 

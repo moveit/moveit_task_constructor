@@ -198,8 +198,6 @@ public:
 class PropertyMap
 {
 	std::map<std::string, Property> props_;
-	typedef std::map<std::string, Property>::iterator iterator;
-	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
 	Property& declare(const std::string& name, const Property::type_index& type_index,
@@ -231,6 +229,9 @@ public:
 	const Property& property(const std::string &name) const {
 		return const_cast<PropertyMap*>(this)->property(name);
 	}
+
+	typedef std::map<std::string, Property>::iterator iterator;
+	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	iterator begin() { return props_.begin(); }
 	iterator end() { return props_.end(); }

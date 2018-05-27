@@ -3,7 +3,7 @@
 
 import unittest
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
-
+from moveit_msgs.msg import RobotState, Constraints
 from moveit.task_constructor import core, stages
 
 
@@ -166,11 +166,10 @@ class TestStages(unittest.TestCase):
         self._check(stage, "group", "group")
         self._check(stage, "link", "link")
         self._check(stage, "pose", PoseStamped())
-        # TODO PointStamped constructor fails
         self._check(stage, "point", PointStamped())
         self._check(stage, "named_joint_pose", "named_joint_pose")
-
-        # TODO missing tests for "joint_pose" and "path_constraints" properties
+        self._check(stage, "joint_pose", RobotState())
+        self._check(stage, "path_constraints", Constraints())
 
     def test_MoveRelative(self):
         stage = stages.MoveRelative("move", self.planner)
@@ -181,23 +180,13 @@ class TestStages(unittest.TestCase):
         self._check(stage, "link", "link")
         self._check(stage, "min_distance", 0.5)
         self._check(stage, "max_distance", 0.25)
-        self._check(stage, "twist", TwistStamped())
         self._check(stage, "direction", Vector3Stamped())
-
-        # TODO missing test for "path_constraints" property
-
+        self._check(stage, "twist", TwistStamped())
         self._check(stage, "joints", {"half": 0.5, "quarter": 0.25, "zero": 0})
+        self._check(stage, "path_constraints", Constraints())
 
         stage.joints = {"one": 1}
         self.assertEqual(stage.joints["one"], 1)
-
-        # TODO dictionary key/val-pair is not deleted. should not be equal and raise a key error here
-        del stage.joints["one"]
-        # self.assertNotEqual(stage.joints["one"], 1)
-
-        # TODO clearing the dict does not work either. should be equal
-        stage.joints.clear()
-        # self.assertEqual(stage.joints, {})
 
     def test_Connect(self):
         planner = core.PipelinePlanner()
