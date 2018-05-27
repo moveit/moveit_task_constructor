@@ -33,6 +33,12 @@ class Test(unittest.TestCase):
         task.init()
         task.plan()
 
+        self.assertEqual(len(task.solutions), 1)
+        for s in task.solutions:
+            print s
+        s = task.solutions[0]
+        task.execute(s)
+
 
 if __name__ == '__main__':
     roscpp_init("test_mtc")

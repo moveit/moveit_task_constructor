@@ -6,6 +6,10 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/task.h>
 
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit/move_group_interface/move_group_interface.h>
+
 namespace bp = boost::python;
 using namespace moveit::task_constructor;
 
@@ -16,6 +20,51 @@ void export_properties();
 void export_solvers();
 
 namespace {
+
+// utility function to extract index from python object
+// also handles negative indexes referencing from the end
+size_t convert_index(long size, PyObject* i_) {
+	bp::extract<long> i(i_);
+	if (i.check()) {
+		long index = i();
+		if (index < 0)
+			index += size;
+		if (index >= long(size) || index < 0) {
+			PyErr_SetString(PyExc_IndexError, "Index out of range");
+			bp::throw_error_already_set();
+		}
+		return index;
+	}
+
+	PyErr_SetString(PyExc_TypeError, "Invalid index type");
+	bp::throw_error_already_set();
+	return size_t();
+}
+
+// implement operator[](index)
+template<typename T>
+typename T::value_type get_item(const T& container, PyObject* i) {
+	auto it = container.begin();
+	std::advance(it, convert_index(container.size(), i));
+	return *it;
+}
+
+// provide implicit type conversion from std::shared_ptr<const T> to std::shared_ptr<T>
+template<typename T>
+struct const_castable {
+	typedef std::shared_ptr<const T> Source;
+	typedef std::shared_ptr<T> Target;
+
+	static PyObject* convert(const Source& x) {
+		return bp::incref(bp::object(std::const_pointer_cast<T>(x)).ptr());
+	}
+
+	// register type conversion
+	const_castable() {
+		bp::to_python_converter<Source, const_castable<T>>();
+	}
+};
+
 
 void ContainerBase_insert(ContainerBase& self, std::auto_ptr<Stage> stage, int before = -1) {
 	self.insert(std::unique_ptr<Stage>{stage.release()}, before);
@@ -31,12 +80,54 @@ void Task_add(Task& self, std::auto_ptr<Stage> stage) {
 	return self.add(std::unique_ptr<Stage>{stage.release()});
 }
 
+void Task_publish(Task& self, SolutionBasePtr &solution) {
+	self.introspection().publishSolution(*solution);
+}
+
+void Task_execute(Task& self, SolutionBasePtr &solution) {
+	moveit::planning_interface::PlanningSceneInterface psi;
+	moveit::planning_interface::MoveGroupInterface mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);
+
+	moveit::planning_interface::MoveGroupInterface::Plan plan;
+	moveit_task_constructor_msgs::Solution serialized;
+	solution->fillMessage(serialized);
+
+	for(const moveit_task_constructor_msgs::SubTrajectory& traj : serialized.sub_trajectory) {
+		if (!traj.trajectory.joint_trajectory.points.empty()) {
+			plan.trajectory_ = traj.trajectory;
+			if (!mgi.execute(plan)) {
+				ROS_ERROR("Execution failed! Aborting!");
+				return;
+			}
+		}
+		psi.applyPlanningScene(traj.scene_diff);
+	}
+	ROS_INFO("Executed successfully.");
+}
+
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task::enableIntrospection, 0, 1)
 
 }
 
+
 void export_core()
 {
+	bp::class_<SolutionBase, SolutionBasePtr, boost::noncopyable>("Solution", bp::no_init)
+	      .add_property("cost", &SolutionBase::cost)
+	      .add_property("comment", bp::make_function(&SolutionBase::comment, bp::return_value_policy<bp::copy_const_reference>()))
+	      ;
+	const_castable<SolutionBase>();
+
+
+	typedef ordered<SolutionBaseConstPtr> Solutions;
+	bp::class_<Solutions, boost::noncopyable>("Solutions", bp::no_init)
+	      .def("__len__", &Solutions::size)
+	      .def("__getitem__", &get_item<Solutions>)
+	      .def("__iter__", bp::iterator<Solutions>())
+	      ;
+
+
 	PropertyMap& (Stage::*Stage_getPropertyMap)() = &Stage::properties;  // resolve method ambiguity
 	properties::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>
 	      ("Stage", bp::no_init)
@@ -45,8 +136,10 @@ void export_core()
 	      .add_property("name",
 	                    bp::make_function(&Stage::name, bp::return_value_policy<bp::copy_const_reference>()),
 	                    &Stage::setName)
-	      // read-only access to properties, reference returned directly as pointer
+	      // read-only access to properties + solutions, reference returned directly as pointer
 	      .add_property("properties", bp::make_function(Stage_getPropertyMap, bp::return_internal_reference<>()))
+	      .add_property("solutions", bp::make_function(&Stage::solutions, bp::return_internal_reference<>()))
+	      .add_property("failures", bp::make_function(&Stage::failures, bp::return_internal_reference<>()))
 	      .def("reset", &Stage::reset)
 	      .def("init", &Stage::init)
 	      ;
@@ -100,7 +193,10 @@ void export_core()
 	bp::class_<Task, boost::noncopyable>
 	      ("Task", bp::no_init)
 	      .add_property("id", &Task::id)
+	      // read-only access to properties + solutions, reference returned directly as pointer
 	      .add_property("properties", bp::make_function(Task_getPropertyMap, bp::return_internal_reference<>()))
+	      .add_property("solutions", bp::make_function(&Task::solutions, bp::return_internal_reference<>()))
+	      .add_property("failures", bp::make_function(&Task::failures, bp::return_internal_reference<>()))
 
 	      .def("__init__", bp::make_constructor(&Task_init))
 	      .def(bp::init<bp::optional<const std::string&>>())
@@ -111,6 +207,8 @@ void export_core()
 	      .def("init", &Task::init)
 	      .def("plan", &Task::plan)
 	      .def("add", &Task_add)
+	      .def("publish", &Task_publish)
+	      .def("execute", &Task_execute)
 	      ;
 }
 
