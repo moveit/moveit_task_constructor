@@ -129,71 +129,75 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
+	size_t cartesian_goals = props.countDefined({"pose", "point"});
+
+	bool has_joint_state_goal;
 	try {
-		size_t cartesian_goals = props.countDefined({"pose", "point"});
-		if (getJointStateGoal(scene->getCurrentStateNonConst())) {
-			if (cartesian_goals > 0)
-				ROS_WARN_NAMED("MoveTo", "Ignoring Cartesian goals in favour of joint space goal");
-			// plan to joint-space target
-			success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
-		} else if (cartesian_goals == 1) {
-			const moveit::core::LinkModel* link;
-			Eigen::Affine3d target_eigen;
-
-			// Cartesian targets require the link name
-			// TODO: use ik_frame property as in ComputeIK
-			std::string link_name = props.get<std::string>("link");
-			if (link_name.empty())
-				link_name = solvers::getEndEffectorLink(jmg);
-			if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
-				ROS_WARN_STREAM_NAMED("MoveTo", "No or invalid link name specified: " << link_name);
-				return false;
-			}
-
-			boost::any goal = props.get("pose");
-			if (!goal.empty()) {
-				const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
-				tf::poseMsgToEigen(target.pose, target_eigen);
-
-				// transform target into global frame
-				const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
-				target_eigen = frame * target_eigen;
-
-				// frame at target pose
-				rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
-
-				// frame at link
-				geometry_msgs::PoseStamped pose_msg;
-				pose_msg.header.frame_id = link_name;
-				pose_msg.pose.orientation.w = 1.0;
-				rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
-			}
-
-			goal = props.get("point");
-			if (!goal.empty()) {
-				const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
-				Eigen::Vector3d target_point;
-				tf::pointMsgToEigen(target.point, target_point);
-
-				// transform target into global frame
-				const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
-				target_point = frame * target_point;
-
-				// retain link orientation
-				target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
-				target_eigen.translation() = target_point;
-			}
-
-			// plan to Cartesian target
-			success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
-		} else if (cartesian_goals > 1)
-			ROS_WARN_NAMED("MoveTo", "Cannot plan to multiple goals");
-		else if (cartesian_goals == 0)
-			ROS_WARN_NAMED("MoveTo", "No goal defined");
+		has_joint_state_goal= getJointStateGoal(scene->getCurrentStateNonConst());
 	} catch (const InitStageException &e) {
 		ROS_WARN_STREAM_NAMED("MoveTo", e.what());
 		return false;
 	}
+
+	if (has_joint_state_goal) {
+		if (cartesian_goals > 0)
+			ROS_WARN_NAMED("MoveTo", "Ignoring Cartesian goals in favor of joint space goal");
+		// plan to joint-space target
+		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+	} else if (cartesian_goals == 1) {
+		const moveit::core::LinkModel* link;
+		Eigen::Affine3d target_eigen;
+
+		// Cartesian targets require the link name
+		// TODO: use ik_frame property as in ComputeIK
+		std::string link_name = props.get<std::string>("link");
+		if (link_name.empty())
+			link_name = solvers::getEndEffectorLink(jmg);
+		if (link_name.empty() || !(link = scene->getRobotModel()->getLinkModel(link_name))) {
+			ROS_WARN_STREAM_NAMED("MoveTo", "No or invalid link name specified: " << link_name);
+			return false;
+		}
+
+		boost::any goal = props.get("pose");
+		if (!goal.empty()) {
+			const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
+			tf::poseMsgToEigen(target.pose, target_eigen);
+
+			// transform target into global frame
+			const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+			target_eigen = frame * target_eigen;
+
+			// frame at target pose
+			rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
+
+			// frame at link
+			geometry_msgs::PoseStamped pose_msg;
+			pose_msg.header.frame_id = link_name;
+			pose_msg.pose.orientation.w = 1.0;
+			rviz_marker_tools::appendFrame(solution.markers(), pose_msg, 0.1, "ik frame");
+		}
+
+		goal = props.get("point");
+		if (!goal.empty()) {
+			const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
+			Eigen::Vector3d target_point;
+			tf::pointMsgToEigen(target.point, target_point);
+
+			// transform target into global frame
+			const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+			target_point = frame * target_point;
+
+			// retain link orientation
+			target_eigen = scene->getCurrentState().getGlobalLinkTransform(link_name);
+			target_eigen.translation() = target_point;
+		}
+
+		// plan to Cartesian target
+		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+	} else if (cartesian_goals > 1)
+		ROS_WARN_NAMED("MoveTo", "Cannot plan to multiple goals");
+	else if (cartesian_goals == 0)
+		ROS_WARN_NAMED("MoveTo", "No goal defined");
 
 	// store result
 	if (success || (robot_trajectory && storeFailures())) {
