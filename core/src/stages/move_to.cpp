@@ -69,17 +69,16 @@ void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 
 	// Check if named_joint_pose is well-defined in JMG.
 	robot_state::RobotState state(robot_model);
-	getJointStateGoal(state, robot_model);
+	getJointStateGoal(state);
 }
 
-bool MoveTo::getJointStateGoal(moveit::core::RobotState& state,
-                               const robot_model::RobotModelConstPtr& robot_model) {
+bool MoveTo::getJointStateGoal(moveit::core::RobotState& state) {
 	const auto& props = properties();
 	if (props.countDefined({"named_joint_pose", "joint_pose"}) == 2)
 		throw InitStageException(*this, "Cannot define both, named_joint_pose and joint_pose");
 
 	const std::string& group = props.get<std::string>("group");
-	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
+	const moveit::core::JointModelGroup* jmg = state.getJointModelGroup(group);
 	if (!jmg)
 		throw InitStageException(*this, "Unknown joint model group: " + group);
 
@@ -132,7 +131,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 	try {
 		size_t cartesian_goals = props.countDefined({"pose", "point"});
-		if (getJointStateGoal(scene->getCurrentStateNonConst(), scene->getRobotModel())) {
+		if (getJointStateGoal(scene->getCurrentStateNonConst())) {
 			if (cartesian_goals > 0)
 				ROS_WARN_NAMED("MoveTo", "Ignoring Cartesian goals in favour of joint space goal");
 			// plan to joint-space target

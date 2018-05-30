@@ -91,7 +91,7 @@ public:
 protected:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
-	bool getJointStateGoal(moveit::core::RobotState& state, const core::RobotModelConstPtr& robot_model);
+	bool getJointStateGoal(moveit::core::RobotState& state);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
