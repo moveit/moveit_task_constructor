@@ -208,12 +208,12 @@ void Task::compute()
 	stages()->compute();
 }
 
-bool Task::plan()
+bool Task::plan(size_t max_solutions)
 {
 	reset();
 	init();
 
-	while(ros::ok() && canCompute()) {
+	while(ros::ok() && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
 		compute();
 		for (const auto& cb : task_cbs_)
 			cb(*this);

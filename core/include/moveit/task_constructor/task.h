@@ -103,7 +103,7 @@ public:
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	bool plan();
+	bool plan(size_t max_solutions = 0);
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream &os = std::cout) const;
 
