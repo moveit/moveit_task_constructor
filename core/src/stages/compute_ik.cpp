@@ -215,6 +215,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
 	const auto& props = properties();
 
+	const bool ignore_collisions = props.get<bool>("ignore_collisions");
 	const auto& robot_model = sandbox_scene->getRobotModel();
 	const moveit::core::JointModelGroup* eef_jmg = nullptr;
 	const moveit::core::JointModelGroup* jmg = nullptr;
@@ -276,7 +277,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 
 	// validate placed link for collisions
 	collision_detection::CollisionResult collisions;
-	bool colliding = isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
+	bool colliding = !ignore_collisions && isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
 
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
@@ -317,7 +318,6 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
 	IKSolutions ik_solutions;
-	bool ignore_collisions = props.get<bool>("ignore_collisions");
 	auto isValid = [sandbox_scene, ignore_collisions, &ik_solutions]
 	               (robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
 		for (const auto& sol : ik_solutions){
