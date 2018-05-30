@@ -49,6 +49,7 @@ public:
 	FixedState(const std::string& name = "initial state");
 	void setState(const planning_scene::PlanningScenePtr& scene);
 
+	void reset() override;
 	bool canCompute() const override;
 	void compute() override;
 

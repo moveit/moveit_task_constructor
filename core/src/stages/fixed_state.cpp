@@ -48,6 +48,12 @@ void FixedState::setState(const planning_scene::PlanningScenePtr& scene)
 	scene_ = scene;
 }
 
+void FixedState::reset()
+{
+	Generator::reset();
+	ran_ = false;
+}
+
 bool FixedState::canCompute() const{
 	return !ran_ && scene_;
 }
