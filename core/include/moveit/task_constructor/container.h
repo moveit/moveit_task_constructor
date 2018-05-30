@@ -132,9 +132,9 @@ class ParallelContainerBasePrivate;
 class ParallelContainerBase;
 /** Parallel containers allow for alternative planning stages
  *  Parallel containers can come in different flavours:
- *  - alternatives: each child stage can contribute a solution
- *  - fallbacks: the children are considered in series
- *  - merged: solutions of all children (actuating disjoint groups)
+ *  - Alternatives: each child stage can contribute a solution
+ *  - Fallbacks: the children are considered in series
+ *  - Merger: solutions of all children (actuating disjoint groups)
  *            are merged into a single solution for parallel execution
 */
 class ParallelContainerBase : public ContainerBase
@@ -175,6 +175,10 @@ protected:
 		trajectory.setCost(cost);
 		spawn(std::move(state), std::move(trajectory));
 	}
+	/// propagate a solution forwards
+	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
+	/// propagate a solution backwards
+	void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory);
 };
 
 
@@ -209,6 +213,25 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	bool compute() override;
+};
+
+
+class MergerPrivate;
+/** Plan for different sub tasks in parallel and finally merge all sub solutions into a single trajectory */
+class Merger : public ParallelContainerBase
+{
+public:
+	PRIVATE_CLASS(Merger)
+	Merger(const std::string &name = "merger");
+
+	void reset() override;
+	void init(const core::RobotModelConstPtr &robot_model) override;
+	bool canCompute() const override;
+	bool compute() override;
+
+protected:
+	Merger(MergerPrivate* impl);
+	void onNewSolution(const SolutionBase& s) override;
 };
 
 

@@ -54,9 +54,13 @@ namespace moveit { namespace task_constructor { namespace stages {
  * The wrapper reads a target_pose from the interface state of solutions provided
  * by the wrapped stage. This Cartesian pose (PoseStamped msg) is used as a goal
  * pose for inverse kinematics.
+ *
  * Usually, the end effector's parent link or the group's tip link is used as
  * the IK frame, which should be moved to the goal frame. However, any other
  * IK frame can be defined (which is linked to the tip of the group).
+ *
+ * Properties of the internally received InterfaceState can be forwarded to the
+ * newly generated, externally exposed InterfaceState.
  */
 class ComputeIK : public WrapperBase {
 public:
@@ -65,11 +69,17 @@ public:
 	void init(const core::RobotModelConstPtr &robot_model);
 	void onNewSolution(const SolutionBase &s) override;
 
-	void setTimeout(double timeout);
-	void setEndEffector(const std::string& eef);
+	void setTimeout(double timeout) {
+		setProperty("timeout", timeout);
+	}
+	void setEndEffector(const std::string& eef) {
+		setProperty("eef", eef);
+	}
 
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped &pose);
+	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
+		setProperty("ik_frame", pose);
+	}
 	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
@@ -81,7 +91,9 @@ public:
 	}
 
 	/// setters for target pose
-	void setTargetPose(const geometry_msgs::PoseStamped &pose);
+	void setTargetPose(const geometry_msgs::PoseStamped &pose) {
+		setProperty("target_pose", pose);
+	}
 	void setTargetPose(const Eigen::Affine3d& pose, const std::string& frame = "");
 	template <typename T>
 	void setTargetPose(const T& p, const std::string& frame = "") {
@@ -89,8 +101,16 @@ public:
 		setTargetPose(pose, frame);
 	}
 
-	void setMaxIKSolutions(uint32_t n);
-	void setIgnoreCollisions(bool flag);
+	void setMaxIKSolutions(uint32_t n) {
+		setProperty("max_ik_solutions", n);
+	}
+	void setIgnoreCollisions(bool flag) {
+		setProperty("ignore_collisions", flag);
+	}
+
+	void setForwardedProperties(const std::set<std::string>& names) {
+		setProperty("forward_properties", names);
+	}
 };
 
 } } }

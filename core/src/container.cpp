@@ -35,8 +35,9 @@
 /* Authors: Robert Haschke */
 
 #include <moveit/task_constructor/container_p.h>
+#include <moveit/task_constructor/merge.h>
+#include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/task_constructor/introspection.h>
 #include <ros/console.h>
 
 #include <memory>
@@ -479,9 +480,13 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 
 	// initialize this' pull interfaces if first/last child pulls
 	if (const InterfacePtr& target = (*start)->pimpl()->starts())
-		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
+		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl,
+		                                            std::placeholders::_1, std::cref(target),
+		                                            std::placeholders::_2)));
 	if (const InterfacePtr& target = (*last)->pimpl()->ends())
-		impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, _1, std::cref(target), _2)));
+		impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl,
+		                                          std::placeholders::_1, std::cref(target),
+		                                          std::placeholders::_2)));
 }
 
 // called by parent asking for pruning of this' interface
@@ -767,11 +772,11 @@ void ParallelContainerBase::init(const moveit::core::RobotModelConstPtr& robot_m
 	// initialize this' pull connections
 	impl->starts().reset(required & READS_START
 	                     ? new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState,
-	                                               impl, Interface::FORWARD, _1, _2))
+	                                               impl, Interface::FORWARD, std::placeholders::_1, std::placeholders::_2))
 	                     : nullptr);
 	impl->ends().reset(required & READS_END
 	                   ? new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState,
-	                                             impl, Interface::BACKWARD, _1, _2))
+	                                             impl, Interface::BACKWARD, std::placeholders::_1, std::placeholders::_2))
 	                   : nullptr);
 
 	// initialize push connections of children according to their demands
@@ -870,6 +875,46 @@ void ParallelContainerBase::spawn(InterfaceState &&state, SubTrajectory&& t)
 		// directly spawn states into push interfaces
 		impl->prevEnds()->add(InterfaceState(state), NULL, &*it);
 		impl->nextStarts()->add(std::move(state), &*it, NULL);
+		impl->solutions_.insert(&*it);
+	}
+	impl->newSolution(*it);
+}
+
+void ParallelContainerBase::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t)
+{
+	auto impl = pimpl();
+	assert(impl->nextStarts());
+
+	// store newly created solution (otherwise it's lost)
+	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
+	it->setStartState(from);
+
+	if (it->isFailure()) {
+		auto state_it = impl->states_.insert(impl->states_.end(), std::move(to));
+		it->setEndState(*state_it);
+		impl->failures_.push_back(&*it);
+	} else {
+		impl->nextStarts()->add(std::move(to), &*it, NULL);
+		impl->solutions_.insert(&*it);
+	}
+	impl->newSolution(*it);
+}
+
+void ParallelContainerBase::sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t)
+{
+	auto impl = pimpl();
+	assert(impl->prevEnds());
+
+	// store newly created solution (otherwise it's lost)
+	auto it = impl->created_solutions_.insert(impl->created_solutions_.end(), std::move(t));
+	it->setEndState(to);
+
+	if (it->isFailure()) {
+		auto state_it = impl->states_.insert(impl->states_.end(), std::move(from));
+		it->setStartState(*state_it);
+		impl->failures_.push_back(&*it);
+	} else {
+		impl->prevEnds()->add(std::move(from), NULL, &*it);
 		impl->solutions_.insert(&*it);
 	}
 	impl->newSolution(*it);
@@ -980,6 +1025,228 @@ bool Fallbacks::compute()
 		active_child_->reportPropertyError(e);
 	}
 	return false;
+}
+
+
+MergerPrivate::MergerPrivate(Merger *me, const std::string &name)
+   : ParallelContainerBasePrivate(me, name)
+{}
+
+InterfaceFlags MergerPrivate::requiredInterface() const
+{
+	if (children().size() < 2)
+		throw InitStageException(*me_, "Need 2 children at least.");
+
+	InterfaceFlags required = ParallelContainerBasePrivate::requiredInterface();
+
+	// all children need to share a common interface
+	for (const Stage::pointer& stage : children()) {
+		InterfaceFlags current = stage->pimpl()->requiredInterface();
+		if (current != required)
+			throw InitStageException(*stage, "Interface doesn't match the common one.");
+	}
+
+	switch (required) {
+		case PROPAGATE_FORWARDS:
+		case PROPAGATE_BACKWARDS:
+		case UNKNOWN:
+			break; // these are supported
+		case GENERATE:
+			throw InitStageException(*me_, "Generator stages not yet supported.");
+		case CONNECT:
+			throw InitStageException(*me_, "Cannot merge connecting stages. Use Connect.");
+		default:
+			throw InitStageException(*me_, "Children's interface not supported.");
+	}
+	return required;
+}
+
+
+Merger::Merger(const std::string &name)
+   : Merger(new MergerPrivate(this, name))
+{}
+
+void Merger::reset()
+{
+	ParallelContainerBase::reset();
+	auto impl = pimpl();
+	impl->jmg_merged_.reset();
+	impl->source_state_to_solutions_.clear();
+}
+
+void Merger::init(const core::RobotModelConstPtr& robot_model)
+{
+	ParallelContainerBase::init(robot_model);
+}
+
+Merger::Merger(MergerPrivate *impl)
+   : ParallelContainerBase(impl)
+{
+}
+
+bool Merger::canCompute() const
+{
+	for (const auto& stage : pimpl()->children())
+		if (stage->pimpl()->canCompute())
+			return true;
+	return false;
+}
+
+bool Merger::compute()
+{
+	bool success = false;
+	for (const auto& stage : pimpl()->children()) {
+		try {
+			success |= stage->pimpl()->compute();
+		} catch (const Property::error &e) {
+			stage->reportPropertyError(e);
+		}
+	}
+	return success;
+}
+
+void Merger::onNewSolution(const SolutionBase& s)
+{
+	auto impl = pimpl();
+	switch (impl->interfaceFlags()) {
+	case PROPAGATE_FORWARDS:
+	case PROPAGATE_BACKWARDS:
+		impl->onNewPropagateSolution(s);
+		break;
+	case GENERATE:
+		impl->onNewGeneratorSolution(s);
+		break;
+	default:
+		assert(false);
+	}
+}
+
+void MergerPrivate::onNewPropagateSolution(const SolutionBase& s)
+{
+	const SubTrajectory* trajectory = dynamic_cast<const SubTrajectory*>(&s);
+	if (!trajectory) {
+		ROS_ERROR_NAMED("Merger", "Only simple trajectories are supported");
+		return;
+	}
+
+	InterfaceFlags dir = interfaceFlags();
+	assert(dir == PROPAGATE_FORWARDS || dir == PROPAGATE_BACKWARDS);
+	// internal source state
+	const InterfaceState* source_state = (dir == PROPAGATE_FORWARDS) ? s.start() : s.end();
+
+	// map to external source state that is shared by all children
+	auto source_it = internalToExternalMap().find(source_state);
+	// internal->external mapping for source state should have been created
+	assert(source_it != internalToExternalMap().end());
+	InterfaceState* external_source_state = &*source_it->second;
+
+	// retrieve (or create if necessary) the ChildSolutionMap for the given external source state
+	ChildSolutionMap& all_solutions = source_state_to_solutions_.insert(std::make_pair(external_source_state, ChildSolutionMap())).first->second;
+
+	// retrieve (or create if necessary) the ChildSolutionList corresponding to the child
+	ChildSolutionList& child_solutions = all_solutions.insert(std::make_pair(s.creator(), ChildSolutionList())).first->second;
+	// insert the new child solution into the list
+	child_solutions.push_back(trajectory);
+
+	// do we have solutions for all children?
+	if (all_solutions.size() < children().size()) return;
+	assert(all_solutions.size() == children().size());
+
+	// combine the new solution with all solutions from other children
+	auto spawner = dir == PROPAGATE_FORWARDS ? &MergerPrivate::sendForward : &MergerPrivate::sendBackward;
+	mergeAnyCombination(all_solutions, s, external_source_state->scene()->getCurrentState(),
+	                    std::bind(spawner, this, std::placeholders::_1, external_source_state));
+}
+
+void MergerPrivate::sendForward(SubTrajectory&& t, const InterfaceState* from)
+{
+	// generate target state
+	planning_scene::PlanningScenePtr to = from->scene()->diff();
+	to->setCurrentState(t.trajectory()->getLastWayPoint());
+	ParallelContainerBasePrivate::sendForward(*from, InterfaceState(to), std::move(t));
+}
+
+void MergerPrivate::sendBackward(SubTrajectory&& t, const InterfaceState* to)
+{
+	// generate target state
+	planning_scene::PlanningScenePtr from = to->scene()->diff();
+	from->setCurrentState(t.trajectory()->getFirstWayPoint());
+	ParallelContainerBasePrivate::sendBackward(InterfaceState(from), *to, std::move(t));
+}
+
+void MergerPrivate::onNewGeneratorSolution(const SolutionBase& s)
+{
+	// TODO
+}
+
+void MergerPrivate::spawn(SubTrajectory&& t)
+{
+
+}
+
+void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
+                                        const moveit::core::RobotState& state, const Spawner& spawner)
+{
+	std::vector<size_t> indeces; // which solution index was considered last for i-th child?
+	indeces.reserve(children().size());
+
+	ChildSolutionList sub_solutions;
+	sub_solutions.reserve(children().size());
+
+	// initialize vector of sub solutions
+	for (const auto &pair : all_solutions) {
+		// all children, except current solution's creator, start with zero index
+		indeces.push_back(pair.first != current.creator() ? 0 : pair.second.size()-1);
+		sub_solutions.push_back(pair.second[indeces.back()]);
+	}
+	while (true) {
+		merge(sub_solutions, state, spawner);
+
+		// compose next combination
+		size_t child = 0;
+		for (auto it = all_solutions.cbegin(), end = all_solutions.cend(); it != end; ++it, ++child) {
+			if (it->first == current.creator()) continue;  // skip current solution's child
+			if (++indeces[child] >= it->second.size()) {
+				indeces[child] = 0;  // start over with zero
+				sub_solutions[child] = it->second[indeces[child]];
+				continue; // and continue with next child
+			}
+			// otherwise, a new solution combination is available
+			sub_solutions[child] = it->second[indeces[child]];
+			break;
+		}
+		if (child == children().size())  // all combinations exhausted?
+			break;
+	}
+}
+
+void MergerPrivate::merge(const ChildSolutionList& sub_solutions, const moveit::core::RobotState& state, const Spawner& spawner)
+{
+	// transform vector of SubTrajectories into vector of RobotTrajectories
+	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
+	sub_trajectories.reserve(sub_solutions.size());
+	for (const auto& sub : sub_solutions) {
+		// TODO: directly skip failures in mergeAnyCombination() or even earlier
+		if (sub->isFailure())
+			return;
+		sub_trajectories.push_back(sub->trajectory());
+	}
+
+	moveit::core::JointModelGroup *jmg = jmg_merged_.get();
+	robot_trajectory::RobotTrajectoryPtr merged = task_constructor::merge(sub_trajectories, state, jmg);
+	if (jmg_merged_.get() != jmg)
+		jmg_merged_.reset(jmg);
+	if (!merged) return;
+
+	SubTrajectory t(merged);
+	// accumulate costs and markers
+	double costs = 0.0;
+	for (const auto& sub : sub_solutions) {
+		costs += sub->cost();
+		t.markers().insert(t.markers().end(), sub->markers().begin(), sub->markers().end());
+	}
+	t.setCost(costs);
+	spawner(std::move(t));
 }
 
 } }

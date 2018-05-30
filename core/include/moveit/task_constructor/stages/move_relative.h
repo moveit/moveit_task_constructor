@@ -55,22 +55,42 @@ public:
 	bool computeForward(const InterfaceState& from) override;
 	bool computeBackward(const InterfaceState& to) override;
 
-	void setGroup(const std::string& group);
-	void setLink(const std::string& link);
+	void setGroup(const std::string& group) {
+		setProperty("group", group);
+	}
+	void setLink(const std::string& link) {
+		setProperty("link", link);
+	}
 
 	/// set minimum / maximum distance to move
-	void setMinDistance(double distance);
-	void setMaxDistance(double distance);
-	void setMinMaxDistance(double min_distance, double max_distance);
+	void setMinDistance(double distance) {
+		setProperty("min_distance", distance);
+	}
+	void setMaxDistance(double distance) {
+		setProperty("max_distance", distance);
+	}
+	void setMinMaxDistance(double min_distance, double max_distance) {
+		setProperty("min_distance", min_distance);
+		setProperty("max_distance", max_distance);
+	}
 
-	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
 	/// perform twist motion on specified link
-	void along(const geometry_msgs::TwistStamped& twist);
+	void along(const geometry_msgs::TwistStamped& twist) {
+		setProperty("twist", twist);
+	}
 	/// translate link along given direction
-	void along(const geometry_msgs::Vector3Stamped& direction);
+	void along(const geometry_msgs::Vector3Stamped& direction) {
+		setProperty("direction", direction);
+	}
+	/// move specified joint variables by given amount
+	void about(const std::map<std::string, double>& goal) {
+		setProperty("joints", goal);
+	}
+
 
 protected:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,

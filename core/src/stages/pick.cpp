@@ -83,4 +83,10 @@ void PickPlaceBase::setLiftPlace(const geometry_msgs::TwistStamped& motion, doub
 	p.set("max_distance", max_distance);
 }
 
+void PickPlaceBase::setLiftPlace(const std::map<std::string, double>& joints)
+{
+	auto& p = lift_stage_->properties();
+	p.set("joints", joints);
+}
+
 } } }

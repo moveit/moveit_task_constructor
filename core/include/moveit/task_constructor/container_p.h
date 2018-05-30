@@ -39,10 +39,16 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
+#include <moveit/macros/class_forward.h>
 #include "stage_p.h"
 
 #include <map>
 #include <climits>
+
+namespace moveit { namespace core {
+MOVEIT_CLASS_FORWARD(JointModelGroup)
+MOVEIT_CLASS_FORWARD(RobotState)
+} }
 
 namespace moveit { namespace task_constructor {
 
@@ -121,7 +127,10 @@ protected:
 	void liftSolution(SolutionBase& solution,
 	                  const InterfaceState *internal_from, const InterfaceState *internal_to);
 
-protected:
+	auto& internalToExternalMap() { return internal_to_external_; }
+	const auto& internalToExternalMap() const { return internal_to_external_; }
+
+private:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
@@ -205,6 +214,17 @@ public:
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
 
+	// grant access to protected methods in ParallelContainerBase
+	inline void spawn(InterfaceState &&state, SubTrajectory&& t) {
+		static_cast<ParallelContainerBase*>(me_)->spawn(std::move(state), std::move(t));
+	}
+	inline void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
+		static_cast<ParallelContainerBase*>(me_)->sendForward(from, std::move(to), std::move(t));
+	}
+	inline void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t) {
+		static_cast<ParallelContainerBase*>(me_)->sendBackward(std::move(from), to, std::move(t));
+	}
+
 private:
 	/// callback for new externally received states
 	void onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated);
@@ -231,5 +251,33 @@ public:
 	WrapperBasePrivate(WrapperBase* me, const std::string& name);
 };
 PIMPL_FUNCTIONS(WrapperBase)
+
+
+class MergerPrivate : public ParallelContainerBasePrivate {
+	friend class Merger;
+
+	moveit::core::JointModelGroupPtr jmg_merged_;
+	typedef std::vector<const SubTrajectory*> ChildSolutionList;
+	typedef std::map<const StagePrivate*, ChildSolutionList> ChildSolutionMap;
+	// map from external source state (iterator) to all corresponding children's solutions
+	std::map<InterfaceState*, ChildSolutionMap> source_state_to_solutions_;
+
+public:
+	typedef std::function<void(SubTrajectory&&)> Spawner;
+	MergerPrivate(Merger* me, const std::string& name);
+
+	InterfaceFlags requiredInterface() const override;
+
+	void onNewPropagateSolution(const SolutionBase& s);
+	void onNewGeneratorSolution(const SolutionBase& s);
+	void mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
+	                         const moveit::core::RobotState& state, const Spawner& spawner);
+	void merge(const ChildSolutionList& sub_solutions, const moveit::core::RobotState& state, const Spawner& spawner);
+
+	void sendForward(SubTrajectory&& t, const InterfaceState* from);
+	void sendBackward(SubTrajectory&& t, const InterfaceState* to);
+	void spawn(SubTrajectory&& t);
+};
+PIMPL_FUNCTIONS(Merger)
 
 } }
