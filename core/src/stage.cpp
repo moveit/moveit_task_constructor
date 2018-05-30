@@ -687,8 +687,9 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 
 		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
 		     to_it = to_object->shape_poses_.cbegin(); from_it != from_end; ++from_it, ++to_it)
-			if (!from_it->matrix().array().isApprox(to_it->matrix().array()))
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)){
 				return false;  // transforms do not match
+			}
 	}
 	return true;
 }
