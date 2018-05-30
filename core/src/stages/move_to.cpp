@@ -129,8 +129,6 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-	size_t cartesian_goals = props.countDefined({"pose", "point"});
-
 	bool has_joint_state_goal;
 	try {
 		has_joint_state_goal= getJointStateGoal(scene->getCurrentStateNonConst());
@@ -139,9 +137,24 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		return false;
 	}
 
+	size_t cartesian_goals = props.countDefined({"pose", "point"});
+
+	if (cartesian_goals > 1){
+		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Multiple Cartesian goals defined");
+		return false;
+	}
+
+	if (cartesian_goals > 0 && has_joint_state_goal){
+		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Cartesian goals and joint state goals defined");
+		return false;
+	}
+
+	if (cartesian_goals == 0 && !has_joint_state_goal){
+		ROS_WARN_NAMED("MoveTo", "No goal defined");
+		return false;
+	}
+
 	if (has_joint_state_goal) {
-		if (cartesian_goals > 0)
-			ROS_WARN_NAMED("MoveTo", "Ignoring Cartesian goals in favor of joint space goal");
 		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else if (cartesian_goals == 1) {
@@ -194,10 +207,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 		// plan to Cartesian target
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
-	} else if (cartesian_goals > 1)
-		ROS_WARN_NAMED("MoveTo", "Cannot plan to multiple goals");
-	else if (cartesian_goals == 0)
-		ROS_WARN_NAMED("MoveTo", "No goal defined");
+	}
 
 	// store result
 	if (success || (robot_trajectory && storeFailures())) {
