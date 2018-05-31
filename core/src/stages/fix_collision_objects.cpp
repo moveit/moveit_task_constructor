@@ -83,6 +83,7 @@ bool FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &scene, st
 {
 	const auto& props = properties();
 	double penetration = props.get<double>("max_penetration");
+	(void) penetration; // not used (yet)
 
 	collision_detection::CollisionRequest req;
 	collision_detection::CollisionResult res;

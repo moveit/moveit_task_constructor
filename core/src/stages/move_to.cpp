@@ -140,7 +140,7 @@ void MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 	bool has_joint_state_goal;
 	try {
-		has_joint_state_goal= getJointStateGoal(scene->getCurrentStateNonConst());
+		has_joint_state_goal = getJointStateGoal(scene->getCurrentStateNonConst());
 	} catch (const InitStageException &e) {
 		ROS_WARN_STREAM_NAMED("MoveTo", e.what());
 		return;
@@ -148,17 +148,17 @@ void MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 	size_t cartesian_goals = props.countDefined({"pose", "point"});
 
-	if (cartesian_goals > 1){
+	if (cartesian_goals > 1) {
 		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Multiple Cartesian goals defined");
 		return;
 	}
 
-	if (cartesian_goals > 0 && has_joint_state_goal){
+	if (cartesian_goals > 0 && has_joint_state_goal) {
 		ROS_WARN_NAMED("MoveTo", "Ambiguous goals: Cartesian goals and joint state goals defined");
 		return;
 	}
 
-	if (cartesian_goals == 0 && !has_joint_state_goal){
+	if (cartesian_goals == 0 && !has_joint_state_goal) {
 		ROS_WARN_NAMED("MoveTo", "No goal defined");
 		return;
 	}
