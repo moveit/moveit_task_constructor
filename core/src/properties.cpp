@@ -52,7 +52,7 @@ Property::Property(const Property::type_index& type_index, const std::string& de
    , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
-	assert(default_.empty() || default_.type() == type_index_);
+	assert(default_.empty() || default_.type() == type_index_ || type_index_ == typeid(boost::any));
 }
 
 void Property::setValue(const boost::any &value) {
@@ -62,7 +62,7 @@ void Property::setValue(const boost::any &value) {
 
 void Property::setCurrentValue(const boost::any &value)
 {
-	if (!value.empty() && value.type() != type_index_)
+	if (!value.empty() && type_index_ != typeid(boost::any) && value.type() != type_index_)
 		throw Property::type_error(value.type().name(), type_index_.name());
 
 	value_ = value;
@@ -112,7 +112,9 @@ Property& PropertyMap::declare(const std::string &name, const Property::type_ind
                                const Property::SerializeFunction &serialize)
 {
 	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value, serialize)));
-	if (!it_inserted.second && type_index != it_inserted.first->second.type_index_)
+	// if name was already declared, the new declaration should match in type (except it was boost::any)
+	if (!it_inserted.second && it_inserted.first->second.type_index_ != typeid(boost::any) &&
+	    type_index != it_inserted.first->second.type_index_)
 		throw Property::type_error(type_index.name(), it_inserted.first->second.type_index_.name());
 	return it_inserted.first->second;
 }

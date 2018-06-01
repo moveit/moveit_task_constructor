@@ -77,6 +77,16 @@ TEST(Property, reset) {
 	EXPECT_EQ(props.get<double>("double1"), 1.0);
 }
 
+TEST(Property, anytype) {
+	PropertyMap props;
+	props.declare<boost::any>("any", "store any type");
+	props.set("any", 1);
+	EXPECT_EQ(props.get<int>("any"), 1);
+
+	props.set("any", std::string("foo"));
+	EXPECT_EQ(props.get<std::string>("any"), "foo");
+}
+
 TEST(Property, serialize) {
 	PropertyMap props;
 	props.declare<int>("int");
