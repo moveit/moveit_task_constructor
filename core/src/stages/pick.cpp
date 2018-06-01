@@ -30,7 +30,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 		if (frame.empty())
 			return boost::any();
 
-		pose.header.frame_id = boost::any_cast<std::string>("eef_frame");
+		pose.header.frame_id = boost::any_cast<std::string>(frame);
 		pose.pose.orientation.w = 1.0;
 		return pose;
 	};
