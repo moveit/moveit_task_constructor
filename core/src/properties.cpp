@@ -43,7 +43,7 @@
 namespace moveit {
 namespace task_constructor {
 
-Property::Property(const std::type_index& type_index, const std::string& description, const boost::any& default_value,
+Property::Property(const Property::type_index& type_index, const std::string& description, const boost::any& default_value,
                    const Property::SerializeFunction &serialize)
    : description_(description)
    , type_index_(type_index)
@@ -52,7 +52,7 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
-	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
+	assert(default_.empty() || default_.type() == type_index_);
 }
 
 void Property::setValue(const boost::any &value) {
@@ -62,7 +62,7 @@ void Property::setValue(const boost::any &value) {
 
 void Property::setCurrentValue(const boost::any &value)
 {
-	if (!value.empty() && std::type_index(value.type()) != type_index_)
+	if (!value.empty() && value.type() != type_index_)
 		throw Property::type_error(value.type().name(), type_index_.name());
 
 	value_ = value;
@@ -107,7 +107,7 @@ void Property::performInitFrom(SourceId source, const PropertyMap &other)
 }
 
 
-Property& PropertyMap::declare(const std::string &name, const std::type_index &type_index,
+Property& PropertyMap::declare(const std::string &name, const Property::type_index &type_index,
                                const std::string &description, const boost::any &default_value,
                                const Property::SerializeFunction &serialize)
 {

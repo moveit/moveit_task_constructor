@@ -77,9 +77,10 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
 class Property {
 	friend class PropertyMap;
 
+	typedef decltype(std::declval<boost::any>().type()) type_index;
 	typedef std::function<std::string(const boost::any& v)> SerializeFunction;
 
-	Property(const std::type_index &type_index, const std::string &description, const boost::any &default_value,
+	Property(const type_index &type_index, const std::string &description, const boost::any &default_value,
 	         const Property::SerializeFunction &serialize);
 
 	template <typename T>
@@ -153,7 +154,7 @@ public:
 
 private:
 	std::string description_;
-	std::type_index type_index_;
+	type_index type_index_;
 	boost::any default_;
 	boost::any value_;
 
@@ -201,7 +202,7 @@ class PropertyMap
 	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
-	Property& declare(const std::string& name, const std::type_index& type_index,
+	Property& declare(const std::string& name, const Property::type_index& type_index,
 	                  const std::string& description,
 	                  const boost::any& default_value,
 	                  const Property::SerializeFunction &serialize);
