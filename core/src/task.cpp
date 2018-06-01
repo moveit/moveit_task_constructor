@@ -109,8 +109,8 @@ void Task::setRobotModel(const core::RobotModelConstPtr& robot_model)
 }
 
 void Task::loadRobotModel(const std::string& robot_description) {
-	robot_model_loader::RobotModelLoader rml(robot_description);
-	setRobotModel(rml.getModel());
+	robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(robot_description);
+	setRobotModel(robot_model_loader_->getModel());
 	if (!robot_model_)
 		throw Exception("Task failed to construct RobotModel");
 }

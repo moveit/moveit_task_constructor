@@ -51,6 +51,10 @@ namespace moveit { namespace core {
 	MOVEIT_CLASS_FORWARD(RobotState)
 }}
 
+namespace robot_model_loader {
+	MOVEIT_CLASS_FORWARD(RobotModelLoader)
+}
+
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Stage)
@@ -140,6 +144,7 @@ protected:
 
 private:
 	std::string id_;
+	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
 	bool preempt_requested_;
 
