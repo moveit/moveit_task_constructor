@@ -35,6 +35,7 @@ std::vector<T> elementOrList(const bp::object& arg) {
 		return fromList<std::string>(bp::extract<bp::list>(arg));
 }
 
+
 void ModifyPlanningScene_attachObjects(ModifyPlanningScene& self, const bp::object& names,
                                        const std::string& attach_link, bool attach = true) {
 	self.attachObjects(elementOrList<std::string>(names), attach_link, attach);
@@ -53,9 +54,13 @@ void ModifyPlanningScene_allowCollisions(ModifyPlanningScene& self, const bp::ob
 BOOST_PYTHON_FUNCTION_OVERLOADS(ModifyPlanningScene_allowCollisions_overloads, ModifyPlanningScene_allowCollisions, 3, 4)
 
 
-// TODO optional arguments for constructors? relevant for Compute_IK, Pick, Place and Task (in core.cpp)
 ComputeIK* ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
 	return new ComputeIK(name, std::unique_ptr<Stage>{stage.release()});
+}
+
+// 1 of 2 arguments given
+ComputeIK* ComputeIK_init_1(const std::string& name) {
+	return new ComputeIK(name);
 }
 
 bp::list ComputeIK_getForwardedProperties(ComputeIK& self) {
@@ -96,9 +101,19 @@ Pick* Pick_init(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
 	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()}, name);
 }
 
+// 1 of 2 arguments given
+Pick* Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
+	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()});
+}
+
 
 Place* Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
 	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}, name);
+}
+
+// 1 of 2 arguments given
+Place* Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
+	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()});
 }
 
 } // anonymous namespace
@@ -150,6 +165,7 @@ void export_stages()
 	      .property<geometry_msgs::PoseStamped>("target_pose")
 	      // methods of base class boost::python::class_ need to be called last!
 	      .def("__init__", bp::make_constructor(&ComputeIK_init))
+	      .def("__init__", bp::make_constructor(&ComputeIK_init_1))
 	      .add_property("forward_properties", &ComputeIK_getForwardedProperties, &ComputeIK_setForwardedProperties) // TODO test
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
@@ -226,6 +242,7 @@ void export_stages()
 	      .property<std::string>("eef_parent_group")
 
 	      .def("__init__", bp::make_constructor(&Pick_init))
+	      .def("__init__", bp::make_constructor(&Pick_init_1))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Pick>, std::auto_ptr<Stage>>();
 
@@ -239,6 +256,7 @@ void export_stages()
 	      .property<std::string>("eef_parent_group")
 
 	      .def("__init__", bp::make_constructor(&Place_init))
+	      .def("__init__", bp::make_constructor(&Place_init_1))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Place>, std::auto_ptr<Stage>>();
 

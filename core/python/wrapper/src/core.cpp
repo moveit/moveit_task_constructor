@@ -23,7 +23,6 @@ void ContainerBase_insert(ContainerBase& self, std::auto_ptr<Stage> stage, int b
 BOOST_PYTHON_FUNCTION_OVERLOADS(ContainerBase_insert_overloads, ContainerBase_insert, 2, 3)
 
 
-// TODO task constructor optional/default values
 Task* Task_init(const std::string& id, std::auto_ptr<ContainerBase> container) {
 	return new Task(id, std::unique_ptr<ContainerBase>{container.release()});
 }
@@ -104,6 +103,7 @@ void export_core()
 	      .add_property("properties", bp::make_function(Task_getPropertyMap, bp::return_internal_reference<>()))
 
 	      .def("__init__", bp::make_constructor(&Task_init))
+	      .def(bp::init<bp::optional<const std::string&>>())
 	      .def("loadRobotModel", &Task::loadRobotModel)
 	      .def("enableIntrospection", &Task::enableIntrospection, Task_enableIntrospection_overloads())
 	      .def("clear", &Task::clear)
