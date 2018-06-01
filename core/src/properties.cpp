@@ -72,7 +72,7 @@ void Property::setCurrentValue(const boost::any &value)
 
 void Property::reset()
 {
-	value_.clear();
+	boost::any().swap(value_);
 }
 
 std::string Property::serialize() const {
