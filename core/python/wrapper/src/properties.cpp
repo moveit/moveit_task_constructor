@@ -11,13 +11,10 @@ namespace python {
 
 namespace {
 
-// Used to pass an iterator to its own __iter__ function
-inline boost::any identity(const boost::any& self) { return self; }
+bp::object property_value_to_python(const boost::any& value) {
+	if (value.empty())
+		return bp::object();
 
-
-bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
-	const Property& prop = self.property(name);
-	const boost::any& value = prop.value();
 	const std::string& type_name = value.type().name();
 
 	/// type-casting for selected primitive types
@@ -43,24 +40,50 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 	throw std::runtime_error("No conversion for: " + type_name);
 }
 
-void PropertyMap_set(PropertyMap& self, const std::string& name, const bp::object& value) {
-	PyObject *o = value.ptr();
+void property_value_from_python(const bp::object& bpo, boost::any& value) {
+	PyObject *o = bpo.ptr();
 	if (PyBool_Check(o))
-		self.set(name, o == Py_True);
+		value = (o == Py_True);
 	else if (PyInt_Check(o))
-		self.set(name, PyInt_AS_LONG(o));
+		value = PyInt_AS_LONG(o);
 	else if (PyFloat_Check(o))
-		self.set(name, PyFloat_AS_DOUBLE(o));
+		value = PyFloat_AS_DOUBLE(o);
 	else if (PyString_Check(o))
-		self.set(name, std::string(PyString_AS_STRING(o)));
+		value = std::string(PyString_AS_STRING(o));
 
 	else {
-		std::string python_type_name = bp::extract<std::string>(value.attr("__class__").attr("__module__"));
+		std::string python_type_name = bp::extract<std::string>(bpo.attr("__class__").attr("__module__"));
 		if (python_type_name == "geometry_msgs.msg._Pose")
-			self.set<geometry_msgs::Pose>(name, boost::python::extract<geometry_msgs::Pose>(value));
+			value = geometry_msgs::Pose(boost::python::extract<geometry_msgs::Pose>(bpo));
 		else
 			throw std::runtime_error("No conversion for: " + python_type_name);
 	}
+}
+
+struct property_pair_to_python {
+	static PyObject* convert(const PropertyMap::iterator::value_type& x) {
+		return bp::incref(bp::make_tuple<std::string, bp::object>(x.first, property_value_to_python(x.second.value())).ptr());
+	}
+};
+
+class ConverterInit {
+public:
+	ConverterInit() {
+		using namespace boost::python;
+		to_python_converter<PropertyMap::iterator::value_type, property_pair_to_python>();
+	}
+};
+static ConverterInit init;
+
+
+bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
+	return property_value_to_python(self.get(name));
+}
+
+void PropertyMap_set(PropertyMap& self, const std::string& name, const bp::object& value) {
+	boost::any v;
+	property_value_from_python(value, v);
+	self.set(name, v);
 }
 
 void PropertyMap_update(PropertyMap& self, bp::dict values) {
@@ -71,51 +94,28 @@ void PropertyMap_update(PropertyMap& self, bp::dict values) {
 	}
 }
 
-class PropertyMapIterator {
-	PropertyMap& pm;
-	std::map<std::string, Property>::iterator iterator;
-	std::map<std::string, Property>::iterator end;
-
-public:
-	PropertyMapIterator(PropertyMap& pm_)  : pm(pm_) {
-		iterator = pm.begin();
-		// TODO Robert: get end of iterator here or for each call of next function?
-		end = pm.end();
-	}
-
-	bp::tuple next() {
-		if (iterator == end) {
-			PyErr_SetString(PyExc_StopIteration, "Iterator exhausted.");
-			bp::throw_error_already_set();
-		} else {
-			const std::string& name = (*iterator).first;
-			iterator++;
-			return bp::make_tuple<std::string, bp::object>(name, PropertyMap_get(pm, name));
-		}
-	}
-};
-
-PropertyMapIterator* PropertyMap_getIterator(PropertyMap& self) {
-	return new PropertyMapIterator(self);
-}
-
 } // anonymous namespace
 
 void export_properties()
 {
-	bp::class_<PropertyMapIterator, boost::noncopyable>
-	      ("PropertyMapIterator", bp::init<PropertyMap&>())
-	      .def("__iter__", &identity)
-	      .def("next", &PropertyMapIterator::next)
-	;
+#if 0 // TODO
+	bp::class_<Property, boost::noncopyable>("Property", bp::no_init)
+	      .def("setValue", &Property::setValue)
+	      .def("setCurrentValue", &Property::setCurrentValue)
+	      .def("value", &Property::value)
+	      .def("defaultValue", &Property::defaultValue)
+	      .def("reset", &Property::reset)
+	      .def("defined", &Property::defined)
+	      .add_property("description", &Property::description, &Property::setDescription)
+	      ;
+#endif
 
-	bp::class_<PropertyMap, boost::noncopyable>
-	      ("PropertyMap")
+	bp::class_<PropertyMap, boost::noncopyable>("PropertyMap")
 	      .def("__getitem__", &PropertyMap_get)
 	      .def("__setitem__", &PropertyMap_set)
 	      .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
-	      .def("__iter__", &PropertyMap_getIterator, bp::return_internal_reference<1>())
 	      .def("update", &PropertyMap_update)
+	      .def("__iter__", bp::iterator<PropertyMap>())
 	      ;
 }
 

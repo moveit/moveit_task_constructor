@@ -53,18 +53,10 @@ class TestPropertyMap(unittest.TestCase):
         # assign values so we can iterate over them
         self.props["double"] = 3.14
         self.props["bool"] = True
-        first_iter = []
-        iterated = False
-        # tuple object
-        for property in self.props:
-            iterated = True
-            first_iter.append(property)
-        self.assertTrue(iterated, "Iteration loop was not entered")
-        second_iter = []
-        # tuple extraction
-        for property, value in self.props:
-            second_iter.append((property, value))
-        self.assertEqual(first_iter, second_iter)
+        first = [p for p in self.props]
+        self.assertEqual(len(first), 2)
+        second = [(name, value) for (name, value) in self.props]
+        self.assertEqual(first, second)
 
     def test_update(self):
         self.props["double"] = 3.14
