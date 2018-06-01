@@ -1,10 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from moveit.task_constructor import core, stages
-from geometry_msgs.msg import Pose
-from geometry_msgs.msg import PoseStamped
 import unittest
+from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
+
+from moveit.task_constructor import core, stages
 
 
 class TestPropertyMap(unittest.TestCase):
@@ -49,6 +49,30 @@ class TestPropertyMap(unittest.TestCase):
         self.assertEqual(props["timeout"], 2.71)
         self.assertEqual(props["group"], "other")
 
+    def test_iter(self):
+        # assign values so we can iterate over them
+        self.props["double"] = 3.14
+        self.props["bool"] = True
+        first_iter = []
+        iterated = False
+        # tuple object
+        for property in self.props:
+            iterated = True
+            first_iter.append(property)
+        self.assertTrue(iterated, "Iteration loop was not entered")
+        second_iter = []
+        # tuple extraction
+        for property, value in self.props:
+            second_iter.append((property, value))
+        self.assertEqual(first_iter, second_iter)
+
+    def test_update(self):
+        self.props["double"] = 3.14
+        self.props.update({"double": 2.72, "bool": True})
+        self.props.update({})
+        self.assertEqual(self.props["double"], 2.72)
+        self.assertEqual(self.props["bool"], True)
+
 
 class TestModifyPlanningScene(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -89,43 +113,66 @@ class TestStages(unittest.TestCase):
 
     def _check(self, stage, name, value):
         self._check_assign(stage, name, value)
-        try:
-            float(value)
-            ignored_types = [int, float, long]
-        except (TypeError, ValueError):
-            ignored_types = [type(value)]
-        self._check_invalid_args(stage, name, ignored_types)
+        self._check_invalid_args(stage, name, type(value))
 
     def _check_assign(self, stage, name, value):
         setattr(stage, name, value)
         self.assertEqual(getattr(stage, name), value)
 
-    def _check_invalid_args(self, stage, name, ignored_types = None):
+    def _check_invalid_args(self, stage, name, target_type):
         """Check some basic types to raise an ArgumentError when assigned"""
-        if ignored_types is None:
-            ignored_types = []
         for value in [None, 1, 1.0, "string", [], {}, set()]:
-            if type(value) in ignored_types:
-                continue
+            try:
+                target_type(value)
+                continue  # ignore values that are implicitly convertible to target_type
+            except:
+                pass
+
             try:
                 setattr(stage, name, value)
             except TypeError as e:
                 pass
+            except:
+                self.fail("Assigning {} did raise wrong exception: {}".format(value, sys.exc_info()[0]))
             else:
-                self.fail("Assigning {} did not raise an exception.".format(value))
+                self.fail("Assigning {} did not raise an exception, result: {}".format(value, getattr(stage, name)))
+
+    def test_CurrentState(self):
+        stage = stages.CurrentState("current")
+
+    def test_FixedState(self):
+        stage = stages.FixedState("fixed")
 
     def test_ComputeIK(self):
-        stage = stages.GeneratePose("generator")
-        compute_ik = stages.ComputeIK("IK", stage)
+        generator_stage = stages.GeneratePose("generator")
+        stage = stages.ComputeIK("IK", generator_stage)
+
+        self._check(stage, "timeout", 0.5)
+        self._check(stage, "eef", "eef")
+        self._check(stage, "group", "group")
+        self._check(stage, "default_pose", "default_pose")
+        self._check(stage, "max_ik_solutions", 1)
+        self.assertRaises(OverflowError, self._check_assign, stage, "max_ik_solutions", -1)
+        self._check(stage, "ignore_collisisons", False)
+        self._check(stage, "ignore_collisisons", True)
+        self._check(stage, "ik_frame", PoseStamped())
+        self._check(stage, "target_pose", PoseStamped())
+        self._check(stage, "forward_properties", ["name1", "name2", "name3"])
 
     def test_MoveTo(self):
         stage = stages.MoveTo("move", self.planner)
 
+        self._check(stage, "timeout", 0.5)
+        self._check(stage, "group", "group")
+        self._check(stage, "link", "link")
         self._check(stage, "pose", PoseStamped())
+        # TODO PointStamped constructor fails
+        self._check(stage, "point", PointStamped())
+        self._check(stage, "named_joint_pose", "named_joint_pose")
 
-        # TODO missing tests for "pose", "point", "joint_pose" and "path_constraints" properties
+        # TODO missing tests for "joint_pose" and "path_constraints" properties
 
-    def test_moveRelative(self):
+    def test_MoveRelative(self):
         stage = stages.MoveRelative("move", self.planner)
 
         self._check(stage, "timeout", 0.5)
@@ -134,11 +181,12 @@ class TestStages(unittest.TestCase):
         self._check(stage, "link", "link")
         self._check(stage, "min_distance", 0.5)
         self._check(stage, "max_distance", 0.25)
+        self._check(stage, "twist", TwistStamped())
+        self._check(stage, "direction", Vector3Stamped())
 
-        self._check(stage, "joints", {})
-        self._check_assign(stage, "joints", {"half": 0.5, "quarter": 0.25, "zero": 0})
+        # TODO missing test for "path_constraints" property
 
-        # TODO missing tests for "twist", "direction" and "path_constraints" properties
+        self._check(stage, "joints", {"half": 0.5, "quarter": 0.25, "zero": 0})
 
         stage.joints = {"one": 1}
         self.assertEqual(stage.joints["one"], 1)
@@ -151,12 +199,71 @@ class TestStages(unittest.TestCase):
         stage.joints.clear()
         # self.assertEqual(stage.joints, {})
 
+    def test_Connect(self):
+        planner = core.PipelinePlanner()
+        planner2 = core.PipelinePlanner()
+        stage = stages.Connect("connect", [("planner", planner), ("planner2", planner2)])
+
+    def test_FixCollisionObjects(self):
+        stage = stages.FixCollisionObjects("collision")
+
+        self._check(stage, "max_penetration", 0.5)
+
+    def test_GenerateGraspPose(self):
+        stage = stages.GenerateGraspPose("generate_grasp_pose")
+
+        self._check(stage, "eef", "eef")
+        self._check(stage, "pregrasp", "pregrasp")
+        self._check(stage, "object", "object")
+        self._check(stage, "angle_delta", 0.5)
+
+    def test_GeneratePose(self):
+        stage = stages.GeneratePose("generate_pose")
+
+        self._check(stage, "pose", PoseStamped())
+
+    def test_Pick(self):
+        generator_stage = stages.GeneratePose("generator")
+        stage = stages.Pick(generator_stage, "pick")
+
+        self._check(stage, "object", "object")
+        self._check(stage, "eef", "eef")
+        self._check(stage, "eef_frame", "eef_frame")
+        self._check(stage, "eef_group", "eef_group")
+        self._check(stage, "eef_parent_group", "eef_parent_group")
+
+    def test_Place(self):
+        generator_stage = stages.GeneratePose("generator")
+        stage = stages.Place(generator_stage, "place")
+
+        self._check(stage, "object", "object")
+        self._check(stage, "eef", "eef")
+        self._check(stage, "eef_frame", "eef_frame")
+        self._check(stage, "eef_group", "eef_group")
+        self._check(stage, "eef_parent_group", "eef_parent_group")
+
+    def test_SimpleGrasp(self):
+        stage = stages.SimpleGrasp()
+
+        self._check(stage, "eef", "eef")
+        self._check(stage, "object", "object")
+
+    def test_SimpleGrasp(self):
+        stage = stages.SimpleGrasp()
+
+        self._check(stage, "eef", "eef")
+        self._check(stage, "object", "object")
+
 
 class TestTask(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestTask, self).__init__(*args, **kwargs)
 
     def test(self):
+        task = core.Task()
+        self.assertEqual(task.id, "")
+        task = core.Task("foo", core.SerialContainer())
+        self.assertEqual(task.id, "foo")
         task = core.Task("task")
         self.assertEqual(task.id, "task")
 

@@ -125,6 +125,7 @@ void export_stages()
 	ROSMsgConverter<geometry_msgs::Pose>();
 	ROSMsgConverter<geometry_msgs::TwistStamped>();
 	ROSMsgConverter<geometry_msgs::Vector3Stamped>();
+	ROSMsgConverter<geometry_msgs::PointStamped>();
 	ROSMsgConverter<moveit_msgs::RobotState>();
 	ROSMsgConverter<moveit_msgs::Constraints>();
 
