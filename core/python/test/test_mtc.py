@@ -40,6 +40,11 @@ class TestPropertyMap(unittest.TestCase):
         self.assertEqual(props["group"], "mygroup")
         self.assertEqual(planner.group, "mygroup")
 
+        props["double"] = 3.14
+        a = props
+        props["double"] = 2.71
+        self.assertEqual(a["double"], 2.71)
+
         planner.group = "other"
         self.assertEqual(props["group"], "other")
         self.assertEqual(planner.group, "other")
