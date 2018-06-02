@@ -56,15 +56,15 @@ int main(int argc, char** argv){
 	t.add(std::move(connect));
 
 	// grasp generator
-	auto grasp_generator = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
+	auto grasp_generator = new stages::GenerateGraspPose("generate grasp pose");
 	grasp_generator->setAngleDelta(.2);
+	grasp_generator->setPreGraspPose("open");
+	grasp_generator->setGraspPose("closed");
+	grasp_generator->setMonitoredStage(initial_stage);
 
-	auto grasp = std::make_unique<stages::SimpleGrasp>(std::move(grasp_generator));
+	auto grasp = std::make_unique<stages::SimpleGrasp>(std::unique_ptr<MonitoringGenerator>(grasp_generator));
 	grasp->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
 	grasp->setMaxIKSolutions(8);
-	grasp->setPreGraspPose("open");
-	grasp->setGraspPose("closed");
-	grasp->setMonitoredStage(initial_stage);
 
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp));
 	pick->setProperty("eef", std::string("gripper"));

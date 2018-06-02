@@ -51,30 +51,43 @@ namespace moveit { namespace task_constructor { namespace stages {
 SimpleGraspBase::SimpleGraspBase(const std::string& name)
    : SerialContainer(name)
 {
-	auto &props = properties();
-	props.declare<boost::any>("pregrasp", "pregrasp posture");
-	props.declare<boost::any>("grasp", "grasp posture");
+	PropertyMap& p = properties();
+	p.declare<std::string>("eef", "end-effector to grasp with");
+	p.declare<std::string>("object", "object to grasp");
 }
 
-void SimpleGraspBase::setup(std::unique_ptr<MonitoringGenerator>&& generator, bool forward)
+void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 {
+	// properties provided by the grasp generator via its Interface or its PropertyMap
+	const std::set<std::string>& grasp_prop_names = { "object", "eef", "pregrasp", "grasp" };
+
 	int insertion_position = forward ? -1 : 0; // insert children at end / front, i.e. normal or reverse order
 	{
-		generator_ = generator.get();
-		auto ik = new ComputeIK("compute ik", std::move(generator));
-		const std::initializer_list<std::string>& grasp_prop_names = { "eef", "pregrasp", "object" };
-		ik->exposePropertiesOfChild(0, grasp_prop_names, true);
-		insert(std::unique_ptr<ComputeIK>(ik), insertion_position);
+		// forward properties from generator's to IK's solution (bottom -> up)
+		generator->setForwardedProperties(grasp_prop_names);
+		// allow inheritance in top -> down fashion as well
+		generator->properties().configureInitFrom(Stage::PARENT, { "object", "eef" });
 
-		exposePropertiesOfChild(insertion_position, grasp_prop_names, true);
-		exposePropertiesOfChild(insertion_position, { "max_ik_solutions", "timeout", "ik_frame" });
+		auto ik = new ComputeIK("compute ik", std::move(generator));
+		ik->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
+
+		PropertyMap& p = ik->properties();
+		p.declare<std::string>("object");
+		p.configureInitFrom(Stage::INTERFACE, {"target_pose"});  // derived from child's solution
+		p.configureInitFrom(Stage::PARENT, {"max_ik_solutions", "timeout", "object"});  // derived from parent
+		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, {"eef", "ik_frame"});  // derive from both
+		p.exposeTo(properties(), { "max_ik_solutions", "timeout", "ik_frame" });
+		insert(std::unique_ptr<ComputeIK>(ik), insertion_position);
+//		exposePropertiesOfChild(insertion_position, { "max_ik_solutions", "timeout", "ik_frame" });
 	}
 	{
 		auto allow_touch = new ModifyPlanningScene(forward ? "allow object collision" : "forbid object collision");
+		allow_touch->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
+
 		PropertyMap& p = allow_touch->properties();
 		p.declare<std::string>("eef");
 		p.declare<std::string>("object");
-		p.configureInitFrom(Stage::PARENT, { "eef", "object" });
+		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
 
 		allow_touch->setCallback([this](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 			collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
@@ -91,21 +104,29 @@ void SimpleGraspBase::setup(std::unique_ptr<MonitoringGenerator>&& generator, bo
 		pipeline->setPlannerId("RRTConnectkConfigDefault");
 
 		auto move = new MoveTo(forward ? "close gripper" : "open gripper", pipeline);
-		PropertyMap& p = move->properties();
-		p.property("group").configureInitFrom(Stage::PARENT, [this](const PropertyMap& parent_map){
+		move->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
+
+		auto group_initializer = [this](const PropertyMap& parent_map) -> boost::any {
 			const std::string& eef = parent_map.get<std::string>("eef");
 			const moveit::core::JointModelGroup* jmg = model_->getEndEffector(eef);
-			return boost::any(jmg->getName());
-		});
+			return jmg->getName();
+		};
+		PropertyMap& p = move->properties();
+		p.property("group").configureInitFrom(Stage::PARENT | Stage::INTERFACE, group_initializer);
+		p.property("goal").configureInitFrom(Stage::PARENT | Stage::INTERFACE, forward ? "grasp" : "pregrasp");
+		p.exposeTo(properties(), { "group", "goal" });
 		insert(std::unique_ptr<MoveTo>(move), insertion_position);
-		exposePropertyOfChildAs(insertion_position, "goal", forward ? "grasp" : "pregrasp");
+//		exposePropertyOfChildAs(insertion_position, "goal", forward ? "grasp" : "pregrasp", true);
 	}
 	{
 		auto attach = new ModifyPlanningScene(forward ? "attach object" : "detach object");
+		attach->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
+
 		PropertyMap& p = attach->properties();
 		p.declare<std::string>("eef");
 		p.declare<std::string>("object");
-		p.configureInitFrom(Stage::PARENT, { "eef", "object" });
+		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
+
 		attach->setCallback([this, forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 				const std::string& eef = p.get<std::string>("eef");
 				moveit_msgs::AttachedCollisionObject obj;
@@ -125,11 +146,6 @@ void SimpleGraspBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 	SerialContainer::init(robot_model);
 }
 
-void SimpleGraspBase::setMonitoredStage(Stage* monitored)
-{
-	generator_->setMonitoredStage(monitored);
-}
-
 void SimpleGraspBase::setIKFrame(const Eigen::Affine3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
@@ -137,13 +153,13 @@ void SimpleGraspBase::setIKFrame(const Eigen::Affine3d& pose, const std::string&
 	setIKFrame(pose_msg);
 }
 
-SimpleGrasp::SimpleGrasp(std::unique_ptr<MonitoringGenerator>&& generator, const std::string& name)
+SimpleGrasp::SimpleGrasp(std::unique_ptr<Stage>&& generator, const std::string& name)
    : SimpleGraspBase(name)
 {
 	setup(std::move(generator), true);
 }
 
-SimpleUnGrasp::SimpleUnGrasp(std::unique_ptr<MonitoringGenerator>&& generator, const std::string& name)
+SimpleUnGrasp::SimpleUnGrasp(std::unique_ptr<Stage>&& generator, const std::string& name)
    : SimpleGraspBase(name) {
 	setup(std::move(generator), false);
 }

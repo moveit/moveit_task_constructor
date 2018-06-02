@@ -58,40 +58,20 @@ class GenerateGraspPose;
  */
 class SimpleGraspBase : public SerialContainer {
 	moveit::core::RobotModelConstPtr model_;
-	MonitoringGenerator* generator_ = nullptr;
 
 protected:
-	void setup(std::unique_ptr<MonitoringGenerator>&& generator, bool forward);
+	void setup(std::unique_ptr<Stage>&& generator, bool forward);
 
 public:
 	SimpleGraspBase(const std::string& name);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void setMonitoredStage(Stage* monitored);
 
-	void setEndEffector(const std::string& eef) {
-		properties().set("eef", eef);
-	}
-	void setObject(const std::string& object) {
-		properties().set("object", object);
-	}
+	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
+	void setObject(const std::string& object) { setProperty("object", object); }
 
-	void setPreGraspPose(const std::string& pregrasp) {
-		properties().set("pregrasp", pregrasp);
-	}
-	void setGraspPose(const std::string& grasp) {
-		properties().set("grasp", grasp);
-	}
-	void setPreGraspPose(const moveit_msgs::RobotState& pregrasp) {
-		properties().set("pregrasp", pregrasp);
-	}
-	void setGraspPose(const moveit_msgs::RobotState& grasp) {
-		properties().set("grasp", grasp);
-	}
-
-	void setIKFrame(const geometry_msgs::PoseStamped &transform) {
-		properties().set("ik_frame", transform);
-	}
+	/// set properties of IK solver
+	void setIKFrame(const geometry_msgs::PoseStamped &transform) { setProperty("ik_frame", transform); }
 	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& t, const std::string& link) {
@@ -102,23 +82,21 @@ public:
 		setIKFrame(Eigen::Affine3d::Identity(), link);
 	}
 
-	void setMaxIKSolutions(uint32_t max_ik_solutions) {
-		properties().set("max_ik_solutions", max_ik_solutions);
-	}
+	void setMaxIKSolutions(uint32_t max_ik_solutions) { setProperty("max_ik_solutions", max_ik_solutions); }
 };
 
 
 /// specialization of SimpleGraspBase to realize grasping
 class SimpleGrasp : public SimpleGraspBase {
 public:
-	SimpleGrasp(std::unique_ptr<MonitoringGenerator>&& generator, const std::string& name = "grasp");
+	SimpleGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "grasp");
 };
 
 
 /// specialization of SimpleGraspBase to realize ungrasping
 class SimpleUnGrasp : public SimpleGraspBase {
 public:
-	SimpleUnGrasp(std::unique_ptr<MonitoringGenerator>&& generator, const std::string& name = "ungrasp");
+	SimpleUnGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "ungrasp");
 };
 
 } } }

@@ -65,7 +65,6 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for ik frame");
-	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
 }
 
 void ComputeIK::setIKFrame(const Eigen::Affine3d &pose, const std::string &link)

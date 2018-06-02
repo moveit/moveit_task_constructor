@@ -51,25 +51,11 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name)
 {
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector");
-	p.declare<std::string>("pregrasp", "name of end-effector's pregrasp pose");
 	p.declare<std::string>("object");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
-}
 
-void GenerateGraspPose::setEndEffector(const std::string &eef) {
-	setProperty("eef", eef);
-}
-
-void GenerateGraspPose::setNamedPose(const std::string &pose_name) {
-	setProperty("pregrasp", pose_name);
-}
-
-void GenerateGraspPose::setObject(const std::string &object) {
-	setProperty("object", object);
-}
-
-void GenerateGraspPose::setAngleDelta(double delta){
-	setProperty("angle_delta", delta);
+	p.declare<boost::any>("pregrasp", "pregrasp posture");
+	p.declare<boost::any>("grasp", "grasp posture");
 }
 
 void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
@@ -84,6 +70,8 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
 	if (props.get<double>("angle_delta") == 0.)
 		errors.push_back(*this, "angle_delta must be non-zero");
 
+	// check availability of object
+	props.get<std::string>("object");
 	// check availability of eef
 	const std::string& eef = props.get<std::string>("eef");
 	if (!robot_model->hasEndEffector(eef))
@@ -141,6 +129,7 @@ void GenerateGraspPose::compute() {
 		InterfaceState state(scene);
 		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
 		state.properties().set("target_pose", target_pose_msg);
+		props.exposeTo(state.properties(), {"pregrasp", "grasp"});
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);

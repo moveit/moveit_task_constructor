@@ -208,8 +208,6 @@ void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_li
 			continue;
 		// declare variables
 		source.exposeTo(target, name, name);
-		// configure inheritance
-		source.configureInitFrom(Stage::PARENT, {name});
 	}
 }
 
@@ -228,8 +226,6 @@ void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_
 
 	// declare variables
 	source.exposeTo(target, child_property_name, parent_property_name);
-	// configure inheritance
-	source.property(child_property_name).configureInitFrom(Stage::PARENT, parent_property_name);
 }
 
 void ContainerBase::reset()
