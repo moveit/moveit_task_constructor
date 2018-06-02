@@ -99,7 +99,8 @@ public:
 	}
 
 protected:
-	void compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
+	// return false if trajectory shouldn't be stored
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
 	bool getJointStateGoal(moveit::core::RobotState& state);
 

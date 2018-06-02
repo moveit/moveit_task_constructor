@@ -272,6 +272,10 @@ size_t Stage::numFailures() const
 	return pimpl()->num_failures_;
 }
 
+void Stage::silentFailure() {
+	++(pimpl()->num_failures_);
+}
+
 
 PropertyMap &Stage::properties()
 {

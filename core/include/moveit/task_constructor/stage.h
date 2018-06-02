@@ -169,6 +169,8 @@ public:
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
 	size_t numFailures() const;
+	/// call to increase number of failures w/o storing a (failure) trajectory
+	void silentFailure();
 
 	/// get the stage's property map
 	PropertyMap& properties();

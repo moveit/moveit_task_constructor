@@ -76,7 +76,7 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 	planner_->init(robot_model);
 }
 
-void MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
+bool MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
@@ -88,7 +88,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
 		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
-		return;
+		return false;
 	}
 
 	// only allow single target
@@ -96,7 +96,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	if (count_goals != 1) {
 		if (count_goals == 0) ROS_WARN_NAMED("MoveRelative", "No goal defined");
 		else ROS_WARN_NAMED("MoveRelative", "Cannot plan to multiple goals");
-		return;
+		return false;
 	}
 
 	double max_distance = props.get<double>("max_distance");
@@ -116,7 +116,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			auto jm = robot_model->getJointModel(index);
 			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end()) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Cannot plan joint target for joint '" << j.first << "' that is not part of group '" << group << "'");
-				return;
+				return false;
 			}
 			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
 			robot_state.enforceBounds(jm);
@@ -132,7 +132,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			//  determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
-				return;
+				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
 			ik_pose_msg.pose.orientation.w = 1.0;
@@ -140,7 +140,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
-				return;
+				return false;
 			}
 		}
 
@@ -276,6 +276,7 @@ void MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		if (!success)
 			solution.markAsFailure();
 	}
+	return true;
 }
 
 void MoveRelative::computeForward(const InterfaceState &from)
@@ -283,8 +284,10 @@ void MoveRelative::computeForward(const InterfaceState &from)
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
 
-	compute(from, to, trajectory, FORWARD);
-	sendForward(from, InterfaceState(to), std::move(trajectory));
+	if (compute(from, to, trajectory, FORWARD))
+		sendForward(from, InterfaceState(to), std::move(trajectory));
+	else
+		silentFailure();
 }
 
 void MoveRelative::computeBackward(const InterfaceState &to)
@@ -292,8 +295,10 @@ void MoveRelative::computeBackward(const InterfaceState &to)
 	planning_scene::PlanningScenePtr from;
 	SubTrajectory trajectory;
 
-	compute(to, from, trajectory, BACKWARD);
-	sendBackward(InterfaceState(from), to, std::move(trajectory));
+	if (compute(to, from, trajectory, BACKWARD))
+		sendBackward(InterfaceState(from), to, std::move(trajectory));
+	else
+		silentFailure();
 }
 
 } } }
