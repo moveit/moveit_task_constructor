@@ -194,40 +194,6 @@ void ContainerBase::clear()
 	pimpl()->children_.clear();
 }
 
-void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names, bool skip_undefined)
-{
-	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
-	if (child_it == impl->children().end())
-		throw std::runtime_error("invalid child index");
-
-	PropertyMap &source = (*child_it)->properties();
-	PropertyMap &target = impl->properties_;
-	for (const std::string& name : names) {
-		if (skip_undefined && !source.hasProperty(name))
-			continue;
-		// declare variables
-		source.exposeTo(target, name, name);
-	}
-}
-
-void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_property_name,
-                                            const std::string& parent_property_name, bool skip_undefined)
-{
-	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
-	if (child_it == impl->children().end())
-		throw std::runtime_error("invalid child index");
-
-	PropertyMap &source = (*child_it)->properties();
-	PropertyMap &target = impl->properties_;
-	if (skip_undefined && !source.hasProperty(child_property_name))
-		return;
-
-	// declare variables
-	source.exposeTo(target, child_property_name, parent_property_name);
-}
-
 void ContainerBase::reset()
 {
 	auto impl = pimpl();

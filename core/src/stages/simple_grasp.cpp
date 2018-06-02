@@ -78,7 +78,6 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, {"eef", "ik_frame"});  // derive from both
 		p.exposeTo(properties(), { "max_ik_solutions", "timeout", "ik_frame" });
 		insert(std::unique_ptr<ComputeIK>(ik), insertion_position);
-//		exposePropertiesOfChild(insertion_position, { "max_ik_solutions", "timeout", "ik_frame" });
 	}
 	{
 		auto allow_touch = new ModifyPlanningScene(forward ? "allow object collision" : "forbid object collision");
@@ -116,7 +115,6 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.property("goal").configureInitFrom(Stage::PARENT | Stage::INTERFACE, forward ? "grasp" : "pregrasp");
 		p.exposeTo(properties(), { "group", "goal" });
 		insert(std::unique_ptr<MoveTo>(move), insertion_position);
-//		exposePropertyOfChildAs(insertion_position, "goal", forward ? "grasp" : "pregrasp", true);
 	}
 	{
 		auto attach = new ModifyPlanningScene(forward ? "attach object" : "detach object");

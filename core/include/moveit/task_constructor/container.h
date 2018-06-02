@@ -62,12 +62,6 @@ public:
 	virtual bool remove(int pos);
 	virtual void clear();
 
-	/// declare all given variables of child and configure child to inherit them from parent
-	void exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names, bool skip_undefined = false);
-	/// declare given child property with another name and configure child to inherit it from parent
-	void exposePropertyOfChildAs(int child, const std::string& child_property_name,
-	                             const std::string& parent_property_name, bool skip_undefined = false);
-
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	/// validate connectivity of children (after init() was done)
