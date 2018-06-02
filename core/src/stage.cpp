@@ -105,6 +105,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	assert(nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
+	me()->forwardProperties(from, to);
 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
@@ -122,6 +123,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	assert(prevEnds());
 	if (!storeSolution(solution))
 		return;  // solution dropped
+	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
@@ -181,6 +183,8 @@ Stage::Stage(StagePrivate *impl)
 	assert(impl);
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
+	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
+	                                 "set of interface properties to forward");
 	p.declare<std::string>("marker_ns", "marker namespace");
 }
 
@@ -244,6 +248,17 @@ const std::string& Stage::name() const {
 void Stage::setName(const std::string& name)
 {
 	pimpl_->name_ = name;
+}
+
+void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest)
+{
+	const PropertyMap& src = source.properties();
+	PropertyMap& dst = dest.properties();
+	for (const auto& name : forwardedProperties()) {
+		if (!src.hasProperty(name))
+			continue;
+		dst.set(name, src.get(name));
+	}
 }
 
 Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionCallback &&cb)

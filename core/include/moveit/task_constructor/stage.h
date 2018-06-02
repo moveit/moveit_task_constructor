@@ -159,6 +159,13 @@ public:
 	void setTimeout(double timeout) { setProperty("timeout", timeout); }
 	double timeout() const { return properties().get<double>("timeout"); }
 
+	/// forwarding of properties between interface states
+	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
+	std::set<std::string> forwardedProperties() const
+	{ return properties().get<std::set<std::string>>("forwarded_properties"); }
+	void setForwardedProperties(const std::set<std::string>& names)
+	{ setProperty("forwarded_properties", names); }
+
 	typedef std::function<void(const SolutionBase &s)> SolutionCallback;
 	typedef std::list<SolutionCallback> SolutionCallbackList;
 	/// add function to be called for every newly found solution or failure

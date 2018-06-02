@@ -61,7 +61,6 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
-	p.declare<std::set<std::string>>("forward_properties", "to-be-forwarded properties from input");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -370,12 +369,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			robot_state.update();
 
 			InterfaceState state(scene);
-			const boost::any &forwards = props.get("forward_properties");
-			if (!forwards.empty()) {
-				auto p = s.start()->properties();
-				p.exposeTo(state.properties(), boost::any_cast<std::set<std::string>>(forwards));
-			}
-
+			forwardProperties(*s.start(), state);
 			spawn(std::move(state), std::move(solution));
 		}
 
