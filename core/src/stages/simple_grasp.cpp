@@ -63,10 +63,10 @@ void SimpleGraspBase::setup(std::unique_ptr<MonitoringGenerator>&& generator, bo
 		generator_ = generator.get();
 		auto ik = new ComputeIK("compute ik", std::move(generator));
 		const std::initializer_list<std::string>& grasp_prop_names = { "eef", "pregrasp", "object" };
-		ik->exposePropertiesOfChild(0, grasp_prop_names);
+		ik->exposePropertiesOfChild(0, grasp_prop_names, true);
 		insert(std::unique_ptr<ComputeIK>(ik), insertion_position);
 
-		exposePropertiesOfChild(insertion_position, grasp_prop_names);
+		exposePropertiesOfChild(insertion_position, grasp_prop_names, true);
 		exposePropertiesOfChild(insertion_position, { "max_ik_solutions", "timeout", "ik_frame" });
 	}
 	{

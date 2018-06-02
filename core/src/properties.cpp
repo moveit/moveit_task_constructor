@@ -140,7 +140,7 @@ void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &prop
 void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name)
 {
 	const Property& p = property(name);
-    other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
+	other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
 }
 
 void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<std::string> &properties)
