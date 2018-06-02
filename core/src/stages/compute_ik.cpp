@@ -212,7 +212,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	// -1 TODO: this should not be necessary in my opinion: Why do you think so?
 	// It is, because the properties on the interface might change from call to call...
 	// enforced initialization from interface ensures that new target_pose is read
-	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
+	properties().performInitFrom(INTERFACE, s.start()->properties());
 	const auto& props = properties();
 
 	const bool ignore_collisions = props.get<bool>("ignore_collisions");

@@ -49,15 +49,18 @@ Property::Property(const std::type_index& type_index, const std::string& descrip
    , type_index_(type_index)
    , default_(default_value)
    , value_()
+   , initialized_from_(-1)
    , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
 	assert(default_.empty() || std::type_index(default_.type()) == type_index_);
+	reset();
 }
 
 void Property::setValue(const boost::any &value) {
 	setCurrentValue(value);
 	default_ = value_;
+	initialized_from_ = 0;
 }
 
 void Property::setCurrentValue(const boost::any &value)
@@ -66,13 +69,18 @@ void Property::setCurrentValue(const boost::any &value)
 		throw Property::type_error(value.type().name(), type_index_.name());
 
 	value_ = value;
+	initialized_from_ = 1; // manually initialized TODO: use enums
+
 	if (signaller_)
 		signaller_(this);
 }
 
 void Property::reset()
 {
+	if (initialized_from_ == 0)  // TODO: use enum
+		return;  // keep manually set values
 	boost::any().swap(value_);
+	initialized_from_ = -1;  // set to max value
 }
 
 std::string Property::serialize() const {
@@ -80,30 +88,24 @@ std::string Property::serialize() const {
 	return serialize_(value());
 }
 
-bool Property::initsFrom(Property::SourceId source) const
+bool Property::initsFrom(Property::SourceFlags source) const
 {
-	return (source == source_id_ && initializer_);
+	return source & source_flags_;
 }
 
-Property& Property::configureInitFrom(SourceId source, const Property::InitializerFunction &f)
+Property& Property::configureInitFrom(SourceFlags source, const Property::InitializerFunction &f)
 {
-	if (source != source_id_ && initializer_)
+	if (source != source_flags_ && initializer_)
 		throw error("Property was already configured for initialization from another source id");
 
-	source_id_ = source;
+	source_flags_ = f ? source : SourceFlags();
 	initializer_ = f;
 	return *this;
 }
 
-Property &Property::configureInitFrom(SourceId source, const std::string &name)
+Property &Property::configureInitFrom(SourceFlags source, const std::string &name)
 {
 	return configureInitFrom(source, [name](const PropertyMap& other) { return fromName(other, name); });
-}
-
-void Property::performInitFrom(SourceId source, const PropertyMap &other)
-{
-	if (source_id_ != source || !initializer_) return;  // source ids not matching
-	setCurrentValue(initializer_(other));
 }
 
 
@@ -143,7 +145,7 @@ void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const st
     other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
 }
 
-void PropertyMap::configureInitFrom(Property::SourceId source, const std::set<std::string> &properties)
+void PropertyMap::configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties)
 {
 	for (auto &pair : props_) {
 		if (properties.empty() || properties.count(pair.first))
@@ -194,23 +196,37 @@ void PropertyMap::reset()
 		pair.second.reset();
 }
 
-void PropertyMap::performInitFrom(Property::SourceId source, const PropertyMap &other, bool enforce)
+void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMap &other)
 {
 	for (auto& pair : props_) {
 		Property &p = pair.second;
-		if (enforce || !p.defined())
-			p.performInitFrom(source, other);
+
+		// don't override value previously set by higher-priority source
+		// MANUAL > CURRENT > PARENT > INTERFACE
+		if (p.initialized_from_ < source && p.defined())
+			continue;
+		// is the property configured for initialization from this source?
+		if (!p.initsFrom(source))
+			continue;
+
+		boost::any value;
+		try {
+			value = p.initializer_(other);
+		} catch (const Property::undeclared&) {
+			// ignore undeclared
+			continue;
+		} catch (const Property::undefined&) {
+		}
+
+		p.setCurrentValue(value);
+		p.initialized_from_ = source;
 	}
 }
 
 
 boost::any fromName(const PropertyMap& other, const std::string& other_name)
 {
-	try {
-		return other.get(other_name);
-	} catch (const std::runtime_error &e) {
-		return boost::any();
-	}
+	return other.get(other_name);
 }
 
 

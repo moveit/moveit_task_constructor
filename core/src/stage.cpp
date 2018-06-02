@@ -440,13 +440,13 @@ void PropagatingEitherWayPrivate::compute()
 	if (hasStartState()) {
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
-		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
+		properties_.performInitFrom(Stage::INTERFACE, state.properties());
 		me->computeForward(state);
 	}
 	if (hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
-		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
+		properties_.performInitFrom(Stage::INTERFACE, state.properties());
 		me->computeBackward(state);
 	}
 }

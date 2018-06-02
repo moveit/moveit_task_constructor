@@ -132,9 +132,11 @@ public:
 	 *
 	 * INTERFACE takes precedence over PARENT.
 	 */
-	enum PropertyInitializerSource {
-		PARENT,
-		INTERFACE,
+	enum PropertyInitializerSource { // TODO: move to property.cpp
+		DEFAULT   = 0,
+		MANUAL    = 1,
+		PARENT    = 2,
+		INTERFACE = 4,
 	};
 	virtual ~Stage();
 
