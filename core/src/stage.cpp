@@ -222,6 +222,7 @@ void Stage::init(const moveit::core::RobotModelConstPtr& robot_model)
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
+			ROS_DEBUG_STREAM_NAMED("Properties", "init '" << name() << "'");
 			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 		} catch (const Property::error &e) {
 			std::ostringstream oss;
@@ -299,7 +300,7 @@ void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std
 			os << "declared, but undefined";
 
 		if (p.initsFrom(Stage::PARENT)) os << ", inherits from parent";
-		else if (p.initsFrom(Stage::PARENT)) os << ", initializes from interface";
+		if (p.initsFrom(Stage::INTERFACE)) os << ", initializes from interface";
 	} catch (const Property::undeclared &e) {
 		os << "undeclared";
 	}

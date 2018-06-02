@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/properties.h>
 #include <boost/format.hpp>
 #include <functional>
+#include <ros/console.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -83,9 +84,9 @@ void Property::reset()
 	initialized_from_ = -1;  // set to max value
 }
 
-std::string Property::serialize() const {
-	if (!serialize_) return "";
-	return serialize_(value());
+std::string Property::serialize(const boost::any& v) const {
+	if (!serialize_ || v.empty()) return "";
+	return serialize_(v);
 }
 
 bool Property::initsFrom(Property::SourceFlags source) const
@@ -142,7 +143,7 @@ void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &prop
 void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name)
 {
 	const Property& p = property(name);
-    other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
+	other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
 }
 
 void PropertyMap::configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties)
@@ -218,6 +219,8 @@ void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMa
 		} catch (const Property::undefined&) {
 		}
 
+		ROS_DEBUG_STREAM_NAMED("Properties", pair.first << ": " << p.initialized_from_ <<
+		                       " -> " << source << ": " << p.serialize(value));
 		p.setCurrentValue(value);
 		p.initialized_from_ = source;
 	}

@@ -128,7 +128,8 @@ public:
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
 	/// serialize current value
-	std::string serialize() const;
+	std::string serialize(const boost::any& value) const;
+	std::string serialize() const { return serialize(value()); }
 
 	/// get description text
 	const std::string& description() const { return description_; }

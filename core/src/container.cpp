@@ -254,7 +254,14 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 	// recursively init all children and accumulate errors
 	InitStageException errors;
 	for (auto& child : children) {
-		try { child->init(robot_model); } catch (InitStageException &e) { errors.append(e); }
+		try { child->init(robot_model); }
+		catch (const Property::error &e) {
+			std::ostringstream oss;
+			oss << e.what();
+			pimpl()->composePropertyErrorMsg(e.name(), oss);
+			errors.push_back(*child, oss.str());
+		}
+		catch (InitStageException &e) { errors.append(e); }
 	}
 
 	if (errors) throw errors;
