@@ -13,8 +13,8 @@
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
 
 #include <ros/ros.h>
-
 #include <moveit/planning_scene/planning_scene.h>
+#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 
@@ -35,11 +35,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	scene->processCollisionObjectMsg(o);
 }
 
-int main(int argc, char** argv){
-	ros::init(argc, argv, "plan_pick");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
-
+TEST(PA10, pick) {
 	Task t;
 	t.loadRobotModel();
 	// define global properties used by most stages
@@ -168,15 +164,23 @@ int main(int argc, char** argv){
 
 	try {
 		t.plan();
-		std::cout << "waiting for <enter>\n";
-		char ch;
-		std::cin >> ch;
-	}
-	catch (const InitStageException &e) {
-		std::cerr << e;
-		t.printState();
-		return EINVAL;
+	} catch (const InitStageException &e) {
+		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
-	return 0;
+	auto solutions = t.solutions().size();
+	EXPECT_GE(solutions, 5);
+	EXPECT_LE(solutions, 10);
+}
+
+int main(int argc, char** argv){
+	testing::InitGoogleTest(&argc, argv);
+	ros::init(argc, argv, "pr2");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
+
+	// wait some time for move_group to come up
+	ros::WallDuration(5.0).sleep();
+
+	return RUN_ALL_TESTS();
 }

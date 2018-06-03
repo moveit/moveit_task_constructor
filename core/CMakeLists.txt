@@ -37,7 +37,6 @@ set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 include_directories(${catkin_INCLUDE_DIRS})
 
 add_subdirectory(src)
-add_subdirectory(demo)
 add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})

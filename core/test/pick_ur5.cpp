@@ -9,6 +9,7 @@
 
 #include <ros/ros.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 
@@ -17,11 +18,11 @@ void spawnObject(){
 
 	moveit_msgs::CollisionObject o;
 	o.id= "object";
-	o.header.frame_id= "base_link";
+	o.header.frame_id= "table_top";
 	o.primitive_poses.resize(1);
-	o.primitive_poses[0].position.x= 0.53;
-	o.primitive_poses[0].position.y= 0.05;
-	o.primitive_poses[0].position.z= 0.84;
+	o.primitive_poses[0].position.x= -0.2;
+	o.primitive_poses[0].position.y= 0.13;
+	o.primitive_poses[0].position.z= 0.12;
 	o.primitive_poses[0].orientation.w= 1.0;
 	o.primitives.resize(1);
 	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
@@ -31,13 +32,7 @@ void spawnObject(){
 	psi.applyCollisionObject(o);
 }
 
-int main(int argc, char** argv){
-	ros::init(argc, argv, "plan_pick");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
-
-	spawnObject();
-
+TEST(UR5, pick) {
 	Task t;
 
 	Stage* initial_stage = nullptr;
@@ -50,7 +45,7 @@ int main(int argc, char** argv){
 	pipeline->setTimeout(8.0);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
-	stages::Connect::GroupPlannerVector planners = {{"left_arm", pipeline}, {"left_gripper", pipeline}};
+	stages::Connect::GroupPlannerVector planners = {{"arm", pipeline}, {"gripper", pipeline}};
 	auto connect = std::make_unique<stages::Connect>("connect", planners);
 	connect->properties().configureInitFrom(Stage::PARENT);
 	t.add(std::move(connect));
@@ -63,35 +58,44 @@ int main(int argc, char** argv){
 	grasp_generator->setMonitoredStage(initial_stage);
 
 	auto grasp = std::make_unique<stages::SimpleGrasp>(std::unique_ptr<MonitoringGenerator>(grasp_generator));
-	grasp->setIKFrame(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
+	grasp->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
+	grasp->setMaxIKSolutions(8);
 
-	// pick stage
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp));
-	pick->setProperty("eef", std::string("left_gripper"));
+	pick->setProperty("eef", std::string("gripper"));
 	pick->setProperty("object", std::string("object"));
 	geometry_msgs::TwistStamped approach;
-	approach.header.frame_id = "l_gripper_tool_frame";
+	approach.header.frame_id = "s_model_tool0";
 	approach.twist.linear.x = 1.0;
 	pick->setApproachMotion(approach, 0.03, 0.1);
 
 	geometry_msgs::TwistStamped lift;
-	lift.header.frame_id = "base_link";
+	lift.header.frame_id = "world";
 	lift.twist.linear.z = 1.0;
 	pick->setLiftMotion(lift, 0.03, 0.05);
 
 	t.add(std::move(pick));
 
 	try {
+		spawnObject();
 		t.plan();
-		std::cout << "waiting for <enter>\n";
-		char ch;
-		std::cin >> ch;
-	}
-	catch (const InitStageException &e) {
-		std::cerr << e;
-		t.printState();
-		return EINVAL;
+	} catch (const InitStageException &e) {
+		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
-	return 0;
+	auto solutions = t.solutions().size();
+	EXPECT_GE(solutions, 30);
+	EXPECT_LE(solutions, 60);
+}
+
+int main(int argc, char** argv){
+	testing::InitGoogleTest(&argc, argv);
+	ros::init(argc, argv, "pr2");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
+
+	// wait some time for move_group to come up
+	ros::WallDuration(5.0).sleep();
+
+	return RUN_ALL_TESTS();
 }
