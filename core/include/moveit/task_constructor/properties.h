@@ -108,7 +108,7 @@ public:
 	/// exception thrown when trying to set a value not matching the declared type
 	class type_error;
 
-	typedef int SourceId;
+	typedef uint SourceFlags;
 	/// function callback used to initialize property value from another PropertyMap
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
 	/// function callback used to signal value setting to external components
@@ -129,7 +129,8 @@ public:
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
 	/// serialize current value
-	std::string serialize() const;
+	std::string serialize(const boost::any& value) const;
+	std::string serialize() const { return serialize(value()); }
 
 	/// get description text
 	const std::string& description() const { return description_; }
@@ -139,14 +140,11 @@ public:
 	std::string typeName() const { return type_index_.name(); }
 
 	/// return true, if property initialized from given SourceId
-	bool initsFrom(SourceId source) const;
+	bool initsFrom(SourceFlags source) const;
 	/// configure initialization from source using an arbitrary function
-	Property &configureInitFrom(SourceId source, const InitializerFunction& f);
+	Property &configureInitFrom(SourceFlags source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name
-	Property &configureInitFrom(SourceId source, const std::string& name);
-
-	/// set current value using matching configured initializers
-	void performInitFrom(SourceId source, const PropertyMap& other);
+	Property &configureInitFrom(SourceFlags source, const std::string& name);
 
 	/// define a function callback to be called on each value update
 	/// note, that boost::any doesn't allow for change detection
@@ -159,7 +157,8 @@ private:
 	boost::any value_;
 
 	/// used for external initialization
-	SourceId source_id_ = 0;
+	SourceFlags source_flags_ = 0;
+	SourceFlags initialized_from_;
 	InitializerFunction initializer_;
 	SignalFunction signaller_;
 	SerializeFunction serialize_;
@@ -239,7 +238,7 @@ public:
 	const_iterator end() const { return props_.end(); }
 
 	/// allow initialization from given source for listed properties - always using the same name
-	void configureInitFrom(Property::SourceId source, const std::set<std::string> &properties = {});
+	void configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties = {});
 
 	/// set (and, if neccessary, declare) the value of a property
 	template <typename T>
@@ -284,7 +283,7 @@ public:
 	void reset();
 
 	/// perform initialization of still undefined properties using configured initializers
-	void performInitFrom(Property::SourceId source, const PropertyMap& other, bool enforce = false);
+	void performInitFrom(Property::SourceFlags source, const PropertyMap& other);
 };
 
 // boost::any needs a specialization to avoid recursion

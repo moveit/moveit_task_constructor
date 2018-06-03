@@ -48,39 +48,30 @@ class GenerateGraspPose;
 
 /** base class for simple grasping / ungrasping
  *
- * Given a named pre-grasp and grasp posture the stage generates fully-qualified
- * pre-grasp and grasp robot states, connected by a grasping trajectory of the end-effector.
+ * Given a pre-grasp and grasp posture the stage generates a trajectory
+ * connecting these two states by a grasping trajectory.
+ * The class takes a generator stage that provides the grasp pose and
+ * optionally the pre-grasp and grasp postures.
  *
  * Grasping and UnGrasping only differs in the order of subtasks. Hence, the base class
  * provides the common functionality for grasping (forward = true) and ungrasping (forward = false).
  */
 class SimpleGraspBase : public SerialContainer {
 	moveit::core::RobotModelConstPtr model_;
-	GenerateGraspPose* grasp_generator_ = nullptr;
+
+protected:
+	void setup(std::unique_ptr<Stage>&& generator, bool forward);
 
 public:
-	SimpleGraspBase(const std::string& name, bool forward);
+	SimpleGraspBase(const std::string& name);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void setMonitoredStage(Stage* monitored);
 
-	void setEndEffector(const std::string& eef) {
-		properties().set<std::string>("eef", eef);
-	}
-	void setObject(const std::string& object) {
-		properties().set<std::string>("object", object);
-	}
+	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
+	void setObject(const std::string& object) { setProperty("object", object); }
 
-	void setPreGraspPose(const std::string& pregrasp) {
-		properties().set<std::string>("pregrasp", pregrasp);
-	}
-	void setGraspPose(const std::string& grasp) {
-		properties().set<std::string>("grasp", grasp);
-	}
-
-	void setIKFrame(const geometry_msgs::PoseStamped &transform) {
-		properties().set("ik_frame", transform);
-	}
+	/// set properties of IK solver
+	void setIKFrame(const geometry_msgs::PoseStamped &transform) { setProperty("ik_frame", transform); }
 	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& t, const std::string& link) {
@@ -91,30 +82,21 @@ public:
 		setIKFrame(Eigen::Affine3d::Identity(), link);
 	}
 
-	void setAngleDelta(double angle_delta) {
-		properties().set("angle_delta", angle_delta);
-	}
-
-	void setMaxIKSolutions(uint32_t max_ik_solutions) {
-		properties().set("max_ik_solutions", max_ik_solutions);
-	}
-	void setTimeout(double timeout) {
-		properties().set("timeout", timeout);
-	}
+	void setMaxIKSolutions(uint32_t max_ik_solutions) { setProperty("max_ik_solutions", max_ik_solutions); }
 };
 
 
 /// specialization of SimpleGraspBase to realize grasping
 class SimpleGrasp : public SimpleGraspBase {
 public:
-	SimpleGrasp(const std::string& name = "grasp") : SimpleGraspBase(name, true) {}
+	SimpleGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "grasp");
 };
 
 
 /// specialization of SimpleGraspBase to realize ungrasping
 class SimpleUnGrasp : public SimpleGraspBase {
 public:
-	SimpleUnGrasp(const std::string& name = "ungrasp") : SimpleGraspBase(name, false) {}
+	SimpleUnGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "ungrasp");
 };
 
 } } }

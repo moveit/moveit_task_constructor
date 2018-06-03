@@ -115,10 +115,10 @@ protected:
 };
 
 TEST_F(InitFromTest, standard) {
-	slave.configureInitFrom(0);  // init all matching vars
+	slave.configureInitFrom(1);  // init all matching vars
 	ASSERT_FALSE(slave.property("double1").defined());
 
-	slave.performInitFrom(0, master);
+	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double1"), 1.0);
 	EXPECT_EQ(slave.get<double>("double2"), 2.0);
 	EXPECT_FALSE(slave.property("double3").defined());
@@ -126,8 +126,8 @@ TEST_F(InitFromTest, standard) {
 }
 
 TEST_F(InitFromTest, limited) {
-	slave.configureInitFrom(0, {"double1"}); // limit init to listed props
-	slave.performInitFrom(0, master);
+	slave.configureInitFrom(1, {"double1"}); // limit init to listed props
+	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double1"), 1.0);
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
@@ -135,8 +135,8 @@ TEST_F(InitFromTest, limited) {
 }
 
 TEST_F(InitFromTest, sourceId) {
-	slave.configureInitFrom(0);  // init all matching vars
-	slave.performInitFrom(1, master); // init with wrong sourceId -> no effect
+	slave.configureInitFrom(1);  // init all matching vars
+	slave.performInitFrom(2, master); // init with wrong sourceId -> no effect
 	EXPECT_FALSE(slave.property("double1").defined());
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
@@ -144,14 +144,14 @@ TEST_F(InitFromTest, sourceId) {
 }
 
 TEST_F(InitFromTest, multipleSourceIds) {
-	slave.configureInitFrom(0);
-	slave.configureInitFrom(0);  // init is allowed second time with same id
-	EXPECT_THROW(slave.configureInitFrom(1), std::runtime_error);  // but not with other id
+	slave.configureInitFrom(1);
+	slave.configureInitFrom(1);  // init is allowed second time with same id
+	EXPECT_THROW(slave.configureInitFrom(2), std::runtime_error);  // but not with other id
 }
 
 TEST_F(InitFromTest, otherName) {
-	slave.property("double1").configureInitFrom(0, "double2"); // init double1 from double2
-	slave.performInitFrom(0, master);
+	slave.property("double1").configureInitFrom(1, "double2"); // init double1 from double2
+	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double1"), 2.0);
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
@@ -159,9 +159,9 @@ TEST_F(InitFromTest, otherName) {
 }
 
 TEST_F(InitFromTest, function) {
-	slave.property("double3").configureInitFrom(0, [](const PropertyMap& other) -> boost::any {
+	slave.property("double3").configureInitFrom(1, [](const PropertyMap& other) -> boost::any {
 		return other.get<double>("double1") + other.get<double>("double2");
 	});
-	slave.performInitFrom(0, master);
+	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double3"), 3.0);
 }
