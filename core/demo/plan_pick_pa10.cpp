@@ -92,7 +92,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "lh_tool_frame";
 		direction.vector.z = 1;
-		move->along(direction);
+		move->setGoal(direction);
 		t.add(std::move(move));
 	}
 
@@ -146,7 +146,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.z = 1;
-		move->along(direction);
+		move->setGoal(direction);
 		t.add(std::move(move));
 	}
 
@@ -161,7 +161,7 @@ int main(int argc, char** argv){
 		twist.header.frame_id = "object";
 		twist.twist.linear.y = 1;
 		twist.twist.angular.y = 2;
-		move->along(twist);
+		move->setGoal(twist);
 		t.add(std::move(move));
 	}
 

@@ -44,6 +44,9 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
+namespace moveit { namespace core {
+class RobotState;
+} }
 namespace moveit { namespace task_constructor { namespace stages {
 
 /** Perform a Cartesian motion relative to some link */
@@ -89,23 +92,24 @@ public:
 	}
 
 	/// perform twist motion on specified link
-	void along(const geometry_msgs::TwistStamped& twist) {
-		setProperty("twist", twist);
+	void setGoal(const geometry_msgs::TwistStamped& twist) {
+		setProperty("goal", twist);
 	}
 	/// translate link along given direction
-	void along(const geometry_msgs::Vector3Stamped& direction) {
-		setProperty("direction", direction);
+	void setGoal(const geometry_msgs::Vector3Stamped& direction) {
+		setProperty("goal", direction);
 	}
 	/// move specified joint variables by given amount
-	void about(const std::map<std::string, double>& goal) {
-		setProperty("joints", goal);
+	void setGoal(const std::map<std::string, double>& joint_deltas) {
+		setProperty("goal", joint_deltas);
 	}
-
 
 protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
+	bool getJointStateGoal(const boost::any& goal, const moveit::core::JointModelGroup* jmg,
+	                       moveit::core::RobotState& robot_state);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
