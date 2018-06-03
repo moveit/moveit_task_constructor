@@ -149,7 +149,7 @@ class TestStages(unittest.TestCase):
         self._check(stage, "ignore_collisisons", True)
         self._check(stage, "ik_frame", PoseStamped())
         self._check(stage, "target_pose", PoseStamped())
-        self._check(stage, "forward_properties", ["name1", "name2", "name3"])
+        self._check(stage, "forwarded_properties", ["name1", "name2", "name3"])
 
     def test_MoveTo(self):
         stage = stages.MoveTo("move", self.planner)
@@ -224,13 +224,13 @@ class TestStages(unittest.TestCase):
         self._check(stage, "eef_parent_group", "eef_parent_group")
 
     def test_SimpleGrasp(self):
-        stage = stages.SimpleGrasp()
+        stage = stages.SimpleGrasp(stages.GenerateGraspPose("grasp"))
 
         self._check(stage, "eef", "eef")
         self._check(stage, "object", "object")
 
-    def test_SimpleGrasp(self):
-        stage = stages.SimpleGrasp()
+    def test_SimpleUnGrasp(self):
+        stage = stages.SimpleUnGrasp(stages.GenerateGraspPose("ungrasp"))
 
         self._check(stage, "eef", "eef")
         self._check(stage, "object", "object")

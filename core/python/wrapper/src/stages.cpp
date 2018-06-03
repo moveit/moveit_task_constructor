@@ -58,25 +58,13 @@ ComputeIK* ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
 	return new ComputeIK(name, std::unique_ptr<Stage>{stage.release()});
 }
 
-bp::list ComputeIK_getForwardedProperties(ComputeIK& self) {
-	bp::list l;
-	for (const std::string& value : self.properties().get<std::set<std::string>>("forward_properties"))
-		l.append(value);
-	return l;
-}
-
-void ComputeIK_setForwardedProperties(ComputeIK& self, const bp::list& names) {
-	boost::python::stl_input_iterator<std::string> begin(names), end;
-	self.setForwardedProperties(std::set<std::string>(begin, end));
-}
-
 
 bp::dict MoveRelative_getJoints(MoveRelative& self) {
-	return toDict<double>(self.properties().get<std::map<std::string, double>>("joints"));
+	return toDict<double>(self.properties().get<std::map<std::string, double>>("goal"));
 }
 
 void MoveRelative_setJoints(MoveRelative& self, const bp::dict& joints) {
-	self.about(fromDict<double>(joints));
+	self.setGoal(fromDict<double>(joints));
 }
 
 
@@ -104,6 +92,22 @@ Place* Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
 }
 Place* Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
 	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()});
+}
+
+
+SimpleGrasp* SimpleGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+	return new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name);
+}
+SimpleGrasp* SimpleGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
+	return new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()});
+}
+
+
+SimpleUnGrasp* SimpleUnGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+	return new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name);
+}
+SimpleUnGrasp* SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
+	return new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()});
 }
 
 } // anonymous namespace
@@ -157,7 +161,6 @@ void export_stages()
 	      // methods of base class boost::python::class_ need to be called last!
 	      .def("__init__", bp::make_constructor(&ComputeIK_init))
 	      .def(bp::init<bp::optional<const std::string&>>())
-	      .add_property("forward_properties", &ComputeIK_getForwardedProperties, &ComputeIK_setForwardedProperties)
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
 
@@ -253,17 +256,21 @@ void export_stages()
 
 
 	properties::class_<SimpleGrasp, std::auto_ptr<SimpleGrasp>, bp::bases<Stage>, boost::noncopyable>
-	      ("SimpleGrasp", bp::init<bp::optional<const std::string&>>())
+	      ("SimpleGrasp", bp::no_init)
 	      .property<std::string>("eef")
 	      .property<std::string>("object")
+	      .def("__init__", bp::make_constructor(&SimpleGrasp_init))
+	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_1))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleGrasp>, std::auto_ptr<Stage>>();
 
 
 	properties::class_<SimpleUnGrasp, std::auto_ptr<SimpleUnGrasp>, bp::bases<Stage>, boost::noncopyable>
-	      ("SimpleUnGrasp", bp::init<bp::optional<const std::string&>>())
+	      ("SimpleUnGrasp", bp::no_init)
 	      .property<std::string>("eef")
 	      .property<std::string>("object")
+	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init))
+	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_1))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleUnGrasp>, std::auto_ptr<Stage>>();
 }

@@ -16,9 +16,6 @@ using namespace moveit::task_constructor;
 namespace moveit {
 namespace python {
 
-void export_properties();
-void export_solvers();
-
 namespace {
 
 // utility function to extract index from python object
@@ -66,6 +63,19 @@ struct const_castable {
 };
 
 
+bp::list Stage_getForwardedProperties(Stage& self) {
+	bp::list l;
+	for (const std::string& value : self.forwardedProperties())
+		l.append(value);
+	return l;
+}
+
+void Stage_setForwardedProperties(Stage& self, const bp::list& names) {
+	boost::python::stl_input_iterator<std::string> begin(names), end;
+	self.setForwardedProperties(std::set<std::string>(begin, end));
+}
+
+
 void ContainerBase_insert(ContainerBase& self, std::auto_ptr<Stage> stage, int before = -1) {
 	self.insert(std::unique_ptr<Stage>{stage.release()}, before);
 }
@@ -105,7 +115,7 @@ void Task_execute(Task& self, SolutionBasePtr &solution) {
 	ROS_INFO("Executed successfully.");
 }
 
-
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_plan_overloads, Task::plan, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task::enableIntrospection, 0, 1)
 
 }
@@ -138,6 +148,7 @@ void export_core()
 	                    &Stage::setName)
 	      // read-only access to properties + solutions, reference returned directly as pointer
 	      .add_property("properties", bp::make_function(Stage_getPropertyMap, bp::return_internal_reference<>()))
+	      .add_property("forwarded_properties", &Stage_getForwardedProperties, &Stage_setForwardedProperties)
 	      .add_property("solutions", bp::make_function(&Stage::solutions, bp::return_internal_reference<>()))
 	      .add_property("failures", bp::make_function(&Stage::failures, bp::return_internal_reference<>()))
 	      .def("reset", &Stage::reset)
@@ -205,7 +216,7 @@ void export_core()
 	      .def("clear", &Task::clear)
 	      .def("reset", &Task::reset)
 	      .def("init", &Task::init)
-	      .def("plan", &Task::plan)
+	      .def("plan", &Task::plan, Task_plan_overloads())
 	      .def("add", &Task_add)
 	      .def("publish", &Task_publish)
 	      .def("execute", &Task_execute)
