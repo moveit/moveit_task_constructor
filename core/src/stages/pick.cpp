@@ -81,7 +81,7 @@ void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance)
 {
 	auto& p = approach_stage_->properties();
-	p.set("twist", motion);
+	p.set("goal", motion);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }
@@ -89,7 +89,7 @@ void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion
 void PickPlaceBase::setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance)
 {
 	auto& p = lift_stage_->properties();
-	p.set("twist", motion);
+	p.set("goal", motion);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }

@@ -61,12 +61,10 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
-	p.declare<std::set<std::string>>("forward_properties", "to-be-forwarded properties from input");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for ik frame");
-	p.configureInitFrom(Stage::INTERFACE, {"target_pose"});
 }
 
 void ComputeIK::setIKFrame(const Eigen::Affine3d &pose, const std::string &link)
@@ -212,7 +210,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	// -1 TODO: this should not be necessary in my opinion: Why do you think so?
 	// It is, because the properties on the interface might change from call to call...
 	// enforced initialization from interface ensures that new target_pose is read
-	properties().performInitFrom(INTERFACE, s.start()->properties(), true);
+	properties().performInitFrom(INTERFACE, s.start()->properties());
 	const auto& props = properties();
 
 	const bool ignore_collisions = props.get<bool>("ignore_collisions");
@@ -370,12 +368,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			robot_state.update();
 
 			InterfaceState state(scene);
-			const boost::any &forwards = props.get("forward_properties");
-			if (!forwards.empty()) {
-				auto p = s.start()->properties();
-				p.exposeTo(state.properties(), boost::any_cast<std::set<std::string>>(forwards));
-			}
-
+			forwardProperties(*s.start(), state);
 			spawn(std::move(state), std::move(solution));
 		}
 

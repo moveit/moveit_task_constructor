@@ -194,35 +194,6 @@ void ContainerBase::clear()
 	pimpl()->children_.clear();
 }
 
-void ContainerBase::exposePropertiesOfChild(int child, const std::initializer_list<std::string>& names)
-{
-	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
-	if (child_it == impl->children().end())
-		throw std::runtime_error("invalid child index");
-
-	auto &child_props = (*child_it)->properties();
-	// declare variables
-	child_props.exposeTo(impl->properties_, names);
-	// configure inheritance
-	child_props.configureInitFrom(Stage::PARENT, names);
-}
-
-void ContainerBase::exposePropertyOfChildAs(int child, const std::string& child_property_name,
-                                            const std::string& parent_property_name)
-{
-	auto impl = pimpl();
-	ContainerBasePrivate::const_iterator child_it = impl->childByIndex(child, false);
-	if (child_it == impl->children().end())
-		throw std::runtime_error("invalid child index");
-
-	auto &child_props = (*child_it)->properties();
-	// declare variables
-	child_props.exposeTo(impl->properties_, child_property_name, parent_property_name);
-	// configure inheritance
-	child_props.property(child_property_name).configureInitFrom(Stage::PARENT, parent_property_name);
-}
-
 void ContainerBase::reset()
 {
 	auto impl = pimpl();
@@ -254,7 +225,14 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 	// recursively init all children and accumulate errors
 	InitStageException errors;
 	for (auto& child : children) {
-		try { child->init(robot_model); } catch (InitStageException &e) { errors.append(e); }
+		try { child->init(robot_model); }
+		catch (const Property::error &e) {
+			std::ostringstream oss;
+			oss << e.what();
+			pimpl()->composePropertyErrorMsg(e.name(), oss);
+			errors.push_back(*child, oss.str());
+		}
+		catch (InitStageException &e) { errors.append(e); }
 	}
 
 	if (errors) throw errors;

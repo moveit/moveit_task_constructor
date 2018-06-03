@@ -104,10 +104,6 @@ public:
 	void setIgnoreCollisions(bool flag) {
 		setProperty("ignore_collisions", flag);
 	}
-
-	void setForwardedProperties(const std::set<std::string>& names) {
-		setProperty("forward_properties", names);
-	}
 };
 
 } } }

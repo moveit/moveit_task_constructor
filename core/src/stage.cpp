@@ -105,6 +105,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	assert(nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
+	me()->forwardProperties(from, to);
 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
@@ -122,6 +123,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	assert(prevEnds());
 	if (!storeSolution(solution))
 		return;  // solution dropped
+	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
@@ -181,6 +183,8 @@ Stage::Stage(StagePrivate *impl)
 	assert(impl);
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
+	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
+	                                 "set of interface properties to forward");
 	p.declare<std::string>("marker_ns", "marker namespace");
 }
 
@@ -222,6 +226,7 @@ void Stage::init(const moveit::core::RobotModelConstPtr& robot_model)
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
+			ROS_DEBUG_STREAM_NAMED("Properties", "init '" << name() << "'");
 			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 		} catch (const Property::error &e) {
 			std::ostringstream oss;
@@ -244,6 +249,17 @@ const std::string& Stage::name() const {
 void Stage::setName(const std::string& name)
 {
 	pimpl_->name_ = name;
+}
+
+void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest)
+{
+	const PropertyMap& src = source.properties();
+	PropertyMap& dst = dest.properties();
+	for (const auto& name : forwardedProperties()) {
+		if (!src.hasProperty(name))
+			continue;
+		dst.set(name, src.get(name));
+	}
 }
 
 Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionCallback &&cb)
@@ -299,7 +315,7 @@ void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std
 			os << "declared, but undefined";
 
 		if (p.initsFrom(Stage::PARENT)) os << ", inherits from parent";
-		else if (p.initsFrom(Stage::PARENT)) os << ", initializes from interface";
+		if (p.initsFrom(Stage::INTERFACE)) os << ", initializes from interface";
 	} catch (const Property::undeclared &e) {
 		os << "undeclared";
 	}
@@ -440,13 +456,13 @@ void PropagatingEitherWayPrivate::compute()
 	if (hasStartState()) {
 		const InterfaceState& state = fetchStartState();
 		// enforce property initialization from INTERFACE
-		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
+		properties_.performInitFrom(Stage::INTERFACE, state.properties());
 		me->computeForward(state);
 	}
 	if (hasEndState()) {
 		const InterfaceState& state = fetchEndState();
 		// enforce property initialization from INTERFACE
-		properties_.performInitFrom(Stage::INTERFACE, state.properties(), true);
+		properties_.performInitFrom(Stage::INTERFACE, state.properties());
 		me->computeBackward(state);
 	}
 }

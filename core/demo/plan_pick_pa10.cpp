@@ -92,22 +92,23 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "lh_tool_frame";
 		direction.vector.z = 1;
-		move->along(direction);
+		move->setGoal(direction);
 		t.add(std::move(move));
 	}
 
 	{
 		auto gengrasp = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 		gengrasp->properties().configureInitFrom(Stage::PARENT);
-		gengrasp->setNamedPose("open");
+		gengrasp->setPreGraspPose("open");
 		gengrasp->setObject("object");
 		gengrasp->setAngleDelta(M_PI / 10.);
 		gengrasp->setMonitoredStage(initial_stage);
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
-		ik->properties().configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
-		ik->setIKFrame(Eigen::Translation3d(0,0,.05)*
-		               Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
+		PropertyMap &props = ik->properties();
+		props.configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
+		props.configureInitFrom(Stage::INTERFACE, {"target_pose"});  // derived from child's solution
+		ik->setIKFrame(Eigen::Translation3d(0,0,.05) * Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
 		               "lh_tool_frame");
 		ik->setMaxIKSolutions(1);
 		t.add(std::move(ik));
@@ -146,7 +147,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.z = 1;
-		move->along(direction);
+		move->setGoal(direction);
 		t.add(std::move(move));
 	}
 
@@ -161,7 +162,7 @@ int main(int argc, char** argv){
 		twist.header.frame_id = "object";
 		twist.twist.linear.y = 1;
 		twist.twist.angular.y = 2;
-		move->along(twist);
+		move->setGoal(twist);
 		t.add(std::move(move));
 	}
 

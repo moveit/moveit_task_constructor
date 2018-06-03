@@ -51,12 +51,10 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	auto& p = properties();
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
+
+	p.declare<boost::any>("goal", "motion specification");
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
-
-	p.declare<geometry_msgs::TwistStamped>("twist", "Cartesian twist transform");
-	p.declare<geometry_msgs::Vector3Stamped>("direction", "Cartesian translation direction");
-	p.declare<std::map<std::string, double>>("joints", "Relative joint space goal");
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
@@ -76,6 +74,30 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 	planner_->init(robot_model);
 }
 
+bool MoveRelative::getJointStateGoal(const boost::any& goal,
+                                     const moveit::core::JointModelGroup* jmg,
+                                     moveit::core::RobotState& robot_state) {
+	try {
+		const auto& accepted = jmg->getJointModelNames();
+		const auto& joints = boost::any_cast<std::map<std::string, double>>(goal);
+		for (const auto& j : joints) {
+			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
+			auto jm = robot_state.getRobotModel()->getJointModel(index);
+			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end())
+				throw std::runtime_error("Cannot plan for joint '" + j.first + "' that is not part of group '" + jmg->getName() + "'");
+
+			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
+			robot_state.enforceBounds(jm);
+		}
+		robot_state.update();
+		return true;
+	} catch (const boost::bad_any_cast&) {
+		return false;
+	}
+
+	return false;
+}
+
 bool MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory &solution, Direction dir) {
 	scene = state.scene()->diff();
@@ -90,12 +112,9 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
 		return false;
 	}
-
-	// only allow single target
-	size_t count_goals = props.countDefined({"twist", "direction", "joints"});
-	if (count_goals != 1) {
-		if (count_goals == 0) ROS_WARN_NAMED("MoveRelative", "No goal defined");
-		else ROS_WARN_NAMED("MoveRelative", "Cannot plan to multiple goals");
+	boost::any goal = props.get("goal");
+	if (goal.empty()) {
+		ROS_WARN_NAMED("MoveRelative", "goal undefined");
 		return false;
 	}
 
@@ -106,22 +125,8 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-	boost::any goal = props.get("joints");
-	if (!goal.empty()) {
-		const auto& accepted = jmg->getJointModelNames();
-		auto& robot_state = scene->getCurrentStateNonConst();
-		const auto& joints = boost::any_cast<std::map<std::string, double>>(goal);
-		for (const auto& j : joints) {
-			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
-			auto jm = robot_model->getJointModel(index);
-			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end()) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Cannot plan joint target for joint '" << j.first << "' that is not part of group '" << group << "'");
-				return false;
-			}
-			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
-			robot_state.enforceBounds(jm);
-		}
-		robot_state.update();
+	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
+		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
 		// Cartesian targets require an IK reference frame
@@ -152,8 +157,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		Eigen::Affine3d target_eigen;
 		Eigen::Affine3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
-		boost::any goal = props.get("twist");
-		if (!goal.empty()) {
+		try { // try to extract Twist goal
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(goal);
 			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.twist.linear, linear);
@@ -189,10 +193,10 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			target_eigen = link_pose;
 			target_eigen.linear() = target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
 			target_eigen.translation() += linear;
-		}
+			goto COMPUTE;
+		} catch (const boost::bad_any_cast&) { /* continue with Vector goal */ }
 
-		goal = props.get("direction");
-		if (!goal.empty()) {
+		try { // try to extract Vector goal
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(goal);
 			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.vector, linear);
@@ -212,8 +216,12 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			linear = frame_pose.linear() * linear;
 			target_eigen = link_pose;
 			target_eigen.translation() += linear;
+		} catch (const boost::bad_any_cast&) {
+			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for goal: " << goal.type().name());
+			return false;
 		}
 
+COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Affine3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);

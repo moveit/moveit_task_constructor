@@ -76,22 +76,22 @@ public:
 
 	/// move link to given pose
 	void setGoal(const geometry_msgs::PoseStamped& pose) {
-		setProperty("pose", pose);
+		setProperty("goal", pose);
 	}
 
 	/// move link to given point, keeping current orientation
 	void setGoal(const geometry_msgs::PointStamped& point) {
-		setProperty("point", point);
+		setProperty("goal", point);
 	}
 
 	/// move joint model group to given named pose
 	void setGoal(const std::string& named_joint_pose) {
-		setProperty("named_joint_pose", named_joint_pose);
+		setProperty("goal", named_joint_pose);
 	}
 
 	/// move joints specified in msg to their target values
 	void setGoal(const moveit_msgs::RobotState& robot_state) {
-		setProperty("joint_pose", robot_state);
+		setProperty("goal", robot_state);
 	}
 
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
@@ -102,7 +102,13 @@ protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
-	bool getJointStateGoal(moveit::core::RobotState& state);
+	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
+	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
+	                 const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
+	                 decltype(std::declval<SolutionBase>().markers())& markers);
+	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
+	                  decltype(std::declval<SolutionBase>().markers())&);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
