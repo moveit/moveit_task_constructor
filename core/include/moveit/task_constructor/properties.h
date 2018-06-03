@@ -220,10 +220,10 @@ public:
 	}
 
 	/// declare all given properties also in other PropertyMap
-	void exposeTo(PropertyMap& other, const std::set<std::string>& properties);
+	void exposeTo(PropertyMap& other, const std::set<std::string>& properties) const;
 
 	/// declare given property name as other_name in other PropertyMap
-	void exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name);
+	void exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const;
 
 	bool hasProperty(const std::string &name) const;
 

@@ -133,13 +133,13 @@ Property& PropertyMap::property(const std::string &name)
 	return it->second;
 }
 
-void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &properties)
+void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &properties) const
 {
 	for (const std::string& name : properties)
 		exposeTo(other, name, name);
 }
 
-void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name)
+void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const
 {
 	const Property& p = property(name);
     other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
