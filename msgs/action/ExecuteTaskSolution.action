@@ -1,0 +1,12 @@
+# Task solution to execute
+Solution task_solution
+
+---
+
+# result of execution
+moveit_msgs/MoveItErrorCodes error_code
+
+---
+
+# current stage/subtrajectory during execution
+string state
