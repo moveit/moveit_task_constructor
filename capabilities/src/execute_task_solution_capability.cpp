@@ -141,10 +141,13 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		plan.plan_components_.emplace_back();
 		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
 
-		exec_traj.description_ = std::to_string(i+1) + "/"
-		                         + std::to_string(solution.sub_trajectory.size())
-		                         + " - subsolution " + std::to_string(sub_traj.id)
-		                         + " of stage " + std::to_string(sub_traj.stage_id);
+		// define individual variable for use in closure below
+		const std::string description = std::to_string(i+1) + "/"
+		                                + std::to_string(solution.sub_trajectory.size())
+		                                + " - subsolution " + std::to_string(sub_traj.id)
+		                                + " of stage " + std::to_string(sub_traj.stage_id);
+
+		exec_traj.description_ = description;
 
 		const moveit::core::JointModelGroup* group = nullptr;
 		{
@@ -162,9 +165,10 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this,sub_traj](const plan_execution::ExecutableMotionPlan*){
+		exec_traj.effect_on_success_ = [this,sub_traj,description](const plan_execution::ExecutableMotionPlan*){
 			if(!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)){
 				planning_scene_monitor::LockedPlanningSceneRW scene(context_->planning_scene_monitor_);
+				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description );
 				return scene->usePlanningSceneMsg(sub_traj.scene_diff);
 			}
 			return true;
@@ -172,7 +176,7 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 
 		if(!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff.robot_state) &&
 		   !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)){
-			ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "invalid intermediate robot state in scene diff of SubTrajectory " << exec_traj.description_);
+			ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "invalid intermediate robot state in scene diff of SubTrajectory " << description);
 			return false;
 		}
 	}
