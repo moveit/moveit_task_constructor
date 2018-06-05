@@ -167,9 +167,8 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		/* TODO add action feedback and markers */
 		exec_traj.effect_on_success_ = [this,sub_traj,description](const plan_execution::ExecutableMotionPlan*){
 			if(!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)){
-				planning_scene_monitor::LockedPlanningSceneRW scene(context_->planning_scene_monitor_);
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description );
-				return scene->usePlanningSceneMsg(sub_traj.scene_diff);
+				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
 			}
 			return true;
 		};
