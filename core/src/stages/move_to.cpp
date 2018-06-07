@@ -81,7 +81,9 @@ bool MoveTo::getJointStateGoal(const boost::any& goal,
 		if (!state.setToDefaultValues(jmg, named_joint_pose))
 			throw InitStageException(*this, "Unknown joint pose: " + named_joint_pose);
 		return true;
+	} catch (const boost::bad_any_cast&) {}
 
+	try {
 		// try RobotState
 		const moveit_msgs::RobotState& msg = boost::any_cast<moveit_msgs::RobotState>(goal);
 		if (!msg.is_diff)
@@ -98,9 +100,7 @@ bool MoveTo::getJointStateGoal(const boost::any& goal,
 
 		moveit::core::robotStateMsgToRobotState(msg, state, false);
 		return true;
-	} catch (const boost::bad_any_cast&) {
-		return false;
-	}
+	} catch (const boost::bad_any_cast&) {}
 
 	return false;
 }
