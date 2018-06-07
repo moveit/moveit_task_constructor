@@ -298,7 +298,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 		solution.markAsFailure();
 		// TODO: visualize collisions
-		solution.setComment("eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
+		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
@@ -351,6 +351,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 			// create a new scene for each solution as they will have different robot states
 			planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
 			SubTrajectory solution;
+			solution.setComment(s.comment());
 
 			// frames at target pose and ik frame
 			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
@@ -384,7 +385,7 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 		SubTrajectory solution;
 
 		solution.markAsFailure();
-		solution.setComment("no IK found");
+		solution.setComment(s.comment() + " no IK found");
 
 		// ik target link placement
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
