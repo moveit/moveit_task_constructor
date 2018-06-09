@@ -70,6 +70,16 @@ class TestPropertyMap(unittest.TestCase):
         self.assertEqual(self.props["double"], 2.72)
         self.assertEqual(self.props["bool"], True)
 
+    def test_expose(self):
+        self.props["double"] = 3.14
+
+        other = core.PropertyMap()
+        self.props.exposeTo(other, "double")
+        self.assertEqual(other["double"], self.props["double"])
+
+        self.props.exposeTo(other, "double", "float")
+        self.assertEqual(other["float"], self.props["double"])
+
 
 class TestModifyPlanningScene(unittest.TestCase):
     def __init__(self, *args, **kwargs):

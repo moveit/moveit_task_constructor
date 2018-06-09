@@ -94,6 +94,24 @@ void PropertyMap_update(PropertyMap& self, bp::dict values) {
 	}
 }
 
+void PropertyMap_configureInitFrom(PropertyMap& self, Property::SourceFlags sources, bp::list values = bp::list()) {
+	boost::python::stl_input_iterator<std::string> begin(values), end;
+	self.configureInitFrom(sources, std::set<std::string>(begin, end));
+}
+BOOST_PYTHON_FUNCTION_OVERLOADS(PropertyMap_configureInitFrom_overloads,
+                                PropertyMap_configureInitFrom, 2, 3);
+
+void PropertyMap_exposeTo_1(PropertyMap& self, PropertyMap& other, const std::string& name) {
+	self.exposeTo(other, name, name);
+}
+void PropertyMap_exposeTo_2(PropertyMap& self, PropertyMap& other, const std::string& name, const std::string& other_name) {
+	self.exposeTo(other, name, other_name);
+}
+void PropertyMap_exposeTo_l(PropertyMap& self, PropertyMap& other, bp::list names) {
+	boost::python::stl_input_iterator<std::string> begin(names), end;
+	self.exposeTo(other, std::set<std::string>(begin, end));
+}
+
 } // anonymous namespace
 
 void export_properties()
@@ -116,6 +134,11 @@ void export_properties()
 	      .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
 	      .def("update", &PropertyMap_update)
 	      .def("__iter__", bp::iterator<PropertyMap>())
+	      .def("configureInitFrom", &PropertyMap_configureInitFrom,
+	           PropertyMap_configureInitFrom_overloads())
+	      .def("exposeTo", &PropertyMap_exposeTo_1)
+	      .def("exposeTo", &PropertyMap_exposeTo_2)
+	      .def("exposeTo", &PropertyMap_exposeTo_l)
 	      ;
 }
 

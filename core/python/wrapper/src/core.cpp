@@ -123,6 +123,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task:
 
 void export_core()
 {
+	bp::scope().attr("PARENT") = static_cast<unsigned int>(Stage::PARENT);
+	bp::scope().attr("INTERFACE") = static_cast<unsigned int>(Stage::INTERFACE);
+
 	bp::class_<SolutionBase, SolutionBasePtr, boost::noncopyable>("Solution", bp::no_init)
 	      .add_property("cost", &SolutionBase::cost)
 	      .add_property("comment", bp::make_function(&SolutionBase::comment, bp::return_value_policy<bp::copy_const_reference>()))
