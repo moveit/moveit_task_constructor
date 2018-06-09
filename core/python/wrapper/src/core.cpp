@@ -154,8 +154,8 @@ void export_core()
 	PropertyMap& (Stage::*Stage_getPropertyMap)() = &Stage::properties;  // resolve method ambiguity
 	properties::class_<Stage, std::auto_ptr<Stage>, boost::noncopyable>
 	      ("Stage", bp::no_init)
-	      // expose name as writeable property, returned string reference will be copied
 	      .property<double>("timeout")
+	      // expose name as writeable property, returned string reference will be copied
 	      .add_property("name",
 	                    bp::make_function(&Stage::name, bp::return_value_policy<bp::copy_const_reference>()),
 	                    &Stage::setName)
@@ -166,6 +166,12 @@ void export_core()
 	      .add_property("failures", bp::make_function(&Stage::failures, bp::return_internal_reference<>()))
 	      .def("reset", &Stage::reset)
 	      .def("init", &Stage::init)
+	      ;
+
+
+	bp::class_<MonitoringGenerator, std::auto_ptr<MonitoringGenerator>, bp::bases<Stage>, boost::noncopyable>
+	      ("MonitoringGenerator", bp::no_init)
+	      .def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage)
 	      ;
 
 

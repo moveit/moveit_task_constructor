@@ -210,17 +210,18 @@ void export_stages()
 	bp::implicitly_convertible<std::auto_ptr<FixCollisionObjects>, std::auto_ptr<Stage>>();
 
 
-	properties::class_<GenerateGraspPose, std::auto_ptr<GenerateGraspPose>, bp::bases<Stage>, boost::noncopyable>
+	properties::class_<GenerateGraspPose, std::auto_ptr<GenerateGraspPose>, bp::bases<MonitoringGenerator>, boost::noncopyable>
 	      ("GenerateGraspPose", bp::init<const std::string&>())
+	      .property<std::string>("object")
 	      .property<std::string>("eef")
 	      .property<std::string>("pregrasp")
-	      .property<std::string>("object")
+	      .property<std::string>("grasp")
 	      .property<double>("angle_delta")
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<GenerateGraspPose>, std::auto_ptr<Stage>>();
 
 
-	properties::class_<GeneratePose, std::auto_ptr<GeneratePose>, bp::bases<Stage>, boost::noncopyable>
+	properties::class_<GeneratePose, std::auto_ptr<GeneratePose>, bp::bases<MonitoringGenerator>, boost::noncopyable>
 	      ("GeneratePose", bp::init<const std::string&>())
 	      .property<geometry_msgs::PoseStamped>("pose")
 	      ;
