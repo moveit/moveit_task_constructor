@@ -94,6 +94,16 @@ void Task_publish(Task& self, SolutionBasePtr &solution) {
 	self.introspection().publishSolution(*solution);
 }
 
+void Task_init_wrapper(Task& self) {
+	try {
+		self.init();
+	} catch (const InitStageException &e) {
+		std::cerr << e;
+		self.printState();
+		throw;
+	}
+}
+
 void Task_execute(Task& self, SolutionBasePtr &solution) {
 	moveit::planning_interface::PlanningSceneInterface psi;
 	moveit::planning_interface::MoveGroupInterface mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);
@@ -218,7 +228,7 @@ void export_core()
 	      .def("enableIntrospection", &Task::enableIntrospection, Task_enableIntrospection_overloads())
 	      .def("clear", &Task::clear)
 	      .def("reset", &Task::reset)
-	      .def("init", &Task::init)
+	      .def("init", &Task_init_wrapper)
 	      .def("plan", &Task::plan, Task_plan_overloads())
 	      .def("add", &Task_add)
 	      .def("publish", &Task_publish)
