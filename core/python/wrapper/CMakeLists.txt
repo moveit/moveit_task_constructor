@@ -4,7 +4,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 
 # python tools support lib
 set(TOOLS_LIB_NAME moveit_python_tools)
-set(INCLUDES include/moveit/python/python_tools)
+set(INCLUDES ${PROJECT_SOURCE_DIR}/include/moveit/python/python_tools)
 add_library(${TOOLS_LIB_NAME} SHARED
 	${INCLUDES}/conversions.h
 	${INCLUDES}/ros_init.h
@@ -14,7 +14,8 @@ add_library(${TOOLS_LIB_NAME} SHARED
 	src/ros_types.cpp
 )
 target_include_directories(${TOOLS_LIB_NAME}
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+	PUBLIC ${catkin_INCLUDE_DIRS}
 )
 target_link_libraries(${TOOLS_LIB_NAME} PUBLIC ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${roscpp_LIBRARIES})
 
@@ -22,6 +23,7 @@ install(TARGETS ${TOOLS_LIB_NAME}
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
+
 
 # python_tools
 set(TOOLS_LIB_NAME _python_tools)
@@ -48,7 +50,7 @@ add_custom_command(TARGET ${TOOLS_LIB_NAME} POST_BUILD
 
 # core
 set(CORE_LIB_NAME _core)
-set(INCLUDES include/moveit/python/task_constructor)
+set(INCLUDES ${PROJECT_SOURCE_DIR}/include/moveit/python/task_constructor)
 configure_file(src/core.cpp.in core.cpp @ONLY)
 add_library(${CORE_LIB_NAME} SHARED
 	${INCLUDES}/properties.h
@@ -59,7 +61,7 @@ add_library(${CORE_LIB_NAME} SHARED
 	${CMAKE_CURRENT_BINARY_DIR}/core.cpp
 )
 target_include_directories(${CORE_LIB_NAME}
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 )
 target_link_libraries(${CORE_LIB_NAME} PUBLIC ${PROJECT_NAME} moveit_python_tools)
 
@@ -83,6 +85,7 @@ install(TARGETS ${CORE_LIB_NAME} ${STAGES_LIB_NAME}
 	ARCHIVE DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION}/${MOVEIT_PYTHON_MODULE_PATH}
 	LIBRARY DESTINATION ${CATKIN_GLOBAL_PYTHON_DESTINATION}/${MOVEIT_PYTHON_MODULE_PATH}
 )
+
 
 # Add symlinks from source space to devel-space libs
 # This is necessary to find them from devel-space too
