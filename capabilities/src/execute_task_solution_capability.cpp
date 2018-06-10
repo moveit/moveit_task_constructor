@@ -103,7 +103,7 @@ void ExecuteTaskSolutionCapability::goalCallback(const moveit_task_constructor_m
 	}
 
 	plan_execution::ExecutableMotionPlan plan;
-	if(!constructMotionPlan(goal->task_solution, plan))
+	if(!constructMotionPlan(goal->solution, plan))
 		result.error_code.val = moveit_msgs::MoveItErrorCodes::INVALID_MOTION_PLAN;
 	else {
 		ROS_INFO_NAMED("ExecuteTaskSolution", "Executing TaskSolution");
@@ -125,7 +125,8 @@ void ExecuteTaskSolutionCapability::preemptCallback() {
 		context_->plan_execution_->stop();
 }
 
-bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution, plan_execution::ExecutableMotionPlan& plan) {
+bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,
+                                                        plan_execution::ExecutableMotionPlan& plan) {
 	robot_model::RobotModelConstPtr model = context_->planning_scene_monitor_->getRobotModel();
 
 	robot_state::RobotState state(model);

@@ -1,5 +1,5 @@
 # Task solution to execute
-Solution task_solution
+Solution solution
 
 ---
 
@@ -8,5 +8,6 @@ moveit_msgs/MoveItErrorCodes error_code
 
 ---
 
-# current stage/subtrajectory during execution
-string state
+# finished subtrajectory id / number
+uint32 sub_id
+uint32 sub_no
