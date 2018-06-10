@@ -104,6 +104,9 @@ public:
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan(size_t max_solutions = 0);
+	/// interrupt current planning (or execution)
+	void preempt();
+
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream &os = std::cout) const;
 
@@ -138,6 +141,7 @@ protected:
 private:
 	std::string id_;
 	moveit::core::RobotModelConstPtr robot_model_;
+	bool preempt_requested_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

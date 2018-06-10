@@ -51,7 +51,7 @@
 namespace moveit { namespace task_constructor {
 
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
-   : WrapperBase(std::string(), std::move(container)), id_(id)
+   : WrapperBase(std::string(), std::move(container)), id_(id), preempt_requested_(false)
 {
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
@@ -213,15 +213,23 @@ bool Task::plan(size_t max_solutions)
 	reset();
 	init();
 
-	while(ros::ok() && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
+	preempt_requested_ = false;
+	while(ros::ok() && !preempt_requested_ && canCompute() &&
+	      (max_solutions == 0 || numSolutions() < max_solutions)) {
 		compute();
 		for (const auto& cb : task_cbs_)
 			cb(*this);
 		if (introspection_)
 			introspection_->publishTaskState();
 	}
+	preempt_requested_ = false;
 	printState();
 	return numSolutions() > 0;
+}
+
+void Task::preempt()
+{
+	preempt_requested_ = true;
 }
 
 void Task::publishAllSolutions(bool wait)
