@@ -99,7 +99,7 @@ public:
 
 	float getWayPointDurationFromPrevious(const IndexPair& idx_pair) const;
 	float getWayPointDurationFromPrevious(size_t index) const {
-		if (index >= steps_) return 0.0;
+		if (index >= steps_) return 0.1;  // display time of last waypoint before switching to final scene
 		return getWayPointDurationFromPrevious(indexPair(index));
 	}
 	const moveit::core::RobotStatePtr& getWayPointPtr(const IndexPair& idx_pair) const;
