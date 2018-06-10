@@ -5,6 +5,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/task.h>
+#include <moveit_task_constructor_msgs/Solution.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -61,6 +62,13 @@ struct const_castable {
 		bp::to_python_converter<Source, const_castable<T>>();
 	}
 };
+
+
+moveit_task_constructor_msgs::Solution SolutionBase_toMsg(SolutionBasePtr s) {
+	moveit_task_constructor_msgs::Solution msg;
+	s->fillMessage(msg);
+	return msg;
+}
 
 
 bp::list Stage_getForwardedProperties(Stage& self) {
@@ -133,12 +141,15 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task:
 
 void export_core()
 {
+	ROSMsgConverter<moveit_task_constructor_msgs::Solution>();
+
 	bp::scope().attr("PARENT") = static_cast<unsigned int>(Stage::PARENT);
 	bp::scope().attr("INTERFACE") = static_cast<unsigned int>(Stage::INTERFACE);
 
 	bp::class_<SolutionBase, SolutionBasePtr, boost::noncopyable>("Solution", bp::no_init)
 	      .add_property("cost", &SolutionBase::cost)
 	      .add_property("comment", bp::make_function(&SolutionBase::comment, bp::return_value_policy<bp::copy_const_reference>()))
+	      .def("toMsg", &SolutionBase_toMsg)
 	      ;
 	const_castable<SolutionBase>();
 
