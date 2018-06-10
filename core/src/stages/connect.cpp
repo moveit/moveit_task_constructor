@@ -48,7 +48,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners)
 {
 	setTimeout(1.0);
 	auto& p = properties();
-	p.declare<std::string>("group", "name of planning group");
+	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 }
@@ -138,6 +138,7 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
+	MergeMode mode = props.get<MergeMode>("merge_mode");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
@@ -156,6 +157,7 @@ void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 		const moveit::core::JointModelGroup *jmg = goal_state.getJointModelGroup(pair.first);
 		goal_state.copyJointGroupPositions(jmg, positions);
 		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
+		end->getCurrentStateNonConst().update();
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
@@ -169,14 +171,12 @@ void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	}
 
 	SolutionBasePtr solution;
-	if (!success) {  // error during sequential planning
-		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
-		solution->markAsFailure();
-	} else {
+	if (success && mode != SEQUENTIAL)  // try to merge
 		solution = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
-		if (!solution)  // merging failed, store sequentially
-			solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
-	}
+	if (!solution)  // success == false or merging failed: store sequentially
+		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
+	if (!success)  // error during sequential planning
+		solution->markAsFailure();
 	connect(from, to, solution);
 }
 

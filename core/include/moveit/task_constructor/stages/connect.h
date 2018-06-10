@@ -62,6 +62,8 @@ protected:
 	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
 
 public:
+	enum MergeMode { SEQUENTIAL = 0, WAYPOINTS = 1 };
+
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(const std::string& name, const GroupPlannerVector& planners);
 
