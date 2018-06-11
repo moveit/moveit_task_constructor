@@ -64,6 +64,13 @@ struct const_castable {
 };
 
 
+void InitStageException_translator(InitStageException const& e) {
+	std::stringstream message;
+	message << e;
+	PyErr_SetString(PyExc_UserWarning, message.str().c_str());
+}
+
+
 moveit_task_constructor_msgs::Solution SolutionBase_toMsg(SolutionBasePtr s) {
 	moveit_task_constructor_msgs::Solution msg;
 	s->fillMessage(msg);
@@ -102,16 +109,6 @@ void Task_publish(Task& self, SolutionBasePtr &solution) {
 	self.introspection().publishSolution(*solution);
 }
 
-void Task_init_wrapper(Task& self) {
-	try {
-		self.init();
-	} catch (const InitStageException &e) {
-		std::cerr << e;
-		self.printState();
-		throw;
-	}
-}
-
 void Task_execute(Task& self, SolutionBasePtr &solution) {
 	moveit::planning_interface::PlanningSceneInterface psi;
 	moveit::planning_interface::MoveGroupInterface mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);
@@ -138,9 +135,9 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task:
 
 }
 
-
 void export_core()
 {
+	bp::register_exception_translator<InitStageException>(InitStageException_translator);
 	ROSMsgConverter<moveit_task_constructor_msgs::Solution>();
 
 	bp::scope().attr("PARENT") = static_cast<unsigned int>(Stage::PARENT);
@@ -245,7 +242,7 @@ void export_core()
 	      .def("enableIntrospection", &Task::enableIntrospection, Task_enableIntrospection_overloads())
 	      .def("clear", &Task::clear)
 	      .def("reset", &Task::reset)
-	      .def("init", &Task_init_wrapper)
+	      .def("init", &Task::init)
 	      .def("plan", &Task::plan, Task_plan_overloads())
 	      .def("add", &Task_add)
 	      .def("publish", &Task_publish)
