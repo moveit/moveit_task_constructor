@@ -51,7 +51,7 @@ visualization_msgs::Marker& makeCone(visualization_msgs::Marker& m, double angle
 visualization_msgs::Marker& makeSphere(visualization_msgs::Marker &m, double radius = 1.0);
 
 /// create a cylinder along z-axis
-visualization_msgs::Marker& makeCylinder(visualization_msgs::Marker& m, double radius, double height);
+visualization_msgs::Marker& makeCylinder(visualization_msgs::Marker& m, double diameter, double height);
 
 /// create a box with given dimensions along x, y, z axes
 visualization_msgs::Marker& makeBox(visualization_msgs::Marker& m, double x, double y, double z);
@@ -74,9 +74,9 @@ visualization_msgs::Marker& makeFromGeometry(visualization_msgs::Marker &m, cons
 
 template <typename T>
 void appendFrame(T& container, const geometry_msgs::PoseStamped& pose, double scale=1.0,
-                 const std::string& ns = "frame", double radius_fraction=0.1) {
+                 const std::string& ns = "frame", double diameter_fraction=0.1) {
 	visualization_msgs::Marker m;
-	makeCylinder(m, scale*radius_fraction, scale);
+	makeCylinder(m, scale*diameter_fraction, scale);
 	m.ns = ns;
 	m.header = pose.header;
 

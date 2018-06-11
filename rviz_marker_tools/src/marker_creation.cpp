@@ -255,8 +255,8 @@ vm::Marker& makeBox(vm::Marker& m, double x, double y, double z) {
 	return m;
 }
 
-vm::Marker& makeCylinder(vm::Marker& m, double radius, double height) {
-	m.scale.x = m.scale.y = radius;
+vm::Marker& makeCylinder(vm::Marker& m, double diameter, double height) {
+	m.scale.x = m.scale.y = diameter;
 	m.scale.z = height;
 	prepareMarker(m, vm::Marker::CYLINDER);
 	return m;
@@ -305,7 +305,7 @@ vm::Marker& makeFromGeometry(vm::Marker &m, const urdf::Geometry& geom) {
 	case urdf::Geometry::CYLINDER:
 	{
 		const urdf::Cylinder& cylinder = static_cast<const urdf::Cylinder&>(geom);
-		makeCylinder(m, cylinder.radius, cylinder.length);
+		makeCylinder(m, 2.0*cylinder.radius, cylinder.length);
 		break;
 	}
 	case urdf::Geometry::MESH:
