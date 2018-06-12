@@ -33,39 +33,18 @@
  *********************************************************************/
 
 /* Authors: Robert Haschke
-   Desc:    plan using MoveIt's PlanningPipeline
+   Desc:    Planner Interface: implementation details shared across different planners
 */
 
-#pragma once
-
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/macros/class_forward.h>
 
 namespace moveit { namespace task_constructor { namespace solvers {
 
-MOVEIT_CLASS_FORWARD(JointInterpolationPlanner)
-
-/** Use MoveIt's PlanningPipeline to plan a trajectory between to scenes */
-class JointInterpolationPlanner : public PlannerInterface {
-public:
-    JointInterpolationPlanner();
-
-	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
-	bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	          const planning_scene::PlanningSceneConstPtr& to,
-	          const core::JointModelGroup *jmg,
-	          double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
-
-	bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	          const moveit::core::LinkModel &link,
-	          const Eigen::Affine3d& target,
-	          const core::JointModelGroup *jmg,
-	          double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
-};
+PlannerInterface::PlannerInterface()
+{
+	auto& p = properties();
+	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
+	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
+}
 
 } } }

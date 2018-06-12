@@ -46,8 +46,6 @@ JointInterpolationPlanner::JointInterpolationPlanner()
 {
 	auto& p = properties();
 	p.declare<double>("max_step", 0.1, "max joint step");
-	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
-	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 }
 
 void JointInterpolationPlanner::init(const core::RobotModelConstPtr &robot_model)

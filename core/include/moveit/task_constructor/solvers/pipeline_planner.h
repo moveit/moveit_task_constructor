@@ -52,9 +52,7 @@ class PipelinePlanner : public PlannerInterface {
 public:
 	PipelinePlanner();
 
-	void setGroup(const std::string &group) { setProperty("group", group); }
 	void setPlannerId(const std::string &planner) { setProperty("planner", planner); }
-	void setTimeout(double timeout) { setProperty("timeout", timeout); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
