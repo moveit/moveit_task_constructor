@@ -60,12 +60,14 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 			std::set_difference(jmg_joint_set.begin(), jmg_joint_set.end(),
 			                    joint_set.begin(), joint_set.end(),
 			                    std::inserter(difference, difference.begin()));
+			unsigned int acceptable = 0;
 			for(const std::string& diff_joint : difference){
 				const moveit::core::JointModel* diff_jm = model.getJointModel(diff_joint);
-				if(!diff_jm->isPassive() && !diff_jm->getMimic())
-					continue;
+				if (diff_jm->isPassive() || diff_jm->getMimic() || diff_jm->getType() == moveit::core::JointModel::FIXED)
+					++acceptable;
 			}
-			return jmg;
+			if (difference.size() == acceptable)
+				return jmg;
 		}
 	}
 
@@ -156,10 +158,13 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			joint_names.insert(joint_names.end(),
 			                   sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
 			                   sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.end());
-			group = findJointModelGroup(*model, joint_names);
-			if(!group){
-				ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {" << boost::algorithm::join(joint_names, ", ") << "}" );
-				return false;
+			if (joint_names.size()) {
+				group = findJointModelGroup(*model, joint_names);
+				if(!group){
+					ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {" << boost::algorithm::join(joint_names, ", ") << "}" );
+					return false;
+				}
+				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution", group->getName().c_str());
 			}
 		}
 		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
