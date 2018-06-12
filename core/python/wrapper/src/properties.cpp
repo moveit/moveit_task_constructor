@@ -36,6 +36,8 @@ bp::object property_value_to_python(const boost::any& value) {
 	/// type-casting for selected ROS msg types
 	else if (type_name == typeid(geometry_msgs::Pose).name())
 		return bp::object(boost::any_cast<geometry_msgs::Pose>(value));
+	else if (type_name == typeid(geometry_msgs::PoseStamped).name())
+		return bp::object(boost::any_cast<geometry_msgs::PoseStamped>(value));
 
 	throw std::runtime_error("No conversion for: " + type_name);
 }
@@ -55,6 +57,8 @@ void property_value_from_python(const bp::object& bpo, boost::any& value) {
 		std::string python_type_name = bp::extract<std::string>(bpo.attr("__class__").attr("__module__"));
 		if (python_type_name == "geometry_msgs.msg._Pose")
 			value = geometry_msgs::Pose(boost::python::extract<geometry_msgs::Pose>(bpo));
+		else if (python_type_name == "geometry_msgs.msg._PoseStamped")
+			value = geometry_msgs::PoseStamped(boost::python::extract<geometry_msgs::PoseStamped>(bpo));
 		else
 			throw std::runtime_error("No conversion for: " + python_type_name);
 	}
