@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
         task.add(stages.CurrentState("current"))
         move = stages.MoveRelative("move", core.PipelinePlanner())
         move.group = self.PLANNING_GROUP
-        move.joints = {"joint_1" : 0.2, "joint_2" : 0.4}
+        move.setGoal({"joint_1" : 0.2, "joint_2" : 0.4})
         task.add(move)
 
         task.enableIntrospection()

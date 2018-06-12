@@ -59,10 +59,6 @@ ComputeIK* ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
 }
 
 
-bp::dict MoveRelative_getJoints(MoveRelative& self) {
-	return toDict<double>(self.properties().get<std::map<std::string, double>>("goal"));
-}
-
 void MoveRelative_setJoints(MoveRelative& self, const bp::dict& joints) {
 	self.setGoal(fromDict<double>(joints));
 }
@@ -150,7 +146,6 @@ void export_stages()
 
 	properties::class_<ComputeIK, std::auto_ptr<ComputeIK>, bp::bases<Stage>, boost::noncopyable>
 	      ("ComputeIK", bp::no_init)
-	      .property<double>("timeout")
 	      .property<std::string>("eef")
 	      .property<std::string>("group")
 	      .property<std::string>("default_pose")
@@ -165,32 +160,35 @@ void export_stages()
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
 
 
+	void (MoveTo::*setGoalPose)(const geometry_msgs::PoseStamped&) = &MoveTo::setGoal;
+	void (MoveTo::*setGoalPoint)(const geometry_msgs::PointStamped&) = &MoveTo::setGoal;
+	void (MoveTo::*setGoalState)(const moveit_msgs::RobotState&) = &MoveTo::setGoal;
+	void (MoveTo::*setGoalNamed)(const std::string&) = &MoveTo::setGoal;
 	properties::class_<MoveTo, std::auto_ptr<MoveTo>, bp::bases<Stage>, boost::noncopyable>
 	      ("MoveTo", bp::init<const std::string&, const solvers::PlannerInterfacePtr&>())
-	      .property<double>("timeout")
 	      .property<std::string>("group")
-	      .property<std::string>("link")
-	      .property<geometry_msgs::PoseStamped>("pose")
-	      .property<geometry_msgs::PointStamped>("point")
-	      .property<std::string>("named_joint_pose")
-	      .property<moveit_msgs::RobotState>("joint_pose")
+	      .property<geometry_msgs::PoseStamped>("ik_frame")
 	      .property<moveit_msgs::Constraints>("path_constraints")
+	      .def("setGoal", setGoalPose)
+	      .def("setGoal", setGoalPoint)
+	      .def("setGoal", setGoalState)
+	      .def("setGoal", setGoalNamed)
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<Stage>>();
 
 
+	void (MoveRelative::*setGoalTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setGoal;
+	void (MoveRelative::*setGoalDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setGoal;
 	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<Stage>, boost::noncopyable>
 	      ("MoveRelative", bp::init<const std::string&, const solvers::PlannerInterfacePtr&>())
-	      .property<double>("timeout")
-	      .property<std::string>("marker_ns")
 	      .property<std::string>("group")
-	      .property<std::string>("link")
+	      .property<geometry_msgs::PoseStamped>("ik_frame")
 	      .property<double>("min_distance")
 	      .property<double>("max_distance")
-	      .property<geometry_msgs::TwistStamped>("twist")
-	      .property<geometry_msgs::Vector3Stamped>("direction")
 	      .property<moveit_msgs::Constraints>("path_constraints")
-	      .add_property("joints", &MoveRelative_getJoints, &MoveRelative_setJoints)
+	      .def("setGoal", setGoalTwist)
+	      .def("setGoal", setGoalDirection)
+	      .def("setGoal", &MoveRelative_setJoints)
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<Stage>>();
 
