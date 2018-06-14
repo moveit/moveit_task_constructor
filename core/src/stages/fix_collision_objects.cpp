@@ -46,6 +46,7 @@
 #include <ros/console.h>
 
 namespace vm = visualization_msgs;
+namespace cd = collision_detection;
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -54,86 +55,104 @@ FixCollisionObjects::FixCollisionObjects(const std::string &name)
 {
 	auto& p = properties();
 	p.declare<double>("max_penetration", "maximally corrected penetration depth");
+	p.declare<geometry_msgs::Vector3>("direction", "direction vector to use for corrections");
 }
 
-void FixCollisionObjects::setMaxPenetration(double penetration)
-{
-	setProperty("max_penetration", penetration);
-}
+
 
 void FixCollisionObjects::computeForward(const InterfaceState &from)
 {
 	planning_scene::PlanningScenePtr to = from.scene()->diff();
-	SubTrajectory solution;
-	bool success = fixCollisions(*to, solution.markers());
-	if (!success) solution.markAsFailure();
-	sendForward(from, InterfaceState(to), std::move(solution));
+	sendForward(from, InterfaceState(to), fixCollisions(*to));
 }
 
 void FixCollisionObjects::computeBackward(const InterfaceState &to)
 {
 	planning_scene::PlanningScenePtr from = to.scene()->diff();
-	SubTrajectory solution;
-	bool success = fixCollisions(*from, solution.markers());
-	if (!success) solution.markAsFailure();
-	sendBackward(InterfaceState(from), to, std::move(solution));
+	sendBackward(InterfaceState(from), to, fixCollisions(*from));
 }
 
-bool FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &scene, std::deque<visualization_msgs::Marker> &markers) const
+bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d& correction, double max_penetration)
 {
-	const auto& props = properties();
-	double penetration = props.get<double>("max_penetration");
-	(void) penetration; // not used (yet)
+	for (const cd::Contact& c : contacts) {
+		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT &&
+		     c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
+			ROS_WARN_STREAM_NAMED("FixCollisionObjects", "Cannot fix collision between "
+			                      << c.body_name_1 << " and " << c.body_name_2);
+			return false;
+		}
+		if (c.body_type_1 == cd::BodyTypes::WORLD_OBJECT)
+			correction -= c.depth * c.normal;
+		else
+			correction += c.depth * c.normal;
+	}
+	// average and add tolerance
+	double norm = correction.norm();
+	double rounded = norm / contacts.size() + 1.e-3;
+	correction *= rounded / norm;
+	return true;
+}
 
-	collision_detection::CollisionRequest req;
-	collision_detection::CollisionResult res;
+SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &scene) const
+{
+	SubTrajectory result;
+	const auto& props = properties();
+	double max_penetration = props.get<double>("max_penetration");
+	const boost::any& dir = props.get("direction");
+
+	cd::CollisionRequest req;
+	cd::CollisionResult res;
 	req.group_name = "";  // check collisions for complete robot
 	req.contacts = true;
 	req.max_contacts = 100;
-	req.max_contacts_per_pair = 5;
+	req.max_contacts_per_pair = 100;
 	req.verbose = false;
 	req.distance = false;
 
-	scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(), scene.getCurrentState(),
-	                                               scene.getAllowedCollisionMatrix());
-
-	geometry_msgs::Pose pose;
-
-	if (!res.collision)
-		return true;
 
 	vm::Marker m;
 	m.header.frame_id = scene.getPlanningFrame();
 	m.ns = "collisions";
-	rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 
-	ROS_INFO_THROTTLE(1, "collision(s) detected");
-	for (const auto& info : res.contacts) {
-		for (const auto& contact : info.second) {
-			tf::poseEigenToMsg(Eigen::Translation3d(contact.pos) * Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), contact.normal), m.pose);
-			rviz_marker_tools::makeArrow(m, contact.depth);
-			markers.push_back(m);
+	bool failure = false;
+	while (!failure) {
+		res.clear();
+		scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(),
+		                                               scene.getCurrentState(),
+		                                               scene.getAllowedCollisionMatrix());
+		if (!res.collision)
+			return result;
+
+		for (const auto& info : res.contacts) {
+			Eigen::Vector3d correction;
+			failure = !computeCorrection(info.second, correction, max_penetration);
+			if (failure)
+				break;
+			double depth = correction.norm();
+			failure = depth > max_penetration;
+
+			// marker indicating correction
+			const cd::Contact &c = info.second.front();
+			rviz_marker_tools::setColor(m.color, failure ? rviz_marker_tools::RED : rviz_marker_tools::GREEN);
+			tf::poseEigenToMsg(Eigen::Translation3d(c.pos) *
+			                   Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction), m.pose);
+			rviz_marker_tools::makeArrow(m, depth, true);
+			result.markers().push_back(m);
+			if (failure)
+				break;
+
+			// fix collision by shifting object along correction direction
+			if (!dir.empty())  // if explicitly given, use this correction direction
+				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
+
+			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
+			scene.getWorldNonConst()->moveObject(name, Eigen::Affine3d(Eigen::Translation3d(correction)));
 		}
 	}
 
-	// check again
-	scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(), scene.getCurrentState(),
-	                                               scene.getAllowedCollisionMatrix());
-	return !res.collision;
-}
-
-void FixCollisionObjects::fixCollision(planning_scene::PlanningScene &scene, geometry_msgs::Pose pose, const std::string& object) const
-{
-	moveit_msgs::CollisionObject collision_obj;
-	collision_obj.header.frame_id = scene.getPlanningFrame();
-	collision_obj.id = object;
-	collision_obj.operation = moveit_msgs::CollisionObject::MOVE;
-
-	collision_obj.primitive_poses.resize(1);
-	collision_obj.primitive_poses[0] = pose;
-
-	if(!scene.processCollisionObjectMsg(collision_obj))
-		std::cout<<"Moving FAILED"<<std::endl;
+	// failure
+	result.markAsFailure();
+	return result;
 }
 
 } } }

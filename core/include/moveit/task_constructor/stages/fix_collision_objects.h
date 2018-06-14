@@ -38,10 +38,10 @@
 
 #pragma once
 
+#include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/stage.h>
-#include <visualization_msgs/Marker.h>
-#include <geometry_msgs/Pose.h>
-#include <deque>
+#include <geometry_msgs/Vector3.h>
+#include <moveit/collision_detection/collision_common.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
 
@@ -52,11 +52,11 @@ public:
 	void computeForward(const InterfaceState& from) override;
 	void computeBackward(const InterfaceState& to) override;
 
-	void setMaxPenetration(double penetration);
+	void setDirection(const geometry_msgs::Vector3& dir) { setProperty("direction", dir); }
+	void setMaxPenetration(double penetration) { setProperty("max_penetration", penetration); }
 
 private:
-	bool fixCollisions(planning_scene::PlanningScene &scene, std::deque<visualization_msgs::Marker>& markers) const;
-	void fixCollision(planning_scene::PlanningScene &scene, geometry_msgs::Pose pose, const std::string& object) const;
+	SubTrajectory fixCollisions(planning_scene::PlanningScene &scene) const;
 };
 
 } } }

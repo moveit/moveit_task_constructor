@@ -25,7 +25,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	o.primitive_poses.resize(1);
 	o.primitive_poses[0].position.x= 0.3;
 	o.primitive_poses[0].position.y= 0.23;
-	o.primitive_poses[0].position.z= 0.12;
+	o.primitive_poses[0].position.z= 0.10;
 	o.primitive_poses[0].orientation.w= 1.0;
 	o.primitives.resize(1);
 	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
@@ -59,14 +59,14 @@ TEST(PA10, pick) {
 		spawnObject(scene);
 
 		auto initial = std::make_unique<stages::FixedState>();
-		initial_stage = initial.get();
 		initial->setState(scene);
 		t.add(std::move(initial));
 	}
 	{
 		auto stage = std::make_unique<stages::FixCollisionObjects>();
 		stage->restrictDirection(stages::MoveTo::FORWARD);
-		stage->setMaxPenetration(0.1);
+		stage->setMaxPenetration(0.04);
+		initial_stage = stage.get();
 		t.add(std::move(stage));
 	}
 
