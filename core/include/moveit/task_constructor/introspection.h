@@ -106,6 +106,8 @@ private:
 	void fillSolution(moveit_task_constructor_msgs::Solution &msg, const SolutionBase &s);
 	/// retrieve or set id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage * const s);
+	/// retrieve solution with given id
+	const SolutionBase* solutionFromId(uint id) const;
 };
 
 } }
