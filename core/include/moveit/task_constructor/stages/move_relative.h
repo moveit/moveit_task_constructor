@@ -92,15 +92,15 @@ public:
 	}
 
 	/// perform twist motion on specified link
-	void setGoal(const geometry_msgs::TwistStamped& twist) {
+	void setDirection(const geometry_msgs::TwistStamped& twist) {
 		setProperty("goal", twist);
 	}
 	/// translate link along given direction
-	void setGoal(const geometry_msgs::Vector3Stamped& direction) {
+	void setDirection(const geometry_msgs::Vector3Stamped& direction) {
 		setProperty("goal", direction);
 	}
 	/// move specified joint variables by given amount
-	void setGoal(const std::map<std::string, double>& joint_deltas) {
+	void setDirection(const std::map<std::string, double>& joint_deltas) {
 		setProperty("goal", joint_deltas);
 	}
 

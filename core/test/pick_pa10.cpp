@@ -88,7 +88,7 @@ TEST(PA10, pick) {
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "lh_tool_frame";
 		direction.vector.z = 1;
-		move->setGoal(direction);
+		move->setDirection(direction);
 		t.add(std::move(move));
 	}
 
@@ -143,7 +143,7 @@ TEST(PA10, pick) {
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.z = 1;
-		move->setGoal(direction);
+		move->setDirection(direction);
 		t.add(std::move(move));
 	}
 
@@ -158,7 +158,7 @@ TEST(PA10, pick) {
 		twist.header.frame_id = "object";
 		twist.twist.linear.y = 1;
 		twist.twist.angular.y = 2;
-		move->setGoal(twist);
+		move->setDirection(twist);
 		t.add(std::move(move));
 	}
 
