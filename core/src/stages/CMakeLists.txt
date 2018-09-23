@@ -7,6 +7,7 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/generate_pose.h
 	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
+	${PROJECT_INCLUDE}/stages/predicate_filter.h
 
 	${PROJECT_INCLUDE}/stages/connect.h
 	${PROJECT_INCLUDE}/stages/move_to.h
@@ -23,6 +24,7 @@ add_library(${PROJECT_NAME}_stages
 	generate_grasp_pose.cpp
 	generate_pose.cpp
 	compute_ik.cpp
+	predicate_filter.cpp
 
 	connect.cpp
 	move_to.cpp
