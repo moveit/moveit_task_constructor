@@ -173,7 +173,7 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution)
 	for (const auto& cb : solution_cbs_)
 		cb(*solution);
 
-	if (parent())
+	if (parent() && !solution->isFailure())
 		parent()->onNewSolution(*solution);
 }
 
