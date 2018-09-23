@@ -203,13 +203,33 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 {
 	assert(s.start() && s.end());
 	assert(s.start()->scene() == s.end()->scene()); // wrapped child should be a generator
-	planning_scene::PlanningScenePtr sandbox_scene = s.start()->scene()->diff();
+
+	// TODO: don't take pointers, this is dangerous
+	targets_.push(&s);
+}
+
+bool ComputeIK::canCompute() const {
+	return !targets_.empty() || WrapperBase::canCompute();
+}
+
+void ComputeIK::compute()
+{
+	if(WrapperBase::canCompute())
+		WrapperBase::compute();
+
+	if(targets_.empty())
+		return;
+
+	const SolutionBase& s = *targets_.front();
+	targets_.pop();
 
 	// -1 TODO: this should not be necessary in my opinion: Why do you think so?
 	// It is, because the properties on the interface might change from call to call...
 	// enforced initialization from interface ensures that new target_pose is read
 	properties().performInitFrom(INTERFACE, s.start()->properties());
 	const auto& props = properties();
+
+	planning_scene::PlanningScenePtr sandbox_scene = s.start()->scene()->diff();
 
 	const bool ignore_collisions = props.get<bool>("ignore_collisions");
 	const auto& robot_model = sandbox_scene->getRobotModel();

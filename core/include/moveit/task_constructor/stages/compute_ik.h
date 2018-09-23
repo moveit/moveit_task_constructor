@@ -69,6 +69,10 @@ public:
 	void init(const core::RobotModelConstPtr &robot_model);
 	void onNewSolution(const SolutionBase &s) override;
 
+	bool canCompute() const override;
+
+	void compute() override;
+
 	void setEndEffector(const std::string& eef) {
 		setProperty("eef", eef);
 	}
@@ -107,6 +111,9 @@ public:
 	void setMinSolutionDistance(double distance) {
 		setProperty("min_solution_distance", distance);
 	}
+
+protected:
+	std::queue<const SolutionBase*> targets_;
 };
 
 } } }
