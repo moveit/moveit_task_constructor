@@ -200,9 +200,6 @@ void ComputeIK::init(const moveit::core::RobotModelConstPtr& robot_model)
 
 void ComputeIK::onNewSolution(const SolutionBase &s)
 {
-	if (s.isFailure())
-		return;
-
 	assert(s.start() && s.end());
 	assert(s.start()->scene() == s.end()->scene()); // wrapped child should be a generator
 	planning_scene::PlanningScenePtr sandbox_scene = s.start()->scene()->diff();
