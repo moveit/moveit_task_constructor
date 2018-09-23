@@ -61,6 +61,7 @@ ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
 	p.declare<std::string>("default_pose", "", "default joint pose of active group (defines cost of IK)");
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
+	p.declare<double>("min_solution_distance", 0.1, "minimum distance between seperate IK solutions for the same target");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -312,11 +313,13 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	} else
 		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
+	double min_solution_distance = props.get<double>("min_solution_distance");
+
 	IKSolutions ik_solutions;
-	auto isValid = [sandbox_scene, ignore_collisions, &ik_solutions]
+	auto isValid = [sandbox_scene, ignore_collisions, min_solution_distance, &ik_solutions]
 	               (robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
 		for (const auto& sol : ik_solutions){
-			if (jmg->distance(joint_positions, sol.data()) < 0.1)
+			if (jmg->distance(joint_positions, sol.data()) < min_solution_distance)
 				return false; // too close to already found solution
 		}
 		state->setJointGroupPositions(jmg, joint_positions);
