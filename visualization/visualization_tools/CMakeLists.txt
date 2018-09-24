@@ -26,7 +26,10 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 	${QT_LIBRARIES}
 	${Boost_LIBRARIES}
 )
-target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
+target_include_directories(${MOVEIT_LIB_NAME}
+  PUBLIC include
+  PRIVATE ${catkin_INCLUDE_DIRS}
+)
 add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
 
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
