@@ -84,8 +84,8 @@ TEST(UR5, pick) {
 	}
 
 	auto solutions = t.solutions().size();
-	EXPECT_GE(solutions, 30);
-	EXPECT_LE(solutions, 60);
+	EXPECT_GE(solutions, 30u);
+	EXPECT_LE(solutions, 60u);
 }
 
 int main(int argc, char** argv){
