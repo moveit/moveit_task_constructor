@@ -244,8 +244,8 @@ public:
 	}
 
 protected:
-	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0)
-	   : creator_(creator), cost_(cost)
+	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0, std::string comment = "")
+	   : creator_(creator), cost_(cost), comment_(std::move(comment))
 	{
 	}
 

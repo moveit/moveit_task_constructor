@@ -185,6 +185,9 @@ PIMPL_FUNCTIONS(SerialContainer)
  * have separate incoming/outgoing trajectories */
 class WrappedSolution : public SolutionBase {
 public:
+	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost, std::string comment)
+		: SolutionBase(creator, cost, std::move(comment)), wrapped_(wrapped)
+	{}
 	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost)
 		: SolutionBase(creator, cost), wrapped_(wrapped)
 	{}
