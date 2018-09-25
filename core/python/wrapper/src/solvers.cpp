@@ -19,7 +19,9 @@ namespace {
 void export_solvers()
 {
 	PropertyMap& (PlannerInterface::*PlannerInterface_getPropertyMap)() = &PlannerInterface::properties;
-	bp::class_<PlannerInterface, PlannerInterfacePtr, boost::noncopyable>("PlannerInterface", bp::no_init)
+	properties::class_<PlannerInterface, PlannerInterfacePtr, boost::noncopyable>("PlannerInterface", bp::no_init)
+	      .property<double>("max_velocity_scaling_factor")
+	      .property<double>("max_acceleration_scaling_factor")
 	      .add_property("properties", bp::make_function(PlannerInterface_getPropertyMap, bp::return_internal_reference<>()))
 	      ;
 
@@ -38,8 +40,6 @@ void export_solvers()
 	      .property<double>("step_size")
 	      .property<double>("jump_threshold")
 	      .property<double>("min_fraction")
-	      .property<double>("max_velocity_scaling_factor")
-	      .property<double>("max_acceleration_scaling_factor")
 	      ;
 	bp::implicitly_convertible<CartesianPathPtr, PlannerInterfacePtr>();
 }
