@@ -49,11 +49,11 @@ TEST(Stage, registerCallbacks) {
 
 	auto it = g.addSolutionCallback(cb);
 	g.compute();
-	EXPECT_EQ(called, 1);
+	EXPECT_EQ(called, 1u);
 
 	g.removeSolutionCallback(it);
 	g.compute();
-	EXPECT_EQ(called, 1);
+	EXPECT_EQ(called, 1u);
 }
 
 TEST(ComputeIK, init) {
