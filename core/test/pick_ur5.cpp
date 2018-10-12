@@ -90,7 +90,7 @@ TEST(UR5, pick) {
 
 int main(int argc, char** argv){
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "pr2");
+	ros::init(argc, argv, "ur5");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 

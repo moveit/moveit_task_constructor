@@ -175,7 +175,7 @@ TEST(PA10, pick) {
 
 int main(int argc, char** argv){
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "pr2");
+	ros::init(argc, argv, "pa10");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
