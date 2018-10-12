@@ -54,8 +54,8 @@ void ModifyPlanningScene_allowCollisions(ModifyPlanningScene& self, const bp::ob
 BOOST_PYTHON_FUNCTION_OVERLOADS(ModifyPlanningScene_allowCollisions_overloads, ModifyPlanningScene_allowCollisions, 3, 4)
 
 
-ComputeIK* ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
-	return new ComputeIK(name, std::unique_ptr<Stage>{stage.release()});
+std::auto_ptr<ComputeIK> ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
+	return std::auto_ptr<ComputeIK>(new ComputeIK(name, std::unique_ptr<Stage>{stage.release()}));
 }
 
 
@@ -64,46 +64,46 @@ void MoveRelative_setJoints(MoveRelative& self, const bp::dict& joints) {
 }
 
 
-Connect* Connect_init(const std::string& name, const bp::list& l) {
+std::auto_ptr<Connect> Connect_init(const std::string& name, const bp::list& l) {
 	Connect::GroupPlannerVector planners;
 	for (bp::stl_input_iterator<bp::tuple> it(l), end; it != end; ++it) {
-		const std::string& group = bp::extract<std::string>((*it)[0]);
+		std::string group = bp::extract<std::string>((*it)[0]);
 		solvers::PlannerInterfacePtr solver = bp::extract<solvers::PlannerInterfacePtr>((*it)[1]);
 		planners.push_back(std::make_pair(group, solver));
 	}
-	return new Connect(name, planners);
+	return std::auto_ptr<Connect>(new Connect(name, planners));
 }
 
 
-Pick* Pick_init(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
-	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()}, name);
+std::auto_ptr<Pick> Pick_init(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
+	return std::auto_ptr<Pick>(new Pick(std::unique_ptr<Stage>{grasp_stage.release()}, name));
 }
-Pick* Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
-	return new Pick(std::unique_ptr<Stage>{grasp_stage.release()});
-}
-
-
-Place* Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
-	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}, name);
-}
-Place* Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
-	return new Place(std::unique_ptr<Stage>{ungrasp_stage.release()});
+std::auto_ptr<Pick> Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
+	return std::auto_ptr<Pick>(new Pick(std::unique_ptr<Stage>{grasp_stage.release()}));
 }
 
 
-SimpleGrasp* SimpleGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
-	return new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name);
+std::auto_ptr<Place> Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
+	return std::auto_ptr<Place>(new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}, name));
 }
-SimpleGrasp* SimpleGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
-	return new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()});
+std::auto_ptr<Place> Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
+	return std::auto_ptr<Place>(new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}));
 }
 
 
-SimpleUnGrasp* SimpleUnGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
-	return new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name);
+std::auto_ptr<SimpleGrasp> SimpleGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+	return std::auto_ptr<SimpleGrasp>(new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name));
 }
-SimpleUnGrasp* SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
-	return new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()});
+std::auto_ptr<SimpleGrasp> SimpleGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
+	return std::auto_ptr<SimpleGrasp>(new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}));
+}
+
+
+std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+	return std::auto_ptr<SimpleUnGrasp>(new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name));
+}
+std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
+	return std::auto_ptr<SimpleUnGrasp>(new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}));
 }
 
 } // anonymous namespace
