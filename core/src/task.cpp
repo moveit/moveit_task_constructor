@@ -222,7 +222,6 @@ bool Task::plan(size_t max_solutions)
 		if (introspection_)
 			introspection_->publishTaskState();
 	}
-	preempt_requested_ = false;
 	printState();
 	return numSolutions() > 0;
 }
