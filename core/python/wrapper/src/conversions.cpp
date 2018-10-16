@@ -133,7 +133,7 @@ void* ROSMsgConverterBase::convertible(PyObject* object) {
 	return registry_singleton_.convertible(object);
 }
 
-std::string fromPython(const boost::python::object& msg)
+std::string ROSMsgConverterBase::fromPython(const boost::python::object& msg)
 {
 	boost::python::object StringIO = boost::python::import("StringIO");
 	boost::python::object buf = StringIO.attr("StringIO")();
@@ -141,7 +141,7 @@ std::string fromPython(const boost::python::object& msg)
 	return boost::python::extract<std::string>(buf.attr("getvalue")());
 }
 
-PyObject* toPython(const std::string& data, const boost::python::type_info& type_info)
+PyObject* ROSMsgConverterBase::toPython(const std::string& data, const boost::python::type_info& type_info)
 {
 	boost::python::object msg = registry_singleton_.createMessage(type_info);
 	msg.attr("deserialize")(boost::python::object(data));

@@ -75,13 +75,6 @@ void deserializeMsg(const std::string& data, T& msg)
 }
 
 
-/// Convert a ROS message (from python) to a string
-std::string fromPython(const boost::python::object& msg);
-
-/// Convert a string to a python ROS message of given type
-PyObject* toPython(const std::string& data, const boost::python::type_info& type_info);
-
-
 /// non-templated base class for ROSMsgConverter<T> providing common methods
 class ROSMsgConverterBase {
 protected:
@@ -90,6 +83,12 @@ protected:
 
 	/// Determine if python object can be converted into C++ msg type
 	static void* convertible(PyObject* object);
+
+	/// Convert a ROS message (from python) to a string
+	static std::string fromPython(const boost::python::object& msg);
+
+	/// Convert a string to a python ROS message of given type
+	static PyObject* toPython(const std::string& data, const boost::python::type_info& type_info);
 };
 
 /// converter type to be registered with boost::python type conversion
