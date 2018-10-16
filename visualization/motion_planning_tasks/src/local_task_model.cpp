@@ -74,6 +74,7 @@ QModelIndex LocalTaskModel::index(Node *n) const
 		++row;
 	}
 	Q_ASSERT(false);
+	return QModelIndex();
 }
 
 LocalTaskModel::LocalTaskModel(QObject *parent)

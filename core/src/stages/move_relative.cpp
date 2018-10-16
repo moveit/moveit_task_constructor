@@ -171,11 +171,13 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 			// use max distance?
 			if (max_distance > 0.0) {
-				double scale;
+				double scale = 1.0;
 				if (!use_rotation_distance)  // non-zero linear motion defines distance
 					scale = max_distance / linear_norm;
 				else if (angular_norm > std::numeric_limits<double>::epsilon())
 					scale = max_distance / angular_norm;
+				else
+					assert(false);
 				linear *= scale;
 				linear_norm *= scale;
 				angular_norm *= scale;
