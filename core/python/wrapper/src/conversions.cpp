@@ -82,6 +82,7 @@ public:
 		auto type_it_inserted = types_.insert(std::make_pair(type_info, it_inserted.first));
 		// type should have been registered too with same name
 		assert(type_it_inserted.second && type_it_inserted.first->second == it_inserted.first);
+		(void)type_it_inserted;
 		return true;
 	}
 

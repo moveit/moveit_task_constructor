@@ -26,7 +26,7 @@ struct Duration_from_python
 	static void construct(PyObject* obj,
 	                      boost::python::converter::rvalue_from_python_stage1_data* data)
 	{
-		double value;
+		double value = 0.0;
 		if (PyObject_HasAttrString(obj, getter)) {
 			boost::python::handle<> handle(boost::python::borrowed(obj));
 			boost::python::object getter_function = boost::python::object(handle).attr(getter);
