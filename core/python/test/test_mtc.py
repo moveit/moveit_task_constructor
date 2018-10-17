@@ -245,6 +245,24 @@ class TestStages(unittest.TestCase):
         self._check(stage, "eef", "eef")
         self._check(stage, "object", "object")
 
+    def test_PropertyMaps(self):
+        for name in dir(stages):
+            if name.startswith("__") or name.endswith("__"):
+                continue
+
+            stage = getattr(stages, name)
+            try:
+                props = stage().properties
+            except:
+                continue
+
+            try:
+                for p in props:
+                    pass
+            except Exception as ex:
+                print("error in class {}: {}".format(stage, ex))
+                raise
+
 
 class TestTask(unittest.TestCase):
     def __init__(self, *args, **kwargs):
