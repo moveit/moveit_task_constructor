@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
+import unittest, sys
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
 from moveit_msgs.msg import RobotState, Constraints
 from moveit.task_constructor import core, stages

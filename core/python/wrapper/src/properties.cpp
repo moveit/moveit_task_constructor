@@ -42,26 +42,25 @@ bp::object property_value_to_python(const boost::any& value) {
 	throw std::runtime_error("No conversion for: " + type_name);
 }
 
-void property_value_from_python(const bp::object& bpo, boost::any& value) {
+boost::any property_value_from_python(const bp::object& bpo) {
 	PyObject *o = bpo.ptr();
-	if (PyBool_Check(o))
-		value = (o == Py_True);
-	else if (PyInt_Check(o))
-		value = PyInt_AS_LONG(o);
-	else if (PyFloat_Check(o))
-		value = PyFloat_AS_DOUBLE(o);
-	else if (PyString_Check(o))
-		value = std::string(PyString_AS_STRING(o));
 
-	else {
-		std::string python_type_name = bp::extract<std::string>(bpo.attr("__class__").attr("__module__"));
-		if (python_type_name == "geometry_msgs.msg._Pose")
-			value = geometry_msgs::Pose(boost::python::extract<geometry_msgs::Pose>(bpo));
-		else if (python_type_name == "geometry_msgs.msg._PoseStamped")
-			value = geometry_msgs::PoseStamped(boost::python::extract<geometry_msgs::PoseStamped>(bpo));
-		else
-			throw std::runtime_error("No conversion for: " + python_type_name);
-	}
+	if (PyBool_Check(o))
+		return (o == Py_True);
+	if (PyInt_Check(o))
+		return PyInt_AS_LONG(o);
+	if (PyFloat_Check(o))
+		return PyFloat_AS_DOUBLE(o);
+	if (PyString_Check(o))
+		return std::string(PyString_AS_STRING(o));
+
+	const std::string& ros_msg_name = rosMsgName(o);
+	if (ros_msg_name == "geometry_msgs/Pose")
+		return geometry_msgs::Pose(boost::python::extract<geometry_msgs::Pose>(bpo));
+	if (ros_msg_name == "geometry_msgs/PoseStamped")
+		return geometry_msgs::PoseStamped(boost::python::extract<geometry_msgs::PoseStamped>(bpo));
+
+	throw std::runtime_error("No conversion for: " + ros_msg_name);
 }
 
 struct property_pair_to_python {
@@ -85,9 +84,7 @@ bp::object PropertyMap_get(const PropertyMap& self, const std::string& name) {
 }
 
 void PropertyMap_set(PropertyMap& self, const std::string& name, const bp::object& value) {
-	boost::any v;
-	property_value_from_python(value, v);
-	self.set(name, v);
+	self.set(name, property_value_from_python(value));
 }
 
 void PropertyMap_update(PropertyMap& self, bp::dict values) {

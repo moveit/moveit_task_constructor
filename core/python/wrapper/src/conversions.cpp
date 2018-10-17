@@ -4,16 +4,30 @@
 namespace moveit {
 namespace python {
 
+std::string rosMsgName(PyObject* object) {
+	boost::python::object o(boost::python::borrowed(object));
+	try {
+		return boost::python::extract<std::string>(o.attr("_type"));
+	} catch (const boost::python::error_already_set&) {
+		// change error to TypeError
+		std::string msg = boost::python::extract<std::string>(o.attr("__class__").attr("__name__"));
+		msg += " is not a ROS message type";
+		PyErr_SetString(PyExc_TypeError, msg.c_str());
+		throw;
+	}
+}
+
 struct MessageSignature {
-	/// constructor from name of form package/type
+	/// constructor from C++ type
 	MessageSignature(const boost::python::type_info& type_info);
 	/// constructor from name of form package/type
 	MessageSignature(const std::string& message);
 	/// constructor from python object's class name
 	explicit MessageSignature(PyObject* object);
 
-	bool isValid() const {
-		return !module.empty() && !message.empty();
+	inline boost::python::object createMessage() const {
+		boost::python::object m = boost::python::import(module.c_str());
+		return m.attr(message.c_str());
 	}
 
 	std::string module; // "<package name>.msg"
@@ -51,26 +65,17 @@ MessageSignature::MessageSignature(const std::string& type_name) {
 }
 
 /// constructor from object's module name of form package.msg._type
-MessageSignature::MessageSignature(PyObject* object) {
-	static const std::string key = ".msg._";
-
-	boost::python::object o(boost::python::borrowed(object));
-	std::string module = boost::python::extract<std::string>(o.attr("__class__").attr("__module__"));
-
-	size_t pos = module.find(key, 0);
-	if (pos == std::string::npos)
-		return; // not a ROS msg object
-
-	this->module = module.substr(0, pos + 4);
-	this->message = module.substr(pos + key.size());
-}
+MessageSignature::MessageSignature(PyObject* object)
+   : MessageSignature(rosMsgName(object)) {}
 
 
 /// Additionally to the boost::python::converter::registry, this class remembers the registered
 /// ROS messages and their signature (in the form of package/msg).
 class ConverterRegistry {
+	// map from signature to Python type instance
 	typedef std::map<MessageSignature, boost::python::object> SignatureMap;
 	SignatureMap signatures_;
+	// map from typeinfo to entry in signatures_
 	typedef std::map<boost::python::type_info, SignatureMap::iterator> TypeIdMap;
 	TypeIdMap types_;
 
@@ -96,11 +101,12 @@ static ConverterRegistry registry_singleton_;
 
 inline void* ConverterRegistry::convertible(PyObject* object)
 {
-	MessageSignature signature(object);
-	if (signature.isValid() && signatures_.find(signature) != signatures_.end())
-		return object;
-	else
-		return 0;
+	try {
+		MessageSignature signature(object);
+		if (signatures_.find(signature) != signatures_.end())
+			return object;
+	} catch (const std::invalid_argument&) {}
+	return 0;
 }
 
 boost::python::object ConverterRegistry::createMessage(const boost::python::type_info& type_info)
@@ -114,9 +120,7 @@ boost::python::object ConverterRegistry::createMessage(const boost::python::type
 
 	if (cls.is_none()) {  // load msg module once on demand
 		const MessageSignature& s = signature_it->first;
-		std::string module_name = s.module;
-		boost::python::object module = boost::python::import(module_name.c_str());
-		cls = module.attr(s.message.c_str());
+		cls = s.createMessage();
 	}
 	return cls();
 }
