@@ -126,18 +126,18 @@ boost::python::object ConverterRegistry::createMessage(const boost::python::type
 }
 
 
-bool ROSMsgConverterBase::insert(const boost::python::type_info& type_info, const std::string& message)
+bool RosMsgConverterBase::insert(const boost::python::type_info& type_info, const std::string& message)
 {
 	MessageSignature signature = message.empty() ? MessageSignature(type_info) : MessageSignature(message);
 	return registry_singleton_.insert(signature, type_info);
 }
 
-void* ROSMsgConverterBase::convertible(PyObject* object) {
+void* RosMsgConverterBase::convertible(PyObject* object) {
 	/// object is convertible if the type of registered
 	return registry_singleton_.convertible(object);
 }
 
-std::string ROSMsgConverterBase::fromPython(const boost::python::object& msg)
+std::string RosMsgConverterBase::fromPython(const boost::python::object& msg)
 {
 	boost::python::object StringIO = boost::python::import("StringIO");
 	boost::python::object buf = StringIO.attr("StringIO")();
@@ -145,7 +145,7 @@ std::string ROSMsgConverterBase::fromPython(const boost::python::object& msg)
 	return boost::python::extract<std::string>(buf.attr("getvalue")());
 }
 
-PyObject* ROSMsgConverterBase::toPython(const std::string& data, const boost::python::type_info& type_info)
+PyObject* RosMsgConverterBase::toPython(const std::string& data, const boost::python::type_info& type_info)
 {
 	boost::python::object msg = registry_singleton_.createMessage(type_info);
 	msg.attr("deserialize")(boost::python::object(data));

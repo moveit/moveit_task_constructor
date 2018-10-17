@@ -138,7 +138,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task:
 void export_core()
 {
 	bp::register_exception_translator<InitStageException>(InitStageException_translator);
-	ROSMsgConverter<moveit_task_constructor_msgs::Solution>();
+	RosMsgConverter<moveit_task_constructor_msgs::Solution>();
 
 	bp::scope().attr("PARENT") = static_cast<unsigned int>(Stage::PARENT);
 	bp::scope().attr("INTERFACE") = static_cast<unsigned int>(Stage::INTERFACE);

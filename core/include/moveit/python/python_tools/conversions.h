@@ -77,8 +77,8 @@ void deserializeMsg(const std::string& data, T& msg)
 /// retrieve name of ROS msg from object instance
 std::string rosMsgName(PyObject* object);
 
-/// non-templated base class for ROSMsgConverter<T> providing common methods
-class ROSMsgConverterBase {
+/// non-templated base class for RosMsgConverter<T> providing common methods
+class RosMsgConverterBase {
 protected:
 	/// Register type internally and return true if registered first time
 	static bool insert(const boost::python::type_info& type_info, const std::string& message);
@@ -96,14 +96,14 @@ protected:
 /// converter type to be registered with boost::python type conversion
 /// https://sixty-north.com/blog/how-to-write-boost-python-type-converters.html
 template <typename T>
-struct ROSMsgConverter : ROSMsgConverterBase {
+struct RosMsgConverter : RosMsgConverterBase {
 	/// constructor registers the type converter
-	ROSMsgConverter(const std::string& message = "") {
+	RosMsgConverter(const std::string& message = "") {
 		auto type_info = boost::python::type_id<T>();
 		if (insert(type_info, message)) {
 			/// register type with boost::python converter system
 			boost::python::converter::registry::push_back(&convertible, &construct, type_info);
-			boost::python::to_python_converter<T, ROSMsgConverter<T>>();
+			boost::python::to_python_converter<T, RosMsgConverter<T>>();
 		}
 	}
 

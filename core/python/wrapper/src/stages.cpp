@@ -111,13 +111,13 @@ std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen)
 void export_stages()
 {
 	// register type converters
-	ROSMsgConverter<geometry_msgs::PoseStamped>();
-	ROSMsgConverter<geometry_msgs::Pose>();
-	ROSMsgConverter<geometry_msgs::TwistStamped>();
-	ROSMsgConverter<geometry_msgs::Vector3Stamped>();
-	ROSMsgConverter<geometry_msgs::PointStamped>();
-	ROSMsgConverter<moveit_msgs::RobotState>();
-	ROSMsgConverter<moveit_msgs::Constraints>();
+	RosMsgConverter<geometry_msgs::PoseStamped>();
+	RosMsgConverter<geometry_msgs::Pose>();
+	RosMsgConverter<geometry_msgs::TwistStamped>();
+	RosMsgConverter<geometry_msgs::Vector3Stamped>();
+	RosMsgConverter<geometry_msgs::PointStamped>();
+	RosMsgConverter<moveit_msgs::RobotState>();
+	RosMsgConverter<moveit_msgs::Constraints>();
 
 
 	properties::class_<ModifyPlanningScene, std::auto_ptr<ModifyPlanningScene>, bp::bases<Stage>, boost::noncopyable>
