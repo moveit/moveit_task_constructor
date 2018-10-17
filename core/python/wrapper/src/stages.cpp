@@ -1,7 +1,6 @@
 #include <boost/python.hpp>
 #include <boost/python/stl_iterator.hpp>
 
-#include <moveit/python/python_tools/conversions.h>
 #include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/current_state.h>
@@ -110,14 +109,14 @@ std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen)
 
 void export_stages()
 {
-	// register type converters
-	RosMsgConverter<geometry_msgs::PoseStamped>();
-	RosMsgConverter<geometry_msgs::Pose>();
-	RosMsgConverter<geometry_msgs::TwistStamped>();
-	RosMsgConverter<geometry_msgs::Vector3Stamped>();
-	RosMsgConverter<geometry_msgs::PointStamped>();
-	RosMsgConverter<moveit_msgs::RobotState>();
-	RosMsgConverter<moveit_msgs::Constraints>();
+	// register type converters for properties
+	PropertyConverter<geometry_msgs::PoseStamped>();
+	PropertyConverter<geometry_msgs::Pose>();
+	PropertyConverter<geometry_msgs::TwistStamped>();
+	PropertyConverter<geometry_msgs::Vector3Stamped>();
+	PropertyConverter<geometry_msgs::PointStamped>();
+	PropertyConverter<moveit_msgs::RobotState>();
+	PropertyConverter<moveit_msgs::Constraints>();
 
 
 	properties::class_<ModifyPlanningScene, std::auto_ptr<ModifyPlanningScene>, bp::bases<Stage>, boost::noncopyable>

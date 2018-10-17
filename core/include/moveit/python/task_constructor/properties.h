@@ -2,11 +2,44 @@
 #include <boost/mpl/vector.hpp>
 
 #include <moveit/task_constructor/properties.h>
+#include <moveit/python/python_tools/conversions.h>
 
 namespace moveit {
 namespace python {
 
 void export_properties();
+
+class PropertyConverterBase {
+public:
+	typedef boost::python::object (*to_python_converter_function)(const boost::any&);
+	typedef boost::any (*from_python_converter_function)(const boost::python::object&);
+
+protected:
+	static bool insert(const boost::python::type_info& type_info,
+	                   to_python_converter_function to,
+	                   from_python_converter_function from);
+};
+
+/// utility class to register C++ / Python converters for a property of type T
+template <typename T>
+class PropertyConverter : protected PropertyConverterBase {
+public:
+	PropertyConverter() {
+		auto type_info = boost::python::type_id<T>();
+		insert(type_info, &toPython, &fromPython);
+
+		if (!rosMsgName(type_info).empty())  // is this a ROS msg?
+			RosMsgConverter<T>();  // also register ROS msg converter
+	}
+
+private:
+	static boost::python::object toPython(const boost::any& value) {
+		return boost::python::object(boost::any_cast<T>(value));
+	}
+	static boost::any fromPython(const boost::python::object& bpo) {
+		return T(boost::python::extract<T>(bpo));
+	}
+};
 
 namespace properties {
 

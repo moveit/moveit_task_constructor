@@ -76,6 +76,8 @@ void deserializeMsg(const std::string& data, T& msg)
 
 /// retrieve name of ROS msg from object instance
 std::string rosMsgName(PyObject* object);
+/// retrieve name of ROS msg from type_info
+std::string rosMsgName(const boost::python::type_info& type_info);
 
 /// non-templated base class for RosMsgConverter<T> providing common methods
 class RosMsgConverterBase {
