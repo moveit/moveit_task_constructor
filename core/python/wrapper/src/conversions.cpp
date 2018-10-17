@@ -17,70 +17,32 @@ std::string rosMsgName(PyObject* object) {
 	}
 }
 
-struct MessageSignature {
-	/// constructor from C++ type
-	MessageSignature(const boost::python::type_info& type_info);
-	/// constructor from name of form package/type
-	MessageSignature(const std::string& message);
-	/// constructor from python object's class name
-	explicit MessageSignature(PyObject* object);
-
-	inline boost::python::object createMessage() const {
-		boost::python::object m = boost::python::import(module.c_str());
-		return m.attr(message.c_str());
-	}
-
-	std::string module; // "<package name>.msg"
-	std::string message;
-};
-inline bool operator<(const MessageSignature& __x, const MessageSignature& __y)
-{
-	return __x.module < __y.module
-	      || (!(__y.module < __x.module) && __x.message < __y.message);
-}
-
-/// constructor from name of form package/message
-MessageSignature::MessageSignature(const boost::python::type_info& type_info)
-{
-	const std::string type_name(type_info.name());
-	size_t pos = type_name.find("::");
+static std::string rosMsgName(const boost::python::type_info& type_info) {
+	std::string name(type_info.name());
+	size_t pos = name.find("::");
 	if (pos != std::string::npos) {
-		this->module = type_name.substr(0, pos) + ".msg";
-
-		size_t end = type_name.find("_<", pos+2);
-		if (end != std::string::npos) {
-			this->message = type_name.substr(pos+2, end - (pos+2));
-			return;
-		}
+		name[pos] = '/';  // replace first ':' with '/'
+		name.erase(pos+1, 1);  // remove second ':'
+		size_t end = name.find("_<", pos+1);
+		if (end != std::string::npos)
+			return name.substr(0, end);
 	}
-	throw std::invalid_argument("Invalid C++ type name for ROS msg: " + type_name);
+	throw std::invalid_argument("Invalid C++ type name for ROS msg: " + name);
 }
-
-MessageSignature::MessageSignature(const std::string& type_name) {
-	size_t pos = type_name.find('/');
-	if (pos == std::string::npos)
-		throw std::invalid_argument("Invalid ROS msg name: " + type_name);
-	this->module = type_name.substr(0, pos) + ".msg";
-	this->message = type_name.substr(pos+1);
-}
-
-/// constructor from object's module name of form package.msg._type
-MessageSignature::MessageSignature(PyObject* object)
-   : MessageSignature(rosMsgName(object)) {}
-
 
 /// Additionally to the boost::python::converter::registry, this class remembers the registered
 /// ROS messages and their signature (in the form of package/msg).
 class ConverterRegistry {
-	// map from signature to Python type instance
-	typedef std::map<MessageSignature, boost::python::object> SignatureMap;
+	// map from ros-msg-names to corresponding Python type instances
+	typedef std::map<std::string, boost::python::object> SignatureMap;
 	SignatureMap signatures_;
 	// map from typeinfo to entry in signatures_
 	typedef std::map<boost::python::type_info, SignatureMap::iterator> TypeIdMap;
 	TypeIdMap types_;
 
 public:
-	bool insert(const MessageSignature &s, const boost::python::type_info& type_info) {
+	bool insert(const boost::python::type_info& type_info) {
+		const std::string &s = rosMsgName(type_info);
 		auto it_inserted = signatures_.insert(std::make_pair(s, boost::python::object()));
 		if (!it_inserted.second)
 			return false; // was already inserted before
@@ -102,8 +64,8 @@ static ConverterRegistry registry_singleton_;
 inline void* ConverterRegistry::convertible(PyObject* object)
 {
 	try {
-		MessageSignature signature(object);
-		if (signatures_.find(signature) != signatures_.end())
+		const std::string& ros_msg_name = rosMsgName(object);
+		if (signatures_.find(ros_msg_name) != signatures_.end())
 			return object;
 	} catch (const std::invalid_argument&) {}
 	return 0;
@@ -119,8 +81,13 @@ boost::python::object ConverterRegistry::createMessage(const boost::python::type
 	boost::python::object& cls = signature_it->second;
 
 	if (cls.is_none()) {  // load msg module once on demand
-		const MessageSignature& s = signature_it->first;
-		cls = s.createMessage();
+		const std::string& ros_msg_name = signature_it->first;
+		// find delimiting '/' in ros msg name
+		std::size_t pos = ros_msg_name.find('/');
+		// import module
+		boost::python::object m = boost::python::import((ros_msg_name.substr(0, pos) + ".msg").c_str());
+		// retrieve type instance (and remember it in signature_it->second)
+		cls = m.attr(ros_msg_name.substr(pos+1).c_str());
 	}
 	return cls();
 }
@@ -128,8 +95,7 @@ boost::python::object ConverterRegistry::createMessage(const boost::python::type
 
 bool RosMsgConverterBase::insert(const boost::python::type_info& type_info)
 {
-	MessageSignature signature(type_info);
-	return registry_singleton_.insert(signature, type_info);
+	return registry_singleton_.insert(type_info);
 }
 
 void* RosMsgConverterBase::convertible(PyObject* object) {
