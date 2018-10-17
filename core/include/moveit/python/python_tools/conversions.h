@@ -100,10 +100,15 @@ struct RosMsgConverter : RosMsgConverterBase {
 	/// constructor registers the type converter
 	RosMsgConverter() {
 		auto type_info = boost::python::type_id<T>();
+		// register type internally
 		if (insert(type_info)) {
-			/// register type with boost::python converter system
-			boost::python::converter::registry::push_back(&convertible, &construct, type_info);
-			boost::python::to_python_converter<T, RosMsgConverter<T>>();
+			// https://stackoverflow.com/questions/9888289/checking-whether-a-converter-has-already-been-registered
+			const boost::python::converter::registration* reg = boost::python::converter::registry::query(type_info);
+			if (!reg || !reg->m_to_python) {
+				/// register type with boost::python converter system
+				boost::python::converter::registry::push_back(&convertible, &construct, type_info);
+				boost::python::to_python_converter<T, RosMsgConverter<T>>();
+			}
 		}
 	}
 
