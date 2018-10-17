@@ -126,9 +126,9 @@ boost::python::object ConverterRegistry::createMessage(const boost::python::type
 }
 
 
-bool RosMsgConverterBase::insert(const boost::python::type_info& type_info, const std::string& message)
+bool RosMsgConverterBase::insert(const boost::python::type_info& type_info)
 {
-	MessageSignature signature = message.empty() ? MessageSignature(type_info) : MessageSignature(message);
+	MessageSignature signature(type_info);
 	return registry_singleton_.insert(signature, type_info);
 }
 

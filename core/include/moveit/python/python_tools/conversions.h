@@ -81,7 +81,7 @@ std::string rosMsgName(PyObject* object);
 class RosMsgConverterBase {
 protected:
 	/// Register type internally and return true if registered first time
-	static bool insert(const boost::python::type_info& type_info, const std::string& message);
+	static bool insert(const boost::python::type_info& type_info);
 
 	/// Determine if python object can be converted into C++ msg type
 	static void* convertible(PyObject* object);
@@ -98,9 +98,9 @@ protected:
 template <typename T>
 struct RosMsgConverter : RosMsgConverterBase {
 	/// constructor registers the type converter
-	RosMsgConverter(const std::string& message = "") {
+	RosMsgConverter() {
 		auto type_info = boost::python::type_id<T>();
-		if (insert(type_info, message)) {
+		if (insert(type_info)) {
 			/// register type with boost::python converter system
 			boost::python::converter::registry::push_back(&convertible, &construct, type_info);
 			boost::python::to_python_converter<T, RosMsgConverter<T>>();
