@@ -198,7 +198,8 @@ void Task::init()
 	}, 1, UINT_MAX);
 
 	// first time publish task
-	introspection_->publishTaskDescription();
+	if (introspection_)
+		introspection_->publishTaskDescription();
 }
 
 bool Task::canCompute() const
