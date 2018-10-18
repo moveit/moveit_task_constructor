@@ -50,11 +50,34 @@
 
 #include <functional>
 
+namespace {
+std::string rosNormalizeName(const std::string &name) {
+	std::string n;
+	n.reserve(name.size());
+
+	// drop invalid initial chars
+	auto read = name.begin(), end = name.end();
+	while(read != end && !isalpha(*read) && *read != '/' && *read != '~')
+		++read;
+
+	// copy (and correct) remaining chars
+	while (read != end) {
+		char c = *read;
+		n.push_back( (isalnum(c) || c == '_') ? c : '_' );
+		++read;
+	}
+	return n;
+}
+}
+
 namespace moveit { namespace task_constructor {
 
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
    : WrapperBase(std::string(), std::move(container)), id_(id), preempt_requested_(false)
 {
+	if (!id.empty()) stages()->setName(id);
+	id_ = rosNormalizeName(id);
+
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default, but only if ros::init() was called

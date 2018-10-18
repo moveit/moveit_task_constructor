@@ -37,6 +37,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 
 TEST(PA10, pick) {
 	Task t;
+	t.stages()->setName("pick");
 	t.loadRobotModel();
 	// define global properties used by most stages
 	t.setProperty("group", std::string("left_arm"));
