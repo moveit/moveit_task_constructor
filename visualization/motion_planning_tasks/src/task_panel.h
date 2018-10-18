@@ -101,6 +101,9 @@ public:
 	void save(rviz::Config config);
 	void load(const rviz::Config& config);
 
+Q_SIGNALS:
+	void configChanged();
+
 public Q_SLOTS:
 	void addTask();
 
