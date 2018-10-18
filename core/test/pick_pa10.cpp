@@ -53,6 +53,7 @@ TEST(PA10, pick) {
 	{
 		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
 		auto& state = scene->getCurrentStateNonConst();
+		state.setToDefaultValues();  // initialize state
 		state.setToDefaultValues(state.getJointModelGroup("left_arm"), "home");
 		state.setToDefaultValues(state.getJointModelGroup("right_arm"), "home");
 		state.update();
@@ -178,9 +179,6 @@ int main(int argc, char** argv){
 	ros::init(argc, argv, "pa10");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
-
-	// wait some time for move_group to come up
-	ros::WallDuration(5.0).sleep();
 
 	return RUN_ALL_TESTS();
 }
