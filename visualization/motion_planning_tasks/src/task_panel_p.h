@@ -62,8 +62,6 @@ public:
 	TaskSettings* settings_widget;
 
 	rviz::WindowManagerInterface* window_manager_;
-	static QPointer<TaskPanel> global_instance_;
-	static uint global_use_count_;
 };
 
 

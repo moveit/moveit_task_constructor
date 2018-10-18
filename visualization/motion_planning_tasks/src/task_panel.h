@@ -70,13 +70,13 @@ public:
 	TaskPanel(QWidget* parent = 0);
 	~TaskPanel();
 
-	/** Increment/decrement use count for global task panel instance.
+	/** Increment/decrement use count of singleton TaskPanel instance.
 	 *
 	 * If not yet done, an instance is created. If use count drops to zero,
 	 * the global instance is destroyed.
 	 */
-	static void incUseCount(rviz::WindowManagerInterface *window_manager);
-	static void decUseCount();
+	static void incDisplayCount(rviz::WindowManagerInterface *window_manager);
+	static void decDisplayCount();
 
 	void onInitialize() override;
 	void load(const rviz::Config& config) override;
