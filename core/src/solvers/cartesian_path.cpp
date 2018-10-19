@@ -56,8 +56,8 @@ void CartesianPath::init(const core::RobotModelConstPtr &robot_model)
 {
 }
 
-bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
-                         const planning_scene::PlanningSceneConstPtr to,
+bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
+                         const planning_scene::PlanningSceneConstPtr& to,
                          const moveit::core::JointModelGroup *jmg,
                          double timeout,
                          robot_trajectory::RobotTrajectoryPtr& result,
@@ -74,7 +74,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
 	            jmg, timeout, result, path_constraints);
 }
 
-bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr from,
+bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
                          const moveit::core::LinkModel &link,
                          const Eigen::Affine3d &target,
                          const moveit::core::JointModelGroup *jmg,

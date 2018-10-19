@@ -82,8 +82,8 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
-                           const planning_scene::PlanningSceneConstPtr to,
+bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                           const planning_scene::PlanningSceneConstPtr& to,
                            const moveit::core::JointModelGroup *jmg,
                            double timeout,
                            robot_trajectory::RobotTrajectoryPtr& result,
@@ -107,7 +107,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
 	return true;
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
+bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                            const moveit::core::LinkModel &link,
                            const Eigen::Affine3d& target_eigen,
                            const moveit::core::JointModelGroup *jmg,

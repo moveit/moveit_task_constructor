@@ -80,7 +80,8 @@ public:
 	~Task();
 
 	std::string id() const;
-	const moveit::core::RobotModelConstPtr getRobotModel() const { return robot_model_; }
+
+	const moveit::core::RobotModelConstPtr& getRobotModel() const { return robot_model_; }
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
 	/// load robot model from given parameter

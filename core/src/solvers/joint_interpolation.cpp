@@ -54,8 +54,8 @@ void JointInterpolationPlanner::init(const core::RobotModelConstPtr &robot_model
 {
 }
 
-bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr from,
-                                     const planning_scene::PlanningSceneConstPtr to,
+bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                     const planning_scene::PlanningSceneConstPtr& to,
                                      const moveit::core::JointModelGroup *jmg,
                                      double timeout,
                                      robot_trajectory::RobotTrajectoryPtr& result,
@@ -99,7 +99,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	return true;
 }
 
-bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr from,
+bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                            const moveit::core::LinkModel &link,
                            const Eigen::Affine3d& target_eigen,
                            const moveit::core::JointModelGroup *jmg,
