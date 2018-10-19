@@ -77,9 +77,10 @@ public:
 
 protected:
 	SolutionSequencePtr makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                                   const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes, const InterfaceState& from, const InterfaceState& to);
+	                                   const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
+	                                   const InterfaceState& from, const InterfaceState& to);
 	SubTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                       const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+	                       const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
 	                       const moveit::core::RobotState& state);
 
 protected:
