@@ -99,12 +99,15 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 
 Task::~Task()
 {
-	reset();
+	clear();  // remove all stages
+	robot_model_.reset();
+	// only destroy loader after all references to the model are gone!
+	robot_model_loader_.reset();
 }
 
 void Task::setRobotModel(const core::RobotModelConstPtr& robot_model)
 {
-	reset();
+	reset();  // solutions, scenes, etc become invalid
 	robot_model_ = robot_model;
 }
 
