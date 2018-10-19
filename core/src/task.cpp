@@ -93,6 +93,8 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 		planner = std::make_shared<planning_pipeline::PlanningPipeline>
 		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
 		planner_cache[id] = planner;
+		planner->displayComputedMotionPlans(false);
+		planner->publishReceivedRequests(false);
 	}
 	return planner;
 }
