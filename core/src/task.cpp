@@ -76,25 +76,48 @@ Task& Task::operator=(Task&& other)
 	return *this;
 }
 
+struct PlannerCache {
+	typedef std::tuple<std::string, std::string, std::string> PlannerID;
+	typedef std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline>> PlannerMap;
+	typedef std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap>> ModelList;
+	ModelList cache_;
+
+	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, PlannerID id) {
+		// find model in cache_ and remove expired entries while doing so
+		ModelList::iterator model_it = cache_.begin();
+		while (model_it != cache_.end()) {
+			if (model_it->first.expired()) {
+				model_it = cache_.erase(model_it);
+				continue;
+			}
+			if (model_it->first.lock() == model)
+				break;
+			++model_it;
+		}
+		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
+			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
+
+		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
+	}
+};
+
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
                     const std::string& planning_plugin_param_name,
                     const std::string& adapter_plugins_param_name) {
-	typedef std::tuple<std::string, std::string, std::string, std::string> PlannerID;
-	static std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> > planner_cache;
+	static PlannerCache cache;
+	PlannerCache::PlannerID id (ns, planning_plugin_param_name, adapter_plugins_param_name);
 
-	PlannerID id (model->getName(), ns, planning_plugin_param_name, adapter_plugins_param_name);
-	auto it = planner_cache.find(id);
-
-	planning_pipeline::PlanningPipelinePtr planner;
-	if (it != planner_cache.cend())
-		planner = it->second.lock();
+	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(model, id);
+	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
 	if (!planner) {
+		// create new entry
 		planner = std::make_shared<planning_pipeline::PlanningPipeline>
 		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
-		planner_cache[id] = planner;
 		planner->displayComputedMotionPlans(false);
 		planner->publishReceivedRequests(false);
+		// store in cache
+		entry = planner;
 	}
 	return planner;
 }
