@@ -112,7 +112,7 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 void GenerateGraspPose::compute() {
 	if (scenes_.empty())
 		return;
-	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
+	planning_scene::PlanningScenePtr scene = scenes_[0];
 	scenes_.pop_front();
 
 	const auto& props = properties();

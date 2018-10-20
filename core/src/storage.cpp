@@ -45,8 +45,16 @@
 
 namespace moveit { namespace task_constructor {
 
-InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
-   : scene_(ps)
+const planning_scene::PlanningScenePtr&
+ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
+	// ensure scene's state is updated
+	if (scene->getCurrentState().dirty())
+		scene->getCurrentStateNonConst().update();
+	return scene;
+}
+
+InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps)
+   : scene_(ensureUpdated(ps))
 {
 }
 
