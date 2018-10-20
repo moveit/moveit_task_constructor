@@ -1,0 +1,13 @@
+# Task solution to execute
+Solution solution
+
+---
+
+# result of execution
+moveit_msgs/MoveItErrorCodes error_code
+
+---
+
+# finished subtrajectory id / number
+uint32 sub_id
+uint32 sub_no

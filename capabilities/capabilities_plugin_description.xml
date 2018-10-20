@@ -1,0 +1,7 @@
+<library path="libmoveit_task_constructor_capabilities">
+  <class name="move_group/ExecuteTaskSolutionCapability" type="move_group::ExecuteTaskSolutionCapability" base_class_type="move_group::MoveGroupCapability">
+    <description>
+      Action server to execute solutions generated through the MoveIt Task Constructor.
+    </description>
+  </class>
+</library>

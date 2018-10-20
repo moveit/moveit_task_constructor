@@ -40,8 +40,10 @@
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
 #include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
@@ -258,6 +260,17 @@ bool Task::plan(size_t max_solutions)
 void Task::preempt()
 {
 	preempt_requested_ = true;
+}
+
+void Task::execute(const SolutionBase &s)
+{
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
+	ac.waitForServer();
+
+	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
+	s.fillMessage(goal.solution, introspection_.get());
+	ac.sendGoal(goal);
+	ac.waitForResult();
 }
 
 void Task::publishAllSolutions(bool wait)
