@@ -74,6 +74,7 @@ void FixCollisionObjects::computeBackward(const InterfaceState &to)
 
 bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d& correction, double max_penetration)
 {
+	correction.setZero();
 	for (const cd::Contact& c : contacts) {
 		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT &&
 		     c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
