@@ -72,14 +72,14 @@ public:
 
 	/// set properties of IK solver
 	void setIKFrame(const geometry_msgs::PoseStamped &transform) { setProperty("ik_frame", transform); }
-	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& t, const std::string& link) {
-		Eigen::Affine3d transform; transform = t;
+		Eigen::Isometry3d transform; transform = t;
 		setIKFrame(transform, link);
 	}
 	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Affine3d::Identity(), link);
+		setIKFrame(Eigen::Isometry3d::Identity(), link);
 	}
 
 	void setMaxIKSolutions(uint32_t max_ik_solutions) { setProperty("max_ik_solutions", max_ik_solutions); }

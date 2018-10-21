@@ -86,7 +86,7 @@ public:
 	/// plan trajectory from current robot state to Cartesian target
 	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from,
 	                  const moveit::core::LinkModel &link,
-	                  const Eigen::Affine3d& target,
+	                  const Eigen::Isometry3d& target,
 	                  const moveit::core::JointModelGroup *jmg,
 	                  double timeout,
 	                  robot_trajectory::RobotTrajectoryPtr& result,

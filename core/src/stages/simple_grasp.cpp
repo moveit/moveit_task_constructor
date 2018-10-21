@@ -143,7 +143,7 @@ void SimpleGraspBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 	SerialContainer::init(robot_model);
 }
 
-void SimpleGraspBase::setIKFrame(const Eigen::Affine3d& pose, const std::string& link) {
+void SimpleGraspBase::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);

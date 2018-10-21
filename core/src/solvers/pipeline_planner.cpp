@@ -115,7 +115,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                            const moveit::core::LinkModel &link,
-                           const Eigen::Affine3d& target_eigen,
+                           const Eigen::Isometry3d& target_eigen,
                            const moveit::core::JointModelGroup *jmg,
                            double timeout,
                            robot_trajectory::RobotTrajectoryPtr& result,

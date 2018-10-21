@@ -60,7 +60,7 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	                                    "constraints to maintain during trajectory");
 }
 
-void MoveRelative::setIKFrame(const Eigen::Affine3d& pose, const std::string& link)
+void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link)
 {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
@@ -154,12 +154,12 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		Eigen::Vector3d angular;  // angular rotation
 		double linear_norm = 0.0, angular_norm = 0.0;
 
-		Eigen::Affine3d target_eigen;
-		Eigen::Affine3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
+		Eigen::Isometry3d target_eigen;
+		Eigen::Isometry3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try { // try to extract Twist
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
-			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
+			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.twist.linear, linear);
 			tf::vectorMsgToEigen(target.twist.angular, angular);
 
@@ -200,7 +200,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 		try { // try to extract Vector
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
-			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
+			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.vector, linear);
 
 			// use max distance?
@@ -225,7 +225,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
-		Eigen::Affine3d ik_pose;
+		Eigen::Isometry3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
 		target_eigen = target_eigen * ik_pose.inverse();
 
@@ -237,7 +237,7 @@ COMPUTE:
 			if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
 				robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 				reached_state->updateLinkTransforms();
-				const Eigen::Affine3d& reached_pose = reached_state->getGlobalLinkTransform(link);
+				const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 				if (use_rotation_distance) {
 					Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
 					distance = rotation.angle();

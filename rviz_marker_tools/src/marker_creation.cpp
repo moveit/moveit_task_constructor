@@ -134,18 +134,18 @@ std_msgs::ColorRGBA getColor(Color color, double alpha) {
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Affine3d& second) {
+geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
 	geometry_msgs::Pose result;
-	Eigen::Affine3d result_eigen;
+	Eigen::Isometry3d result_eigen;
 	tf::poseMsgToEigen(first, result_eigen);
 	result_eigen = result_eigen * second;
 	tf::poseEigenToMsg(result_eigen, result);
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const Eigen::Affine3d& first, const geometry_msgs::Pose& second) {
+geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
 	geometry_msgs::Pose result;
-	Eigen::Affine3d result_eigen;
+	Eigen::Isometry3d result_eigen;
 	tf::poseMsgToEigen(second, result_eigen);
 	result_eigen = first * result_eigen;
 	tf::poseEigenToMsg(result_eigen, result);
@@ -277,7 +277,7 @@ vm::Marker& makeArrow(vm::Marker &m, double scale, bool tip_at_origin) {
 	m.scale.x = scale;
 	prepareMarker(m, vm::Marker::ARROW);
 	if (tip_at_origin)
-		m.pose = composePoses(m.pose, Eigen::Translation3d(-scale, 0, 0) * Eigen::Affine3d::Identity());
+		m.pose = composePoses(m.pose, Eigen::Translation3d(-scale, 0, 0) * Eigen::Isometry3d::Identity());
 	return m;
 }
 

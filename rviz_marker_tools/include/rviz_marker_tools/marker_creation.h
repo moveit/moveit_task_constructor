@@ -33,8 +33,8 @@ std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::Col
 std_msgs::ColorRGBA& brighten(std_msgs::ColorRGBA& color, double fraction);
 std_msgs::ColorRGBA& darken(std_msgs::ColorRGBA& color, double fraction);
 
-geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Affine3d& second);
-geometry_msgs::Pose composePoses(const Eigen::Affine3d& first, const geometry_msgs::Pose& second);
+geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second);
+geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second);
 
 /** All routines only touch the geometry part of the marker
  *  pose, color, namespace, id, etc need to be set externally
@@ -91,7 +91,7 @@ void appendFrame(T& container, const geometry_msgs::PoseStamped& pose, double sc
 	container.push_back(m);
 
 	// z-axis
-	m.pose = composePoses(pose.pose, Eigen::Translation3d(0, 0, scale / 2.0) * Eigen::Affine3d::Identity());
+	m.pose = composePoses(pose.pose, Eigen::Translation3d(0, 0, scale / 2.0) * Eigen::Isometry3d::Identity());
 	setColor(m.color, BLUE);
 	container.push_back(m);
 }

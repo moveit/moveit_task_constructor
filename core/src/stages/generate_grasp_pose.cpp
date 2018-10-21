@@ -131,7 +131,7 @@ void GenerateGraspPose::compute() {
 	double current_angle_ = 0.0;
 	while (current_angle_ < 2.*M_PI && current_angle_ > -2.*M_PI) {
 		// rotate object pose about z-axis
-		Eigen::Affine3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
+		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
 		current_angle_ += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);

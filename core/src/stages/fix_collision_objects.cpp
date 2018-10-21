@@ -147,7 +147,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
-			scene.getWorldNonConst()->moveObject(name, Eigen::Affine3d(Eigen::Translation3d(correction)));
+			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));
 		}
 	}
 

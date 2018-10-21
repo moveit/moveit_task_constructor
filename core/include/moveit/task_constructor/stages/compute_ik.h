@@ -77,24 +77,24 @@ public:
 	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
 		setProperty("ik_frame", pose);
 	}
-	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose; pose = p;
 		setIKFrame(pose, link);
 	}
 	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Affine3d::Identity(), link);
+		setIKFrame(Eigen::Isometry3d::Identity(), link);
 	}
 
 	/// setters for target pose
 	void setTargetPose(const geometry_msgs::PoseStamped &pose) {
 		setProperty("target_pose", pose);
 	}
-	void setTargetPose(const Eigen::Affine3d& pose, const std::string& frame = "");
+	void setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame = "");
 	template <typename T>
 	void setTargetPose(const T& p, const std::string& frame = "") {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose; pose = p;
 		setTargetPose(pose, frame);
 	}
 

@@ -55,7 +55,7 @@ TEST(PR2, pick) {
 	grasp_generator->setMonitoredStage(initial_stage);
 
 	auto grasp = std::make_unique<stages::SimpleGrasp>(std::unique_ptr<MonitoringGenerator>(grasp_generator));
-	grasp->setIKFrame(Eigen::Affine3d::Identity(), "l_gripper_tool_frame");
+	grasp->setIKFrame(Eigen::Isometry3d::Identity(), "l_gripper_tool_frame");
 
 	// pick stage
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp));

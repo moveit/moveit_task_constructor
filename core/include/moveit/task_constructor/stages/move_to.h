@@ -64,14 +64,14 @@ public:
 	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
 		setProperty("ik_frame", pose);
 	}
-	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose; pose = p;
 		setIKFrame(pose, link);
 	}
 	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Affine3d::Identity(), link);
+		setIKFrame(Eigen::Isometry3d::Identity(), link);
 	}
 
 	/// move link to given pose
@@ -104,10 +104,10 @@ protected:
 	             SubTrajectory &trajectory, Direction dir);
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
 	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-	                 const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
+	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
 	                 decltype(std::declval<SolutionBase>().markers())& markers);
 	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-	                  const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
 	                  decltype(std::declval<SolutionBase>().markers())&);
 
 protected:

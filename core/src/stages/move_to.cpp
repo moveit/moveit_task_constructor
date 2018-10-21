@@ -58,7 +58,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	                                    "constraints to maintain during trajectory");
 }
 
-void MoveTo::setIKFrame(const Eigen::Affine3d& pose, const std::string& link)
+void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link)
 {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
@@ -107,14 +107,14 @@ bool MoveTo::getJointStateGoal(const boost::any& goal,
 
 bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
                          const planning_scene::PlanningScenePtr& scene,
-                         Eigen::Affine3d& target_eigen, decltype(std::declval<SolutionBase>().markers())& markers)
+                         Eigen::Isometry3d& target_eigen, decltype(std::declval<SolutionBase>().markers())& markers)
 {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
 		tf::poseMsgToEigen(target.pose, target_eigen);
 
 		// transform target into global frame
-		const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
 		target_eigen = frame * target_eigen;
 
 		// frame at target pose
@@ -130,7 +130,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 
 bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
                           const planning_scene::PlanningScenePtr& scene,
-                          Eigen::Affine3d& target_eigen, decltype(std::declval<SolutionBase>().markers())&)
+                          Eigen::Isometry3d& target_eigen, decltype(std::declval<SolutionBase>().markers())&)
 {
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
@@ -138,7 +138,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 		tf::pointMsgToEigen(target.point, target_point);
 
 		// transform target into global frame
-		const Eigen::Affine3d& frame = scene->getFrameTransform(target.header.frame_id);
+		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
 		target_point = frame * target_point;
 
 		// retain link orientation
@@ -179,7 +179,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else { // Cartesian goal
 		const moveit::core::LinkModel* link;
-		Eigen::Affine3d target_eigen;
+		Eigen::Isometry3d target_eigen;
 
 		// Cartesian targets require an IK reference frame
 		geometry_msgs::PoseStamped ik_pose_msg;
@@ -207,7 +207,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		}
 
 		// transform target pose such that ik frame will reach there if link does
-		Eigen::Affine3d ik_pose;
+		Eigen::Isometry3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
 		target_eigen = target_eigen * ik_pose.inverse();
 
