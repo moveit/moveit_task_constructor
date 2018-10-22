@@ -26,6 +26,7 @@ add_library(${PROJECT_NAME}
 	storage.cpp
 	task.cpp
 
+	solvers/planner_interface.cpp
 	solvers/cartesian_path.cpp
 	solvers/pipeline_planner.cpp
 	solvers/joint_interpolation.cpp

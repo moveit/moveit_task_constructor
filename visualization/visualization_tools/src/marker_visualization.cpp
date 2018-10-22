@@ -2,60 +2,15 @@
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <rviz/default_plugin/markers/marker_base.h>
-#include "rviz/default_plugin/markers/arrow_marker.h"
-#include "rviz/default_plugin/markers/line_list_marker.h"
-#include "rviz/default_plugin/markers/line_strip_marker.h"
-#include "rviz/default_plugin/markers/mesh_resource_marker.h"
-#include "rviz/default_plugin/markers/points_marker.h"
-#include "rviz/default_plugin/markers/shape_marker.h"
-#include "rviz/default_plugin/markers/text_view_facing_marker.h"
-#include "rviz/default_plugin/markers/triangle_list_marker.h"
-
+#include <rviz/default_plugin/marker_utils.h>
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
+#include <OgreSceneManager.h>
 #include <tf2_msgs/TF2Error.h>
 #include <ros/console.h>
 #include <eigen_conversions/eigen_msg.h>
-#include <OgreSceneManager.h>
 
 namespace moveit_rviz_plugin {
-
-rviz::MarkerBase* createMarker(int marker_type, rviz::DisplayContext* context, Ogre::SceneNode* node)
-{
-	switch (marker_type) {
-	case visualization_msgs::Marker::CUBE:
-	case visualization_msgs::Marker::CYLINDER:
-	case visualization_msgs::Marker::SPHERE:
-		return new rviz::ShapeMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::ARROW:
-		return new rviz::ArrowMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::LINE_STRIP:
-		return new rviz::LineStripMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::LINE_LIST:
-		return new rviz::LineListMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::SPHERE_LIST:
-	case visualization_msgs::Marker::CUBE_LIST:
-	case visualization_msgs::Marker::POINTS:
-		return new rviz::PointsMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::TEXT_VIEW_FACING:
-		return new rviz::TextViewFacingMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::MESH_RESOURCE:
-		return new rviz::MeshResourceMarker(nullptr, context, node);
-
-	case visualization_msgs::Marker::TRIANGLE_LIST:
-		return new rviz::TriangleListMarker(nullptr, context, node);
-
-	default:
-		ROS_ERROR("Unknown marker type: %d", marker_type);
-		return nullptr;
-	}
-}
 
 // create MarkerData with nil marker_ pointer, just with a copy of message
 MarkerVisualization::MarkerData::MarkerData(const visualization_msgs::Marker& marker)
@@ -151,7 +106,7 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext *context, Ogre::Sce
 			frame_it->second = node->createChildSceneNode();
 		node = frame_it->second;
 
-		data.marker_.reset(createMarker(data.msg_->type, context, node));
+		data.marker_.reset(rviz::createMarker(data.msg_->type, nullptr, context, node));
 		if (!data.marker_) continue;  // failed to create marker
 
 		// setMessage() initializes the marker, placing it at the message-specified frame

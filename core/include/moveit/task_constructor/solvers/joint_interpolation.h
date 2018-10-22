@@ -50,9 +50,6 @@ class JointInterpolationPlanner : public PlannerInterface {
 public:
     JointInterpolationPlanner();
 
-	void setGroup(const std::string &group) { setProperty("group", group); }
-	void setTimeout(double timeout) { setProperty("timeout", timeout); }
-
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr& from,

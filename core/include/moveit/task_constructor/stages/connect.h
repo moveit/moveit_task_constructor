@@ -62,6 +62,8 @@ protected:
 	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
 
 public:
+	enum MergeMode { SEQUENTIAL = 0, WAYPOINTS = 1 };
+
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(const std::string& name, const GroupPlannerVector& planners);
 
@@ -75,9 +77,10 @@ public:
 
 protected:
 	SolutionSequencePtr makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                                   const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes, const InterfaceState& from, const InterfaceState& to);
+	                                   const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
+	                                   const InterfaceState& from, const InterfaceState& to);
 	SubTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-	                       const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+	                       const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
 	                       const moveit::core::RobotState& state);
 
 protected:

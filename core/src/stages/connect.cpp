@@ -48,7 +48,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners)
 {
 	setTimeout(1.0);
 	auto& p = properties();
-	p.declare<std::string>("group", "name of planning group");
+	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 }
@@ -138,13 +138,14 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
+	MergeMode mode = props.get<MergeMode>("merge_mode");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
+	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
-	planning_scene::PlanningScenePtr start = from.scene()->diff();
-	const moveit::core::RobotState& goal_state = to.scene()->getCurrentState();
 
-	std::vector<planning_scene::PlanningScenePtr> intermediate_scenes;
+	std::vector<planning_scene::PlanningSceneConstPtr> intermediate_scenes;
+	planning_scene::PlanningSceneConstPtr start = from.scene();
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
@@ -152,10 +153,12 @@ void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
 		planning_scene::PlanningScenePtr end = start->diff();
+		const moveit::core::JointModelGroup *jmg = final_goal_state.getJointModelGroup(pair.first);
+		final_goal_state.copyJointGroupPositions(jmg, positions);
+		robot_state::RobotState& goal_state = end->getCurrentStateNonConst();
+		goal_state.setJointGroupPositions(jmg, positions);
+		goal_state.update();
 		intermediate_scenes.push_back(end);
-		const moveit::core::JointModelGroup *jmg = goal_state.getJointModelGroup(pair.first);
-		goal_state.copyJointGroupPositions(jmg, positions);
-		end->getCurrentStateNonConst().setJointGroupPositions(jmg, positions);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
@@ -169,29 +172,27 @@ void Connect::compute(const InterfaceState &from, const InterfaceState &to) {
 	}
 
 	SolutionBasePtr solution;
-	if (!success) {  // error during sequential planning
-		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
-		solution->markAsFailure();
-	} else {
+	if (success && mode != SEQUENTIAL)  // try to merge
 		solution = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
-		if (!solution)  // merging failed, store sequentially
-			solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
-	}
+	if (!solution)  // success == false or merging failed: store sequentially
+		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
+	if (!success)  // error during sequential planning
+		solution->markAsFailure();
 	connect(from, to, solution);
 }
 
 SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                            const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+                                            const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                             const InterfaceState &from, const InterfaceState &to)
 {
 	assert(sub_trajectories.size() + 1 == intermediate_scenes.size());
 	auto scene_it = intermediate_scenes.begin();
-	planning_scene::PlanningScenePtr start = *scene_it;
+	planning_scene::PlanningSceneConstPtr start = *scene_it;
 	const InterfaceState* state = &from;
 
 	SolutionSequence::container_type sub_solutions;
 	for (const auto &sub : sub_trajectories) {
-		planning_scene::PlanningScenePtr end = *++scene_it;
+		planning_scene::PlanningSceneConstPtr end = *++scene_it;
 
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
 		inserted->setCreator(pimpl_);
@@ -214,7 +215,7 @@ SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::
 }
 
 SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                const std::vector<planning_scene::PlanningScenePtr>& intermediate_scenes,
+                                const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                 const moveit::core::RobotState& state)
 {
 	// no need to merge if there is only a single sub trajectory

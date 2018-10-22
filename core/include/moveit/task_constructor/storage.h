@@ -99,6 +99,7 @@ public:
 
 	/// create an InterfaceState from a planning scene
 	InterfaceState(const planning_scene::PlanningScenePtr& ps);
+	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);

@@ -99,7 +99,6 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 	}
 	{
 		auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-		pipeline->setTimeout(8.0);
 		pipeline->setPlannerId("RRTConnectkConfigDefault");
 
 		auto move = new MoveTo(forward ? "close gripper" : "open gripper", pipeline);

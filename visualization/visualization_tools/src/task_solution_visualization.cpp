@@ -419,7 +419,6 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
   } else if (current_state_ < max_state_index)
     animating_ = true;  // auto-activate animation if slider_panel_ is hidden
 
-  QString msg = "no change";
   if (animating_ && current_state_ == previous_state) {
     // auto-advance current_state_ based on time progress
     current_state_time_ += wall_dt;
@@ -429,7 +428,6 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
       current_state_ = 0;
       current_state_time_ = 0.0;
       trail_scene_node_->setVisible(false);
-      msg = "restart";
     } else if (tm < 0.0) {  // using realtime: skip to next waypoint based on elapsed display time
       while (current_state_ < max_state_index &&
              (tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1)) < current_state_time_) {
@@ -439,11 +437,9 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
     } else if (current_state_time_ > tm) {  // fixed display time per state
         ++current_state_;
       current_state_time_ = 0.0;
-      msg = "progress";
     }
   } else if (current_state_ != previous_state) {  // current_state_ changed from slider
     current_state_time_ = 0.0;
-    msg = "slider";
   }
 
   if ((waypoint_count > 0 && current_state_ >= max_state_index) ||

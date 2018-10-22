@@ -164,14 +164,20 @@ void Introspection::publishAllSolutions(bool wait)
 	};
 }
 
+const SolutionBase* Introspection::solutionFromId(uint id) const {
+	auto it = impl->id_solution_bimap_.left.find(id);
+	if (it == impl->id_solution_bimap_.left.end())
+		return nullptr;
+	return it->second;
+}
+
 bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Request  &req,
                                 moveit_task_constructor_msgs::GetSolution::Response &res)
 {
-	auto it = impl->id_solution_bimap_.left.find(req.solution_id);
-	if (it == impl->id_solution_bimap_.left.end())
-		return false;
+	const SolutionBase* solution = solutionFromId(req.solution_id);
+	if (!solution) return false;
 
-	fillSolution(res.solution, *it->second);
+	fillSolution(res.solution, *solution);
 	return true;
 }
 

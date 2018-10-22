@@ -44,7 +44,6 @@ TEST(PA10, pick) {
 	t.setProperty("gripper", std::string("left_hand"));
 
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-	pipeline->setTimeout(8.0);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 

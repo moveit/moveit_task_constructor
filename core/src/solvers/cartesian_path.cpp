@@ -48,8 +48,6 @@ CartesianPath::CartesianPath()
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
 	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
-	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
-	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 }
 
 void CartesianPath::init(const core::RobotModelConstPtr &robot_model)

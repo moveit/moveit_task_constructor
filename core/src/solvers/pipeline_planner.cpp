@@ -52,8 +52,6 @@ PipelinePlanner::PipelinePlanner()
 	p.declare<std::string>("planner", "", "planner id");
 
 	p.declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
-	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
-	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 	p.declare<moveit_msgs::WorkspaceParameters>("workspace_parameters", moveit_msgs::WorkspaceParameters(), "allowed workspace of mobile base?");
 
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");

@@ -47,9 +47,6 @@ class CartesianPath : public PlannerInterface {
 public:
 	CartesianPath();
 
-	void setGroup(const std::string &group) { setProperty("group", group); }
-	void setTimeout(double timeout) { setProperty("timeout", timeout); }
-
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
