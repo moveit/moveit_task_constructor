@@ -235,8 +235,9 @@ COMPUTE:
 		if (min_distance > 0.0) {
 			double distance = 0.0;
 			if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
-				const robot_state::RobotState& reached_state = robot_trajectory->getLastWayPoint();
-				Eigen::Affine3d reached_pose = reached_state.getGlobalLinkTransform(link);
+				robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+				reached_state->updateLinkTransforms();
+				const Eigen::Affine3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 				if (use_rotation_distance) {
 					Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
 					distance = rotation.angle();
