@@ -59,11 +59,19 @@ PipelinePlanner::PipelinePlanner()
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");
 	p.declare<double>("goal_position_tolerance", 1e-4, "tolerance for reaching position goals");
 	p.declare<double>("goal_orientation_tolerance", 1e-4, "tolerance for reaching orientation goals");
+
+	p.declare<bool>("display_motion_plans", false,
+		"publish generated solutions on topic " + planning_pipeline::PlanningPipeline::DISPLAY_PATH_TOPIC);
+	p.declare<bool>("publish_planning_requests", false,
+		"publish motion planning requests on topic " + planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
 void PipelinePlanner::init(const core::RobotModelConstPtr &robot_model)
 {
 	planner_ = Task::createPlanner(robot_model);
+
+	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
+	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
 
 void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,

@@ -116,8 +116,6 @@ Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::str
 		// create new entry
 		planner = std::make_shared<planning_pipeline::PlanningPipeline>
 		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
-		planner->displayComputedMotionPlans(false);
-		planner->publishReceivedRequests(false);
 		// store in cache
 		entry = planner;
 	}
