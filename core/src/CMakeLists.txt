@@ -10,7 +10,6 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/stage_p.h
 	${PROJECT_INCLUDE}/storage.h
 	${PROJECT_INCLUDE}/task.h
-	${PROJECT_INCLUDE}/test.h
 	${PROJECT_INCLUDE}/utils.h
 
 	${PROJECT_INCLUDE}/solvers/planner_interface.h
