@@ -59,7 +59,7 @@ std::auto_ptr<ComputeIK> ComputeIK_init(const std::string& name, std::auto_ptr<S
 
 
 void MoveRelative_setJoints(MoveRelative& self, const bp::dict& joints) {
-	self.setGoal(fromDict<double>(joints));
+	self.setDirection(fromDict<double>(joints));
 }
 
 
@@ -176,8 +176,8 @@ void export_stages()
 	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<Stage>>();
 
 
-	void (MoveRelative::*setGoalTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setGoal;
-	void (MoveRelative::*setGoalDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setGoal;
+	void (MoveRelative::*setTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setDirection;
+	void (MoveRelative::*setDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setDirection;
 	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<Stage>, boost::noncopyable>
 	      ("MoveRelative", bp::init<const std::string&, const solvers::PlannerInterfacePtr&>())
 	      .property<std::string>("group")
@@ -185,9 +185,9 @@ void export_stages()
 	      .property<double>("min_distance")
 	      .property<double>("max_distance")
 	      .property<moveit_msgs::Constraints>("path_constraints")
-	      .def("setGoal", setGoalTwist)
-	      .def("setGoal", setGoalDirection)
-	      .def("setGoal", &MoveRelative_setJoints)
+	      .def("setDirection", setTwist)
+	      .def("setDirection", setDirection)
+	      .def("setDirection", &MoveRelative_setJoints)
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<Stage>>();
 

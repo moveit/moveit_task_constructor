@@ -185,8 +185,8 @@ class TestStages(unittest.TestCase):
         self._check(stage, "min_distance", 0.5)
         self._check(stage, "max_distance", 0.25)
         self._check(stage, "path_constraints", Constraints())
-        stage.setGoal(TwistStamped())
-        stage.setGoal(Vector3Stamped())
+        stage.setDirection(TwistStamped())
+        stage.setDirection(Vector3Stamped())
 
     def test_Connect(self):
         planner = core.PipelinePlanner()
