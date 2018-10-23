@@ -40,7 +40,6 @@
 #include <moveit/task_constructor/task.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
-#include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <eigen_conversions/eigen_msg.h>
 
@@ -67,15 +66,12 @@ PipelinePlanner::PipelinePlanner()
 void PipelinePlanner::init(const core::RobotModelConstPtr &robot_model)
 {
 	planner_ = Task::createPlanner(robot_model);
-
-	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
-	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
 
-void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
-                           const PropertyMap& p,
-                           const moveit::core::JointModelGroup *jmg,
-                           double timeout)
+void PipelinePlanner::initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
+                                            const PropertyMap& p,
+                                            const moveit::core::JointModelGroup *jmg,
+                                            double timeout)
 {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
@@ -86,6 +82,9 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
 	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
 	req.max_acceleration_scaling_factor = p.get<double>("max_acceleration_scaling_factor");
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
+
+	planner_->displayComputedMotionPlans(p.get<bool>("display_motion_plans"));
+	planner_->publishReceivedRequests(p.get<bool>("publish_planning_requests"));
 }
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
