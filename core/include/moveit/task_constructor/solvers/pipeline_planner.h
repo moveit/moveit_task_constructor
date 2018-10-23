@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
@@ -70,6 +71,12 @@ public:
 	          double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
+
+protected:
+	void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
+	                           const PropertyMap& p,
+	                           const moveit::core::JointModelGroup *jmg,
+	                           double timeout);
 
 protected:
 	planning_pipeline::PlanningPipelinePtr planner_;
