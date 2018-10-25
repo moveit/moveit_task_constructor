@@ -21,7 +21,6 @@ env:
 
 before_script:
   - git clone -q https://github.com/ros-planning/moveit_ci.git .moveit_ci
-  - . .prepare_overlay.sh
 
 script:
   - .moveit_ci/travis.sh
