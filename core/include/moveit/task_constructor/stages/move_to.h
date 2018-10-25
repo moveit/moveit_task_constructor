@@ -51,7 +51,8 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class MoveTo : public PropagatingEitherWay {
 public:
-	MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner);
+	MoveTo(const std::string& name = "move to",
+	       const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	void computeForward(const InterfaceState& from) override;

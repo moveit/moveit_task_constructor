@@ -128,7 +128,7 @@ class ParallelContainerBase : public ContainerBase
 {
 public:
 	PRIVATE_CLASS(ParallelContainerBase)
-	ParallelContainerBase(const std::string &name);
+	ParallelContainerBase(const std::string &name = "parallel container");
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -228,7 +228,7 @@ class WrapperBase : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(WrapperBase)
-	WrapperBase(const std::string &name, Stage::pointer &&child = Stage::pointer());
+	WrapperBase(const std::string &name = "wrapper", Stage::pointer &&child = Stage::pointer());
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;

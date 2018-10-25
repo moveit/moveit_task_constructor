@@ -53,8 +53,14 @@ void ModifyPlanningScene_allowCollisions(ModifyPlanningScene& self, const bp::ob
 BOOST_PYTHON_FUNCTION_OVERLOADS(ModifyPlanningScene_allowCollisions_overloads, ModifyPlanningScene_allowCollisions, 3, 4)
 
 
-std::auto_ptr<ComputeIK> ComputeIK_init(const std::string& name, std::auto_ptr<Stage> stage) {
+std::auto_ptr<ComputeIK> ComputeIK_init_2(const std::string& name, std::auto_ptr<Stage> stage) {
 	return std::auto_ptr<ComputeIK>(new ComputeIK(name, std::unique_ptr<Stage>{stage.release()}));
+}
+std::auto_ptr<ComputeIK> ComputeIK_init_1(const std::string& name) {
+	return std::auto_ptr<ComputeIK>(new ComputeIK(name));
+}
+std::auto_ptr<ComputeIK> ComputeIK_init_0() {
+	return std::auto_ptr<ComputeIK>(new ComputeIK());
 }
 
 
@@ -63,7 +69,7 @@ void MoveRelative_setJoints(MoveRelative& self, const bp::dict& joints) {
 }
 
 
-std::auto_ptr<Connect> Connect_init(const std::string& name, const bp::list& l) {
+std::auto_ptr<Connect> Connect_init_2(const std::string& name, const bp::list& l) {
 	Connect::GroupPlannerVector planners;
 	for (bp::stl_input_iterator<bp::tuple> it(l), end; it != end; ++it) {
 		std::string group = bp::extract<std::string>((*it)[0]);
@@ -72,37 +78,54 @@ std::auto_ptr<Connect> Connect_init(const std::string& name, const bp::list& l) 
 	}
 	return std::auto_ptr<Connect>(new Connect(name, planners));
 }
+std::auto_ptr<Connect> Connect_init_1(const std::string& name) {
+	return Connect_init_2(name, bp::list());
+}
+std::auto_ptr<Connect> Connect_init_0() {
+	return Connect_init_2(std::string(), bp::list());
+}
 
-
-std::auto_ptr<Pick> Pick_init(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
+std::auto_ptr<Pick> Pick_init_2(std::auto_ptr<Stage> grasp_stage, const std::string& name) {
 	return std::auto_ptr<Pick>(new Pick(std::unique_ptr<Stage>{grasp_stage.release()}, name));
 }
 std::auto_ptr<Pick> Pick_init_1(std::auto_ptr<Stage> grasp_stage) {
-	return std::auto_ptr<Pick>(new Pick(std::unique_ptr<Stage>{grasp_stage.release()}));
+	return Pick_init_2(std::move(grasp_stage), std::string());
+}
+std::auto_ptr<Pick> Pick_init_0() {
+	return Pick_init_2(std::auto_ptr<Stage>(), std::string());
 }
 
 
-std::auto_ptr<Place> Place_init(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
+std::auto_ptr<Place> Place_init_2(std::auto_ptr<Stage> ungrasp_stage, const std::string& name) {
 	return std::auto_ptr<Place>(new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}, name));
 }
 std::auto_ptr<Place> Place_init_1(std::auto_ptr<Stage> ungrasp_stage) {
-	return std::auto_ptr<Place>(new Place(std::unique_ptr<Stage>{ungrasp_stage.release()}));
+	return Place_init_2(std::move(ungrasp_stage), std::string());
+}
+std::auto_ptr<Place> Place_init_0() {
+	return Place_init_2(std::auto_ptr<Stage>(), std::string());
 }
 
 
-std::auto_ptr<SimpleGrasp> SimpleGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+std::auto_ptr<SimpleGrasp> SimpleGrasp_init_2(std::auto_ptr<Stage> pose_gen, const std::string& name) {
 	return std::auto_ptr<SimpleGrasp>(new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name));
 }
 std::auto_ptr<SimpleGrasp> SimpleGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
-	return std::auto_ptr<SimpleGrasp>(new SimpleGrasp(std::unique_ptr<Stage>{pose_gen.release()}));
+	return SimpleGrasp_init_2(std::move(pose_gen), std::string());
+}
+std::auto_ptr<SimpleGrasp> SimpleGrasp_init_0() {
+	return SimpleGrasp_init_2(std::auto_ptr<Stage>(), std::string());
 }
 
 
-std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init(std::auto_ptr<Stage> pose_gen, const std::string& name) {
+std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_2(std::auto_ptr<Stage> pose_gen, const std::string& name) {
 	return std::auto_ptr<SimpleUnGrasp>(new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}, name));
 }
 std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_1(std::auto_ptr<Stage> pose_gen) {
-	return std::auto_ptr<SimpleUnGrasp>(new SimpleUnGrasp(std::unique_ptr<Stage>{pose_gen.release()}));
+	return SimpleUnGrasp_init_2(std::move(pose_gen), std::string());
+}
+std::auto_ptr<SimpleUnGrasp> SimpleUnGrasp_init_0() {
+	return SimpleUnGrasp_init_2(std::auto_ptr<Stage>(), std::string());
 }
 
 } // anonymous namespace
@@ -153,8 +176,9 @@ void export_stages()
 	      .property<geometry_msgs::PoseStamped>("ik_frame")
 	      .property<geometry_msgs::PoseStamped>("target_pose")
 	      // methods of base class boost::python::class_ need to be called last!
-	      .def("__init__", bp::make_constructor(&ComputeIK_init))
-	      .def(bp::init<bp::optional<const std::string&>>())
+	      .def("__init__", bp::make_constructor(&ComputeIK_init_2))
+	      .def("__init__", bp::make_constructor(&ComputeIK_init_1))
+	      .def("__init__", bp::make_constructor(&ComputeIK_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
 
@@ -164,7 +188,7 @@ void export_stages()
 	void (MoveTo::*setGoalState)(const moveit_msgs::RobotState&) = &MoveTo::setGoal;
 	void (MoveTo::*setGoalNamed)(const std::string&) = &MoveTo::setGoal;
 	properties::class_<MoveTo, std::auto_ptr<MoveTo>, bp::bases<Stage>, boost::noncopyable>
-	      ("MoveTo", bp::init<const std::string&, const solvers::PlannerInterfacePtr&>())
+	      ("MoveTo", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	      .property<std::string>("group")
 	      .property<geometry_msgs::PoseStamped>("ik_frame")
 	      .property<moveit_msgs::Constraints>("path_constraints")
@@ -179,7 +203,7 @@ void export_stages()
 	void (MoveRelative::*setTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setDirection;
 	void (MoveRelative::*setDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setDirection;
 	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<Stage>, boost::noncopyable>
-	      ("MoveRelative", bp::init<const std::string&, const solvers::PlannerInterfacePtr&>())
+	      ("MoveRelative", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	      .property<std::string>("group")
 	      .property<geometry_msgs::PoseStamped>("ik_frame")
 	      .property<double>("min_distance")
@@ -201,7 +225,9 @@ void export_stages()
 	properties::class_<Connect, std::auto_ptr<Connect>, bp::bases<Stage>, boost::noncopyable>
 	      ("Connect", bp::no_init)
 	      // use a custom wrapper as constructor to pass a python list of (name, planner) tuples
-	      .def("__init__", bp::make_constructor(&Connect_init))
+	      .def("__init__", bp::make_constructor(&Connect_init_2))
+	      .def("__init__", bp::make_constructor(&Connect_init_1))
+	      .def("__init__", bp::make_constructor(&Connect_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Connect>, std::auto_ptr<Stage>>();
 
@@ -239,8 +265,9 @@ void export_stages()
 	      .property<std::string>("eef_group")
 	      .property<std::string>("eef_parent_group")
 
-	      .def("__init__", bp::make_constructor(&Pick_init))
+	      .def("__init__", bp::make_constructor(&Pick_init_2))
 	      .def("__init__", bp::make_constructor(&Pick_init_1))
+	      .def("__init__", bp::make_constructor(&Pick_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Pick>, std::auto_ptr<Stage>>();
 
@@ -253,8 +280,9 @@ void export_stages()
 	      .property<std::string>("eef_group")
 	      .property<std::string>("eef_parent_group")
 
-	      .def("__init__", bp::make_constructor(&Place_init))
+	      .def("__init__", bp::make_constructor(&Place_init_2))
 	      .def("__init__", bp::make_constructor(&Place_init_1))
+	      .def("__init__", bp::make_constructor(&Place_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Place>, std::auto_ptr<Stage>>();
 
@@ -263,8 +291,9 @@ void export_stages()
 	      ("SimpleGrasp", bp::no_init)
 	      .property<std::string>("eef")
 	      .property<std::string>("object")
-	      .def("__init__", bp::make_constructor(&SimpleGrasp_init))
+	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_2))
 	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_1))
+	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleGrasp>, std::auto_ptr<Stage>>();
 
@@ -273,8 +302,9 @@ void export_stages()
 	      ("SimpleUnGrasp", bp::no_init)
 	      .property<std::string>("eef")
 	      .property<std::string>("object")
-	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init))
+	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_2))
 	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_1))
+	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleUnGrasp>, std::auto_ptr<Stage>>();
 }

@@ -96,7 +96,7 @@ public:
 /// specialization of PickPlaceBase to realize picking
 class Pick : public PickPlaceBase {
 public:
-	Pick(Stage::pointer &&grasp_stage, const std::string& name = "pick")
+	Pick(Stage::pointer&& grasp_stage = Stage::pointer(), const std::string& name = "pick")
 	   : PickPlaceBase(std::move(grasp_stage), name, true)
 	{}
 
@@ -118,7 +118,7 @@ public:
 /// specialization of PickPlaceBase to realize placing
 class Place : public PickPlaceBase {
 public:
-	Place(Stage::pointer &&ungrasp_stage, const std::string& name = "place")
+	Place(Stage::pointer&& ungrasp_stage = Stage::pointer(), const std::string& name = "place")
 	   : PickPlaceBase(std::move(ungrasp_stage), name, false)
 	{}
 

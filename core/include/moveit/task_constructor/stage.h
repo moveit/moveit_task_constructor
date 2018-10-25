@@ -222,7 +222,7 @@ class PropagatingEitherWayPrivate;
 class PropagatingEitherWay : public ComputeBase {
 public:
 	PRIVATE_CLASS(PropagatingEitherWay)
-	PropagatingEitherWay(const std::string& name);
+	PropagatingEitherWay(const std::string& name = "propagating either way");
 
 	enum Direction {
 		AUTO = 0x00,     // auto-derive direction from context
@@ -254,7 +254,7 @@ class PropagatingForwardPrivate;
 class PropagatingForward : public PropagatingEitherWay {
 public:
 	PRIVATE_CLASS(PropagatingForward)
-	PropagatingForward(const std::string& name);
+	PropagatingForward(const std::string& name = "propagating forward");
 
 private:
 	// restrict access to backward method to provide compile-time check
@@ -267,7 +267,7 @@ class PropagatingBackwardPrivate;
 class PropagatingBackward : public PropagatingEitherWay {
 public:
 	PRIVATE_CLASS(PropagatingBackward)
-	PropagatingBackward(const std::string& name);
+	PropagatingBackward(const std::string& name = "propagating backward");
 
 private:
 	// restrict access to forward method to provide compile-time check
@@ -280,7 +280,7 @@ class GeneratorPrivate;
 class Generator : public ComputeBase {
 public:
 	PRIVATE_CLASS(Generator)
-	Generator(const std::string& name);
+	Generator(const std::string& name = "generator");
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
@@ -328,7 +328,7 @@ protected:
 
 public:
 	PRIVATE_CLASS(Connecting)
-	Connecting(const std::string& name);
+	Connecting(const std::string& name = "connecting");
 
 	void reset() override;
 

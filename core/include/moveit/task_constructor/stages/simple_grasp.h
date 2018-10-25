@@ -89,14 +89,14 @@ public:
 /// specialization of SimpleGraspBase to realize grasping
 class SimpleGrasp : public SimpleGraspBase {
 public:
-	SimpleGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "grasp");
+	SimpleGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "grasp");
 };
 
 
 /// specialization of SimpleGraspBase to realize ungrasping
 class SimpleUnGrasp : public SimpleGraspBase {
 public:
-	SimpleUnGrasp(std::unique_ptr<Stage>&& generator, const std::string& name = "ungrasp");
+	SimpleUnGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "ungrasp");
 };
 
 } } }

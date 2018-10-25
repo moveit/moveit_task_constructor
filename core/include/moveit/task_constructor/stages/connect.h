@@ -65,7 +65,7 @@ public:
 	enum MergeMode { SEQUENTIAL = 0, WAYPOINTS = 1 };
 
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
-	Connect(const std::string& name, const GroupPlannerVector& planners);
+	Connect(const std::string& name = "connect", const GroupPlannerVector& planners = {});
 
 	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));

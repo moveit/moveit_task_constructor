@@ -44,7 +44,7 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class GenerateGraspPose : public GeneratePose {
 public:
-	GenerateGraspPose(const std::string& name);
+	GenerateGraspPose(const std::string& name = "generate grasp pose");
 
 	void init(const core::RobotModelConstPtr &robot_model) override;
 	void compute() override;
