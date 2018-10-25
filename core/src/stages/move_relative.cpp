@@ -50,9 +50,9 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	setTimeout(10.0);
 	auto& p = properties();
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
+	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
 
-	p.declare<boost::any>("goal", "motion specification");
+	p.declare<boost::any>("direction", "motion specification");
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
@@ -74,12 +74,12 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
 	planner_->init(robot_model);
 }
 
-bool MoveRelative::getJointStateGoal(const boost::any& goal,
+static bool getJointStateFromOffset(const boost::any& direction,
                                      const moveit::core::JointModelGroup* jmg,
                                      moveit::core::RobotState& robot_state) {
 	try {
 		const auto& accepted = jmg->getJointModelNames();
-		const auto& joints = boost::any_cast<std::map<std::string, double>>(goal);
+		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
 		for (const auto& j : joints) {
 			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
 			auto jm = robot_state.getRobotModel()->getJointModel(index);
@@ -112,9 +112,9 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
 		return false;
 	}
-	boost::any goal = props.get("goal");
-	if (goal.empty()) {
-		ROS_WARN_NAMED("MoveRelative", "goal undefined");
+	boost::any direction = props.get("direction");
+	if (direction.empty()) {
+		ROS_WARN_NAMED("MoveRelative", "direction undefined");
 		return false;
 	}
 
@@ -125,7 +125,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
+	if (getJointStateFromOffset(direction, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
@@ -157,8 +157,8 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		Eigen::Affine3d target_eigen;
 		Eigen::Affine3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
-		try { // try to extract Twist goal
-			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(goal);
+		try { // try to extract Twist
+			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
 			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.twist.linear, linear);
 			tf::vectorMsgToEigen(target.twist.angular, angular);
@@ -171,11 +171,13 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 
 			// use max distance?
 			if (max_distance > 0.0) {
-				double scale;
+				double scale = 1.0;
 				if (!use_rotation_distance)  // non-zero linear motion defines distance
 					scale = max_distance / linear_norm;
 				else if (angular_norm > std::numeric_limits<double>::epsilon())
 					scale = max_distance / angular_norm;
+				else
+					assert(false);
 				linear *= scale;
 				linear_norm *= scale;
 				angular_norm *= scale;
@@ -194,10 +196,10 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			target_eigen.linear() = target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
 			target_eigen.translation() += linear;
 			goto COMPUTE;
-		} catch (const boost::bad_any_cast&) { /* continue with Vector goal */ }
+		} catch (const boost::bad_any_cast&) { /* continue with Vector */ }
 
-		try { // try to extract Vector goal
-			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(goal);
+		try { // try to extract Vector
+			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
 			const Eigen::Affine3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.vector, linear);
 
@@ -217,7 +219,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			target_eigen = link_pose;
 			target_eigen.translation() += linear;
 		} catch (const boost::bad_any_cast&) {
-			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for goal: " << goal.type().name());
+			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for direction: " << direction.type().name());
 			return false;
 		}
 
@@ -233,8 +235,9 @@ COMPUTE:
 		if (min_distance > 0.0) {
 			double distance = 0.0;
 			if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
-				const robot_state::RobotState& reached_state = robot_trajectory->getLastWayPoint();
-				Eigen::Affine3d reached_pose = reached_state.getGlobalLinkTransform(link);
+				robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+				reached_state->updateLinkTransforms();
+				const Eigen::Affine3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 				if (use_rotation_distance) {
 					Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
 					distance = rotation.angle();
@@ -266,7 +269,7 @@ COMPUTE:
 				if (dir == BACKWARD)  {
 					// flip arrow direction
 					quat = quat * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
-					// arrow tip at goal_pose
+					// arrow tip at goal pose
 					pos += quat * Eigen::Vector3d(-linear_norm, 0, 0);
 				}
 				tf::pointEigenToMsg(pos, m.pose.position);

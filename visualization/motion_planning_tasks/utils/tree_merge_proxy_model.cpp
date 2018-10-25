@@ -61,10 +61,9 @@ public:
 		inline void storeMapping(void* src_internal_pointer, const QModelIndex &src_parent) {
 			ProxyToSourceMap::value_type pair (src_internal_pointer, src_parent);
 			auto it = proxy_to_source_mapping_.insert(std::move(pair)).first;
-#ifndef NDEBUG
 			Q_ASSERT_X(it->second == src_parent, "TreeMergeProxyModel",
 			           "the internal pointer must map to a unique src_parent");
-#endif
+			Q_UNUSED(it)
 		}
 
 		// collect all invalidated mappings, return true if we are affected at all
@@ -134,6 +133,7 @@ public:
 			}
 		}
 		Q_ASSERT(false);
+		return QModelIndex();
 	}
 
 	QModelIndex mapFromSource(const QModelIndex &src, ModelData *data = nullptr) const {

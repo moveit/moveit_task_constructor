@@ -94,21 +94,16 @@ TaskDisplay::TaskDisplay() : Display()
 
 TaskDisplay::~TaskDisplay()
 {
-	if (context_) TaskPanel::decUseCount();
+	if (context_) TaskPanel::decDisplayCount();
 }
 
 void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	// displays are loaded before panels, hence wait a little bit for the panel to be loaded
-	QTimer::singleShot(1000, [this](){ TaskPanel::incUseCount(context_->getWindowManager()); });
-#else
-	// Qt4 doesn't support lambdas: directly instantiate panel instance
-	TaskPanel::incUseCount(context_->getWindowManager());
-#endif
+	// create a new TaskPanel by default
+	// by post-poning this to main loop, we can ensure that rviz has loaded everything before
+	mainloop_jobs_.addJob([this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
 }
 
 void TaskDisplay::loadRobotModel()

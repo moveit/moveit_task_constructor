@@ -24,6 +24,10 @@ add_service_files(DIRECTORY srv FILES
 	GetSolution.srv
 )
 
+add_action_files(DIRECTORY action FILES
+	ExecuteTaskSolution.action
+)
+
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 
 catkin_package(

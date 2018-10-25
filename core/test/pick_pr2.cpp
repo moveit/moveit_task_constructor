@@ -9,6 +9,7 @@
 
 #include <ros/ros.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 
@@ -31,23 +32,14 @@ void spawnObject(){
 	psi.applyCollisionObject(o);
 }
 
-int main(int argc, char** argv){
-	ros::init(argc, argv, "plan_pick");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
-
-	spawnObject();
-
+TEST(PR2, pick) {
 	Task t;
 
-	Stage* initial_stage = nullptr;
-	auto initial = std::make_unique<stages::CurrentState>("current state");
-	initial_stage = initial.get();
-	t.add(std::move(initial));
+	Stage* initial_stage = new stages::CurrentState("current state");
+	t.add(std::unique_ptr<Stage>(initial_stage));
 
 	// planner used for connect
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-	pipeline->setTimeout(8.0);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
 	stages::Connect::GroupPlannerVector planners = {{"left_arm", pipeline}, {"left_gripper", pipeline}};
@@ -82,16 +74,25 @@ int main(int argc, char** argv){
 	t.add(std::move(pick));
 
 	try {
+		spawnObject();
 		t.plan();
-		std::cout << "waiting for <enter>\n";
-		char ch;
-		std::cin >> ch;
-	}
-	catch (const InitStageException &e) {
-		std::cerr << e;
-		t.printState();
-		return EINVAL;
+	} catch (const InitStageException &e) {
+		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
-	return 0;
+	auto solutions = t.solutions().size();
+	EXPECT_GE(solutions, 5u);
+	EXPECT_LE(solutions, 10u);
+}
+
+int main(int argc, char** argv){
+	testing::InitGoogleTest(&argc, argv);
+	ros::init(argc, argv, "pr2");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
+
+	// wait some time for move_group to come up
+	ros::WallDuration(5.0).sleep();
+
+	return RUN_ALL_TESTS();
 }

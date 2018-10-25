@@ -67,7 +67,7 @@ bool GeneratePose::canCompute() const {
 void GeneratePose::compute() {
 	if (scenes_.empty())
 		return;
-	planning_scene::PlanningSceneConstPtr scene = scenes_[0];
+	planning_scene::PlanningScenePtr scene = scenes_[0];
 	scenes_.pop_front();
 
 	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");

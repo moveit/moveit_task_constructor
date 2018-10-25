@@ -1,0 +1,11 @@
+<launch>
+	<include file="$(find pa10_shadow_moveit_config)/launch/planning_context.launch">
+		<arg name="load_robot_description" value="true"/>
+	</include>
+
+	<include ns="move_group" file="$(find pa10_shadow_moveit_config)/launch/planning_pipeline.launch.xml">
+		<arg name="pipeline" value="ompl" />
+	</include>
+
+	<test pkg="moveit_task_constructor_core" type="pick_pa10" test-name="pick_pa10"/>
+</launch>

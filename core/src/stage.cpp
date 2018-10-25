@@ -173,7 +173,7 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution)
 	for (const auto& cb : solution_cbs_)
 		cb(*solution);
 
-	if (parent())
+	if (parent() && !solution->isFailure())
 		parent()->onNewSolution(*solution);
 }
 
@@ -614,9 +614,16 @@ void MonitoringGenerator::init(const moveit::core::RobotModelConstPtr& robot_mod
 	if (!impl->monitored_)
 		throw InitStageException(*this, "no monitored stage defined");
 	if (!impl->registered_) {  // register only once
-		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGenerator::onNewSolution, this, std::placeholders::_1));
+		impl->cb_ = impl->monitored_->addSolutionCallback(std::bind(&MonitoringGeneratorPrivate::solutionCB, impl, std::placeholders::_1));
 		impl->registered_ = true;
 	}
+}
+
+void MonitoringGeneratorPrivate::solutionCB(const SolutionBase &s)
+{
+	// forward only successful solutions to monitor
+	if(!s.isFailure())
+		static_cast<MonitoringGenerator*>(me())->onNewSolution(s);
 }
 
 
@@ -695,19 +702,28 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& from = from_state.scene();
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
-	if (from->getWorld()->size() != to->getWorld()->size())
-		return false;  // different number of collision objects
+	if (from->getWorld()->size() != to->getWorld()->size()) {
+		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of collision objects");
+		return false;
+	}
 
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
 		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_pair.first);
-		if (!to_object) return false;  // object missing
-		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) return false;  // shapes not matching
+		if (!to_object) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object_pair.first);
+			return false;
+		}
+		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object_pair.first);
+			return false;  // shapes not matching
+		}
 
 		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
 		     to_it = to_object->shape_poses_.cbegin(); from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)){
+				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_pair.first);
 				return false;  // transforms do not match
 			}
 	}

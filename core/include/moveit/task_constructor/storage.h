@@ -98,6 +98,7 @@ public:
 	typedef std::deque<SolutionBase*> Solutions;
 
 	/// create an InterfaceState from a planning scene
+	InterfaceState(const planning_scene::PlanningScenePtr& ps);
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
@@ -243,8 +244,8 @@ public:
 	}
 
 protected:
-	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0)
-	   : creator_(creator), cost_(cost)
+	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0, std::string comment = "")
+	   : creator_(creator), cost_(cost), comment_(std::move(comment))
 	{
 	}
 
@@ -269,8 +270,8 @@ MOVEIT_CLASS_FORWARD(SolutionBase)
 class SubTrajectory : public SolutionBase {
 public:
 	SubTrajectory(const robot_trajectory::RobotTrajectoryConstPtr& trajectory = robot_trajectory::RobotTrajectoryConstPtr(),
-	              double cost = 0.0)
-	   : SolutionBase(nullptr, cost), trajectory_(trajectory)
+	              double cost = 0.0, std::string comment = "")
+		: SolutionBase(nullptr, cost, std::move(comment)), trajectory_(trajectory)
 	{}
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }

@@ -51,6 +51,7 @@
 #include <rviz/display_group.h>
 #include <rviz/visualization_manager.h>
 #include <rviz/window_manager_interface.h>
+#include <rviz/visualization_frame.h>
 #include <rviz/panel_dock_widget.h>
 #include <ros/console.h>
 #include <QPointer>
@@ -75,6 +76,12 @@ rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
 }
 
 
+// TaskPanel singleton
+static QPointer<TaskPanel> singleton_;
+// count active TaskDisplays
+static uint display_count_ = 0;
+
+
 TaskPanel::TaskPanel(QWidget* parent)
   : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this))
 {
@@ -84,20 +91,15 @@ TaskPanel::TaskPanel(QWidget* parent)
 	d->settings_widget = new TaskSettings(this);
 	layout()->addWidget(d->tasks_widget);
 	layout()->addWidget(d->settings_widget);
+	connect(d->tasks_widget, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
 
 	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 	connect(d->button_show_settings, SIGNAL(toggled(bool)), d->settings_widget, SLOT(setVisible(bool)));
 	d->settings_widget->setVisible(d->button_show_settings->isChecked());
 
 	// if still undefined, this becomes the global instance
-	if (TaskPanelPrivate::global_instance_.isNull()) {
-		TaskPanelPrivate::global_instance_ = this;
-		// If an explicitly created instance is explicitly destroyed, we don't notice.
-		// If there there were displays "using" it, global_use_count_ is still greater zero.
-		if (TaskPanelPrivate::global_use_count_ > 0);  // In this case, don't increment use count
-		else
-			++TaskPanelPrivate::global_use_count_; // otherwise increment use count for explicitly created instance
-	}
+	if (singleton_.isNull())
+		singleton_ = this;
 }
 
 TaskPanel::~TaskPanel()
@@ -105,26 +107,23 @@ TaskPanel::~TaskPanel()
 	delete d_ptr;
 }
 
-QPointer<TaskPanel> TaskPanelPrivate::global_instance_;
-uint TaskPanelPrivate::global_use_count_ = 0;
-
-void TaskPanel::incUseCount(rviz::WindowManagerInterface* window_manager)
+void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager)
 {
-	++TaskPanelPrivate::global_use_count_;
-	if (TaskPanelPrivate::global_instance_ || !window_manager)
+	++display_count_;
+
+	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
+	if (singleton_ || !vis_frame)
 		return; // already define, nothing to do
 
-	--TaskPanelPrivate::global_use_count_; // counteract ++ in constructor
-	TaskPanelPrivate::global_instance_ = new TaskPanel(window_manager->getParentWindow());
-	TaskPanelPrivate::global_instance_->d_ptr->window_manager_ = window_manager;
-	window_manager->addPane("Motion Planning Tasks", TaskPanelPrivate::global_instance_);
+	window_manager->addPane("Motion Planning Tasks", new TaskPanel());
+	singleton_->initialize(vis_frame->getManager());
 }
 
-void TaskPanel::decUseCount()
+void TaskPanel::decDisplayCount()
 {
-	Q_ASSERT(TaskPanelPrivate::global_use_count_ > 0);
-	if (--TaskPanelPrivate::global_use_count_ == 0 && TaskPanelPrivate::global_instance_)
-		TaskPanelPrivate::global_instance_->deleteLater();
+	Q_ASSERT(display_count_ > 0);
+	if (--display_count_ == 0 && singleton_)
+		singleton_->deleteLater();
 }
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
@@ -247,6 +246,13 @@ TaskView::TaskView(QWidget *parent)
 	        this, SLOT(onCurrentStageChanged(QModelIndex,QModelIndex)));
 
 	onCurrentStageChanged(d->tasks_view->currentIndex(), QModelIndex());
+
+	// propagate infos about config changes
+	connect(d_ptr->tasks_property_splitter, SIGNAL(splitterMoved(int,int)),this, SIGNAL(configChanged()));
+	connect(d_ptr->tasks_solutions_splitter, SIGNAL(splitterMoved(int,int)), this, SIGNAL(configChanged()));
+	connect(d_ptr->tasks_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
+	connect(d_ptr->solutions_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
+	connect(d_ptr->solutions_view->header(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)), this, SIGNAL(configChanged()));
 }
 
 TaskView::~TaskView()

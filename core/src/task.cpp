@@ -40,8 +40,10 @@
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
 #include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
@@ -51,7 +53,7 @@
 namespace moveit { namespace task_constructor {
 
 Task::Task(const std::string& id, ContainerBase::pointer &&container)
-   : WrapperBase(std::string(), std::move(container)), id_(id)
+   : WrapperBase(std::string(), std::move(container)), id_(id), preempt_requested_(false)
 {
 	// monitor state on commandline
 	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
@@ -76,41 +78,67 @@ Task& Task::operator=(Task&& other)
 	return *this;
 }
 
+struct PlannerCache {
+	typedef std::tuple<std::string, std::string, std::string> PlannerID;
+	typedef std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline>> PlannerMap;
+	typedef std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap>> ModelList;
+	ModelList cache_;
+
+	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, PlannerID id) {
+		// find model in cache_ and remove expired entries while doing so
+		ModelList::iterator model_it = cache_.begin();
+		while (model_it != cache_.end()) {
+			if (model_it->first.expired()) {
+				model_it = cache_.erase(model_it);
+				continue;
+			}
+			if (model_it->first.lock() == model)
+				break;
+			++model_it;
+		}
+		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
+			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
+
+		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
+	}
+};
+
 planning_pipeline::PlanningPipelinePtr
 Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
                     const std::string& planning_plugin_param_name,
                     const std::string& adapter_plugins_param_name) {
-	typedef std::tuple<std::string, std::string, std::string, std::string> PlannerID;
-	static std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> > planner_cache;
+	static PlannerCache cache;
+	PlannerCache::PlannerID id (ns, planning_plugin_param_name, adapter_plugins_param_name);
 
-	PlannerID id (model->getName(), ns, planning_plugin_param_name, adapter_plugins_param_name);
-	auto it = planner_cache.find(id);
-
-	planning_pipeline::PlanningPipelinePtr planner;
-	if (it != planner_cache.cend())
-		planner = it->second.lock();
+	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(model, id);
+	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
 	if (!planner) {
+		// create new entry
 		planner = std::make_shared<planning_pipeline::PlanningPipeline>
 		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
-		planner_cache[id] = planner;
+		// store in cache
+		entry = planner;
 	}
 	return planner;
 }
 
 Task::~Task()
 {
-	reset();
+	clear();  // remove all stages
+	robot_model_.reset();
+	// only destroy loader after all references to the model are gone!
+	robot_model_loader_.reset();
 }
 
 void Task::setRobotModel(const core::RobotModelConstPtr& robot_model)
 {
-	reset();
+	reset();  // solutions, scenes, etc become invalid
 	robot_model_ = robot_model;
 }
 
 void Task::loadRobotModel(const std::string& robot_description) {
-	robot_model_loader::RobotModelLoader rml(robot_description);
-	setRobotModel(rml.getModel());
+	robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(robot_description);
+	setRobotModel(robot_model_loader_->getModel());
 	if (!robot_model_)
 		throw Exception("Task failed to construct RobotModel");
 }
@@ -195,7 +223,8 @@ void Task::init()
 	}, 1, UINT_MAX);
 
 	// first time publish task
-	introspection_->publishTaskDescription();
+	if (introspection_)
+		introspection_->publishTaskDescription();
 }
 
 bool Task::canCompute() const
@@ -213,7 +242,9 @@ bool Task::plan(size_t max_solutions)
 	reset();
 	init();
 
-	while(ros::ok() && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
+	preempt_requested_ = false;
+	while(ros::ok() && !preempt_requested_ && canCompute() &&
+	      (max_solutions == 0 || numSolutions() < max_solutions)) {
 		compute();
 		for (const auto& cb : task_cbs_)
 			cb(*this);
@@ -222,6 +253,22 @@ bool Task::plan(size_t max_solutions)
 	}
 	printState();
 	return numSolutions() > 0;
+}
+
+void Task::preempt()
+{
+	preempt_requested_ = true;
+}
+
+void Task::execute(const SolutionBase &s)
+{
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
+	ac.waitForServer();
+
+	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
+	s.fillMessage(goal.solution, introspection_.get());
+	ac.sendGoal(goal);
+	ac.waitForResult();
 }
 
 void Task::publishAllSolutions(bool wait)

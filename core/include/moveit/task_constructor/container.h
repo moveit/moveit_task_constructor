@@ -143,7 +143,12 @@ protected:
 		liftSolution(solution, solution.cost());
 	}
 	/// lift child solution to external interface, adapting the costs
-	void liftSolution(const SolutionBase& solution, double cost);
+	void liftSolution(const SolutionBase& solution, double cost) {
+		liftSolution(solution, cost, solution.comment());
+	}
+
+	/// lift child solution to external interface, adapting the costs and comment
+	void liftSolution(const SolutionBase& solution, double cost, std::string comment);
 
 	/// spawn a new solution with given state as start and end
 	void spawn(InterfaceState &&state, SubTrajectory&& trajectory);

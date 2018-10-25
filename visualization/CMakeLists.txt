@@ -52,8 +52,6 @@ else ()
 	set(CMAKE_CXX_STANDARD 14)
 endif ()
 
-include_directories(${catkin_INCLUDE_DIRS})
-
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)
 

@@ -752,10 +752,10 @@ void ParallelContainerBase::validateConnectivity() const
 	if (errors) throw errors;
 }
 
-void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost)
+void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment)
 {
 	auto impl = pimpl();
-	impl->liftSolution(std::make_shared<WrappedSolution>(impl, &solution, cost),
+	impl->liftSolution(std::make_shared<WrappedSolution>(impl, &solution, cost, std::move(comment)),
 	                   solution.start(), solution.end());
 }
 

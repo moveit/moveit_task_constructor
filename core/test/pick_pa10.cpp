@@ -13,8 +13,8 @@
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
 
 #include <ros/ros.h>
-
 #include <moveit/planning_scene/planning_scene.h>
+#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 
@@ -25,7 +25,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	o.primitive_poses.resize(1);
 	o.primitive_poses[0].position.x= 0.3;
 	o.primitive_poses[0].position.y= 0.23;
-	o.primitive_poses[0].position.z= 0.12;
+	o.primitive_poses[0].position.z= 0.10;
 	o.primitive_poses[0].orientation.w= 1.0;
 	o.primitives.resize(1);
 	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
@@ -35,11 +35,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	scene->processCollisionObjectMsg(o);
 }
 
-int main(int argc, char** argv){
-	ros::init(argc, argv, "plan_pick");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
-
+TEST(PA10, pick) {
 	Task t;
 	t.loadRobotModel();
 	// define global properties used by most stages
@@ -48,7 +44,6 @@ int main(int argc, char** argv){
 	t.setProperty("gripper", std::string("left_hand"));
 
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-	pipeline->setTimeout(8.0);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 
@@ -57,20 +52,21 @@ int main(int argc, char** argv){
 	{
 		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
 		auto& state = scene->getCurrentStateNonConst();
+		state.setToDefaultValues();  // initialize state
 		state.setToDefaultValues(state.getJointModelGroup("left_arm"), "home");
 		state.setToDefaultValues(state.getJointModelGroup("right_arm"), "home");
 		state.update();
 		spawnObject(scene);
 
 		auto initial = std::make_unique<stages::FixedState>();
-		initial_stage = initial.get();
 		initial->setState(scene);
 		t.add(std::move(initial));
 	}
 	{
 		auto stage = std::make_unique<stages::FixCollisionObjects>();
 		stage->restrictDirection(stages::MoveTo::FORWARD);
-		stage->setMaxPenetration(0.1);
+		stage->setMaxPenetration(0.04);
+		initial_stage = stage.get();
 		t.add(std::move(stage));
 	}
 
@@ -92,7 +88,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "lh_tool_frame";
 		direction.vector.z = 1;
-		move->setGoal(direction);
+		move->setDirection(direction);
 		t.add(std::move(move));
 	}
 
@@ -147,7 +143,7 @@ int main(int argc, char** argv){
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.z = 1;
-		move->setGoal(direction);
+		move->setDirection(direction);
 		t.add(std::move(move));
 	}
 
@@ -162,21 +158,26 @@ int main(int argc, char** argv){
 		twist.header.frame_id = "object";
 		twist.twist.linear.y = 1;
 		twist.twist.angular.y = 2;
-		move->setGoal(twist);
+		move->setDirection(twist);
 		t.add(std::move(move));
 	}
 
 	try {
 		t.plan();
-		std::cout << "waiting for <enter>\n";
-		char ch;
-		std::cin >> ch;
-	}
-	catch (const InitStageException &e) {
-		std::cerr << e;
-		t.printState();
-		return EINVAL;
+	} catch (const InitStageException &e) {
+		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
-	return 0;
+	auto solutions = t.solutions().size();
+	EXPECT_GE(solutions, 5u);
+	EXPECT_LE(solutions, 10u);
+}
+
+int main(int argc, char** argv){
+	testing::InitGoogleTest(&argc, argv);
+	ros::init(argc, argv, "pa10");
+	ros::AsyncSpinner spinner(1);
+	spinner.start();
+
+	return RUN_ALL_TESTS();
 }

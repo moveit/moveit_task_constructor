@@ -14,6 +14,7 @@ add_library(${PROJECT_NAME}
 
 	${PROJECT_INCLUDE}/solvers/planner_interface.h
 	${PROJECT_INCLUDE}/solvers/cartesian_path.h
+	${PROJECT_INCLUDE}/solvers/joint_interpolation.h
 	${PROJECT_INCLUDE}/solvers/pipeline_planner.h
 
 	container.cpp
@@ -25,13 +26,16 @@ add_library(${PROJECT_NAME}
 	storage.cpp
 	task.cpp
 
+	solvers/planner_interface.cpp
 	solvers/cartesian_path.cpp
 	solvers/pipeline_planner.cpp
+	solvers/joint_interpolation.cpp
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 target_include_directories(${PROJECT_NAME}
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-	PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	PUBLIC ${catkin_INCLUDE_DIRS}
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 

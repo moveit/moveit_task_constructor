@@ -10,6 +10,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 )
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
+	PRIVATE ${catkin_INCLUDE_DIRS}
 )
 
 install(TARGETS ${MOVEIT_LIB_NAME}

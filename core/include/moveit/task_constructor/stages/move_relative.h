@@ -92,24 +92,22 @@ public:
 	}
 
 	/// perform twist motion on specified link
-	void setGoal(const geometry_msgs::TwistStamped& twist) {
-		setProperty("goal", twist);
+	void setDirection(const geometry_msgs::TwistStamped& twist) {
+		setProperty("direction", twist);
 	}
 	/// translate link along given direction
-	void setGoal(const geometry_msgs::Vector3Stamped& direction) {
-		setProperty("goal", direction);
+	void setDirection(const geometry_msgs::Vector3Stamped& direction) {
+		setProperty("direction", direction);
 	}
 	/// move specified joint variables by given amount
-	void setGoal(const std::map<std::string, double>& joint_deltas) {
-		setProperty("goal", joint_deltas);
+	void setDirection(const std::map<std::string, double>& joint_deltas) {
+		setProperty("direction", joint_deltas);
 	}
 
 protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
 	             SubTrajectory &trajectory, Direction dir);
-	bool getJointStateGoal(const boost::any& goal, const moveit::core::JointModelGroup* jmg,
-	                       moveit::core::RobotState& robot_state);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;

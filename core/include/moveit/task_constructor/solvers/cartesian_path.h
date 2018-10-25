@@ -49,9 +49,6 @@ class CartesianPath : public PlannerInterface {
 public:
 	CartesianPath();
 
-	void setGroup(const std::string &group) { setProperty("group", group); }
-	void setTimeout(double timeout) { setProperty("timeout", timeout); }
-
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
@@ -61,14 +58,14 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr from,
-	          const planning_scene::PlanningSceneConstPtr to,
+	bool plan(const planning_scene::PlanningSceneConstPtr& from,
+	          const planning_scene::PlanningSceneConstPtr& to,
 	          const moveit::core::JointModelGroup *jmg,
 	          double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr from,
+	bool plan(const planning_scene::PlanningSceneConstPtr& from,
 	          const moveit::core::LinkModel &link,
 	          const Eigen::Affine3d& target,
 	          const moveit::core::JointModelGroup *jmg,

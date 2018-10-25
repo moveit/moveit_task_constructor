@@ -45,9 +45,24 @@
 
 namespace moveit { namespace task_constructor {
 
-InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr &ps)
+const planning_scene::PlanningScenePtr&
+ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
+	// ensure scene's state is updated
+	if (scene->getCurrentState().dirty())
+		scene->getCurrentStateNonConst().update();
+	return scene;
+}
+
+InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps)
+   : scene_(ensureUpdated(ps))
+{
+}
+
+InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
    : scene_(ps)
 {
+	if (scene_->getCurrentState().dirty())
+		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
 InterfaceState::InterfaceState(const InterfaceState &other)

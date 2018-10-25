@@ -52,18 +52,24 @@ PipelinePlanner::PipelinePlanner()
 	p.declare<std::string>("planner", "", "planner id");
 
 	p.declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
-	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
-	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 	p.declare<moveit_msgs::WorkspaceParameters>("workspace_parameters", moveit_msgs::WorkspaceParameters(), "allowed workspace of mobile base?");
 
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");
 	p.declare<double>("goal_position_tolerance", 1e-4, "tolerance for reaching position goals");
 	p.declare<double>("goal_orientation_tolerance", 1e-4, "tolerance for reaching orientation goals");
+
+	p.declare<bool>("display_motion_plans", false,
+		"publish generated solutions on topic " + planning_pipeline::PlanningPipeline::DISPLAY_PATH_TOPIC);
+	p.declare<bool>("publish_planning_requests", false,
+		"publish motion planning requests on topic " + planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
 void PipelinePlanner::init(const core::RobotModelConstPtr &robot_model)
 {
 	planner_ = Task::createPlanner(robot_model);
+
+	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
+	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
 
 void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
@@ -82,8 +88,8 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
-                           const planning_scene::PlanningSceneConstPtr to,
+bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                           const planning_scene::PlanningSceneConstPtr& to,
                            const moveit::core::JointModelGroup *jmg,
                            double timeout,
                            robot_trajectory::RobotTrajectoryPtr& result,
@@ -107,7 +113,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
 	return true;
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr from,
+bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                            const moveit::core::LinkModel &link,
                            const Eigen::Affine3d& target_eigen,
                            const moveit::core::JointModelGroup *jmg,

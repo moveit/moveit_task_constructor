@@ -457,13 +457,13 @@ TEST(Task, move) {
 	Task t1("foo");
 	t1.add(std::make_unique<GeneratorMockup>());
 	t1.add(std::make_unique<GeneratorMockup>());
-	EXPECT_EQ(t1.stages()->numChildren(), 2);
+	EXPECT_EQ(t1.stages()->numChildren(), 2u);
 
 	Task t2 = std::move(t1);
-	EXPECT_EQ(t2.stages()->numChildren(), 2);
-	EXPECT_EQ(t1.stages()->numChildren(), 0);
+	EXPECT_EQ(t2.stages()->numChildren(), 2u);
+	EXPECT_EQ(t1.stages()->numChildren(), 0u);
 
 	t1 = std::move(t2);
-	EXPECT_EQ(t1.stages()->numChildren(), 2);
-	EXPECT_EQ(t2.stages()->numChildren(), 0);
+	EXPECT_EQ(t1.stages()->numChildren(), 2u);
+	EXPECT_EQ(t2.stages()->numChildren(), 0u);
 }

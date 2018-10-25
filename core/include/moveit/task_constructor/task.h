@@ -51,6 +51,10 @@ namespace moveit { namespace core {
 	MOVEIT_CLASS_FORWARD(RobotState)
 }}
 
+namespace robot_model_loader {
+	MOVEIT_CLASS_FORWARD(RobotModelLoader)
+}
+
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Stage)
@@ -77,7 +81,7 @@ public:
 
 	std::string id() const;
 
-	const moveit::core::RobotModelConstPtr getRobotModel() const { return robot_model_; }
+	const moveit::core::RobotModelConstPtr& getRobotModel() const { return robot_model_; }
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
 	/// load robot model from given parameter
@@ -105,6 +109,11 @@ public:
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan(size_t max_solutions = 0);
+	/// interrupt current planning (or execution)
+	void preempt();
+	/// execute solution
+	void execute(const SolutionBase& s);
+
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream &os = std::cout) const;
 
@@ -138,7 +147,9 @@ protected:
 
 private:
 	std::string id_;
+	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
+	bool preempt_requested_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

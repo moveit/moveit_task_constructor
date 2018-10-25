@@ -76,7 +76,7 @@ protected:
 
 	void validate(QAbstractItemModel& model, const std::initializer_list<const char*> &expected) {
 		// validate root index
-		ASSERT_EQ(model.rowCount(), expected.size());
+		ASSERT_EQ(model.rowCount(), static_cast<int>(expected.size()));
 		EXPECT_EQ(model.columnCount(), 3);
 		EXPECT_EQ(model.parent(QModelIndex()), QModelIndex());
 
@@ -84,15 +84,15 @@ protected:
 		auto it = expected.begin();
 		for (size_t row = 0; row < expected.size(); ++row, ++it) {
 			QModelIndex idx = model.index(row, 0);
-			EXPECT_EQ(idx.row(), row);
+			EXPECT_EQ(idx.row(), static_cast<int>(row));
 			EXPECT_EQ(idx.column(), 0);
 			EXPECT_EQ(idx.model(), &model);
 			EXPECT_EQ(model.parent(idx), QModelIndex());
 
 			// validate data
 			EXPECT_STREQ(model.data(idx).toByteArray().constData(), *it);
-			EXPECT_EQ(model.data(model.index(row, 1)).toUInt(), 0);
-			EXPECT_EQ(model.data(model.index(row, 2)).toUInt(), 0);
+			EXPECT_EQ(model.data(model.index(row, 1)).toUInt(), 0u);
+			EXPECT_EQ(model.data(model.index(row, 2)).toUInt(), 0u);
 
 			// validate children
 			ASSERT_EQ(model.rowCount(idx), children);

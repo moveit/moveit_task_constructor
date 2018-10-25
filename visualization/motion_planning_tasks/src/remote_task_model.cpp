@@ -117,6 +117,7 @@ QModelIndex RemoteTaskModel::index(const Node *n) const
 		if (parent->children_.at(row).get() == n)
 			return createIndex(row, 0, parent);
 	Q_ASSERT(false);
+	return QModelIndex();
 }
 
 RemoteTaskModel::RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent)
