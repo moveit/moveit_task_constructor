@@ -10,6 +10,37 @@ namespace python {
 
 namespace {
 
+// Converter for std::set<T> to/from Python list
+template <typename T>
+struct SetConverter {
+	// Determine if obj can be converted into std::set
+	static void* convertible(PyObject* obj)
+	{
+		return PyList_Check(obj) ? obj : nullptr;
+	}
+
+	/// Conversion from Python to C++
+	static void construct(PyObject* obj,
+	                      bp::converter::rvalue_from_python_stage1_data* data)
+	{
+		bp::object bpo(bp::borrowed(obj));
+		bp::stl_input_iterator<T> begin(bpo), end;
+		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
+		void* storage = reinterpret_cast<bp::converter::rvalue_from_python_storage<std::set<T>>*>(data)->storage.bytes;
+		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's convertible variable.
+		data->convertible = new (storage) std::set<T>(begin, end);
+	}
+
+	/// Conversion from C++ object to Python object
+	static PyObject* convert(const std::set<T>& v) {
+		bp::list l;
+		for (const T& value : v)
+			l.append(value);
+		return bp::incref(l.ptr());
+	}
+};
+
+
 class PropertyConverterRegistry {
 	struct Entry {
 		PropertyConverterBase::to_python_converter_function to_;
@@ -37,6 +68,12 @@ static PropertyConverterRegistry registry_singleton_;
 
 PropertyConverterRegistry::PropertyConverterRegistry() {
 	// register primitive type converters
+	bp::converter::registry::push_back(&SetConverter<std::string>::convertible,
+	                                   &SetConverter<std::string>::construct,
+	                                   bp::type_id<std::set<std::string>>());
+	bp::to_python_converter<std::set<std::string>, SetConverter<std::string>>();
+
+	// register primitive property converters
 	PropertyConverter<bool>();
 	PropertyConverter<int>();
 	PropertyConverter<unsigned int>();
@@ -44,6 +81,7 @@ PropertyConverterRegistry::PropertyConverterRegistry() {
 	PropertyConverter<float>();
 	PropertyConverter<double>();
 	PropertyConverter<std::string>();
+	PropertyConverter<std::set<std::string>>();
 }
 
 bool PropertyConverterRegistry::insert(const bp::type_info& type_info, const std::string& ros_msg_name,
@@ -60,7 +98,7 @@ bool PropertyConverterRegistry::insert(const bp::type_info& type_info, const std
 	return true;
 }
 
-boost::python::object PropertyConverterRegistry::toPython(const boost::any& value) {
+bp::object PropertyConverterRegistry::toPython(const boost::any& value) {
 	if (value.empty())
 		return bp::object();
 
@@ -75,7 +113,7 @@ boost::python::object PropertyConverterRegistry::toPython(const boost::any& valu
 	return it->second.to_(value);
 }
 
-boost::any PropertyConverterRegistry::fromPython(const boost::python::object& bpo) {
+boost::any PropertyConverterRegistry::fromPython(const bp::object& bpo) {
 	PyObject *o = bpo.ptr();
 
 	if (PyBool_Check(o))
