@@ -192,6 +192,12 @@ void export_stages()
 	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<Stage>>();
 
 
+	bp::enum_<stages::Connect::MergeMode>("MergeMode")
+	      .value("SEQUENTIAL", stages::Connect::MergeMode::SEQUENTIAL)
+	      .value("WAYPOINTS", stages::Connect::MergeMode::WAYPOINTS)
+	      ;
+	PropertyConverter<stages::Connect::MergeMode>();
+
 	properties::class_<Connect, std::auto_ptr<Connect>, bp::bases<Stage>, boost::noncopyable>
 	      ("Connect", bp::no_init)
 	      // use a custom wrapper as constructor to pass a python list of (name, planner) tuples
