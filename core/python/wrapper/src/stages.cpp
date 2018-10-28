@@ -267,7 +267,7 @@ void export_stages()
 
 	      .def("__init__", bp::make_constructor(&Pick_init_2))
 	      .def("__init__", bp::make_constructor(&Pick_init_1))
-	      .def("__init__", bp::make_constructor(&Pick_init_0))
+	      // .def("__init__", bp::make_constructor(&Pick_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Pick>, std::auto_ptr<Stage>>();
 
@@ -282,7 +282,7 @@ void export_stages()
 
 	      .def("__init__", bp::make_constructor(&Place_init_2))
 	      .def("__init__", bp::make_constructor(&Place_init_1))
-	      .def("__init__", bp::make_constructor(&Place_init_0))
+	      // .def("__init__", bp::make_constructor(&Place_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<Place>, std::auto_ptr<Stage>>();
 
@@ -293,7 +293,7 @@ void export_stages()
 	      .property<std::string>("object")
 	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_2))
 	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_1))
-	      .def("__init__", bp::make_constructor(&SimpleGrasp_init_0))
+	      // .def("__init__", bp::make_constructor(&SimpleGrasp_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleGrasp>, std::auto_ptr<Stage>>();
 
@@ -304,7 +304,7 @@ void export_stages()
 	      .property<std::string>("object")
 	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_2))
 	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_1))
-	      .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_0))
+	      // .def("__init__", bp::make_constructor(&SimpleUnGrasp_init_0))
 	      ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleUnGrasp>, std::auto_ptr<Stage>>();
 }
