@@ -3,7 +3,7 @@
 
 import unittest, sys
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
-from moveit_msgs.msg import RobotState, Constraints
+from moveit_msgs.msg import RobotState, Constraints, MotionPlanRequest
 from moveit.task_constructor import core, stages
 
 
@@ -24,6 +24,8 @@ class TestPropertyMap(unittest.TestCase):
         self._check("bool", False)
         self._check("string", "anything")
         self._check("pose", Pose())
+        # MotionPlanRequest is not registered as property type and should raise
+        self.assertRaises(TypeError,self._check, "request", MotionPlanRequest())
 
     def test_assign_in_reference(self):
         planner = core.PipelinePlanner()

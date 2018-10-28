@@ -17,19 +17,6 @@ std::string rosMsgName(PyObject* object) {
 	}
 }
 
-std::string rosMsgName(const boost::python::type_info& type_info) {
-	std::string name(type_info.name());
-	size_t pos = name.find("::");
-	if (pos != std::string::npos) {
-		name[pos] = '/';  // replace first ':' with '/'
-		name.erase(pos+1, 1);  // remove second ':'
-		size_t end = name.find("_<", pos+1);
-		if (end != std::string::npos)
-			return name.substr(0, end);
-	}
-	return std::string();
-}
-
 namespace {
 /// Additionally to the boost::python::converter::registry, this class remembers the registered
 /// ROS messages and their signature (in the form of package/msg).
@@ -43,7 +30,7 @@ class RosMsgConverterRegistry {
 
 public:
 	/// register type_info as convertible between C++ and Python
-	inline bool insert(const boost::python::type_info& type_info);
+	inline bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name);
 
 	/// check whether object can be converted to C++ type
 	inline void* convertible(PyObject* object);
@@ -53,9 +40,8 @@ public:
 };
 static RosMsgConverterRegistry registry_singleton_;
 
-bool RosMsgConverterRegistry::insert(const boost::python::type_info& type_info) {
-	const std::string &s = rosMsgName(type_info);
-	auto it_inserted = signatures_.insert(std::make_pair(s, boost::python::object()));
+bool RosMsgConverterRegistry::insert(const boost::python::type_info& type_info, const std::string& ros_msg_name) {
+	auto it_inserted = signatures_.insert(std::make_pair(ros_msg_name, boost::python::object()));
 	if (!it_inserted.second)
 		return false; // was already inserted before
 	auto type_it_inserted = types_.insert(std::make_pair(type_info, it_inserted.first));
@@ -98,9 +84,9 @@ boost::python::object RosMsgConverterRegistry::createMessage(const boost::python
 
 } // anonymous namespace
 
-bool RosMsgConverterBase::insert(const boost::python::type_info& type_info)
+bool RosMsgConverterBase::insert(const boost::python::type_info& type_info, const std::string& ros_msg_name)
 {
-	return registry_singleton_.insert(type_info);
+	return registry_singleton_.insert(type_info, ros_msg_name);
 }
 
 void* RosMsgConverterBase::convertible(PyObject* object) {

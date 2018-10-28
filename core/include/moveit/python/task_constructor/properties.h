@@ -15,7 +15,7 @@ public:
 	typedef boost::any (*from_python_converter_function)(const boost::python::object&);
 
 protected:
-	static bool insert(const boost::python::type_info& type_info,
+	static bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name,
 	                   to_python_converter_function to,
 	                   from_python_converter_function from);
 };
@@ -26,10 +26,7 @@ class PropertyConverter : protected PropertyConverterBase {
 public:
 	PropertyConverter() {
 		auto type_info = boost::python::type_id<T>();
-		insert(type_info, &toPython, &fromPython);
-
-		if (!rosMsgName(type_info).empty())  // is this a ROS msg?
-			RosMsgConverter<T>();  // also register ROS msg converter
+		insert(type_info, rosMsgName<T>(), &toPython, &fromPython);
 	}
 
 private:
@@ -39,6 +36,17 @@ private:
 	static boost::any fromPython(const boost::python::object& bpo) {
 		return T(boost::python::extract<T>(bpo));
 	}
+
+	template <class Q = T>
+	typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
+	rosMsgName() {
+		RosMsgConverter<T>();  // register ROS msg converter
+		return ros::message_traits::DataType<T>::value();
+	}
+
+	template <class Q = T>
+	typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type
+	rosMsgName() { return std::string(); }  // empty string if T isn't a ROS msg
 };
 
 namespace properties {

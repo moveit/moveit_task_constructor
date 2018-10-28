@@ -76,14 +76,12 @@ void deserializeMsg(const std::string& data, T& msg)
 
 /// retrieve name of ROS msg from object instance
 std::string rosMsgName(PyObject* object);
-/// retrieve name of ROS msg from type_info
-std::string rosMsgName(const boost::python::type_info& type_info);
 
 /// non-templated base class for RosMsgConverter<T> providing common methods
 class RosMsgConverterBase {
 protected:
 	/// Register type internally and return true if registered first time
-	static bool insert(const boost::python::type_info& type_info);
+	static bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name);
 
 	/// Determine if python object can be converted into C++ msg type
 	static void* convertible(PyObject* object);
@@ -103,7 +101,7 @@ struct RosMsgConverter : RosMsgConverterBase {
 	RosMsgConverter() {
 		auto type_info = boost::python::type_id<T>();
 		// register type internally
-		if (insert(type_info)) {
+		if (insert(type_info, ros::message_traits::DataType<T>::value())) {
 			// https://stackoverflow.com/questions/9888289/checking-whether-a-converter-has-already-been-registered
 			const boost::python::converter::registration* reg = boost::python::converter::registry::query(type_info);
 			if (!reg || !reg->m_to_python) {
