@@ -81,6 +81,21 @@ rviz::Property* PropertyFactory::create(const std::string& prop_name, Property* 
 	return it->second(QString::fromStdString(prop_name), prop);
 }
 
+rviz::Property* PropertyFactory::create(const moveit_task_constructor_msgs::Property& p, rviz::Property* old) const
+{
+	if (old) {  // reuse existing Property?
+		old->setDescription(QString::fromStdString(p.description));
+		old->setValue(QString::fromStdString(p.value));
+		return old;
+	} else {  // create new Property?
+		rviz::Property *result = new rviz::StringProperty(QString::fromStdString(p.name),
+		                                                  QString::fromStdString(p.value),
+		                                                  QString::fromStdString(p.description));
+		result->setReadOnly(true);
+		return result;
+	}
+}
+
 rviz::PropertyTreeModel* createPropertyTreeModel(PropertyMap& properties, QObject* parent) {
 	PropertyFactory& factory = PropertyFactory::instance();
 

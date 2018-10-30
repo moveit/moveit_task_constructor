@@ -41,6 +41,7 @@
 #include <map>
 #include <functional>
 #include <typeindex>
+#include <moveit_task_constructor_msgs/Property.h>
 
 namespace rviz {
 class Property;
@@ -62,10 +63,12 @@ public:
 
 	/// register a new factory function for type T
 	template <typename T>
-	void registerType(const FactoryFunction& f) { registerType(std::type_index(typeid(T)).name(), f); }
+	void registerType(const FactoryFunction& f) { registerType(typeid(T).name(), f); }
 
-	/// retrieve rviz property for given task_constructor property
+	/// create rviz::Property for given MTC Property
 	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property *prop) const;
+	/// create rviz::Property for given MTC property message
+	rviz::Property* create(const moveit_task_constructor_msgs::Property& p, rviz::Property* old) const;
 
 private:
 	std::map<std::string, FactoryFunction> registry_;

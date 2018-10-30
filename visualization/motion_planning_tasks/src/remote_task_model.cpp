@@ -37,11 +37,12 @@
 #include <stdio.h>
 
 #include "remote_task_model.h"
+#include "properties/property_factory.h"
 #include <moveit/task_constructor/container.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
 #include <rviz/properties/property_tree_model.h>
-#include <rviz/properties/property.h>
+#include <rviz/properties/string_property.h>
 #include <ros/console.h>
 #include <ros/service_client.h>
 
@@ -78,7 +79,38 @@ struct RemoteTaskModel::Node {
 		name_ = name;
 		return true;
 	}
+
+	void setProperties(const std::vector<moveit_task_constructor_msgs::Property>& props);
 };
+
+void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_constructor_msgs::Property> &props)
+{
+	// insert properties in same order as reported in description
+	rviz::Property *root = properties_->getRoot();
+	int index = 0;  // current child index in root
+	for (auto it = props.begin(); it != props.end(); ++it) {
+		int num = root->numChildren();
+		// find first child with name >= it->name
+		int next = index;
+		while (next < num && root->childAt(next)->getName().toStdString() < it->name)
+			++next;
+		// and remove all children in range [index, next) at once
+		root->removeChildren(index, next-index);
+		num = root->numChildren();
+
+		// if names differ, insert a new child, otherwise reuse existing
+		rviz::Property *old_child = index < num ? root->childAt(index) : nullptr;
+		if (old_child && old_child->getName().toStdString() != it->name)
+			old_child = nullptr;
+
+		rviz::Property *new_child = PropertyFactory::instance().create(*it, old_child);
+		if (new_child != old_child)
+			root->addChild(new_child, index);
+		++index;
+	}
+	// remove remaining children
+	root->removeChildren(index, root->numChildren()-index);
+}
 
 // return Node* corresponding to index
 RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex &index) const
@@ -259,6 +291,8 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 		bool changed = false;
 		if (!(n->node_flags_ & NAME_CHANGED)) // avoid overwriting a manually changed name
 			changed |= n->setName(QString::fromStdString(s.name));
+
+		n->setProperties(s.properties);
 
 		InterfaceFlags old_flags = n->interface_flags_;
 		n->interface_flags_ = InterfaceFlags();
