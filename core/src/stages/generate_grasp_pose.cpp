@@ -100,9 +100,17 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
 	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
 
-	const std::string& object_name = props.get<std::string>("object");
-	if (!scene->knowsFrameTransform(object_name)) {
-		ROS_WARN_STREAM_NAMED("GenerateGraspPose", "unknown object: " << object_name);
+	const std::string& object = props.get<std::string>("object");
+	if (!scene->knowsFrameTransform(object)) {
+		const std::string msg = "object '" + object + "' not in scene";
+		if (storeFailures()) {
+			InterfaceState state(scene);
+			SubTrajectory solution;
+			solution.markAsFailure();
+			solution.setComment(msg);
+			spawn(std::move(state), std::move(solution));
+		} else
+			ROS_WARN_STREAM_NAMED("GenerateGraspPose", msg);
 		return;
 	}
 
