@@ -88,6 +88,10 @@ public:
 
 	/// allow / forbid collisions for each combination of pairs in first and second lists
 	void allowCollisions(const Names& first, const Names& second, bool allow);
+	/// allow / forbid collisions for pair (first, second)
+	void allowCollisions(const std::string& first, const std::string& second, bool allow) {
+		allowCollisions(Names{first}, Names{second}, allow);
+	}
 	/// allow / forbid all collisions for given object
 	void allowCollisions(const std::string& object, bool allow) {
 		allowCollisions(Names({object}), Names(), allow);
@@ -95,14 +99,19 @@ public:
 
 	/// conveniency method accepting arbitrary container types
 	template <typename T1, typename T2,
-	          typename E1 = typename std::enable_if_t<is_container<T1>::value && std::is_base_of<std::string, typename T1::value_type>::value>,
-	          typename E2 = typename std::enable_if_t<is_container<T2>::value && std::is_base_of<std::string, typename T2::value_type>::value>>
+	          typename E1 = typename std::enable_if_t<is_container<T1>::value && std::is_convertible<typename T1::value_type, std::string>::value>,
+	          typename E2 = typename std::enable_if_t<is_container<T2>::value && std::is_convertible<typename T1::value_type, std::string>::value>>
 	inline void allowCollisions(const T1& first, const T2& second, bool enable_collision) {
 		allowCollisions(Names(first.cbegin(), first.cend()), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and an arbitrary container of names
-	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
 	inline void allowCollisions(const std::string& first, const T& second, bool enable_collision) {
+		allowCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
+	}
+	/// conveniency method accepting const char* and an arbitrary container of names
+	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
+	inline void allowCollisions(const char* first, const T& second, bool enable_collision) {
 		allowCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and JointModelGroup

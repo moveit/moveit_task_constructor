@@ -2,6 +2,7 @@
 
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/stages/compute_ik.h>
+#include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <geometry_msgs/PoseStamped.h>
 
@@ -84,4 +85,16 @@ TEST(ComputeIK, init) {
 	// valid group should not throw
 	props.set("group", std::string("base_from_base_to_tip"));
 	EXPECT_NO_THROW(ik.init(robot_model));
+}
+
+TEST(ModifyPlanningScene, allowCollisions) {
+	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
+
+	auto s = std::make_unique<stages::ModifyPlanningScene>();
+	std::string first="foo", second="boom";
+	s->allowCollisions(first, second, true);
+	s->allowCollisions(first, std::vector<const char*>{"ab", "abc"}, false);
+
+	s->allowCollisions("foo", std::vector<const char*>{"bar", "boom"}, true);
+	s->allowCollisions("foo", std::set<const char*>{"ab", "abc"}, false);
 }
