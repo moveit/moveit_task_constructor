@@ -292,6 +292,10 @@ void Stage::silentFailure() {
 	++(pimpl()->num_failures_);
 }
 
+bool Stage::storeFailures() const {
+	return pimpl()->storeFailures();
+}
+
 
 PropertyMap &Stage::properties()
 {

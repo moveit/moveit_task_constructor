@@ -180,6 +180,8 @@ public:
 	size_t numFailures() const;
 	/// call to increase number of failures w/o storing a (failure) trajectory
 	void silentFailure();
+	/// should we generate failure solutions?
+	bool storeFailures() const;
 
 	/// get the stage's property map
 	PropertyMap& properties();
