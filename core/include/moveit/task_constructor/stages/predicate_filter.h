@@ -45,7 +45,7 @@ MOVEIT_CLASS_FORWARD(RobotState)
 
 namespace moveit { namespace task_constructor { namespace stages {
 
-/** Generator Wrapper to filter generated solutions by custom criteria
+/** Stage Wrapper to filter generated solutions by custom criteria
  *
  * All solutions of the wrapped class are passed to predicate.
  * Solutions are accepted if predicate(s) == true.
