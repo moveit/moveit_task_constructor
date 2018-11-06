@@ -300,7 +300,7 @@ public:
 	   : SolutionBase()
 	{}
 	SolutionSequence(container_type&& subsolutions, double cost = 0.0, StagePrivate* creator = nullptr)
-	   : SolutionBase(creator, cost), subsolutions_(subsolutions)
+	   : SolutionBase(creator, cost), subsolutions_(std::move(subsolutions))
 	{}
 
 	void push_back(const SolutionBase& solution);
