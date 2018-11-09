@@ -183,9 +183,10 @@ Stage::Stage(StagePrivate *impl)
 	assert(impl);
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
+	p.declare<std::string>("marker_ns", name(), "marker namespace");
+
 	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
 	                                 "set of interface properties to forward");
-	p.declare<std::string>("marker_ns", "marker namespace");
 }
 
 Stage::~Stage()
