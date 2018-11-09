@@ -167,6 +167,14 @@ public:
 	/// timeout of stage per computation
 	double timeout() const { return properties().get<double>("timeout"); }
 
+	/** set marker namespace for solutions
+	 *
+	 * Auxiliary markers in this stage should use this namespace
+	 */
+	void setMarkerNS(const std::string& marker_ns) { setProperty("marker_ns", marker_ns); }
+	/// marker namespace of solution markers
+	const std::string& markerNS() { return properties().get<std::string>("marker_ns"); }
+
 	/// forwarding of properties between interface states
 	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
 	std::set<std::string> forwardedProperties() const
