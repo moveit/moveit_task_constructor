@@ -155,10 +155,16 @@ public:
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model);
 
 	const ContainerBase* parent() const;
+
 	const std::string& name() const;
 	void setName(const std::string& name);
 
+	/** set computation timeout (in seconds)
+	 *
+	 * The logic of the individual stage should ensure this limit is respected.
+	 */
 	void setTimeout(double timeout) { setProperty("timeout", timeout); }
+	/// timeout of stage per computation
 	double timeout() const { return properties().get<double>("timeout"); }
 
 	/// forwarding of properties between interface states
