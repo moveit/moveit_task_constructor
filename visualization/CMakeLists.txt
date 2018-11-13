@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_task_constructor_msgs
 	roscpp
 	rviz
+	ros_type_introspection
 )
 
 # definition needed for boost/math/constants/constants.hpp included by Ogre to compile

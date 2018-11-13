@@ -40,6 +40,7 @@
 #include "properties/property_factory.h"
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/properties.h>
+#include <moveit/visualization_tools/type_introspection.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
 #include <rviz/properties/property_tree_model.h>
@@ -139,6 +140,9 @@ RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Proper
 		} else
 			properties_.erase(it);
 	}
+
+	const ri::RenamedValues& flat_dict = TypeIntrospector::instance().extract(prop.type, prop.value);
+	return TreeConstructor::parseToTree(flat_dict, prop.name, prop.description, old);
 
 	if (old) {  // reuse existing Property?
 		old->setDescription(QString::fromStdString(prop.description));

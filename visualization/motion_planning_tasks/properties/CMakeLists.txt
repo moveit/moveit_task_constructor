@@ -6,7 +6,8 @@ set(SOURCES
 add_library(${MOVEIT_LIB_NAME} SHARED ${SOURCES})
 
 target_link_libraries(${MOVEIT_LIB_NAME}
-	${QT_LIBRARIES}
+	PUBLIC ${QT_LIBRARIES}
+	PRIVATE moveit_task_visualization_tools
 )
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>

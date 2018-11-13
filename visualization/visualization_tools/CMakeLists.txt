@@ -7,6 +7,7 @@ set(HEADERS
 	${PROJECT_INCLUDE}/marker_visualization.h
 	${PROJECT_INCLUDE}/task_solution_panel.h
 	${PROJECT_INCLUDE}/task_solution_visualization.h
+	${PROJECT_INCLUDE}/type_introspection.h
 )
 
 add_library(${MOVEIT_LIB_NAME}
@@ -16,6 +17,7 @@ add_library(${MOVEIT_LIB_NAME}
 	src/marker_visualization.cpp
 	src/task_solution_panel.cpp
 	src/task_solution_visualization.cpp
+	src/type_introspection.cpp
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
 
