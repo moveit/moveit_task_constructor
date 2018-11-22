@@ -72,7 +72,7 @@ public:
 	                   PropertySerializerBase::DeserializeFunction deserialize,
 	                   PropertySerializerBase::PrintFunction print);
 
-	const Entry& entry(const std::type_index& type_index) {
+	const Entry& entry(const std::type_index& type_index) const {
 		auto it = types_.find(type_index);
 		if (it == types_.end()) {
 			ROS_ERROR_STREAM_NAMED(LOGNAME, "Unregistered type: " << type_index.name());
@@ -115,15 +115,15 @@ bool PropertySerializerBase::insert(const std::type_index& type_index, const std
 }
 
 
-Property::Property(const Property::type_index& type_index, const std::string& description, const boost::any& default_value)
+Property::Property(const type_info& type_info, const std::string& description, const boost::any& default_value)
    : description_(description)
-   , type_index_(type_index)
+   , type_info_(type_info)
    , default_(default_value)
    , value_()
    , initialized_from_(-1)
 {
 	// default value's type should match declared type by construction
-	assert(default_.empty() || default_.type() == type_index_ || type_index_ == typeid(boost::any));
+	assert(default_.empty() || default_.type() == type_info_ || type_info_ == typeid(boost::any));
 	reset();
 }
 
@@ -135,8 +135,8 @@ void Property::setValue(const boost::any &value) {
 
 void Property::setCurrentValue(const boost::any &value)
 {
-	if (!value.empty() && type_index_ != typeid(boost::any) && value.type() != type_index_)
-		throw Property::type_error(value.type().name(), type_index_.name());
+	if (!value.empty() && type_info_ != typeid(boost::any) && value.type() != type_info_)
+		throw Property::type_error(value.type().name(), type_info_.name());
 
 	value_ = value;
 	initialized_from_ = 1; // manually initialized TODO: use enums
@@ -173,16 +173,16 @@ std::string Property::print(const boost::any& value)
 }
 
 std::string Property::typeName() const {
-	if (value().empty()) return typeName(type_index_);
+	if (value().empty()) return typeName(type_info_);
 	else return typeName(value().type());
 }
 
-std::string Property::typeName(const std::type_index& type_index)
+std::string Property::typeName(const type_info& type_info)
 {
-	if (type_index == typeid(boost::any))
+	if (type_info == typeid(boost::any))
 		return "";
 	else
-		return registry_singleton_.entry(type_index).name_;
+		return registry_singleton_.entry(type_info).name_;
 }
 
 bool Property::initsFrom(Property::SourceFlags source) const
@@ -206,14 +206,14 @@ Property &Property::configureInitFrom(SourceFlags source, const std::string &nam
 }
 
 
-Property& PropertyMap::declare(const std::string &name, const Property::type_index &type_index,
+Property& PropertyMap::declare(const std::string &name, const Property::type_info& type_info,
                                const std::string &description, const boost::any &default_value)
 {
-	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value)));
+	auto it_inserted = props_.insert(std::make_pair(name, Property(type_info, description, default_value)));
 	// if name was already declared, the new declaration should match in type (except it was boost::any)
-	if (!it_inserted.second && it_inserted.first->second.type_index_ != typeid(boost::any) &&
-	    type_index != it_inserted.first->second.type_index_)
-		throw Property::type_error(type_index.name(), it_inserted.first->second.type_index_.name());
+	if (!it_inserted.second && it_inserted.first->second.type_info_ != typeid(boost::any) &&
+	    type_info != it_inserted.first->second.type_info_)
+		throw Property::type_error(type_info.name(), it_inserted.first->second.type_info_.name());
 	return it_inserted.first->second;
 }
 
@@ -240,7 +240,7 @@ void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &prop
 void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const
 {
 	const Property& p = property(name);
-	other.declare(other_name, p.type_index_, p.description_, p.default_);
+	other.declare(other_name, p.type_info_, p.description_, p.default_);
 }
 
 void PropertyMap::configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties)

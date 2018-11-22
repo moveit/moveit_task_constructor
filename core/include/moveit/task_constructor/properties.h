@@ -70,11 +70,14 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
 class Property {
 	friend class PropertyMap;
 
-	typedef decltype(std::declval<boost::any>().type()) type_index;
 	/// typed constructor is only accessible via PropertyMap
-	Property(const type_index &type_index, const std::string &description, const boost::any &default_value);
+	Property(const boost::typeindex::type_info& type_info,
+	         const std::string &description,
+	         const boost::any &default_value);
 
 public:
+	typedef boost::typeindex::type_info type_info;
+
 	/// base class for Property exceptions
 	class error;
 	/// exception thrown when accessing an undeclared property
@@ -115,7 +118,7 @@ public:
 	void setDescription(const std::string& desc) { description_ = desc; }
 
 	/// get typename
-	static std::string typeName(const std::type_index& type_index);
+	static std::string typeName(const type_info& type_info);
 	std::string typeName() const;
 
 	/// return true, if property initialized from given SourceId
@@ -127,7 +130,7 @@ public:
 
 private:
 	std::string description_;
-	type_index type_index_;
+	const type_info& type_info_;
 	boost::any default_;
 	boost::any value_;
 
@@ -282,7 +285,7 @@ class PropertyMap
 	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
-	Property& declare(const std::string& name, const Property::type_index& type_index,
+	Property& declare(const std::string& name, const Property::type_info& type_info,
 	                  const std::string& description, const boost::any& default_value);
 public:
 	/// declare a property for future use
@@ -294,7 +297,7 @@ public:
 	/// declare a property with default value
 	template<typename T>
 	Property& declare(const std::string& name, const T& default_value,
-	             const std::string& description = "") {
+	                  const std::string& description = "") {
 		PropertySerializer<T>();  // register serializer/deserializer
 		return declare(name, typeid(T), description, default_value);
 	}
