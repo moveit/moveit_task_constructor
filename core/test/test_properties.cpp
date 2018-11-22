@@ -27,12 +27,11 @@ TEST(Property, directset) {
 	PropertyMap props;
 	props.set("int1", 1);
 	EXPECT_EQ(props.get<int>("int1"), 1);
-	EXPECT_STREQ(props.property("int1").serialize().c_str(), "1");
+	EXPECT_EQ(props.property("int1").serialize(), "1");
 
 	props.set("int2", boost::any(2));
 	EXPECT_EQ(props.get<int>("int2"), 2);
-	// cannot serialize, because directly set
-	EXPECT_STREQ(props.property("int2").serialize().c_str(), "");
+	EXPECT_EQ(props.property("int2").serialize(), "2");
 }
 
 TEST(Property, redeclare) {
@@ -85,6 +84,15 @@ TEST(Property, anytype) {
 
 	props.set("any", std::string("foo"));
 	EXPECT_EQ(props.get<std::string>("any"), "foo");
+}
+
+TEST(Property, serialize_basic) {
+	EXPECT_TRUE(hasSerialize<int>::value);
+	EXPECT_TRUE(hasDeserialize<int>::value);
+	EXPECT_TRUE(hasSerialize<double>::value);
+	EXPECT_TRUE(hasDeserialize<double>::value);
+	EXPECT_TRUE(hasSerialize<std::string>::value);
+	EXPECT_TRUE(hasDeserialize<std::string>::value);
 }
 
 TEST(Property, serialize) {

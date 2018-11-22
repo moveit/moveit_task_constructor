@@ -45,17 +45,10 @@
 #include <vector>
 #include <functional>
 #include <sstream>
+#include <ros/serialization.h>
 
 namespace moveit {
 namespace task_constructor {
-
-// hasSerialize<T>::value provides a true/false constexpr depending on whether operator<< is supported.
-// This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
-template <typename T, typename = std::ostream&>
-struct hasSerialize : std::false_type {};
-
-template <typename T>
-struct hasSerialize<T, decltype(std::declval<std::ostringstream&>() << std::declval<T>())> : std::true_type {};
 
 class Property;
 class PropertyMap;
@@ -78,25 +71,8 @@ class Property {
 	friend class PropertyMap;
 
 	typedef decltype(std::declval<boost::any>().type()) type_index;
-	typedef std::function<std::string(const boost::any& v)> SerializeFunction;
-
-	Property(const type_index &type_index, const std::string &description, const boost::any &default_value,
-	         const Property::SerializeFunction &serialize);
-
-	template <typename T>
-	static typename std::enable_if<hasSerialize<T>::value, std::string>::type
-	serialize(const boost::any& value) {
-		if (value.empty()) return "";
-		std::ostringstream oss;
-		oss << boost::any_cast<T>(value);
-		return oss.str();
-	}
-
-	template <typename T>
-	static typename std::enable_if<!hasSerialize<T>::value, std::string>::type
-	serialize(const boost::any& value) {
-		return "";
-	}
+	/// typed constructor is only accessible via PropertyMap
+	Property(const type_index &type_index, const std::string &description, const boost::any &default_value);
 
 public:
 	/// base class for Property exceptions
@@ -111,8 +87,6 @@ public:
 	typedef uint SourceFlags;
 	/// function callback used to initialize property value from another PropertyMap
 	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
-	/// function callback used to signal value setting to external components
-	typedef std::function<void(const Property*)> SignalFunction;
 
 	/// set current value and default value
 	void setValue(const boost::any& value);
@@ -128,8 +102,12 @@ public:
 	inline const boost::any& value() const { return value_.empty() ? default_ : value_; }
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
-	/// serialize current value
-	std::string serialize(const boost::any& value) const;
+
+	/// serialize/print value using registered functions
+	static std::string print(const boost::any& value);
+	static std::string serialize(const boost::any& value);
+	static boost::any deserialize(const std::string& type_name, const std::string& wire);
+	std::string print() const { return print(value()); }
 	std::string serialize() const { return serialize(value()); }
 
 	/// get description text
@@ -137,7 +115,8 @@ public:
 	void setDescription(const std::string& desc) { description_ = desc; }
 
 	/// get typename
-	std::string typeName() const { return type_index_.name(); }
+	static std::string typeName(const std::type_index& type_index);
+	std::string typeName() const;
 
 	/// return true, if property initialized from given SourceId
 	bool initsFrom(SourceFlags source) const;
@@ -145,10 +124,6 @@ public:
 	Property &configureInitFrom(SourceFlags source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name
 	Property &configureInitFrom(SourceFlags source, const std::string& name);
-
-	/// define a function callback to be called on each value update
-	/// note, that boost::any doesn't allow for change detection
-	void setSignalCallback(const SignalFunction& f) { signaller_ = f; }
 
 private:
 	std::string description_;
@@ -160,8 +135,6 @@ private:
 	SourceFlags source_flags_ = 0;
 	SourceFlags initialized_from_;
 	InitializerFunction initializer_;
-	SignalFunction signaller_;
-	SerializeFunction serialize_;
 };
 
 
@@ -189,6 +162,114 @@ public:
 };
 
 
+// hasSerialize<T>::value provides a true/false constexpr depending on whether operator<< is supported.
+// This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
+template <typename T, typename = std::ostream&>
+struct hasSerialize : std::false_type {};
+
+template <typename T>
+struct hasSerialize<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type {};
+
+template <typename T, typename = std::istream&>
+struct hasDeserialize : std::false_type {};
+
+template <typename T>
+struct hasDeserialize<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type {};
+
+class PropertySerializerBase {
+public:
+	typedef std::string (*SerializeFunction)(const boost::any&);
+	typedef boost::any (*DeserializeFunction)(const std::string&);
+	typedef std::string (*PrintFunction)(const boost::any&);
+
+	static std::string dummySerialize(const boost::any&) { return ""; }
+	static boost::any dummyDeserialize(const std::string&) { return boost::any(); }
+
+protected:
+	static bool insert(const std::type_index& type_index, const std::string& type_name,
+	                   SerializeFunction serialize, DeserializeFunction deserialize, PrintFunction print);
+};
+
+/// utility class to register serializer/deserializer functions for a property of type T
+template <typename T>
+class PropertySerializer : protected PropertySerializerBase {
+public:
+	PropertySerializer() {
+		insert(typeid(T), typeName<T>(), &serialize, &deserialize, &print);
+	}
+
+	template <class Q = T>
+	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
+	typeName() {
+		return ros::message_traits::DataType<T>::value();
+	}
+
+	template <class Q = T>
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type
+	typeName() { return typeid(T).name(); }
+
+private:
+	/** ROS message serialization */
+	template <class Q = T>
+	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
+	serialize(const boost::any& value) {
+		static_assert(sizeof(uint8_t) == sizeof(char), "Assuming char has same size as uint8_t");
+		const T& msg = boost::any_cast<T>(value);
+		std::size_t size = ros::serialization::serializationLength(msg);
+		std::string result(size, '\0');
+		if (size)
+		{
+			ros::serialization::OStream stream(reinterpret_cast<uint8_t*>(&result[0]), size);
+			ros::serialization::serialize(stream, msg);
+		}
+		return result;
+	}
+	template <class Q = T>
+	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, boost::any>::type
+	deserialize(const std::string& wire) {
+		T value;
+		ros::serialization::IStream stream(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&wire[0])), wire.size());
+		ros::serialization::deserialize(stream, value);
+		return value;
+	}
+
+	/** Serialization based on std::[io]stringstream */
+	template <class Q = T>
+	static typename std::enable_if<hasSerialize<Q>::value, std::string>::type
+	print(const boost::any& value) {
+		std::ostringstream oss;
+		oss << boost::any_cast<T>(value);
+		return oss.str();
+	}
+
+	template <class Q = T>
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && hasSerialize<Q>::value, std::string>::type
+	serialize(const boost::any& value) {
+		return print(value);
+	}
+	template <class Q = T>
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && hasSerialize<Q>::value && hasDeserialize<Q>::value, boost::any>::type
+	deserialize(const std::string& wired) {
+		std::istringstream iss(wired);
+		T value;
+		iss >> value;
+		return value;
+	}
+
+	/** No serialization available */
+	template <class Q = T>
+	static typename std::enable_if<!hasSerialize<Q>::value, std::string>::type
+	print(const boost::any& value) { return dummySerialize(value); }
+
+	template <class Q = T>
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && !hasSerialize<Q>::value, std::string>::type
+	serialize(const boost::any& value) { return dummySerialize(value); }
+	template <class Q = T>
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && (!hasSerialize<Q>::value || !hasDeserialize<Q>::value), boost::any>::type
+	deserialize(const std::string& wire) { return dummyDeserialize(wire); }
+};
+
+
 /** PropertyMap is map of (name, Property) pairs.
  *
  * Conveniency methods are provided to setup property initialization for several
@@ -202,20 +283,20 @@ class PropertyMap
 
 	/// implementation of declare methods
 	Property& declare(const std::string& name, const Property::type_index& type_index,
-	                  const std::string& description,
-	                  const boost::any& default_value,
-	                  const Property::SerializeFunction &serialize);
+	                  const std::string& description, const boost::any& default_value);
 public:
 	/// declare a property for future use
 	template<typename T>
 	Property& declare(const std::string& name, const std::string& description = "") {
-		return declare(name, typeid(T), description, boost::any(), &Property::serialize<T>);
+		PropertySerializer<T>();  // register serializer/deserializer
+		return declare(name, typeid(T), description, boost::any());
 	}
 	/// declare a property with default value
 	template<typename T>
 	Property& declare(const std::string& name, const T& default_value,
 	             const std::string& description = "") {
-		return declare(name, typeid(T), description, default_value, &Property::serialize<T>);
+		PropertySerializer<T>();  // register serializer/deserializer
+		return declare(name, typeid(T), description, default_value);
 	}
 
 	/// declare all given properties also in other PropertyMap

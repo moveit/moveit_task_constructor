@@ -53,6 +53,11 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<boost::any>("goal", "goal specification");
+	// register actual types
+	PropertySerializer<std::string>();
+	PropertySerializer<moveit_msgs::RobotState>();
+	PropertySerializer<geometry_msgs::PointStamped>();
+	PropertySerializer<geometry_msgs::PoseStamped>();
 
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");

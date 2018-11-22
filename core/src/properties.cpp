@@ -44,14 +44,83 @@
 namespace moveit {
 namespace task_constructor {
 
-Property::Property(const Property::type_index& type_index, const std::string& description, const boost::any& default_value,
-                   const Property::SerializeFunction &serialize)
+const std::string LOGNAME = "Properties";
+
+class PropertyTypeRegistry {
+	struct Entry {
+		std::string name_;
+		PropertySerializerBase::SerializeFunction serialize_;
+		PropertySerializerBase::DeserializeFunction deserialize_;
+		PropertySerializerBase::PrintFunction print_;
+	};
+	Entry dummy_;
+
+	// map from type_info to corresponding converter functions
+	typedef std::map<std::type_index, Entry> RegistryMap;
+	RegistryMap types_;
+	// map from type names (type.name or ROS msg name) to entry in types_
+	typedef std::map<std::string, RegistryMap::iterator> TypeNameMap;
+	TypeNameMap names_;
+
+public:
+	PropertyTypeRegistry() : dummy_{"", PropertySerializerBase::dummySerialize,
+	                                PropertySerializerBase::dummyDeserialize,
+	                                PropertySerializerBase::dummySerialize}
+	{}
+	inline bool insert(const std::type_index& type_index, const std::string& type_name,
+	                   PropertySerializerBase::SerializeFunction serialize,
+	                   PropertySerializerBase::DeserializeFunction deserialize,
+	                   PropertySerializerBase::PrintFunction print);
+
+	const Entry& entry(const std::type_index& type_index) {
+		auto it = types_.find(type_index);
+		if (it == types_.end()) {
+			ROS_ERROR_STREAM_NAMED(LOGNAME, "Unregistered type: " << type_index.name());
+			return dummy_;
+		}
+		return it->second;
+	}
+	const Entry& entry(const std::string& type_name) const {
+		auto it = names_.find(type_name);
+		if (it == names_.end())
+			return dummy_;
+		return it->second->second;
+	}
+};
+static PropertyTypeRegistry registry_singleton_;
+
+bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::string& type_name,
+                                  PropertySerializerBase::SerializeFunction serialize,
+                                  PropertySerializerBase::DeserializeFunction deserialize,
+                                  PropertySerializerBase::PrintFunction print)
+{
+	if (type_index == std::type_index(typeid(boost::any)))
+		return false;
+
+	auto it_inserted = types_.insert(std::make_pair(type_index, Entry {type_name, serialize, deserialize, print}));
+	if (!it_inserted.second)
+		return false;  // was already registered before
+
+	if (!type_name.empty())  // register type_name too?
+		names_.insert(std::make_pair(type_name, it_inserted.first));
+
+	return true;
+}
+
+bool PropertySerializerBase::insert(const std::type_index& type_index, const std::string& type_name,
+                                    PropertySerializerBase::SerializeFunction serialize,
+                                    PropertySerializerBase::DeserializeFunction deserialize, PrintFunction print)
+{
+	return registry_singleton_.insert(type_index, type_name, serialize, deserialize, print);
+}
+
+
+Property::Property(const Property::type_index& type_index, const std::string& description, const boost::any& default_value)
    : description_(description)
    , type_index_(type_index)
    , default_(default_value)
    , value_()
    , initialized_from_(-1)
-   , serialize_(serialize)
 {
 	// default value's type should match declared type by construction
 	assert(default_.empty() || default_.type() == type_index_ || type_index_ == typeid(boost::any));
@@ -71,9 +140,6 @@ void Property::setCurrentValue(const boost::any &value)
 
 	value_ = value;
 	initialized_from_ = 1; // manually initialized TODO: use enums
-
-	if (signaller_)
-		signaller_(this);
 }
 
 void Property::reset()
@@ -84,9 +150,39 @@ void Property::reset()
 	initialized_from_ = -1;  // set to max value
 }
 
-std::string Property::serialize(const boost::any& v) const {
-	if (!serialize_ || v.empty()) return "";
-	return serialize_(v);
+std::string Property::serialize(const boost::any& value)
+{
+	if (value.empty())
+		return "";
+	return registry_singleton_.entry(value.type()).serialize_(value);
+}
+
+boost::any Property::deserialize(const std::string& type_name, const std::string& wire)
+{
+	if (wire.empty())
+		return boost::any();
+	else
+		return registry_singleton_.entry(type_name).deserialize_(wire);
+}
+
+std::string Property::print(const boost::any& value)
+{
+	if (value.empty())
+		return "";
+	return registry_singleton_.entry(value.type()).print_(value);
+}
+
+std::string Property::typeName() const {
+	if (value().empty()) return typeName(type_index_);
+	else return typeName(value().type());
+}
+
+std::string Property::typeName(const std::type_index& type_index)
+{
+	if (type_index == typeid(boost::any))
+		return "";
+	else
+		return registry_singleton_.entry(type_index).name_;
 }
 
 bool Property::initsFrom(Property::SourceFlags source) const
@@ -111,10 +207,9 @@ Property &Property::configureInitFrom(SourceFlags source, const std::string &nam
 
 
 Property& PropertyMap::declare(const std::string &name, const Property::type_index &type_index,
-                               const std::string &description, const boost::any &default_value,
-                               const Property::SerializeFunction &serialize)
+                               const std::string &description, const boost::any &default_value)
 {
-	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value, serialize)));
+	auto it_inserted = props_.insert(std::make_pair(name, Property(type_index, description, default_value)));
 	// if name was already declared, the new declaration should match in type (except it was boost::any)
 	if (!it_inserted.second && it_inserted.first->second.type_index_ != typeid(boost::any) &&
 	    type_index != it_inserted.first->second.type_index_)
@@ -145,7 +240,7 @@ void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string> &prop
 void PropertyMap::exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const
 {
 	const Property& p = property(name);
-	other.declare(other_name, p.type_index_, p.description_, p.default_, p.serialize_);
+	other.declare(other_name, p.type_index_, p.description_, p.default_);
 }
 
 void PropertyMap::configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties)
@@ -167,8 +262,7 @@ void PropertyMap::set<boost::any>(const std::string& name, const boost::any& val
 	if (range.first == range.second) { // name is not yet declared
 		if (value.empty())
 			throw Property::undeclared(name, "trying to set undeclared property '" + name + "' with NULL value");
-		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any(),
-		                                                                   Property::SerializeFunction())));
+		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any())));
 		it->second.setValue(value);
 	} else
 		range.first->second.setValue(value);
@@ -221,8 +315,8 @@ void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMa
 		} catch (const Property::undefined&) {
 		}
 
-		ROS_DEBUG_STREAM_NAMED("Properties", pair.first << ": " << p.initialized_from_ <<
-		                       " -> " << source << ": " << p.serialize(value));
+		ROS_DEBUG_STREAM_NAMED(LOGNAME, pair.first << ": " << p.initialized_from_ <<
+		                       " -> " << source << ": " << Property::print(value));
 		p.setCurrentValue(value);
 		p.initialized_from_ = source;
 	}

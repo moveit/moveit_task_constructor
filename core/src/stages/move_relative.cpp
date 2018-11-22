@@ -53,6 +53,9 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
 
 	p.declare<boost::any>("direction", "motion specification");
+	// register actual types
+	PropertySerializer<geometry_msgs::TwistStamped>();
+	PropertySerializer<geometry_msgs::Vector3Stamped>();
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
