@@ -35,6 +35,7 @@
 /* Author: Robert Haschke */
 
 #include "property_factory.h"
+
 #include <boost/functional/factory.hpp>
 #include <moveit/task_constructor/properties.h>
 
@@ -42,25 +43,35 @@
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/float_property.h>
 
-using namespace moveit::task_constructor;
+namespace mtc = ::moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-/// TODO: We also need to provide methods to sync both properties in both directions.
-/// In our Property we could store a callback function to update the rviz::Property.
-/// The rviz::Property can simply use a lambda-function slot to update our Property.
-/// However, we need to avoid infinite loops in doing so. Our Property cannot compare values...
-template <typename T, typename RVIZProp>
-RVIZProp* helper(const QString& name, Property* prop) {
-	T value = prop->defined() ? boost::any_cast<T>(prop->value()) : T();
-	return new RVIZProp(name, value, QString::fromStdString(prop->description()));
+static rviz::StringProperty* stringFactory(const QString& name, mtc::Property& mtc_prop) {
+	std::string value;
+	if (mtc_prop.defined())
+		value = boost::any_cast<std::string>(mtc_prop.value());
+	rviz::StringProperty* rviz_prop = new rviz::StringProperty(name, QString::fromStdString(value),
+	                                                           QString::fromStdString(mtc_prop.description()));
+	QObject::connect(rviz_prop, &rviz::StringProperty::changed,
+	                 [rviz_prop, &mtc_prop]() {mtc_prop.setValue(rviz_prop->getStdString());});
+	return rviz_prop;
+}
+template <typename T>
+static rviz::FloatProperty* floatFactory(const QString& name, mtc::Property& mtc_prop) {
+	T value = mtc_prop.defined() ? boost::any_cast<T>(mtc_prop.value()) : T();
+	rviz::FloatProperty* rviz_prop = new rviz::FloatProperty(name, value, QString::fromStdString(mtc_prop.description()));
+	QObject::connect(rviz_prop, &rviz::FloatProperty::changed,
+	                 [rviz_prop, &mtc_prop]() {mtc_prop.setValue(T(rviz_prop->getFloat()));});
+	return rviz_prop;
 }
 
 PropertyFactory::PropertyFactory()
 {
-	// registe some standard types
-	registerType<double>(&helper<double, rviz::FloatProperty>);
-	registerType<QString>(&helper<QString, rviz::StringProperty>);
+	// register some standard types
+	registerType<float>(&floatFactory<float>);
+	registerType<double>(&floatFactory<double>);
+	registerType<std::string>(&stringFactory);
 }
 
 PropertyFactory& PropertyFactory::instance()
@@ -71,12 +82,14 @@ PropertyFactory& PropertyFactory::instance()
 
 void PropertyFactory::registerType(const std::string &type_name, const FactoryFunction &f)
 {
+	if (type_name.empty())
+		return;
 	registry_.insert(std::make_pair(type_name, f));
 }
 
-rviz::Property* PropertyFactory::create(const std::string& prop_name, Property* prop) const
+rviz::Property* PropertyFactory::create(const std::string& prop_name, mtc::Property& prop) const
 {
-	auto it = registry_.find(prop->typeName());
+	auto it = registry_.find(prop.typeName());
 	if (it == registry_.end()) return nullptr;
 	return it->second(QString::fromStdString(prop_name), prop);
 }
@@ -96,13 +109,13 @@ rviz::Property* PropertyFactory::create(const moveit_task_constructor_msgs::Prop
 	}
 }
 
-rviz::PropertyTreeModel* createPropertyTreeModel(PropertyMap& properties, QObject* parent) {
+rviz::PropertyTreeModel* defaultPropertyTreeModel(mtc::PropertyMap& properties, QObject* parent) {
 	PropertyFactory& factory = PropertyFactory::instance();
 
 	rviz::Property* root = new rviz::Property();
 	rviz::PropertyTreeModel *model = new rviz::PropertyTreeModel(root, parent);
 	for (auto& prop : properties) {
-		rviz::Property* rviz_prop = factory.create(prop.first, &prop.second);
+		rviz::Property* rviz_prop = factory.create(prop.first, prop.second);
 		if (!rviz_prop) rviz_prop = new rviz::Property(QString::fromStdString(prop.first));
 		rviz_prop->setParent(root);
 	}

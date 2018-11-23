@@ -41,16 +41,14 @@
 #include <map>
 #include <functional>
 #include <typeindex>
+
+#include <moveit/task_constructor/properties.h>
 #include <moveit_task_constructor_msgs/Property.h>
 
 namespace rviz {
 class Property;
 class PropertyTreeModel;
 }
-namespace moveit { namespace task_constructor {
-class Property;
-class PropertyMap;
-} }
 
 namespace moveit_rviz_plugin {
 
@@ -59,14 +57,17 @@ class PropertyFactory
 public:
 	static PropertyFactory& instance();
 
-	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property*)> FactoryFunction;
+	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&)> FactoryFunction;
 
 	/// register a new factory function for type T
 	template <typename T>
-	void registerType(const FactoryFunction& f) { registerType(typeid(T).name(), f); }
+	inline void registerType(const FactoryFunction& f) {
+		moveit::task_constructor::PropertySerializer<T>();  // register serializer
+		registerType(moveit::task_constructor::Property::typeName(typeid(T)), f);
+	}
 
 	/// create rviz::Property for given MTC Property
-	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property *prop) const;
+	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property &prop) const;
 	/// create rviz::Property for given MTC property message
 	rviz::Property* create(const moveit_task_constructor_msgs::Property& p, rviz::Property* old) const;
 
@@ -82,6 +83,6 @@ private:
 };
 
 /// turn a PropertyMap into an rviz::PropertyTreeModel
-rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::PropertyMap &properties, QObject *parent = nullptr);
+rviz::PropertyTreeModel* defaultPropertyTreeModel(moveit::task_constructor::PropertyMap &properties, QObject *parent = nullptr);
 
 }

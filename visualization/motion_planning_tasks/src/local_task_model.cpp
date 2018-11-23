@@ -245,8 +245,10 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex &ind
 	Node *n = node(index);
 	if (!n) return nullptr;
 	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
+	// TODO: We might need custom factory methods to create PropertyTreeModels
+	// that are specifically tailored to a Stage class.
 	if (it_inserted.second)  // newly inserted, create new model
-		it_inserted.first->second = createPropertyTreeModel(n->me()->properties(), this);
+		it_inserted.first->second = defaultPropertyTreeModel(n->me()->properties(), this);
 	return it_inserted.first->second;
 }
 
