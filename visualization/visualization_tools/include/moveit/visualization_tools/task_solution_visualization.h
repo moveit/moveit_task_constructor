@@ -137,10 +137,11 @@ Q_SIGNALS:
   void activeStageChanged(size_t);
 
 protected:
-  void setVisibility(); // set visibility of main scene node
+  void setVisibility();  ///< set visibility of main scene node
   void setVisibility(Ogre::SceneNode* node, Ogre::SceneNode* parent, bool visible);
   float getStateDisplayTime();
   void clearTrail();
+  void renderCurrentWayPoint();
   void renderWayPoint(size_t index, int previous_index);
   void renderPlanningScene(const planning_scene::PlanningSceneConstPtr &scene);
 

@@ -305,6 +305,7 @@ void TaskSolutionVisualization::changedRobotAlpha()
 void TaskSolutionVisualization::changedRobotVisualEnabled()
 {
   robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
+  renderCurrentWayPoint();
   for (std::size_t i = 0; i < trail_.size(); ++i)
     trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
 }
@@ -312,6 +313,7 @@ void TaskSolutionVisualization::changedRobotVisualEnabled()
 void TaskSolutionVisualization::changedRobotCollisionEnabled()
 {
   robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
+  renderCurrentWayPoint();
   for (std::size_t i = 0; i < trail_.size(); ++i)
     trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
 }
@@ -352,7 +354,7 @@ void TaskSolutionVisualization::onAllAtOnceChanged(bool all_at_once)
   if (all_at_once)
     addMarkers(displaying_solution_);
   else if (current_state_ >= 0)
-    renderWayPoint(current_state_, -1);
+    renderCurrentWayPoint();
 }
 
 float TaskSolutionVisualization::getStateDisplayTime()
@@ -469,6 +471,12 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt)
   for (; start < end; ++start) trail_[start]->setVisible(show);
 
   setVisibility();
+}
+
+void TaskSolutionVisualization::renderCurrentWayPoint()
+{
+  if (displaying_solution_)
+    renderWayPoint(current_state_, -1);
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
@@ -591,7 +599,7 @@ void TaskSolutionVisualization::enabledRobotColor()
 
 void TaskSolutionVisualization::changedAttachedBodyColor()
 {
-
+  renderCurrentWayPoint();
 }
 
 void TaskSolutionVisualization::unsetRobotColor(rviz::Robot* robot)
