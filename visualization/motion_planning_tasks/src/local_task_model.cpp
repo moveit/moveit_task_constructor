@@ -80,10 +80,8 @@ QModelIndex LocalTaskModel::index(Node *n) const
 
 LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr& scene,
                                rviz::DisplayContext* display_context, QObject* parent)
-   : BaseTaskModel(parent)
+   : BaseTaskModel(scene, display_context, parent)
    , Task("", std::move(container))
-   , scene_(scene)
-   , display_context_(display_context)
 {
 	root_ = pimpl();
 	flags_ |= LOCAL_MODEL;

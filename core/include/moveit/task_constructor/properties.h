@@ -78,6 +78,9 @@ class Property {
 public:
 	typedef boost::typeindex::type_info type_info;
 
+	/// Construct a property holding a any value
+	Property();
+
 	/// base class for Property exceptions
 	class error;
 	/// exception thrown when accessing an undeclared property

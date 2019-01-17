@@ -54,7 +54,6 @@ class RemoteTaskModel : public BaseTaskModel {
 	Q_OBJECT
 	struct Node;
 	Node* const root_;
-	planning_scene::PlanningSceneConstPtr scene_;
 	ros::ServiceClient* get_solution_client_ = nullptr;
 
 	std::map<uint32_t, Node*> id_to_stage_;
@@ -67,7 +66,7 @@ class RemoteTaskModel : public BaseTaskModel {
 	inline RemoteSolutionModel* getSolutionModel(uint32_t stage_id) const;
 
 public:
-	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent = nullptr);
+	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, rviz::DisplayContext *display_context, QObject *parent = nullptr);
 	~RemoteTaskModel();
 
 	void setSolutionClient(ros::ServiceClient *client);
