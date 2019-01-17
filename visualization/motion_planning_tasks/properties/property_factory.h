@@ -49,6 +49,9 @@ namespace rviz {
 class Property;
 class PropertyTreeModel;
 }
+namespace moveit { namespace task_constructor {
+class Stage;
+} }
 
 namespace moveit_rviz_plugin {
 
@@ -57,32 +60,45 @@ class PropertyFactory
 public:
 	static PropertyFactory& instance();
 
-	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&)> FactoryFunction;
+	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&)> PropertyFactoryFunction;
+	typedef std::function<rviz::PropertyTreeModel*(moveit::task_constructor::PropertyMap&)> TreeFactoryFunction;
 
-	/// register a new factory function for type T
+	/// register a factory function for type T
 	template <typename T>
-	inline void registerType(const FactoryFunction& f) {
+	inline void registerType(const PropertyFactoryFunction& f) {
 		moveit::task_constructor::PropertySerializer<T>();  // register serializer
 		registerType(moveit::task_constructor::Property::typeName(typeid(T)), f);
 	}
+
+	/// register a factory function for stage T
+	template <typename T>
+	inline void registerStage(const TreeFactoryFunction& f) { registerStage(typeid(T), f); }
 
 	/// create rviz::Property for given MTC Property
 	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property &prop) const;
 	/// create rviz::Property for given MTC property message
 	rviz::Property* create(const moveit_task_constructor_msgs::Property& p, rviz::Property* old) const;
 
+	/// create PropertyTreeModel for given Stage
+	rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::Stage &stage);
+
+	/// turn a PropertyMap into an rviz::PropertyTreeModel
+	rviz::PropertyTreeModel* defaultPropertyTreeModel(moveit::task_constructor::PropertyMap &properties);
+
+	/// add all properties from map that are not yet in root
+	void addRemainingProperties(rviz::Property *root, moveit::task_constructor::PropertyMap &properties);
+
 private:
-	std::map<std::string, FactoryFunction> registry_;
+	std::map<std::string, PropertyFactoryFunction> property_registry_;
+	std::map<std::type_index, TreeFactoryFunction> stage_registry_;
 
 	/// class is singleton
 	PropertyFactory();
 	PropertyFactory(const PropertyFactory&) = delete;
 	void operator=(const PropertyFactory&) = delete;
 
-	void registerType(const std::string& type_name, const FactoryFunction& f);
+	void registerType(const std::string& type_name, const PropertyFactoryFunction& f);
+	void registerStage(const std::type_index& type_index, const TreeFactoryFunction& f);
 };
-
-/// turn a PropertyMap into an rviz::PropertyTreeModel
-rviz::PropertyTreeModel* defaultPropertyTreeModel(moveit::task_constructor::PropertyMap &properties, QObject *parent = nullptr);
 
 }

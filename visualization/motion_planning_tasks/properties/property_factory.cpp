@@ -37,6 +37,7 @@
 #include "property_factory.h"
 
 #include <boost/functional/factory.hpp>
+#include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/properties.h>
 
 #include <rviz/properties/property_tree_model.h>
@@ -80,17 +81,22 @@ PropertyFactory& PropertyFactory::instance()
 	return instance_;
 }
 
-void PropertyFactory::registerType(const std::string &type_name, const FactoryFunction &f)
+void PropertyFactory::registerType(const std::string &type_name, const PropertyFactoryFunction &f)
 {
 	if (type_name.empty())
 		return;
-	registry_.insert(std::make_pair(type_name, f));
+	property_registry_.insert(std::make_pair(type_name, f));
+}
+
+void PropertyFactory::registerStage(const std::type_index &type_index, const PropertyFactory::TreeFactoryFunction &f)
+{
+	stage_registry_.insert(std::make_pair(type_index, f));
 }
 
 rviz::Property* PropertyFactory::create(const std::string& prop_name, mtc::Property& prop) const
 {
-	auto it = registry_.find(prop.typeName());
-	if (it == registry_.end()) return nullptr;
+	auto it = property_registry_.find(prop.typeName());
+	if (it == property_registry_.end()) return nullptr;
 	return it->second(QString::fromStdString(prop_name), prop);
 }
 
@@ -109,20 +115,42 @@ rviz::Property* PropertyFactory::create(const moveit_task_constructor_msgs::Prop
 	}
 }
 
-rviz::PropertyTreeModel* defaultPropertyTreeModel(mtc::PropertyMap& properties, QObject* parent) {
-	PropertyFactory& factory = PropertyFactory::instance();
+rviz::PropertyTreeModel* PropertyFactory::createPropertyTreeModel(moveit::task_constructor::Stage &stage)
+{
+	auto it = stage_registry_.find(typeid(stage));
+	if (it == stage_registry_.end())
+		return defaultPropertyTreeModel(stage.properties());
+	return it->second(stage.properties());
+}
 
-	rviz::Property* root = new rviz::Property();
-	rviz::PropertyTreeModel *model = new rviz::PropertyTreeModel(root, parent);
-	for (auto& prop : properties) {
-		rviz::Property* rviz_prop = factory.create(prop.first, prop.second);
-		if (!rviz_prop) rviz_prop = new rviz::Property(QString::fromStdString(prop.first));
-		rviz_prop->setParent(root);
+rviz::PropertyTreeModel* PropertyFactory::defaultPropertyTreeModel(mtc::PropertyMap& properties) {
+	auto root = new rviz::Property();
+	addRemainingProperties(root, properties);
+	return new rviz::PropertyTreeModel(root, nullptr);
+}
+
+static bool hasChild(rviz::Property* root, const QString& name) {
+	for (int i = 0, end = root->numChildren(); i != end; ++i) {
+		if (root->childAt(i)->getName() == name)
+			return true;
 	}
+	return false;
+}
+
+void PropertyFactory::addRemainingProperties(rviz::Property* root, mtc::PropertyMap& properties) {
+	for (auto& prop : properties) {
+		const QString& name = QString::fromStdString(prop.first);
+		if (hasChild(root, name))
+			continue;
+
+		rviz::Property* rviz_prop = create(prop.first, prop.second);
+		if (!rviz_prop) rviz_prop = new rviz::Property(name);
+		root->addChild(rviz_prop);
+	}
+
 	// just to see something, when no properties are defined
-	if (model->rowCount() == 0)
+	if (root->numChildren() == 0)
 		new rviz::Property("no properties", QVariant(), QString(), root);
-	return model;
 }
 
 }

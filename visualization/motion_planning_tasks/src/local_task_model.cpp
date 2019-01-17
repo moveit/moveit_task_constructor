@@ -38,6 +38,7 @@
 #include "factory_model.h"
 #include "properties/property_factory.h"
 #include <moveit/task_constructor/container_p.h>
+#include <rviz/properties/property_tree_model.h>
 
 #include <ros/console.h>
 
@@ -247,8 +248,10 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex &ind
 	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
 	// TODO: We might need custom factory methods to create PropertyTreeModels
 	// that are specifically tailored to a Stage class.
-	if (it_inserted.second)  // newly inserted, create new model
-		it_inserted.first->second = defaultPropertyTreeModel(n->me()->properties(), this);
+	if (it_inserted.second) {  // newly inserted, create new model
+		it_inserted.first->second = PropertyFactory::instance().createPropertyTreeModel(*n->me());
+		it_inserted.first->second->setParent(this);
+	}
 	return it_inserted.first->second;
 }
 
