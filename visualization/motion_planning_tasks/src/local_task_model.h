@@ -49,9 +49,6 @@ class LocalTaskModel
 	typedef moveit::task_constructor::StagePrivate Node;
 	Node *root_;
 	StageFactoryPtr stage_factory_;
-	planning_scene::PlanningSceneConstPtr scene_;
-	rviz::DisplayContext* display_context_;
-
 	std::map<Node*, rviz::PropertyTreeModel*> properties_;
 
 	inline Node* node(const QModelIndex &index) const;

@@ -127,6 +127,10 @@ Property::Property(const type_info& type_info, const std::string& description, c
 	reset();
 }
 
+Property::Property() : Property(typeid(boost::any), "", boost::any())
+{
+}
+
 void Property::setValue(const boost::any &value) {
 	setCurrentValue(value);
 	default_ = value_;

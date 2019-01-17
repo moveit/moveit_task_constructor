@@ -43,7 +43,6 @@
 #include <typeindex>
 
 #include <moveit/task_constructor/properties.h>
-#include <moveit_task_constructor_msgs/Property.h>
 
 namespace rviz {
 class Property;
@@ -59,6 +58,16 @@ class Stage;
 
 namespace moveit_rviz_plugin {
 
+/** Registry for rviz::Property and rviz::PropertyTreeModel creator functions.
+ *
+ *  To inspect (and edit) properties of stages, our MTC properties are converted to rviz properties,
+ *  which are finally shown in an rviz::PropertyTree.
+ *  To allow customization of property display, one can register creator functions for individual
+ *  properties as well as creator functions for a complete stage. The latter allows to fully customize
+ *  the display of stage properties, e.g. hiding specific properties, or returning a subclassed
+ *  PropertyTreeModel with modified behaviour. By default, defaultPropertyTreeModel() creates an rviz
+ *  property for each MTC property.
+ */
 class PropertyFactory
 {
 public:
@@ -75,7 +84,7 @@ public:
 	template <typename T>
 	inline void registerType(const PropertyFactoryFunction& f) {
 		moveit::task_constructor::PropertySerializer<T>();  // register serializer
-		registerType(moveit::task_constructor::Property::typeName(typeid(T)), f);
+		registerType(moveit::task_constructor::PropertySerializer<T>::typeName(), f);
 	}
 
 	/// register a factory function for stage T
@@ -84,9 +93,7 @@ public:
 
 	/// create rviz::Property for given MTC Property
 	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property &prop,
-	                       const planning_scene::PlanningScene*scene, rviz::DisplayContext *display_context) const;
-	/// create rviz::Property for given MTC property message
-	rviz::Property* create(const moveit_task_constructor_msgs::Property& p, rviz::Property* old) const;
+	                       const planning_scene::PlanningScene *scene, rviz::DisplayContext *display_context) const;
 
 	/// create PropertyTreeModel for given Stage
 	rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::Stage &stage,

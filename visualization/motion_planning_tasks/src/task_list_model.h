@@ -70,6 +70,8 @@ class BaseTaskModel : public QAbstractItemModel {
 	Q_OBJECT
 protected:
 	unsigned int flags_ = 0;
+	planning_scene::PlanningSceneConstPtr scene_;
+	rviz::DisplayContext* display_context_;
 
 public:
 	enum TaskModelFlag {
@@ -79,7 +81,10 @@ public:
 		IS_RUNNING     = 0x08,
 	};
 
-	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
+	BaseTaskModel(const planning_scene::PlanningSceneConstPtr &scene,
+	              rviz::DisplayContext* display_context, QObject *parent = nullptr)
+	    : QAbstractItemModel(parent), scene_(scene), display_context_(display_context)
+	{}
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;

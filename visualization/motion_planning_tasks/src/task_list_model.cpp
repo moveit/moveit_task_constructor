@@ -275,7 +275,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		}
 	} else if (created) { // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(scene_, this);
+		remote_task = new RemoteTaskModel(scene_, display_context_, this);
 		remote_task->setSolutionClient(get_solution_client_);
 
 		// HACK: always use the last created model as active
