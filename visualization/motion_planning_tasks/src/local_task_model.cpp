@@ -78,19 +78,15 @@ QModelIndex LocalTaskModel::index(Node *n) const
 	return QModelIndex();
 }
 
-LocalTaskModel::LocalTaskModel(QObject *parent)
+LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr& scene,
+                               rviz::DisplayContext* display_context, QObject* parent)
    : BaseTaskModel(parent)
-   , Task()
+   , Task("", std::move(container))
+   , scene_(scene)
+   , display_context_(display_context)
 {
 	root_ = pimpl();
 	flags_ |= LOCAL_MODEL;
-}
-
-LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, QObject *parent)
-   : BaseTaskModel(parent)
-   , Task("", std::move(container))
-{
-	root_ = pimpl();
 }
 
 int LocalTaskModel::rowCount(const QModelIndex &parent) const
@@ -246,10 +242,8 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex &ind
 	Node *n = node(index);
 	if (!n) return nullptr;
 	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
-	// TODO: We might need custom factory methods to create PropertyTreeModels
-	// that are specifically tailored to a Stage class.
 	if (it_inserted.second) {  // newly inserted, create new model
-		it_inserted.first->second = PropertyFactory::instance().createPropertyTreeModel(*n->me());
+		it_inserted.first->second = PropertyFactory::instance().createPropertyTreeModel(*n->me(), scene_.get(), display_context_);
 		it_inserted.first->second->setParent(this);
 	}
 	return it_inserted.first->second;

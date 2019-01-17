@@ -169,11 +169,13 @@ TEST_F(TaskListModelTest, localTaskModel) {
 	ros::init(argc, &argv, "testLocalTaskModel");
 
 	children = 3;
-	moveit_rviz_plugin::LocalTaskModel m;
+	const char* task_name = "task pipeline";
+	moveit_rviz_plugin::LocalTaskModel m(std::make_unique<SerialContainer>(task_name),
+	                                     planning_scene::PlanningSceneConstPtr(), nullptr);
 	for (int i = 0; i != children; ++i)
 		m.add(std::make_unique<stages::CurrentState>(std::to_string(i)));
 
-	{ SCOPED_TRACE("localTaskModel"); validate(m, {"task pipeline"}); }
+	{ SCOPED_TRACE("localTaskModel"); validate(m, {task_name}); }
 }
 
 TEST_F(TaskListModelTest, noChildren) {

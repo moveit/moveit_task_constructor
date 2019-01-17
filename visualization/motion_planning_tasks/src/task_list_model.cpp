@@ -187,6 +187,11 @@ void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
 	scene_ = scene;
 }
 
+void TaskListModel::setDisplayContext(rviz::DisplayContext *display_context)
+{
+	display_context_ = display_context;
+}
+
 void TaskListModel::setSolutionClient(ros::ServiceClient *client)
 {
 	get_solution_client_ = client;
@@ -319,6 +324,18 @@ DisplaySolutionPtr TaskListModel::processSolutionMessage(const std::string &id,
 	return remote_task->processSolutionMessage(msg);
 }
 
+bool TaskListModel::insertModel(BaseTaskModel *model, int pos) {
+	Q_ASSERT(model && model->columnCount() == columnCount());
+	// pass on stage factory
+	model->setStageFactory(stage_factory_);
+	// forward to base class method
+	return FlatMergeProxyModel::insertModel(model, pos);
+}
+
+BaseTaskModel* TaskListModel::createLocalTaskModel() {
+	return new LocalTaskModel(std::make_unique<SerialContainer>("task pipeline"), scene_, display_context_, this);
+}
+
 bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent)
 {
 	Q_UNUSED(column);
@@ -340,7 +357,7 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 		}
 
 		// create a new local task using the given container as root
-		auto *m = new LocalTaskModel(std::move(container), this);
+		auto *m = new LocalTaskModel(std::move(container), scene_, display_context_, this);
 		insertModel(m, row);
 		return true;
 	}

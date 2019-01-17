@@ -101,6 +101,7 @@ void TaskDisplay::onInitialize()
 {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
+	task_list_model_->setDisplayContext(context_);
 	// create a new TaskPanel by default
 	// by post-poning this to main loop, we can ensure that rviz has loaded everything before
 	mainloop_jobs_.addJob([this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });

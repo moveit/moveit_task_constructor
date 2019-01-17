@@ -49,14 +49,17 @@ class LocalTaskModel
 	typedef moveit::task_constructor::StagePrivate Node;
 	Node *root_;
 	StageFactoryPtr stage_factory_;
+	planning_scene::PlanningSceneConstPtr scene_;
+	rviz::DisplayContext* display_context_;
+
 	std::map<Node*, rviz::PropertyTreeModel*> properties_;
 
 	inline Node* node(const QModelIndex &index) const;
 	QModelIndex index(Node *n) const;
 
 public:
-	LocalTaskModel(QObject *parent = nullptr);
-	LocalTaskModel(ContainerBase::pointer &&container, QObject *parent = nullptr);
+	LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr &scene,
+	               rviz::DisplayContext* display_context, QObject *parent = nullptr);
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
 	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
