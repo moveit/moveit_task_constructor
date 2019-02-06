@@ -364,4 +364,6 @@ protected:
 	}
 };
 
+const char* flowSymbol(moveit::task_constructor::InterfaceFlags f);
+
 } }

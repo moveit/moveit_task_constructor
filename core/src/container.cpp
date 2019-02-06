@@ -44,6 +44,7 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
+#include <boost/format.hpp>
 #include <functional>
 
 using namespace std::placeholders;
@@ -548,16 +549,19 @@ void SerialContainer::validateConnectivity() const
 {
 	auto impl = pimpl();
 	InitStageException errors;
+	boost::format desc("%1% interface of '%2%' (%3%) doesn't match mine (%4%)");
 
 	// check that input / output interface of first / last child matches this' resp. interface
 	if (!impl->children().empty()) {
 		const StagePrivate* start = impl->children().front()->pimpl();
 		if ((start->interfaceFlags() & INPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & INPUT_IF_MASK))
-			errors.push_back(*this, "input interface of '" + start->name() + "' doesn't match mine");
+			errors.push_back(*this, (desc % "input" % start->name() % flowSymbol(start->interfaceFlags())
+			                         % flowSymbol(this->pimpl()->interfaceFlags())).str());
 
 		const StagePrivate* last = impl->children().back()->pimpl();
 		if ((last->interfaceFlags() & OUTPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & OUTPUT_IF_MASK))
-			errors.push_back(*this, "output interface of '" + last->name() + "' doesn't match mine");
+			errors.push_back(*this, (desc % "output" % last->name() % flowSymbol(last->interfaceFlags())
+			                         % flowSymbol(this->pimpl()->interfaceFlags())).str());
 	}
 
 	// validate connectivity of children amongst each other
@@ -734,13 +738,14 @@ void ParallelContainerBase::validateConnectivity() const
 	auto impl = pimpl();
 	InterfaceFlags my_interface = impl->interfaceFlags();
 	InterfaceFlags children_interfaces;
+	boost::format desc("interface of child '%1%' (%2%) doesn't match mine (%3%)");
 
 	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : pimpl()->children()) {
 		InterfaceFlags current = child->pimpl()->interfaceFlags();
 		children_interfaces |= current;  // compute union of all children interfaces
 		if ((current & my_interface) != current)
-			errors.push_back(*this, "interface of child '" + child->name() + "' doesn't match mine");
+			errors.push_back(*this, (desc % child->name() % flowSymbol(current) % flowSymbol(my_interface)).str());
 	}
 	// check that there is a child matching the expected push interfaces
 	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))

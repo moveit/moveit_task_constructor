@@ -349,6 +349,15 @@ const char* direction(const StagePrivate& stage) {
 	return "<-";
 }
 
+const char* flowSymbol(moveit::task_constructor::InterfaceFlags f) {
+	if (f == InterfaceFlags(CONNECT)) return "∞";
+	if (f == InterfaceFlags(PROPAGATE_FORWARDS)) return "↓";
+	if (f == InterfaceFlags(PROPAGATE_BACKWARDS)) return "↑";
+	if (f == PROPAGATE_BOTHWAYS) return "⇅";
+	if (f == InterfaceFlags(GENERATE)) return "↕";
+	return "?";
+}
+
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	// starts
 	for (const InterfaceConstPtr& i : {impl.prevEnds(), impl.starts()}) {
