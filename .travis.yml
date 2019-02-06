@@ -13,14 +13,15 @@ notifications:
       - rhaschke@techfak.uni-bielefeld.de
       - me@v4hn.de
 env:
+  global:
+    - ROS_DISTRO=melodic
+    - ROS_REPO=ros
+    - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
-    - ROS_DISTRO=kinetic  ROS_REPO=ros               UPSTREAM_WORKSPACE=.rosinstall
-    - ROS_DISTRO=kinetic  ROS_REPO=ros-shadow-fixed  UPSTREAM_WORKSPACE=.rosinstall
-    - ROS_DISTRO=melodic  ROS_REPO=ros               UPSTREAM_WORKSPACE=.rosinstall
-    - ROS_DISTRO=melodic  ROS_REPO=ros-shadow-fixed  UPSTREAM_WORKSPACE=.rosinstall
+    - ROS_DISTRO=melodic
 
 before_script:
-  - git clone -q https://github.com/ros-planning/moveit_ci.git .moveit_ci
+  - git clone -q --depth=1 https://github.com/ros-planning/moveit_ci.git .moveit_ci
 
 script:
   - .moveit_ci/travis.sh
