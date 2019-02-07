@@ -102,7 +102,8 @@ rviz::Property* PropertyFactory::create(const std::string& prop_name, mtc::Prope
                                         rviz::DisplayContext* display_context) const
 {
 	auto it = property_registry_.find(prop.typeName());
-	if (it == property_registry_.end()) return nullptr;
+	if (it == property_registry_.end())
+		return createDefault(prop_name, prop.typeName(), prop.description(), prop.serialize());
 	return it->second(QString::fromStdString(prop_name), prop, scene, display_context);
 }
 
@@ -148,6 +149,24 @@ void PropertyFactory::addRemainingProperties(rviz::Property* root, mtc::Property
 	// just to see something, when no properties are defined
 	if (root->numChildren() == 0)
 		new rviz::Property("no properties", QVariant(), QString(), root);
+}
+
+rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+                                               const std::string& description, const std::string& value,
+                                               rviz::Property* old)
+{
+	if (old) {  // reuse existing Property?
+		assert(old->getNameStd() == name);
+		old->setDescription(QString::fromStdString(description));
+		old->setValue(QString::fromStdString(value));
+		return old;
+	} else {  // create new Property?
+		rviz::Property *result = new rviz::StringProperty(QString::fromStdString(name),
+		                                                  QString::fromStdString(value),
+		                                                  QString::fromStdString(description));
+		result->setReadOnly(true);
+		return result;
+	}
 }
 
 }

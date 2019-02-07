@@ -94,6 +94,10 @@ public:
 	/// create rviz::Property for given MTC Property
 	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property &prop,
 	                       const planning_scene::PlanningScene *scene, rviz::DisplayContext *display_context) const;
+	/// create rviz::Property for property of given name, type, description, and value
+	static rviz::Property* createDefault(const std::string& name, const std::string& type,
+	                                     const std::string& description, const std::string& value,
+	                                     rviz::Property* old=nullptr);
 
 	/// create PropertyTreeModel for given Stage
 	rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::Stage &stage,
