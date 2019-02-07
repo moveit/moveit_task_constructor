@@ -1,14 +1,15 @@
-# moveit_task_constructor
-An approach to forward multi-step manipulation planning
+# MoveIt! Task Constructor Framework
 
-**The framework is currently under development. The API is unstable and incomplete.**
+The Task Constructor framework provides a flexible and transparent way to define and plan actions that consist of *multiple interdependent* subtasks.
+It draws on the planning capabilities of [MoveIt!](https://moveit.ros.org/) to solve individual subproblems in black-box *planning stages*.
+A common interface, based on MoveIt's PlanningScene is used to pass solution hypotheses between stages.
+The framework enables the hierarchical organization of basic stages using *containers*, allowing for sequential as well as parallel compositions.
+For more details, please refer to the associated [ICRA 2019 publication](https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf).
 
-**Feedback is very welcome.**
+**The framework is still under development. The API is unstable and incomplete.**
 
-This project enables the user to specify and plan *complex manipulation actions* in terms of successive *planning stages*.
-
-Individual stages compute robot trajectories relative to their expected start *or end*.
-The resulting planning pipeline, i.e. Task, extends different candidate trajectories from key states (Generator stages)
-until it generated feasible trajectories that extend through all stages.
+**Feedback and contributions are very welcome.**
 
 The current aim is to replace MoveIt's old pick&place pipeline and provide a *transparent mechanism* to enable and debug complex motion sequences.
+
+The software repository is compatible to MoveIt's Melodic branch, which also works on Kinetic (when compiled from source).
