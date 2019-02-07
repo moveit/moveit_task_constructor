@@ -51,7 +51,6 @@ class PropertyTypeRegistry {
 		std::string name_;
 		PropertySerializerBase::SerializeFunction serialize_;
 		PropertySerializerBase::DeserializeFunction deserialize_;
-		PropertySerializerBase::PrintFunction print_;
 	};
 	Entry dummy_;
 
@@ -64,13 +63,11 @@ class PropertyTypeRegistry {
 
 public:
 	PropertyTypeRegistry() : dummy_{"", PropertySerializerBase::dummySerialize,
-	                                PropertySerializerBase::dummyDeserialize,
-	                                PropertySerializerBase::dummySerialize}
+	                                PropertySerializerBase::dummyDeserialize}
 	{}
 	inline bool insert(const std::type_index& type_index, const std::string& type_name,
 	                   PropertySerializerBase::SerializeFunction serialize,
-	                   PropertySerializerBase::DeserializeFunction deserialize,
-	                   PropertySerializerBase::PrintFunction print);
+	                   PropertySerializerBase::DeserializeFunction deserialize);
 
 	const Entry& entry(const std::type_index& type_index) const {
 		auto it = types_.find(type_index);
@@ -91,13 +88,12 @@ static PropertyTypeRegistry registry_singleton_;
 
 bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::string& type_name,
                                   PropertySerializerBase::SerializeFunction serialize,
-                                  PropertySerializerBase::DeserializeFunction deserialize,
-                                  PropertySerializerBase::PrintFunction print)
+                                  PropertySerializerBase::DeserializeFunction deserialize)
 {
 	if (type_index == std::type_index(typeid(boost::any)))
 		return false;
 
-	auto it_inserted = types_.insert(std::make_pair(type_index, Entry {type_name, serialize, deserialize, print}));
+	auto it_inserted = types_.insert(std::make_pair(type_index, Entry {type_name, serialize, deserialize}));
 	if (!it_inserted.second)
 		return false;  // was already registered before
 
@@ -109,9 +105,9 @@ bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::
 
 bool PropertySerializerBase::insert(const std::type_index& type_index, const std::string& type_name,
                                     PropertySerializerBase::SerializeFunction serialize,
-                                    PropertySerializerBase::DeserializeFunction deserialize, PrintFunction print)
+                                    PropertySerializerBase::DeserializeFunction deserialize)
 {
-	return registry_singleton_.insert(type_index, type_name, serialize, deserialize, print);
+	return registry_singleton_.insert(type_index, type_name, serialize, deserialize);
 }
 
 
@@ -167,13 +163,6 @@ boost::any Property::deserialize(const std::string& type_name, const std::string
 		return boost::any();
 	else
 		return registry_singleton_.entry(type_name).deserialize_(wire);
-}
-
-std::string Property::print(const boost::any& value)
-{
-	if (value.empty())
-		return "";
-	return registry_singleton_.entry(value.type()).print_(value);
 }
 
 std::string Property::typeName() const {
@@ -320,7 +309,7 @@ void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMa
 		}
 
 		ROS_DEBUG_STREAM_NAMED(LOGNAME, pair.first << ": " << p.initialized_from_ <<
-		                       " -> " << source << ": " << Property::print(value));
+		                       " -> " << source << ": " << Property::serialize(value));
 		p.setCurrentValue(value);
 		p.initialized_from_ = source;
 	}

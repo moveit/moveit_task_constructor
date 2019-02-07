@@ -109,11 +109,9 @@ public:
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
 
-	/// serialize/print value using registered functions
-	static std::string print(const boost::any& value);
+	/// serialize value using registered functions
 	static std::string serialize(const boost::any& value);
 	static boost::any deserialize(const std::string& type_name, const std::string& wire);
-	std::string print() const { return print(value()); }
 	std::string serialize() const { return serialize(value()); }
 
 	/// get description text
@@ -186,14 +184,13 @@ class PropertySerializerBase {
 public:
 	typedef std::string (*SerializeFunction)(const boost::any&);
 	typedef boost::any (*DeserializeFunction)(const std::string&);
-	typedef std::string (*PrintFunction)(const boost::any&);
 
 	static std::string dummySerialize(const boost::any&) { return ""; }
 	static boost::any dummyDeserialize(const std::string&) { return boost::any(); }
 
 protected:
 	static bool insert(const std::type_index& type_index, const std::string& type_name,
-	                   SerializeFunction serialize, DeserializeFunction deserialize, PrintFunction print);
+	                   SerializeFunction serialize, DeserializeFunction deserialize);
 };
 
 /// utility class to register serializer/deserializer functions for a property of type T
@@ -201,7 +198,7 @@ template <typename T>
 class PropertySerializer : protected PropertySerializerBase {
 public:
 	PropertySerializer() {
-		insert(typeid(T), typeName<T>(), &serialize, &deserialize, &print);
+		insert(typeid(T), typeName<T>(), &serialize, &deserialize);
 	}
 
 	template <class Q = T>
@@ -215,46 +212,16 @@ public:
 	typeName() { return typeid(T).name(); }
 
 private:
-	/** ROS message serialization */
-	template <class Q = T>
-	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
-	serialize(const boost::any& value) {
-		static_assert(sizeof(uint8_t) == sizeof(char), "Assuming char has same size as uint8_t");
-		const T& msg = boost::any_cast<T>(value);
-		std::size_t size = ros::serialization::serializationLength(msg);
-		std::string result(size, '\0');
-		if (size)
-		{
-			ros::serialization::OStream stream(reinterpret_cast<uint8_t*>(&result[0]), size);
-			ros::serialization::serialize(stream, msg);
-		}
-		return result;
-	}
-	template <class Q = T>
-	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, boost::any>::type
-	deserialize(const std::string& wire) {
-		T value;
-		ros::serialization::IStream stream(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&wire[0])), wire.size());
-		ros::serialization::deserialize(stream, value);
-		return value;
-	}
-
 	/** Serialization based on std::[io]stringstream */
 	template <class Q = T>
 	static typename std::enable_if<hasSerialize<Q>::value, std::string>::type
-	print(const boost::any& value) {
+	serialize(const boost::any& value) {
 		std::ostringstream oss;
 		oss << boost::any_cast<T>(value);
 		return oss.str();
 	}
-
 	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && hasSerialize<Q>::value, std::string>::type
-	serialize(const boost::any& value) {
-		return print(value);
-	}
-	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && hasSerialize<Q>::value && hasDeserialize<Q>::value, boost::any>::type
+	static typename std::enable_if<hasSerialize<Q>::value && hasDeserialize<Q>::value, boost::any>::type
 	deserialize(const std::string& wired) {
 		std::istringstream iss(wired);
 		T value;
@@ -265,13 +232,9 @@ private:
 	/** No serialization available */
 	template <class Q = T>
 	static typename std::enable_if<!hasSerialize<Q>::value, std::string>::type
-	print(const boost::any& value) { return dummySerialize(value); }
-
-	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && !hasSerialize<Q>::value, std::string>::type
 	serialize(const boost::any& value) { return dummySerialize(value); }
 	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value && (!hasSerialize<Q>::value || !hasDeserialize<Q>::value), boost::any>::type
+	static typename std::enable_if<!hasSerialize<Q>::value || !hasDeserialize<Q>::value, boost::any>::type
 	deserialize(const std::string& wire) { return dummyDeserialize(wire); }
 };
 
