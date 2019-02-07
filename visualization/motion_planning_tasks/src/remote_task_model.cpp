@@ -129,7 +129,7 @@ RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Proper
 	auto& factory = PropertyFactory::instance();
 	// try to deserialize from msg (using registered functions)
 	boost::any value = Property::deserialize(prop.type, prop.value);
-	if (!value.empty()) {
+	if (!value.empty()) {  // if successful, create rviz::Property from mtc::Property using factory methods
 		auto it = properties_.insert(std::make_pair(prop.name, Property())).first;
 		it->second.setDescription(prop.description);
 		it->second.setValue(value);
@@ -140,17 +140,8 @@ RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Proper
 			properties_.erase(it);
 	}
 
-	if (old) {  // reuse existing Property?
-		old->setDescription(QString::fromStdString(prop.description));
-		old->setValue(QString::fromStdString(prop.value));
-		return old;
-	} else {  // create new Property?
-		rviz::Property *result = new rviz::StringProperty(QString::fromStdString(prop.name),
-		                                                  QString::fromStdString(prop.value),
-		                                                  QString::fromStdString(prop.description));
-		result->setReadOnly(true);
-		return result;
-	}
+	// otherwise create default, read-only rviz::Property by parsing serialized YAML
+	return factory.createDefault(prop.name, prop.type, prop.description, prop.value, old);
 }
 
 // return Node* corresponding to index
