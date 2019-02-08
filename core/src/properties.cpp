@@ -159,7 +159,7 @@ std::string Property::serialize(const boost::any& value)
 
 boost::any Property::deserialize(const std::string& type_name, const std::string& wire)
 {
-	if (wire.empty())
+	if (type_name != Property::typeName(typeid(std::string)) && wire.empty())
 		return boost::any();
 	else
 		return registry_singleton_.entry(type_name).deserialize_(wire);
