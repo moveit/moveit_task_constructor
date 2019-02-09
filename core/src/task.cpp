@@ -176,6 +176,7 @@ void Task::add(Stage::pointer &&stage) {
 
 void Task::clear()
 {
+	reset();
 	stages()->clear();
 }
 
