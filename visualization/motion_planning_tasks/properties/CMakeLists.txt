@@ -5,7 +5,7 @@ set(SOURCES
 )
 
 include(FindPkgConfig)
-pkg_check_modules(YAML yaml-cpp>=0.5)
+pkg_check_modules(YAML yaml-0.1)
 if (YAML_FOUND)
 	# Only cmake > 3.12 provides XXX_LINK_LIBRARIES. Find the absolute path manually
 	find_library(YAML_LIBRARIES ${YAML_LIBRARIES} PATHS ${YAML_LIBRARY_DIRS})

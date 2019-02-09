@@ -35,7 +35,7 @@
 /* Author: Robert Haschke */
 
 #include "property_factory.h"
-#include <yaml-cpp/yaml.h>
+#include <yaml.h>
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/float_property.h>
 
@@ -48,7 +48,7 @@ namespace moveit_rviz_plugin {
  *  As we cannot know the required data type for a field from YAML parsing,
  *  we only distinguish numbers (FloatProperty) and all other YAML scalars (StringProperty).
  */
-
+#if 0
 // Try to set numeric or arbitrary scalar value from YAML node. Needs to match old's type.
 void setScalarValue(rviz::Property* old, const YAML::Node& node)
 {
@@ -183,6 +183,9 @@ rviz::Property* createFromNode(const QString& name, const QString& description,
 	result->setReadOnly(true);
 	return result;
 }
+#endif
+
+inline std::string indent(unsigned int depth) { return std::string(2*depth, ' '); }
 
 rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
                                                const std::string& description, const std::string& value,
@@ -190,10 +193,45 @@ rviz::Property* PropertyFactory::createDefault(const std::string& name, const st
 {
 	QString qname = QString::fromStdString(name);
 	QString qdesc = QString::fromStdString(description);
+
+	yaml_parser_t parser;
+	yaml_parser_initialize(&parser);
+	yaml_parser_set_input_string(&parser, reinterpret_cast<const yaml_char_t*>(value.c_str()), value.size());
 	try {
-		return createFromNode(qname, qdesc, YAML::Load(value), old);
+		unsigned int depth=0;
+		bool proceed = true;
+		while (proceed) {
+			yaml_event_t event;
+			if (!yaml_parser_parse(&parser, &event)) {
+				yaml_event_delete(&event);
+				throw std::runtime_error(parser.problem);
+				break;
+			}
+
+			switch(event.type)
+			{
+			case YAML_NO_EVENT: std::cout << indent(depth) << "No event!" << std::endl; break;
+			/* Stream start/end */
+			case YAML_STREAM_START_EVENT: std::cout << indent(depth++) << "STREAM START" << std::endl; break;
+			case YAML_STREAM_END_EVENT:   std::cout << indent(--depth) << "STREAM END" << std::endl;   break;
+			/* Block delimeters */
+			case YAML_DOCUMENT_START_EVENT: std::cout << indent(depth++) << "Start Document" << std::endl; break;
+			case YAML_DOCUMENT_END_EVENT:   std::cout << indent(--depth) << "End Document" << std::endl;   break;
+			case YAML_SEQUENCE_START_EVENT: std::cout << indent(depth++) << "Start Sequence" << std::endl; break;
+			case YAML_SEQUENCE_END_EVENT:   std::cout << indent(--depth) << "End Sequence" << std::endl;   break;
+			case YAML_MAPPING_START_EVENT:  std::cout << indent(depth++) << "Start Mapping" << std::endl;  break;
+			case YAML_MAPPING_END_EVENT:    std::cout << indent(--depth) << "End Mapping" << std::endl;    break;
+			/* Data */
+			case YAML_ALIAS_EVENT:  std::cout << indent(depth) << "alias anchor=" << event.data.alias.anchor << std::endl; break;
+			case YAML_SCALAR_EVENT: std::cout << indent(depth) << "scalar: " << event.data.scalar.value << std::endl; break;
+			}
+			proceed = event.type != YAML_STREAM_END_EVENT;
+			yaml_event_delete(&event);
+		}
+		return nullptr;
 	} catch (const std::exception &e) {
-		return createFromNode(qname, qdesc, dummyNode("YAML parse error"), old);
+		std::cout << e.what() << std::endl;
+		return nullptr;
 	}
 }
 
