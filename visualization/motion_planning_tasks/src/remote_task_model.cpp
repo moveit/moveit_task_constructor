@@ -134,7 +134,7 @@ RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Proper
 		it->second.setDescription(prop.description);
 		it->second.setValue(value);
 		if (rviz::Property* rviz_prop = factory.create(prop.name, it->second, scene_.get(), display_context_)) {
-			// rviz_prop->setReadOnly(true);
+			rviz_prop->setReadOnly(true);
 			return rviz_prop;
 		} else
 			properties_.erase(it);
