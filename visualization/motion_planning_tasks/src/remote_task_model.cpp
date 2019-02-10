@@ -37,11 +37,13 @@
 #include <stdio.h>
 
 #include "remote_task_model.h"
+#include "properties/property_factory.h"
 #include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/properties.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_task_constructor_msgs/GetSolution.h>
 #include <rviz/properties/property_tree_model.h>
-#include <rviz/properties/property.h>
+#include <rviz/properties/string_property.h>
 #include <ros/console.h>
 #include <ros/service_client.h>
 
@@ -66,11 +68,12 @@ struct RemoteTaskModel::Node {
 	InterfaceFlags interface_flags_;
 	NodeFlags node_flags_;
 	std::unique_ptr<RemoteSolutionModel> solutions_;
-	std::unique_ptr<rviz::PropertyTreeModel> properties_;
+	std::unique_ptr<rviz::PropertyTreeModel> property_tree_;
+	std::map<std::string, Property> properties_;
 
 	inline Node(Node *parent) : parent_(parent) {
 		solutions_.reset(new RemoteSolutionModel());
-		properties_.reset(new rviz::PropertyTreeModel(new rviz::Property()));
+		property_tree_.reset(new rviz::PropertyTreeModel(new rviz::Property()));
 	}
 
 	bool setName(const QString& name) {
@@ -78,7 +81,68 @@ struct RemoteTaskModel::Node {
 		name_ = name;
 		return true;
 	}
+
+	void setProperties(const std::vector<moveit_task_constructor_msgs::Property>& props,
+	                   const planning_scene::PlanningSceneConstPtr& scene_,
+	                   rviz::DisplayContext* display_context_);
+	rviz::Property *createProperty(const moveit_task_constructor_msgs::Property &prop, rviz::Property *old,
+	                               const planning_scene::PlanningSceneConstPtr& scene_,
+	                               rviz::DisplayContext* display_context_);
 };
+
+void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_constructor_msgs::Property> &props,
+                                          const planning_scene::PlanningSceneConstPtr& scene_,
+                                          rviz::DisplayContext* display_context_)
+{
+	// insert properties in same order as reported in description
+	rviz::Property *root = property_tree_->getRoot();
+	int index = 0;  // current child index in root
+	for (auto it = props.begin(); it != props.end(); ++it) {
+		int num = root->numChildren();
+		// find first child with name >= it->name
+		int next = index;
+		while (next < num && root->childAt(next)->getName().toStdString() < it->name)
+			++next;
+		// and remove all children in range [index, next) at once
+		root->removeChildren(index, next-index);
+		num = root->numChildren();
+
+		// if names differ, insert a new child, otherwise reuse existing
+		rviz::Property *old_child = index < num ? root->childAt(index) : nullptr;
+		if (old_child && old_child->getName().toStdString() != it->name)
+			old_child = nullptr;
+
+		rviz::Property *new_child = createProperty(*it, old_child, scene_, display_context_);
+		if (new_child != old_child)
+			root->addChild(new_child, index);
+		++index;
+	}
+	// remove remaining children
+	root->removeChildren(index, root->numChildren()-index);
+}
+
+rviz::Property*
+RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Property& prop, rviz::Property* old,
+                                      const planning_scene::PlanningSceneConstPtr& scene_,
+                                      rviz::DisplayContext* display_context_)
+{
+	auto& factory = PropertyFactory::instance();
+	// try to deserialize from msg (using registered functions)
+	boost::any value = Property::deserialize(prop.type, prop.value);
+	if (!value.empty()) {  // if successful, create rviz::Property from mtc::Property using factory methods
+		auto it = properties_.insert(std::make_pair(prop.name, Property())).first;
+		it->second.setDescription(prop.description);
+		it->second.setValue(value);
+		if (rviz::Property* rviz_prop = factory.create(prop.name, it->second, scene_.get(), display_context_)) {
+			rviz_prop->setReadOnly(true);
+			return rviz_prop;
+		} else
+			properties_.erase(it);
+	}
+
+	// otherwise create default, read-only rviz::Property by parsing serialized YAML
+	return factory.createDefault(prop.name, prop.type, prop.description, prop.value, old);
+}
 
 // return Node* corresponding to index
 RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex &index) const
@@ -120,8 +184,10 @@ QModelIndex RemoteTaskModel::index(const Node *n) const
 	return QModelIndex();
 }
 
-RemoteTaskModel::RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, QObject *parent)
-   : BaseTaskModel(parent), root_(new Node(nullptr)), scene_(scene)
+RemoteTaskModel::RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene,
+                                 rviz::DisplayContext* display_context, QObject *parent)
+   : BaseTaskModel(scene, display_context, parent)
+   , root_(new Node(nullptr))
 {
 	id_to_stage_[0] = root_; // root node has ID 0
 }
@@ -260,6 +326,8 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 		if (!(n->node_flags_ & NAME_CHANGED)) // avoid overwriting a manually changed name
 			changed |= n->setName(QString::fromStdString(s.name));
 
+		n->setProperties(s.properties, scene_, display_context_);
+
 		InterfaceFlags old_flags = n->interface_flags_;
 		n->interface_flags_ = InterfaceFlags();
 		for (auto f : {READS_START, READS_END, WRITES_NEXT_START, WRITES_PREV_END}) {
@@ -388,7 +456,7 @@ rviz::PropertyTreeModel* RemoteTaskModel::getPropertyModel(const QModelIndex &in
 {
 	Node *n = node(index);
 	if (!n) return nullptr;
-	return n->properties_.get();
+	return n->property_tree_.get();
 }
 
 namespace detail {

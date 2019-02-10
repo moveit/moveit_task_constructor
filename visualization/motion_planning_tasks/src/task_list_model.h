@@ -51,7 +51,10 @@
 #include <QPointer>
 
 namespace ros { class ServiceClient; }
-namespace rviz { class PropertyTreeModel; }
+namespace rviz {
+class PropertyTreeModel;
+class DisplayContext;
+}
 
 namespace moveit_rviz_plugin {
 
@@ -67,6 +70,8 @@ class BaseTaskModel : public QAbstractItemModel {
 	Q_OBJECT
 protected:
 	unsigned int flags_ = 0;
+	planning_scene::PlanningSceneConstPtr scene_;
+	rviz::DisplayContext* display_context_;
 
 public:
 	enum TaskModelFlag {
@@ -76,7 +81,10 @@ public:
 		IS_RUNNING     = 0x08,
 	};
 
-	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
+	BaseTaskModel(const planning_scene::PlanningSceneConstPtr &scene,
+	              rviz::DisplayContext* display_context, QObject *parent = nullptr)
+	    : QAbstractItemModel(parent), scene_(scene), display_context_(display_context)
+	{}
 
 	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
@@ -105,7 +113,7 @@ public:
  *  Each TaskDisplay owns a TaskListModel to maintain the list of tasks published on
  *  a monitoring topic.
  *
- *  Local instances are created by insertLocalTask().
+ *  Local instances are created by createLocalTaskModel() or in dropMimeData().
  *  Remote instances are discovered via processTaskMessage() / processSolutionMessage().
  */
 class TaskListModel : public utils::FlatMergeProxyModel {
@@ -113,6 +121,8 @@ class TaskListModel : public utils::FlatMergeProxyModel {
 
 	// planning scene / robot model used by all tasks in this model
 	planning_scene::PlanningSceneConstPtr scene_;
+	// rviz::DisplayContext used to show (interactive) markers by the property models
+	rviz::DisplayContext* display_context_ = nullptr;
 
 	// map from remote task IDs to tasks
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
@@ -133,6 +143,7 @@ public:
 	~TaskListModel();
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
+	void setDisplayContext(rviz::DisplayContext* display_context);
 	void setSolutionClient(ros::ServiceClient* client);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
@@ -149,13 +160,9 @@ public:
 	DisplaySolutionPtr processSolutionMessage(const std::string &id, const moveit_task_constructor_msgs::Solution &msg);
 
 	/// insert a TaskModel, pos is relative to modelCount()
-	inline bool insertModel(BaseTaskModel* model, int pos = -1) {
-		Q_ASSERT(model && model->columnCount() == columnCount());
-		// pass on stage factory
-		model->setStageFactory(stage_factory_);
-		// forward to base class method
-		return FlatMergeProxyModel::insertModel(model, pos);
-	}
+	bool insertModel(BaseTaskModel* model, int pos = -1);
+	/// create a new LocalTaskModel
+	BaseTaskModel* createLocalTaskModel();
 
 	/// providing a StageFactory makes the model accepting drops
 	void setStageFactory(const StageFactoryPtr &factory);

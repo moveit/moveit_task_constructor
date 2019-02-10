@@ -330,7 +330,7 @@ void TaskView::addTask()
 	bool is_top_level = !current.parent().isValid();
 
 	TaskListModel* task_list_model = d_ptr->getTaskListModel(current).first;
-	task_list_model->insertModel(new LocalTaskModel(task_list_model), is_top_level ? -1 : current.row());
+	task_list_model->insertModel(task_list_model->createLocalTaskModel(), is_top_level ? -1 : current.row());
 
 	// select and edit newly inserted model
 	if (is_top_level) current = current.model()->index(task_list_model->rowCount()-1, 0, current);

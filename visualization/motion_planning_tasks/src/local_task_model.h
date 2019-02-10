@@ -55,8 +55,8 @@ class LocalTaskModel
 	QModelIndex index(Node *n) const;
 
 public:
-	LocalTaskModel(QObject *parent = nullptr);
-	LocalTaskModel(ContainerBase::pointer &&container, QObject *parent = nullptr);
+	LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr &scene,
+	               rviz::DisplayContext* display_context, QObject *parent = nullptr);
 	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
 	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;

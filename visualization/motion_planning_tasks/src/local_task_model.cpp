@@ -38,6 +38,7 @@
 #include "factory_model.h"
 #include "properties/property_factory.h"
 #include <moveit/task_constructor/container_p.h>
+#include <rviz/properties/property_tree_model.h>
 
 #include <ros/console.h>
 
@@ -77,19 +78,13 @@ QModelIndex LocalTaskModel::index(Node *n) const
 	return QModelIndex();
 }
 
-LocalTaskModel::LocalTaskModel(QObject *parent)
-   : BaseTaskModel(parent)
-   , Task()
-{
-	root_ = pimpl();
-	flags_ |= LOCAL_MODEL;
-}
-
-LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, QObject *parent)
-   : BaseTaskModel(parent)
+LocalTaskModel::LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr& scene,
+                               rviz::DisplayContext* display_context, QObject* parent)
+   : BaseTaskModel(scene, display_context, parent)
    , Task("", std::move(container))
 {
 	root_ = pimpl();
+	flags_ |= LOCAL_MODEL;
 }
 
 int LocalTaskModel::rowCount(const QModelIndex &parent) const
@@ -245,8 +240,10 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex &ind
 	Node *n = node(index);
 	if (!n) return nullptr;
 	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
-	if (it_inserted.second)  // newly inserted, create new model
-		it_inserted.first->second = createPropertyTreeModel(n->me()->properties(), this);
+	if (it_inserted.second) {  // newly inserted, create new model
+		it_inserted.first->second = PropertyFactory::instance().createPropertyTreeModel(*n->me(), scene_.get(), display_context_);
+		it_inserted.first->second->setParent(this);
+	}
 	return it_inserted.first->second;
 }
 

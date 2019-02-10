@@ -35,32 +35,48 @@
 /* Author: Robert Haschke */
 
 #include "property_factory.h"
+
 #include <boost/functional/factory.hpp>
+#include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/properties.h>
 
 #include <rviz/properties/property_tree_model.h>
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/float_property.h>
 
-using namespace moveit::task_constructor;
+namespace mtc = ::moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-/// TODO: We also need to provide methods to sync both properties in both directions.
-/// In our Property we could store a callback function to update the rviz::Property.
-/// The rviz::Property can simply use a lambda-function slot to update our Property.
-/// However, we need to avoid infinite loops in doing so. Our Property cannot compare values...
-template <typename T, typename RVIZProp>
-RVIZProp* helper(const QString& name, Property* prop) {
-	T value = prop->defined() ? boost::any_cast<T>(prop->value()) : T();
-	return new RVIZProp(name, value, QString::fromStdString(prop->description()));
+static rviz::StringProperty* stringFactory(const QString& name, mtc::Property& mtc_prop,
+                                           const planning_scene::PlanningScene*,
+                                           rviz::DisplayContext*) {
+	std::string value;
+	if (!mtc_prop.value().empty())
+		value = boost::any_cast<std::string>(mtc_prop.value());
+	rviz::StringProperty* rviz_prop = new rviz::StringProperty(name, QString::fromStdString(value),
+	                                                           QString::fromStdString(mtc_prop.description()));
+	QObject::connect(rviz_prop, &rviz::StringProperty::changed,
+	                 [rviz_prop, &mtc_prop]() {mtc_prop.setValue(rviz_prop->getStdString());});
+	return rviz_prop;
+}
+template <typename T>
+static rviz::FloatProperty* floatFactory(const QString& name, mtc::Property& mtc_prop,
+                                         const planning_scene::PlanningScene*,
+                                         rviz::DisplayContext*) {
+	T value = !mtc_prop.value().empty() ? boost::any_cast<T>(mtc_prop.value()) : T();
+	rviz::FloatProperty* rviz_prop = new rviz::FloatProperty(name, value, QString::fromStdString(mtc_prop.description()));
+	QObject::connect(rviz_prop, &rviz::FloatProperty::changed,
+	                 [rviz_prop, &mtc_prop]() {mtc_prop.setValue(T(rviz_prop->getFloat()));});
+	return rviz_prop;
 }
 
 PropertyFactory::PropertyFactory()
 {
-	// registe some standard types
-	registerType<double>(&helper<double, rviz::FloatProperty>);
-	registerType<QString>(&helper<QString, rviz::StringProperty>);
+	// register some standard types
+	registerType<float>(&floatFactory<float>);
+	registerType<double>(&floatFactory<double>);
+	registerType<std::string>(&stringFactory);
 }
 
 PropertyFactory& PropertyFactory::instance()
@@ -69,32 +85,90 @@ PropertyFactory& PropertyFactory::instance()
 	return instance_;
 }
 
-void PropertyFactory::registerType(const std::string &type_name, const FactoryFunction &f)
+void PropertyFactory::registerType(const std::string &type_name, const PropertyFactoryFunction &f)
 {
-	registry_.insert(std::make_pair(type_name, f));
+	if (type_name.empty())
+		return;
+	property_registry_.insert(std::make_pair(type_name, f));
 }
 
-rviz::Property* PropertyFactory::create(const std::string& prop_name, Property* prop) const
+void PropertyFactory::registerStage(const std::type_index &type_index, const PropertyFactory::TreeFactoryFunction &f)
 {
-	auto it = registry_.find(prop->typeName());
-	if (it == registry_.end()) return nullptr;
-	return it->second(QString::fromStdString(prop_name), prop);
+	stage_registry_.insert(std::make_pair(type_index, f));
 }
 
-rviz::PropertyTreeModel* createPropertyTreeModel(PropertyMap& properties, QObject* parent) {
-	PropertyFactory& factory = PropertyFactory::instance();
+rviz::Property* PropertyFactory::create(const std::string& prop_name, mtc::Property& prop,
+                                        const planning_scene::PlanningScene* scene,
+                                        rviz::DisplayContext* display_context) const
+{
+	auto it = property_registry_.find(prop.typeName());
+	if (it == property_registry_.end())
+		return createDefault(prop_name, prop.typeName(), prop.description(), prop.serialize());
+	return it->second(QString::fromStdString(prop_name), prop, scene, display_context);
+}
 
-	rviz::Property* root = new rviz::Property();
-	rviz::PropertyTreeModel *model = new rviz::PropertyTreeModel(root, parent);
-	for (auto& prop : properties) {
-		rviz::Property* rviz_prop = factory.create(prop.first, &prop.second);
-		if (!rviz_prop) rviz_prop = new rviz::Property(QString::fromStdString(prop.first));
-		rviz_prop->setParent(root);
+rviz::PropertyTreeModel* PropertyFactory::createPropertyTreeModel(moveit::task_constructor::Stage& stage,
+                                                                  const planning_scene::PlanningScene* scene,
+                                                                  rviz::DisplayContext* display_context)
+{
+	auto it = stage_registry_.find(typeid(stage));
+	if (it == stage_registry_.end())
+		return defaultPropertyTreeModel(stage.properties(), scene, display_context);
+	return it->second(stage.properties(), scene, display_context);
+}
+
+rviz::PropertyTreeModel* PropertyFactory::defaultPropertyTreeModel(mtc::PropertyMap& properties,
+                                                                   const planning_scene::PlanningScene* scene,
+                                                                   rviz::DisplayContext* display_context) {
+	auto root = new rviz::Property();
+	addRemainingProperties(root, properties, scene, display_context);
+	return new rviz::PropertyTreeModel(root, nullptr);
+}
+
+static bool hasChild(rviz::Property* root, const QString& name) {
+	for (int i = 0, end = root->numChildren(); i != end; ++i) {
+		if (root->childAt(i)->getName() == name)
+			return true;
 	}
-	// just to see something, when no properties are defined
-	if (model->rowCount() == 0)
-		new rviz::Property("no properties", QVariant(), QString(), root);
-	return model;
+	return false;
 }
+
+void PropertyFactory::addRemainingProperties(rviz::Property* root, mtc::PropertyMap& properties,
+                                             const planning_scene::PlanningScene* scene,
+                                             rviz::DisplayContext* display_context) {
+	for (auto& prop : properties) {
+		const QString& name = QString::fromStdString(prop.first);
+		if (hasChild(root, name))
+			continue;
+
+		rviz::Property* rviz_prop = create(prop.first, prop.second, scene, display_context);
+		if (!rviz_prop) rviz_prop = new rviz::Property(name);
+		root->addChild(rviz_prop);
+	}
+
+	// just to see something, when no properties are defined
+	if (root->numChildren() == 0)
+		new rviz::Property("no properties", QVariant(), QString(), root);
+}
+
+#ifndef HAVE_YAML
+rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+                                               const std::string& description, const std::string& value,
+                                               rviz::Property* old)
+{
+	if (old) {  // reuse existing Property?
+		assert(old->getNameStd() == name);
+		old->setDescription(QString::fromStdString(description));
+		old->setValue(QString::fromStdString(value));
+		return old;
+	} else {  // create new Property?
+		rviz::Property *result = new rviz::StringProperty(QString::fromStdString(name),
+		                                                  QString::fromStdString(value),
+		                                                  QString::fromStdString(description));
+		result->setReadOnly(true);
+		return result;
+	}
+}
+#endif
 
 }

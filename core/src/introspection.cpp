@@ -227,6 +227,7 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 			moveit_task_constructor_msgs::Property p;
 			p.name = pair.first;
 			p.description = pair.second.description();
+			p.type = pair.second.typeName();
 			p.value = pair.second.serialize();
 			desc.properties.push_back(p);
 		}

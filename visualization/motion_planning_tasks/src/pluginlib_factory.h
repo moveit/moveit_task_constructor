@@ -54,6 +54,9 @@
 
 namespace moveit_rviz_plugin {
 
+/** Templated factory to create objects of a given pluginlib base class type.
+ *  This is a slightly modified version of rviz::PluginlibFactory, providing a custom mime type.
+ */
 template<class Type>
 class PluginlibFactory: public rviz::Factory
 {
@@ -177,9 +180,8 @@ public:
    * @param error_return If non-NULL and there is an error, *error_return is set to a description of the problem.
    * @return A new instance of the class identified by class_id, or NULL if there was an error.
    *
-   * If makeRaw() returns NULL and error_return is not NULL,
-   * *error_return will be set.  On success, *error_return will not be
-   * changed. */
+   * If makeRaw() returns NULL and error_return is not NULL, *error_return will be set.
+   * On success, *error_return will not be changed. */
   virtual Type* makeRaw( const QString& class_id, QString* error_return = NULL )
     {
       typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find( class_id );
