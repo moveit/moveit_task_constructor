@@ -6,6 +6,18 @@
 #include <iostream>
 #include <algorithm>
 
+/// ValueOrPointeeLess provides correct comparison for plain and pointer-like types
+template <typename T, typename Default = void>
+struct ValueOrPointeeLess : public std::less<T> {};
+
+/// The following template-specialization is for pointer-like types
+template <typename T>
+struct ValueOrPointeeLess<T, decltype(*std::declval<T>(), std::declval<void>())> {
+	bool operator()(const T& x, const T& y) const {
+		return *x < *y;
+	}
+};
+
 /**
  *  @brief ordered<ValueType> provides an adapter for a std::list to allow sorting.
  *
@@ -14,7 +26,7 @@
  *  Sorted insertion has logarithmic complexity.
  */
 template <typename T,
-          typename Compare = std::less<T>>
+          typename Compare = ValueOrPointeeLess<T>>
 class ordered
 {
 public:
@@ -50,7 +62,7 @@ public:
 
 	reference top() { return c.front(); }
 	const_reference top() const { return c.front(); }
-	reference pop() { reference result = top(); c.pop_front(); return result; }
+	value_type pop() { value_type result(top()); c.pop_front(); return result; }
 
 	reference front() { return c.front(); }
 	const_reference front() const { return c.front(); }
@@ -81,6 +93,8 @@ public:
 		iterator at = std::upper_bound(c.begin(), c.end(), item, comp);
 		return c.insert(at, std::move(item));
 	}
+	inline void push(const value_type& item) { insert(item); }
+	inline void push(value_type&& item) { insert(std::move(item)); }
 
 	iterator erase(const_iterator pos) { return c.erase(pos); }
 

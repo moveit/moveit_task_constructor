@@ -51,25 +51,25 @@ GeneratePose::GeneratePose(const std::string& name)
 
 void GeneratePose::reset()
 {
+	upstream_solutions_.clear();
 	MonitoringGenerator::reset();
-	scenes_.clear();
 }
 
 void GeneratePose::onNewSolution(const SolutionBase& s)
 {
-	scenes_.push_back(s.end()->scene()->diff());
+	// It's safe to store a pointer to this solution, as the generating stage stores it
+	upstream_solutions_.push(&s);
 }
 
 bool GeneratePose::canCompute() const {
-	return scenes_.size() > 0;
+	return upstream_solutions_.size() > 0;
 }
 
 void GeneratePose::compute() {
-	if (scenes_.empty())
+	if (upstream_solutions_.empty())
 		return;
-	planning_scene::PlanningScenePtr scene = scenes_[0];
-	scenes_.pop_front();
 
+	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
 	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
 	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();

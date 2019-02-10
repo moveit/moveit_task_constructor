@@ -134,17 +134,9 @@ private:
 	Interface* owner_ = nullptr;  // allow update of priority
 };
 
-
-/// compare InterfaceState* by value
-struct InterfaceStateLess {
-	inline bool operator()(const InterfaceState* x, const InterfaceState* y) const {
-		return *x < *y;
-	}
-};
-
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
-class Interface : public ordered<InterfaceState*, InterfaceStateLess> {
-	typedef ordered<InterfaceState*, InterfaceStateLess> base_type;
+class Interface : public ordered<InterfaceState*> {
+	typedef ordered<InterfaceState*> base_type;
 
 public:
 	// iterators providing convinient access to stored InterfaceState

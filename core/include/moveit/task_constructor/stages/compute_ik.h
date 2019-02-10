@@ -37,6 +37,7 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/cost_queue.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
 
@@ -66,7 +67,8 @@ class ComputeIK : public WrapperBase {
 public:
 	ComputeIK(const std::string &name, Stage::pointer &&child = Stage::pointer());
 
-	void init(const core::RobotModelConstPtr &robot_model);
+	void reset() override;
+	void init(const core::RobotModelConstPtr &robot_model) override;
 	void onNewSolution(const SolutionBase &s) override;
 
 	bool canCompute() const override;
@@ -113,7 +115,7 @@ public:
 	}
 
 protected:
-	std::queue<const SolutionBase*> targets_;
+	ordered<const SolutionBase*> upstream_solutions_;
 };
 
 } } }

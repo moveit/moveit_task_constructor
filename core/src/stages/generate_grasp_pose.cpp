@@ -90,16 +90,9 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
 
 void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 {
-	planning_scene::PlanningScenePtr scene = s.end()->scene()->diff();
+	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
 
-	// set end effector pose
 	const auto& props = properties();
-	const std::string& eef = props.get<std::string>("eef");
-	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
-
-	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
-
 	const std::string& object = props.get<std::string>("object");
 	if (!scene->knowsFrameTransform(object)) {
 		const std::string msg = "object '" + object + "' not in scene";
@@ -114,16 +107,21 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s)
 		return;
 	}
 
-	scenes_.push_back(scene);
+	upstream_solutions_.push(&s);
 }
 
 void GenerateGraspPose::compute() {
-	if (scenes_.empty())
+	if (upstream_solutions_.empty())
 		return;
-	planning_scene::PlanningScenePtr scene = scenes_[0];
-	scenes_.pop_front();
+	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
 
+	// set end effector pose
 	const auto& props = properties();
+	const std::string& eef = props.get<std::string>("eef");
+	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
+
+	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
+	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");

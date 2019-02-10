@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
+#include <moveit/task_constructor/cost_queue.h>
 #include <geometry_msgs/PoseStamped.h>
 
 namespace moveit { namespace task_constructor { namespace stages {
@@ -57,8 +58,7 @@ public:
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;
-
-	std::deque<planning_scene::PlanningScenePtr> scenes_;
+	ordered<const SolutionBase*> upstream_solutions_;
 };
 
 } } }

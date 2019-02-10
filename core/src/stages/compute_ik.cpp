@@ -179,6 +179,12 @@ bool validateGroup(const PropertyMap& props, const moveit::core::RobotModelConst
 
 } // anonymous namespace
 
+void ComputeIK::reset()
+{
+	upstream_solutions_.clear();
+	WrapperBase::reset();
+}
+
 void ComputeIK::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	InitStageException errors;
@@ -204,12 +210,12 @@ void ComputeIK::onNewSolution(const SolutionBase &s)
 	assert(s.start() && s.end());
 	assert(s.start()->scene() == s.end()->scene()); // wrapped child should be a generator
 
-	// TODO: don't take pointers, this is dangerous
-	targets_.push(&s);
+	// It's safe to store a pointer to the solution, as the generating stage stores it
+	upstream_solutions_.push(&s);
 }
 
 bool ComputeIK::canCompute() const {
-	return !targets_.empty() || WrapperBase::canCompute();
+	return !upstream_solutions_.empty() || WrapperBase::canCompute();
 }
 
 void ComputeIK::compute()
@@ -217,11 +223,10 @@ void ComputeIK::compute()
 	if(WrapperBase::canCompute())
 		WrapperBase::compute();
 
-	if(targets_.empty())
+	if(upstream_solutions_.empty())
 		return;
 
-	const SolutionBase& s = *targets_.front();
-	targets_.pop();
+	const SolutionBase& s = *upstream_solutions_.pop();
 
 	// -1 TODO: this should not be necessary in my opinion: Why do you think so?
 	// It is, because the properties on the interface might change from call to call...
