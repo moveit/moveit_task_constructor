@@ -41,7 +41,7 @@
 #include "task_panel.h"
 #include "ui_task_panel.h"
 #include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include "ui_global_settings.h"
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
@@ -58,8 +58,8 @@ public:
 	TaskPanelPrivate(TaskPanel *q_ptr);
 
 	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
+	QButtonGroup* tool_buttons_group;
+	rviz::Property* property_root;
 
 	rviz::WindowManagerInterface* window_manager_;
 };
@@ -85,11 +85,12 @@ public:
 };
 
 
-class TaskSettingsPrivate : public Ui_TaskSettings {
+class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget {
 public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
+	GlobalSettingsWidgetPrivate(GlobalSettingsWidget *q_ptr, rviz::Property *root);
 
-	TaskSettings *q_ptr;
+	GlobalSettingsWidget *q_ptr;
+	rviz::PropertyTreeModel *properties;
 };
 
 }
