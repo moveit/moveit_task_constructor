@@ -48,6 +48,7 @@
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
+#include <rviz/properties/enum_property.h>
 #include <rviz/display_group.h>
 #include <rviz/visualization_manager.h>
 #include <rviz/window_manager_interface.h>
@@ -218,15 +219,20 @@ TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
 	tasks_view->setModel(meta_model);
 	// auto-expand newly-inserted top-level items
 	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last){
-		if (parent.isValid() && !parent.parent().isValid()) {
+		if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
+			int expand = this->q_ptr->initial_task_expand->getOptionInt();
 			for (int row = first; row <= last; ++row) {
 				QModelIndex child = parent.child(row, 0);
-				// expand inserted items
-				setExpanded(tasks_view, child, true);
-				// collapse up to first level
-				setExpanded(tasks_view, child, false, 1);
-				// expand inserted item
-				setExpanded(tasks_view, child, true, 0);
+				if (expand != TaskView::EXPAND_NONE) {
+					// recursively expand all inserted items
+					setExpanded(tasks_view, child, true);
+				}
+				if (expand == TaskView::EXPAND_TOP) {
+					// collapse up to first level
+					setExpanded(tasks_view, child, false, 1);
+					// expand inserted item
+					setExpanded(tasks_view, child, true, 0);
+				}
 			}
 			tasks_view->setExpanded(parent, true);  // expand parent group item
 		}
@@ -288,6 +294,14 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel *parent, rviz::Property *root)
 	connect(d_ptr->tasks_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
 	connect(d_ptr->solutions_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
 	connect(d_ptr->solutions_view->header(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)), this, SIGNAL(configChanged()));
+
+	// configuration settings
+	auto configs = new rviz::Property("Task View Settings", QVariant(), QString(), root);
+	initial_task_expand = new rviz::EnumProperty("Task Expansion", "All Expanded",
+	                                             "Configure how to initially expand new tasks", configs);
+	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
+	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
+	initial_task_expand->addOption("All Closed", EXPAND_NONE);
 }
 
 TaskView::~TaskView()

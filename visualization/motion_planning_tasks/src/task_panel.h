@@ -47,6 +47,7 @@ class QIcon;
 namespace rviz {
 class WindowManagerInterface;
 class Property;
+class EnumProperty;
 }
 
 namespace moveit_rviz_plugin {
@@ -114,6 +115,11 @@ class TaskView : public SubPanel {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TaskView)
 	TaskViewPrivate *d_ptr;
+
+protected:
+	// configuration settings
+	enum TaskExpand { EXPAND_TOP=1, EXPAND_ALL, EXPAND_NONE };
+	rviz::EnumProperty* initial_task_expand;
 
 public:
 	TaskView(TaskPanel* parent, rviz::Property* root);
