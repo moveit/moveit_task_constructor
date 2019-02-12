@@ -229,6 +229,8 @@ public:
 	/// append this solution to Solution msg
 	virtual void fillMessage(moveit_task_constructor_msgs::Solution &solution,
 	                         Introspection* introspection = nullptr) const = 0;
+	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info,
+	              Introspection* introspection = nullptr) const;
 
 	/// order solutions by their cost
 	bool operator<(const SolutionBase& other) const {

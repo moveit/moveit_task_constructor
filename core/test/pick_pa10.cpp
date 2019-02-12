@@ -8,6 +8,7 @@
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
+#include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
@@ -101,7 +102,17 @@ TEST(PA10, pick) {
 		gengrasp->setAngleDelta(M_PI / 10.);
 		gengrasp->setMonitoredStage(initial_stage);
 
-		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(gengrasp));
+		auto filter = std::make_unique<stages::PredicateFilter>("filtered");
+		gengrasp->properties().exposeTo(filter->properties(), {"eef"});
+		filter->properties().configureInitFrom(Stage::PARENT);
+		filter->insert(std::move(gengrasp));
+		filter->setPredicate([](const SolutionBase& s, std::string& comment) {
+			bool accept = s.cost() < 2;
+			if (!accept) comment += " (rejected)";
+			return accept;
+		});
+
+		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(filter));
 		PropertyMap &props = ik->properties();
 		props.configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
 		props.configureInitFrom(Stage::INTERFACE, {"target_pose"});  // derived from child's solution

@@ -116,8 +116,8 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	for (const auto& sub : msg.sub_trajectory) {
 		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
 		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
-		data_[i].comment_ = sub.comment;
-		data_[i].creator_id_ = sub.stage_id;
+		data_[i].comment_ = sub.info.comment;
+		data_[i].creator_id_ = sub.info.stage_id;
 		steps_ += data_[i].trajectory_->getWayPointCount();
 
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
@@ -126,8 +126,8 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		// create new reference scene for next iteration
 		ref_scene = ref_scene->diff();
 
-		if (sub.markers.size())
-			data_[i].markers_.reset(new MarkerVisualization(sub.markers, *ref_scene));
+		if (sub.info.markers.size())
+			data_[i].markers_.reset(new MarkerVisualization(sub.info.markers, *ref_scene));
 		else
 			data_[i].markers_.reset();
 		++i;

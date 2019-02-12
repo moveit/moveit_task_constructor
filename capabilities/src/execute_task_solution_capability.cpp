@@ -147,8 +147,8 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		// define individual variable for use in closure below
 		const std::string description = std::to_string(i+1) + "/"
 		                                + std::to_string(solution.sub_trajectory.size())
-		                                + " - subsolution " + std::to_string(sub_traj.id)
-		                                + " of stage " + std::to_string(sub_traj.stage_id);
+		                                + " - subsolution " + std::to_string(sub_traj.info.id)
+		                                + " of stage " + std::to_string(sub_traj.info.stage_id);
 
 		exec_traj.description_ = description;
 

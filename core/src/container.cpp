@@ -35,6 +35,7 @@
 /* Authors: Robert Haschke */
 
 #include <moveit/task_constructor/container_p.h>
+#include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/merge.h>
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -640,6 +641,12 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution &soluti
                                   Introspection *introspection) const
 {
 	wrapped_->fillMessage(solution, introspection);
+
+	// prepend this solutions info as a SubSolution msg
+	moveit_task_constructor_msgs::SubSolution sub_msg;
+	SolutionBase::fillInfo(sub_msg.info, introspection);
+	sub_msg.sub_solution_id.push_back(introspection ? introspection->solutionId(*wrapped_) : 0);
+	solution.sub_solution.insert(solution.sub_solution.begin(), std::move(sub_msg));
 }
 
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase *me, const std::string &name)

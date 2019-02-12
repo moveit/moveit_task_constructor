@@ -152,25 +152,28 @@ void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
 
+void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info,
+                            Introspection* introspection) const
+{
+	info.id = introspection ? introspection->solutionId(*this) : 0;
+	info.cost = this->cost();
+	info.comment = this->comment();
+	const Introspection *ci = introspection;
+	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
 
+	const auto& markers = this->markers();
+	info.markers.resize(markers.size());
+	std::copy(markers.begin(), markers.end(), info.markers.begin());
+}
 
 void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
                                 Introspection *introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
-	t.id = introspection ? introspection->solutionId(*this) : 0;
-	t.cost = this->cost();
-	t.comment = this->comment();
-
-	const Introspection *ci = introspection;
-	t.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	SolutionBase::fillInfo(t.info, introspection);
 
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
-
-	const auto& markers = this->markers();
-	t.markers.clear();
-	std::copy(markers.begin(), markers.end(), std::back_inserter(t.markers));
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
@@ -186,11 +189,7 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
                                    Introspection* introspection) const
 {
 	moveit_task_constructor_msgs::SubSolution sub_msg;
-	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
-	sub_msg.cost = this->cost();
-
-	const Introspection *ci = introspection;
-	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	SolutionBase::fillInfo(sub_msg.info, introspection);
 
 	// Usually subsolutions originate from another stage than this solution.
 	// However, the Connect stage will announce sub solutions created by itself
@@ -218,10 +217,9 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 			auto end = msg.sub_trajectory.end();
 			std::advance(it, current);
 			for (; it != end; ++it)
-				it->id = 0;
+				it->info.id = 0;
 		}
 	}
 }
-
 
 } }

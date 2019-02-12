@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg FILES
 	Property.msg
 	Solution.msg
+	SolutionInfo.msg
 	StageDescription.msg
 	StageStatistics.msg
 	SubSolution.msg

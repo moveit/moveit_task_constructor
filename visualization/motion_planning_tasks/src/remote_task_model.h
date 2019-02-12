@@ -64,6 +64,7 @@ class RemoteTaskModel : public BaseTaskModel {
 
 	Node* node(uint32_t stage_id) const;
 	inline RemoteSolutionModel* getSolutionModel(uint32_t stage_id) const;
+	void setSolutionData(const moveit_task_constructor_msgs::SolutionInfo &info);
 
 public:
 	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, rviz::DisplayContext *display_context, QObject *parent = nullptr);
