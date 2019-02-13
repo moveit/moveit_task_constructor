@@ -65,7 +65,7 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
  *
  * Setting the value via setValue() updates both, the current value and the default value.
  * Using reset() the default value can be restored.
- * Using setCurrentValue() only updates the current value, allowing for later reset to the original default.
+ * setCurrentValue() and setDefaultValue() only set the specific value.
  */
 class Property {
 	friend class PropertyMap;
@@ -97,6 +97,7 @@ public:
 	/// set current value and default value
 	void setValue(const boost::any& value);
 	void setCurrentValue(const boost::any& value);
+	void setDefaultValue(const boost::any& value);
 
 	/// reset to default value (which can be empty)
 	void reset();
@@ -274,6 +275,7 @@ public:
 	/// declare given property name as other_name in other PropertyMap
 	void exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const;
 
+	/// check whether given property is declared
 	bool hasProperty(const std::string &name) const;
 
 	/// get the property with given name, throws Property::undeclared for unknown name
