@@ -107,6 +107,10 @@ public:
 	void setMinSolutionDistance(double distance) {
 		setProperty("min_solution_distance", distance);
 	}
+
+	void setDefaultTimeout(double timeout) {
+		properties().property("timeout").setDefaultValue(timeout);
+	}
 };
 
 } } }
