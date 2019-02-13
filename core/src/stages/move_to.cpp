@@ -48,8 +48,8 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
    : PropagatingEitherWay(name)
    , planner_(planner)
 {
-	setTimeout(10.0);
 	auto& p = properties();
+	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<boost::any>("goal", "goal specification");
