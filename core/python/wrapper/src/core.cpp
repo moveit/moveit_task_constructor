@@ -178,10 +178,25 @@ void export_core()
 	      ;
 
 
+	bp::enum_<PropagatingEitherWay::Direction>("PropagationDirection")
+	      .value("AUTO", PropagatingEitherWay::AUTO)
+	      .value("FORWARD", PropagatingEitherWay::FORWARD)
+	      .value("BACKWARD", PropagatingEitherWay::BACKWARD)
+	      .value("BOTHWAY", PropagatingEitherWay::BOTHWAY)
+	      ;
+
+	bp::class_<PropagatingEitherWay, std::auto_ptr<PropagatingEitherWay>, bp::bases<Stage>, boost::noncopyable>
+	      ("PropagatingEitherWay", bp::no_init)
+	      .def("restrictDirection", &PropagatingEitherWay::restrictDirection)
+	      ;
+	bp::implicitly_convertible<std::auto_ptr<PropagatingEitherWay>, std::auto_ptr<Stage>>();
+
+
 	bp::class_<MonitoringGenerator, std::auto_ptr<MonitoringGenerator>, bp::bases<Stage>, boost::noncopyable>
 	      ("MonitoringGenerator", bp::no_init)
 	      .def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage)
 	      ;
+	bp::implicitly_convertible<std::auto_ptr<MonitoringGenerator>, std::auto_ptr<Stage>>();
 
 
 	bp::class_<ContainerBase, std::auto_ptr<ContainerBase>, bp::bases<Stage>, boost::noncopyable>

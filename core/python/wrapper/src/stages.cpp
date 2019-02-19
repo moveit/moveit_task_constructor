@@ -187,7 +187,7 @@ void export_stages()
 	void (MoveTo::*setGoalPoint)(const geometry_msgs::PointStamped&) = &MoveTo::setGoal;
 	void (MoveTo::*setGoalState)(const moveit_msgs::RobotState&) = &MoveTo::setGoal;
 	void (MoveTo::*setGoalNamed)(const std::string&) = &MoveTo::setGoal;
-	properties::class_<MoveTo, std::auto_ptr<MoveTo>, bp::bases<Stage>, boost::noncopyable>
+	properties::class_<MoveTo, std::auto_ptr<MoveTo>, bp::bases<PropagatingEitherWay>, boost::noncopyable>
 	      ("MoveTo", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	      .property<std::string>("group")
 	      .property<geometry_msgs::PoseStamped>("ik_frame")
@@ -197,12 +197,12 @@ void export_stages()
 	      .def("setGoal", setGoalState)
 	      .def("setGoal", setGoalNamed)
 	      ;
-	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<Stage>>();
+	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<PropagatingEitherWay>>();
 
 
 	void (MoveRelative::*setTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setDirection;
 	void (MoveRelative::*setDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setDirection;
-	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<Stage>, boost::noncopyable>
+	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<PropagatingEitherWay>, boost::noncopyable>
 	      ("MoveRelative", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	      .property<std::string>("group")
 	      .property<geometry_msgs::PoseStamped>("ik_frame")
@@ -213,7 +213,7 @@ void export_stages()
 	      .def("setDirection", setDirection)
 	      .def("setDirection", &MoveRelative_setJoints)
 	      ;
-	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<Stage>>();
+	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<PropagatingEitherWay>>();
 
 
 	bp::enum_<stages::Connect::MergeMode>("MergeMode")
