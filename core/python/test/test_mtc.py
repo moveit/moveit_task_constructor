@@ -31,30 +31,30 @@ class TestPropertyMap(unittest.TestCase):
         planner = core.PipelinePlanner()
         props = planner.properties
 
-        props["timeout"] = 3.14
-        self.assertEqual(props["timeout"], 3.14)
-        self.assertEqual(planner.timeout, 3.14)
+        props["goal_joint_tolerance"] = 3.14
+        self.assertEqual(props["goal_joint_tolerance"], 3.14)
+        self.assertEqual(planner.goal_joint_tolerance, 3.14)
 
-        planner.timeout = 2.71
-        self.assertEqual(props["timeout"], 2.71)
+        planner.goal_joint_tolerance = 2.71
+        self.assertEqual(props["goal_joint_tolerance"], 2.71)
 
-        props["group"] = "mygroup"
-        self.assertEqual(props["group"], "mygroup")
-        self.assertEqual(planner.group, "mygroup")
+        props["planner"] = "planner"
+        self.assertEqual(props["planner"], "planner")
+        self.assertEqual(planner.planner, "planner")
 
         props["double"] = 3.14
         a = props
         props["double"] = 2.71
         self.assertEqual(a["double"], 2.71)
 
-        planner.group = "other"
-        self.assertEqual(props["group"], "other")
-        self.assertEqual(planner.group, "other")
+        planner.planner = "other"
+        self.assertEqual(props["planner"], "other")
+        self.assertEqual(planner.planner, "other")
 
         del planner
         # TODO: Why can we still access props? planner should be destroyed
-        self.assertEqual(props["timeout"], 2.71)
-        self.assertEqual(props["group"], "other")
+        self.assertEqual(props["goal_joint_tolerance"], 2.71)
+        self.assertEqual(props["planner"], "other")
 
     def test_iter(self):
         # assign values so we can iterate over them
