@@ -1092,7 +1092,8 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 		// TODO: directly skip failures in mergeAnyCombination() or even earlier
 		if (sub->isFailure())
 			return;
-		sub_trajectories.push_back(sub->trajectory());
+		if (sub->trajectory())
+			sub_trajectories.push_back(sub->trajectory());
 	}
 
 	moveit::core::JointModelGroup *jmg = jmg_merged_.get();
