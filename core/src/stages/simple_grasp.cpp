@@ -39,7 +39,7 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/move_to.h>
-#include <moveit/task_constructor/solvers/pipeline_planner.h>
+#include <moveit/task_constructor/solvers/joint_interpolation.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -99,10 +99,8 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		insert(std::unique_ptr<ModifyPlanningScene>(allow_touch), insertion_position);
 	}
 	{
-		auto pipeline = std::make_shared<solvers::PipelinePlanner>();
-		pipeline->setPlannerId("RRTConnectkConfigDefault");
-
-		auto move = new MoveTo(forward ? "close gripper" : "open gripper", pipeline);
+		auto planner = std::make_shared<solvers::JointInterpolationPlanner>();
+		auto move = new MoveTo(forward ? "close gripper" : "open gripper", planner);
 		move->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
 
 		auto group_initializer = [this](const PropertyMap& parent_map) -> boost::any {
