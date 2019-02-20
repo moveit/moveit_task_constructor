@@ -313,11 +313,11 @@ void ComputeIK::compute()
 		marker.color.a *= 0.5;
 		failure_markers.push_back(marker);
 	};
-	const auto& link_to_visualize = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
+	const auto& links_to_visualize = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
 	                                ->getParentJointModel()->getDescendantLinkModels();
 	if (colliding) {
 		SubTrajectory solution;
-		generateCollisionMarkers(sandbox_state, appender, link_to_visualize);
+		generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
 		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
 		solution.markAsFailure();
 		// TODO: visualize collisions
@@ -325,7 +325,7 @@ void ComputeIK::compute()
 		spawn(InterfaceState(sandbox_scene), std::move(solution));
 		return;
 	} else
-		generateVisualMarkers(sandbox_state, appender, link_to_visualize);
+		generateVisualMarkers(sandbox_state, appender, links_to_visualize);
 
 
 	// determine joint values of robot pose to compare IK solution with for costs
