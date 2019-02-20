@@ -56,12 +56,12 @@ SimpleGraspBase::SimpleGraspBase(const std::string& name)
 	p.declare<std::string>("object", "object to grasp");
 }
 
+// TODO: Use AttachedBody's detach_posture_ to store the inverse grasping trajectory to re-open the gripper.
 void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 {
 	// properties provided by the grasp generator via its Interface or its PropertyMap
 	const std::set<std::string>& grasp_prop_names = { "object", "eef", "pregrasp", "grasp" };
 
-	int insertion_position = forward ? -1 : 0; // insert children at end / front, i.e. normal or reverse order
 	{
 		// forward properties from generator's to IK's solution (bottom -> up)
 		generator->setForwardedProperties(grasp_prop_names);
@@ -77,8 +77,9 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.configureInitFrom(Stage::PARENT, {"max_ik_solutions", "timeout", "object"});  // derived from parent
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, {"eef", "ik_frame"});  // derive from both
 		p.exposeTo(properties(), { "max_ik_solutions", "timeout", "ik_frame" });
-		insert(std::unique_ptr<ComputeIK>(ik), insertion_position);
+		insert(std::unique_ptr<ComputeIK>(ik), 0);  // ComputeIK always goes upfront
 	}
+	int insertion_position = forward ? -1 : 1; // insert children at end / front, i.e. normal or reverse order
 	{
 		auto allow_touch = new ModifyPlanningScene(forward ? "allow object collision" : "forbid object collision");
 		allow_touch->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
@@ -88,12 +89,12 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.declare<std::string>("object");
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
 
-		allow_touch->setCallback([this](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
+		allow_touch->setCallback([this, forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 			collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
 			const std::string& eef = p.get<std::string>("eef");
 			const std::string& object = p.get<std::string>("object");
 			acm.setEntry(object, scene->getRobotModel()->getEndEffector(eef)
-			             ->getLinkModelNamesWithCollisionGeometry(), true);
+			             ->getLinkModelNamesWithCollisionGeometry(), forward);
 		});
 		insert(std::unique_ptr<ModifyPlanningScene>(allow_touch), insertion_position);
 	}
