@@ -168,6 +168,21 @@ size_t ContainerBase::numChildren() const
 	return pimpl()->children().size();
 }
 
+Stage* ContainerBase::findChild(const std::string& name) const
+{
+	auto pos = name.find('/');
+	const std::string first = name.substr(0, pos);
+	for (const Stage::pointer& child : pimpl()->children())
+		if (child->name() == first)
+		{
+			if (pos == std::string::npos)
+				return child.get();
+			else if (auto *parent = dynamic_cast<const ContainerBase*>(child.get()))
+				return parent->findChild(name.substr(pos+1));
+		}
+	return nullptr;
+}
+
 bool ContainerBase::traverseChildren(const ContainerBase::StageCallback &processor) const
 {
 	return pimpl()->traverseStages(processor, 0, 1);

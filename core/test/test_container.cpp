@@ -100,6 +100,23 @@ TEST(ContainerBase, positionForInsert) {
 	EXPECT_EQ(impl->childByIndex(-4, true), impl->children().end());
 }
 
+TEST(ContainerBase, findChild) {
+	SerialContainer s, *c2;
+	Stage *a, *b, *c1, *d;
+	s.insert(Stage::pointer(a=new NamedStage("a")));
+	s.insert(Stage::pointer(b=new NamedStage("b")));
+	s.insert(Stage::pointer(c1=new NamedStage("c")));
+	auto sub = Stage::pointer(c2 = new SerialContainer("c"));
+	c2->insert(Stage::pointer(d=new NamedStage("d")));
+	s.insert(std::move(sub));
+
+	EXPECT_EQ(s.findChild("a"), a);
+	EXPECT_EQ(s.findChild("b"), b);
+	EXPECT_EQ(s.findChild("c"), c1);
+	EXPECT_EQ(s.findChild("d"), nullptr);
+	EXPECT_EQ(s.findChild("c/d"), d);
+}
+
 
 template <typename Container>
 class InitTest : public ::testing::Test {
