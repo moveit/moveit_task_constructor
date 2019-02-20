@@ -41,6 +41,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 #include <ros/console.h>
 
 namespace moveit { namespace task_constructor {
@@ -738,6 +739,46 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		     to_it = to_object->shape_poses_.cbegin(); from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)){
 				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_pair.first);
+				return false;  // transforms do not match
+			}
+	}
+
+	// Also test for attached objects which have a different storage
+	std::vector<const moveit::core::AttachedBody*> from_attached;
+	std::vector<const moveit::core::AttachedBody*> to_attached;
+	from->getCurrentState().getAttachedBodies(from_attached);
+	to->getCurrentState().getAttachedBodies(to_attached);
+	if (from_attached.size() != to_attached.size()) {
+		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of objects");
+		return false;
+	}
+
+	for (const moveit::core::AttachedBody* from_object : from_attached) {
+		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
+		                    [from_object](const moveit::core::AttachedBody* object) {
+			return object->getName() == from_object->getName();
+		});
+		if (it == to_attached.cend()) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object->getName());
+			return false;
+		}
+		const moveit::core::AttachedBody* to_object = *it;
+		if (from_object->getAttachedLink() != to_object->getAttachedLink()) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different attach links: "
+			                       << from_object->getName() << " attached to "
+			                       << from_object->getAttachedLinkName() << " / "
+			                       << to_object->getAttachedLinkName());
+			return false;  // links not matching
+		}
+		if (from_object->getFixedTransforms().size() != to_object->getFixedTransforms().size()) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object->getName());
+			return false;  // shapes not matching
+		}
+
+		for (auto from_it = from_object->getFixedTransforms().cbegin(), from_end = from_object->getFixedTransforms().cend(),
+		     to_it = to_object->getFixedTransforms().cbegin(); from_it != from_end; ++from_it, ++to_it)
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
+				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object->getName());
 				return false;  // transforms do not match
 			}
 	}
