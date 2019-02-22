@@ -42,6 +42,8 @@
 #include "ui_task_panel.h"
 #include "ui_task_view.h"
 #include "ui_global_settings.h"
+#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <actionlib/client/simple_action_client.h>
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
@@ -81,6 +83,7 @@ public:
 
 	TaskView* q_ptr;
 	QPointer<TaskDisplay> locked_display_;
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> exec_action_client_;
 };
 
 class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget

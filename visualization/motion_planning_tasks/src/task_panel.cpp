@@ -45,6 +45,7 @@
 #include "pluginlib_factory.h"
 #include "task_display.h"
 #include <moveit/visualization_tools/task_solution_visualization.h>
+#include <moveit/visualization_tools/display_solution.h>
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
@@ -91,8 +92,11 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
 	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
 
+	auto* task_view = new TaskView(this, d->property_root);
+	connect(d->button_exec_solution, SIGNAL(clicked()), task_view, SLOT(onExecCurrentSolution()));
+
 	// create sub widgets with corresponding tool buttons
-	addSubPanel(new TaskView(this, d->property_root), "Tasks View", QIcon(":/icons/tasks.png"));
+	addSubPanel(task_view, "Tasks View", QIcon(":/icons/tasks.png"));
 	d->stackedWidget->setCurrentIndex(0);  // Tasks View is show by default
 
 	// settings widget should come last
@@ -194,7 +198,7 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	view->setExpanded(index, expand);
 }
 
-TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr) {
+TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_client_("execute_task_solution") {
 	setupUi(q_ptr);
 
 	MetaTaskListModel* meta_model = &MetaTaskListModel::instance();
@@ -448,6 +452,26 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const 
 		display->setSolutionStatus(bool(solution));
 		display->addMarkers(solution);
 	}
+}
+
+void TaskView::onExecCurrentSolution() const {
+	const QModelIndex& current = d_ptr->solutions_view->currentIndex();
+	if (!current.isValid())
+		return;
+
+	BaseTaskModel* task = d_ptr->getTaskModel(d_ptr->tasks_view->currentIndex()).first;
+	Q_ASSERT(task);
+
+	const DisplaySolutionPtr& solution = task->getSolution(current);
+
+	if (!d_ptr->exec_action_client_.waitForServer(ros::Duration(0.1))) {
+		ROS_ERROR("Failed to connect to task execution action");
+		return;
+	}
+
+	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
+	solution->fillMessage(goal.solution);
+	d_ptr->exec_action_client_.sendGoal(goal);
 }
 
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
