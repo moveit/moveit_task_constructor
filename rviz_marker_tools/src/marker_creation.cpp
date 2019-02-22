@@ -104,16 +104,18 @@ std_msgs::ColorRGBA &setColor(std_msgs::ColorRGBA &color, Color color_id, double
 	return color;
 }
 
+// interpolate between start and end with fraction in range from 0..1
 double interpolate(double start, double end, double fraction) {
-	return start * fraction + end * (1.0 - fraction);
+	return start * (1.0 - fraction) + end * fraction;
 }
 
 std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::ColorRGBA& other, double fraction) {
 	if (fraction < 0.0) fraction = 0.0;
 	if (fraction > 1.0) fraction = 1.0;
-	color.r += interpolate(other.r-color.r, other.r, fraction);
-	color.g += interpolate(other.g-color.g, other.g, fraction);
-	color.b += interpolate(other.b-color.b, other.b, fraction);
+	color.r = interpolate(color.r, other.r, fraction);
+	color.g = interpolate(color.g, other.g, fraction);
+	color.b = interpolate(color.b, other.b, fraction);
+	color.a = interpolate(color.a, other.a, fraction);
 	return color;
 }
 
