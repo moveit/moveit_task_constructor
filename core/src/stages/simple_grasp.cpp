@@ -62,7 +62,10 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 	// properties provided by the grasp generator via its Interface or its PropertyMap
 	const std::set<std::string>& grasp_prop_names = { "object", "eef", "pregrasp", "grasp" };
 
-	{
+	// insert children at end / front, i.e. normal or reverse order
+	int insertion_position = forward ? -1 : (generator ? 1 : 0);
+
+	if (generator) {
 		// forward properties from generator's to IK's solution (bottom -> up)
 		generator->setForwardedProperties(grasp_prop_names);
 		// allow inheritance in top -> down fashion as well
@@ -79,7 +82,6 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.exposeTo(properties(), { "max_ik_solutions", "timeout", "ik_frame" });
 		insert(std::unique_ptr<ComputeIK>(ik), 0);  // ComputeIK always goes upfront
 	}
-	int insertion_position = forward ? -1 : 1; // insert children at end / front, i.e. normal or reverse order
 	{
 		auto allow_touch = new ModifyPlanningScene(forward ? "allow object collision" : "forbid object collision");
 		allow_touch->setForwardedProperties(grasp_prop_names);  // continue forwarding generator's properties
