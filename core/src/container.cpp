@@ -209,12 +209,26 @@ bool ContainerBase::insert(Stage::pointer &&stage, int before)
 	return true;
 }
 
+bool ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos)
+{
+	if (pos == children_.end())
+		return false;
+
+	(*pos)->pimpl()->setHierarchy(nullptr, ContainerBasePrivate::iterator());
+	children_.erase(pos);
+	return true;
+}
+
 bool ContainerBase::remove(int pos)
 {
-	ContainerBasePrivate::const_iterator it = pimpl()->childByIndex(pos, false);
-	(*it)->pimpl()->setHierarchy(nullptr, ContainerBasePrivate::iterator());
-	pimpl()->children_.erase(it);
-	return true;
+	return pimpl()->remove(pimpl()->childByIndex(pos, false));
+}
+
+bool ContainerBase::remove(Stage *child)
+{
+	auto it = pimpl()->children_.begin(), end = pimpl()->children_.end();
+	for (; it != end && it->get() != child; ++it);
+	return pimpl()->remove(it);
 }
 
 void ContainerBase::clear()

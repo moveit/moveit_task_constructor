@@ -84,6 +84,9 @@ public:
 	 * Contrary to std::advance(), iterator limits are considered. */
 	const_iterator childByIndex(int index, bool for_insert = false) const;
 
+	/// remove child at given iterator position, returns fals if pos is invalid
+	bool remove(ContainerBasePrivate::const_iterator pos);
+
 	/// traversing all stages up to max_depth
 	bool traverseStages(const ContainerBase::StageCallback &processor,
 	                    unsigned int cur_depth, unsigned int max_depth) const;
