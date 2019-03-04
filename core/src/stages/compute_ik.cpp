@@ -288,9 +288,23 @@ void ComputeIK::compute()
 		ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 		Eigen::Isometry3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
-		if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-			ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown link: " << ik_pose_msg.header.frame_id);
-			return;
+		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
+			link = robot_model->getLinkModel(ik_pose_msg.header.frame_id);
+		} else {
+			const robot_state::AttachedBody* attached
+			      = sandbox_scene->getCurrentState().getAttachedBody(ik_pose_msg.header.frame_id);
+			if (!attached) {
+				ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
+				return;
+			}
+			const EigenSTL::vector_Isometry3d& tf = attached->getFixedTransforms();
+			if (tf.empty()) {
+				ROS_WARN_STREAM_NAMED("ComputeIK", "Attached body doesn't have shapes.");
+				return;
+			}
+			// prepend link
+			link = attached->getAttachedLink();
+			ik_pose = tf[0] * ik_pose;
 		}
 		// transform target pose such that ik frame will reach there if link does
 		target_pose = target_pose * ik_pose.inverse();
