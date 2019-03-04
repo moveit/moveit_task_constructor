@@ -106,6 +106,7 @@ public:
 
 	/// get current value (or default if not defined)
 	inline const boost::any& value() const { return value_.empty() ? default_ : value_; }
+	inline boost::any& value() { return value_.empty() ? default_ : value_; }
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
 
