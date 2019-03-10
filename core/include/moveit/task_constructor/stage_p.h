@@ -56,16 +56,22 @@ class StagePrivate {
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
 
 public:
-	// container type used to store children
+	/// container type used to store children
 	typedef std::list<Stage::pointer> container_type;
 	StagePrivate(Stage* me, const std::string& name);
 	virtual ~StagePrivate() = default;
 
+	/// actually configured interface of this stage (only valid after init())
 	InterfaceFlags interfaceFlags() const;
-	// retrieve description of the interface required by this stage
-	// if this is unknown (because interface is auto-detected from context), return 0
+
+	/** Interface required by this stage
+	 *
+	 * If the interface is unknown (because it is auto-detected from context), return 0 */
 	virtual InterfaceFlags requiredInterface() const = 0;
-	// prune interface to the given propagation direction
+
+	/** Prune interface to comply with the given propagation direction
+	 *
+	 * PropagatingEitherWay uses this in restrictDirection() */
 	virtual void pruneInterface(InterfaceFlags accepted) {}
 
 	virtual bool canCompute() const = 0;

@@ -367,8 +367,8 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
    : ContainerBasePrivate(me, name)
 {}
 
-// a serial container's required interface is derived from the required input interface
-// of the first child and the required output interface of the last child
+// a serial container's required interface is derived from the actual input interface
+// of the first child and the actual output interface of the last child
 InterfaceFlags SerialContainerPrivate::requiredInterface() const
 {
 	if (children().empty())
@@ -424,7 +424,8 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 	impl->starts_.reset();
 	impl->ends_.reset();
 
-	ContainerBase::init(robot_model); // throws if there are no children
+	// recursively init all children, throws if there are no children
+	ContainerBase::init(robot_model);
 
 	auto start = impl->children().begin();
 	auto last = --impl->children().end();
@@ -582,7 +583,7 @@ void SerialContainer::validateConnectivity() const
 		// start pull interface fed?
 		if (cur != impl->children().begin() &&  // first child has not a previous one
 		    (required & READS_START) && !(*prev)->pimpl()->nextStarts())
-			errors.push_back(**cur, "end interface is not fed");
+			errors.push_back(**cur, "start interface is not fed");
 
 		// end pull interface fed?
 		if (next != end && // last child has not a next one

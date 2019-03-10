@@ -519,7 +519,7 @@ void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_mo
 	// pretend that we offer both interface directions during init().
 	// This is needed due to a chicken-egg-problem: interface auto-detection requires
 	// the context (external pushing interfaces prevEnds, nextStarts) to be set,
-	// while the are ony set if we detected the correct interface...
+	// while they are ony set if we detected the correct interface...
 	if (impl->required_interface_dirs_ == AUTO)
 		impl->initInterface(BOTHWAY);
 	// otherwise the interface is already fixed and well-defined
