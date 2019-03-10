@@ -554,14 +554,17 @@ void SerialContainer::validateConnectivity() const
 	// check that input / output interface of first / last child matches this' resp. interface
 	if (!impl->children().empty()) {
 		const StagePrivate* start = impl->children().front()->pimpl();
-		if ((start->interfaceFlags() & INPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & INPUT_IF_MASK))
-			errors.push_back(*this, (desc % "input" % start->name() % flowSymbol(start->interfaceFlags())
-			                         % flowSymbol(this->pimpl()->interfaceFlags())).str());
+		const auto my_flags = this->pimpl()->interfaceFlags();
+		auto child_flags = start->interfaceFlags() & INPUT_IF_MASK;
+		if (child_flags != (my_flags & INPUT_IF_MASK))
+			errors.push_back(*this, (desc % "input" % start->name() % flowSymbol(child_flags)
+			                         % flowSymbol(my_flags & INPUT_IF_MASK)).str());
 
 		const StagePrivate* last = impl->children().back()->pimpl();
-		if ((last->interfaceFlags() & OUTPUT_IF_MASK) != (this->pimpl()->interfaceFlags() & OUTPUT_IF_MASK))
-			errors.push_back(*this, (desc % "output" % last->name() % flowSymbol(last->interfaceFlags())
-			                         % flowSymbol(this->pimpl()->interfaceFlags())).str());
+		child_flags = last->interfaceFlags() & OUTPUT_IF_MASK;
+		if (child_flags != (my_flags & OUTPUT_IF_MASK))
+			errors.push_back(*this, (desc % "output" % last->name() % flowSymbol(child_flags)
+			                         % flowSymbol(my_flags & OUTPUT_IF_MASK)).str());
 	}
 
 	// validate connectivity of children amongst each other

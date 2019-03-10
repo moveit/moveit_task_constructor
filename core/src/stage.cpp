@@ -349,13 +349,21 @@ const char* direction(const StagePrivate& stage) {
 	return "<-";
 }
 
-const char* flowSymbol(moveit::task_constructor::InterfaceFlags f) {
-	if (f == InterfaceFlags(CONNECT)) return "∞";
-	if (f == InterfaceFlags(PROPAGATE_FORWARDS)) return "↓";
-	if (f == InterfaceFlags(PROPAGATE_BACKWARDS)) return "↑";
-	if (f == PROPAGATE_BOTHWAYS) return "⇅";
-	if (f == InterfaceFlags(GENERATE)) return "↕";
-	return "?";
+const char* flowSymbol(InterfaceFlags f) {
+	if (f == InterfaceFlags())
+		return "?"; // unknown interface
+
+	// f should have either INPUT or OUTPUT flags set (not both)
+	assert(static_cast<bool>(f & INPUT_IF_MASK) ^ static_cast<bool>(f & OUTPUT_IF_MASK));
+
+	if (f & INPUT_IF_MASK) {
+		if (f == READS_START) return "->";
+		if (f == WRITES_PREV_END) return "<-";
+	} else if (f & OUTPUT_IF_MASK) {
+		if (f == READS_END) return "<-";
+		if (f == WRITES_NEXT_START) return "->";
+	}
+	return "<->";
 }
 
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
