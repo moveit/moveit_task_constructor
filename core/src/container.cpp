@@ -399,7 +399,7 @@ bool SerialContainerPrivate::connect(container_type::const_iterator cur)
 		cur_impl->setPrevEnds((*prev)->pimpl()->ends());
 
 	// schedule stage with unknown interface for 2nd sweep
-	return required == UNKNOWN;
+	return required == UNKNOWN || required == PROPAGATE_BOTHWAYS;
 }
 
 /* Establishing the interface connections, we face a chicken-egg-problem:
