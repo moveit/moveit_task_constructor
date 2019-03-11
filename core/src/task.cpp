@@ -237,7 +237,7 @@ void Task::init()
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->pruneInterface(InterfaceFlags({GENERATE}));
 	// and *finally* validate connectivity
-	stages()->validateConnectivity();
+	stages()->pimpl()->validateConnectivity();
 
 	// provide introspection instance to all stages
 	impl->setIntrospection(introspection_.get());

@@ -83,6 +83,15 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	return f;
 }
 
+void StagePrivate::validateConnectivity() const
+{
+	// check that the required interface is provided
+	InterfaceFlags required = requiredInterface();
+	InterfaceFlags actual = interfaceFlags();
+	if ((required & actual) != required)
+		throw InitStageException(*me(), "required interface is not satisfied");
+}
+
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution)
 {
 	solution->setCreator(this);
@@ -427,6 +436,27 @@ void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	initInterface(PropagatingEitherWay::Direction(dir));
 }
 
+void PropagatingEitherWayPrivate::validateConnectivity() const
+{
+	InterfaceFlags required = requiredInterface();
+	InterfaceFlags actual = interfaceFlags();
+	if (actual == UNKNOWN)
+		throw InitStageException(*me(), "not connected in any direction");
+
+	InitStageException errors;
+	if ((actual & READS_START) && !(actual & WRITES_NEXT_START))
+		errors.push_back(*me(), "Cannot push forwards");
+	if ((actual & READS_END) && !(actual & WRITES_PREV_END))
+		errors.push_back(*me(), "Cannot push backwards");
+
+	if (required_interface_dirs_ == PropagatingEitherWay::BOTHWAY &&
+	    (required & actual) != required)
+		ROS_WARN_STREAM_NAMED("PropagatingEitherWay", "Cannot propagate " <<
+		                      (actual & PROPAGATE_FORWARDS ? "backwards" : "forwards"));
+
+	if (errors) throw errors;
+}
+
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 {
 	InterfaceFlags f;
@@ -434,7 +464,7 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 		f |= PROPAGATE_FORWARDS;
 	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
 		f |= PROPAGATE_BACKWARDS;
-	// if required_interface_dirs_ == ANYWAY, we don't require an interface
+	// if required_interface_dirs_ == AUTO, we don't require an interface
 	// but the parent container auto-derives the propagation direction
 	return f;
 }

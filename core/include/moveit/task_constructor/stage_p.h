@@ -74,6 +74,9 @@ public:
 	 * PropagatingEitherWay uses this in restrictDirection() */
 	virtual void pruneInterface(InterfaceFlags accepted) {}
 
+	/// validate connectivity of children (after init() was done)
+	virtual void validateConnectivity() const;
+
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
 
@@ -179,6 +182,8 @@ public:
 	void initInterface(PropagatingEitherWay::Direction dir);
 	// prune interface to the given propagation direction
 	void pruneInterface(InterfaceFlags accepted) override;
+	// validate that we can propagate in one direction at least
+	void validateConnectivity() const override;
 
 	bool canCompute() const override;
 	void compute() override;

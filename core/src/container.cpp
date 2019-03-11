@@ -89,6 +89,17 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback &pr
 	return true;
 }
 
+void ContainerBasePrivate::validateConnectivity() const
+{
+	InitStageException errors;
+	// recursively validate all children and accumulate errors
+	for (const auto& child : children()) {
+		try { child->pimpl()->validateConnectivity(); }
+		catch (InitStageException &e) { errors.append(e); }
+	}
+	if (errors) throw errors;
+}
+
 bool ContainerBasePrivate::canCompute() const
 {
 	// call the method of the public interface
@@ -234,25 +245,6 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 			errors.push_back(*child, oss.str());
 		}
 		catch (InitStageException &e) { errors.append(e); }
-	}
-
-	if (errors) throw errors;
-}
-
-void ContainerBase::validateConnectivity() const
-{
-	InitStageException errors;
-	for (const auto& child : pimpl()->children()) {
-		// check that child's required interface is provided
-		InterfaceFlags required = child->pimpl()->requiredInterface();
-		InterfaceFlags actual = child->pimpl()->interfaceFlags();
-		if ((required & actual) != required)
-			errors.push_back(*child, "required interface is not satisfied");
-
-		// recursively validate all children and accumulate errors
-		ContainerBase* child_container = dynamic_cast<ContainerBase*>(child.get());
-		if (!child_container) continue;  // only containers provide validateConnectivity()
-		try { child_container->validateConnectivity(); } catch (InitStageException &e) { errors.append(e); }
 	}
 
 	if (errors) throw errors;
@@ -546,42 +538,45 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	}
 }
 
-void SerialContainer::validateConnectivity() const
+void SerialContainerPrivate::validateConnectivity() const
 {
-	auto impl = pimpl();
 	InitStageException errors;
 	boost::format desc("%1% interface of '%2%' (%3%) doesn't match mine (%4%)");
 
+	// recursively validate children
+	try { ContainerBasePrivate::validateConnectivity(); }
+	catch (InitStageException& e) { errors.append(e); }
+
 	// check that input / output interface of first / last child matches this' resp. interface
-	if (!impl->children().empty()) {
-		const StagePrivate* start = impl->children().front()->pimpl();
-		const auto my_flags = this->pimpl()->interfaceFlags();
+	if (!children().empty()) {
+		const StagePrivate* start = children().front()->pimpl();
+		const auto my_flags = this->interfaceFlags();
 		auto child_flags = start->interfaceFlags() & INPUT_IF_MASK;
 		if (child_flags != (my_flags & INPUT_IF_MASK))
-			errors.push_back(*this, (desc % "input" % start->name() % flowSymbol(child_flags)
+			errors.push_back(*me(), (desc % "input" % start->name() % flowSymbol(child_flags)
 			                         % flowSymbol(my_flags & INPUT_IF_MASK)).str());
 
-		const StagePrivate* last = impl->children().back()->pimpl();
+		const StagePrivate* last = children().back()->pimpl();
 		child_flags = last->interfaceFlags() & OUTPUT_IF_MASK;
 		if (child_flags != (my_flags & OUTPUT_IF_MASK))
-			errors.push_back(*this, (desc % "output" % last->name() % flowSymbol(child_flags)
+			errors.push_back(*me(), (desc % "output" % last->name() % flowSymbol(child_flags)
 			                         % flowSymbol(my_flags & OUTPUT_IF_MASK)).str());
 	}
 
 	// validate connectivity of children amongst each other
-	// ContainerBase::validateConnectivity() ensures that required push interfaces are present,
+	// ContainerBasePrivate::validateConnectivity() ensures that required push interfaces are present,
 	// that is, neighbouring stages have a corresponding pull interface.
-	// Here, it remains to check that - if a child requires a pull interface - it's indeed feeded.
-	for (auto cur = impl->children().begin(), end = impl->children().end(); cur != end; ++cur) {
+	// Here, it remains to check that - if a child has a pull interface - it's indeed feeded.
+	for (auto cur = children().begin(), end = children().end(); cur != end; ++cur) {
 		const StagePrivate* const cur_impl = **cur;
-		InterfaceFlags required = cur_impl->requiredInterface();
+		InterfaceFlags required = cur_impl->interfaceFlags();
 
 		// get iterators to prev / next stage in sequence
 		auto prev = cur; --prev;
 		auto next = cur; ++next;
 
 		// start pull interface fed?
-		if (cur != impl->children().begin() &&  // first child has not a previous one
+		if (cur != children().begin() &&  // first child has not a previous one
 		    (required & READS_START) && !(*prev)->pimpl()->nextStarts())
 			errors.push_back(**cur, "start interface is not fed");
 
@@ -590,9 +585,6 @@ void SerialContainer::validateConnectivity() const
 		    (required & READS_END) && !(*next)->pimpl()->prevEnds())
 			errors.push_back(**cur, "end interface is not fed");
 	}
-
-	// recursively validate children
-	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }
 
 	if (errors) throw errors;
 }
@@ -693,6 +685,31 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted)
 	}
 }
 
+void ParallelContainerBasePrivate::validateConnectivity() const
+{
+	InitStageException errors;
+	InterfaceFlags my_interface = interfaceFlags();
+	InterfaceFlags children_interfaces;
+	boost::format desc("interface of child '%1%' (%2%) doesn't match mine (%3%)");
+
+	// check that input / output interfaces of all children are handled by my interface
+	for (const auto& child : children()) {
+		InterfaceFlags current = child->pimpl()->interfaceFlags();
+		children_interfaces |= current;  // compute union of all children interfaces
+		if ((current & my_interface) != current)
+			errors.push_back(*me(), (desc % child->name() % flowSymbol(current) % flowSymbol(my_interface)).str());
+	}
+	// check that there is a child matching the expected push interfaces
+	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))
+		errors.push_back(*me(), "no child provides expected push interface");
+
+	// recursively validate children
+	try { ContainerBasePrivate::validateConnectivity(); }
+	catch (InitStageException& e) { errors.append(e); }
+
+	if (errors) throw errors;
+}
+
 void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
 		copyState(external, stage->pimpl()->pullInterface(dir), updated);
@@ -734,31 +751,6 @@ void ParallelContainerBase::init(const moveit::core::RobotModelConstPtr& robot_m
 		impl->setChildsPushForwardInterface(*stage);
 		impl->setChildsPushBackwardInterface(*stage);
 	}
-}
-
-void ParallelContainerBase::validateConnectivity() const
-{
-	InitStageException errors;
-	auto impl = pimpl();
-	InterfaceFlags my_interface = impl->interfaceFlags();
-	InterfaceFlags children_interfaces;
-	boost::format desc("interface of child '%1%' (%2%) doesn't match mine (%3%)");
-
-	// check that input / output interfaces of all children are handled by my interface
-	for (const auto& child : pimpl()->children()) {
-		InterfaceFlags current = child->pimpl()->interfaceFlags();
-		children_interfaces |= current;  // compute union of all children interfaces
-		if ((current & my_interface) != current)
-			errors.push_back(*this, (desc % child->name() % flowSymbol(current) % flowSymbol(my_interface)).str());
-	}
-	// check that there is a child matching the expected push interfaces
-	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))
-		errors.push_back(*this, "no child provides expected push interface");
-
-	// recursively validate children
-	try { ContainerBase::validateConnectivity(); } catch (InitStageException& e) { errors.append(e); }
-
-	if (errors) throw errors;
 }
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment)

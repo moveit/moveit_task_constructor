@@ -134,7 +134,7 @@ protected:
 			if (start) accepted |= WRITES_PREV_END;
 			if (end) accepted |= WRITES_NEXT_START;
 			container.pimpl()->pruneInterface(accepted);
-			container.validateConnectivity();
+			container.pimpl()->validateConnectivity();
 			if (!expect_failure) return; // as expected
 			ADD_FAILURE() << "init() didn't recognize a failure condition as expected\n" << container;
 		} catch (const InitStageException &e) {
