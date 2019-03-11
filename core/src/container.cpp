@@ -366,7 +366,7 @@ InterfaceFlags SerialContainerPrivate::requiredInterface() const
 	if (children().empty())
 		return UNKNOWN;
 	return (children().front()->pimpl()->interfaceFlags() & INPUT_IF_MASK)
-	      | (children().back()->pimpl()->interfaceFlags() & OUTPUT_IF_MASK);
+	     | (children().back()->pimpl()->interfaceFlags() & OUTPUT_IF_MASK);
 }
 
 // connect cur stage to its predecessor and successor by setting the push interface pointers
@@ -459,10 +459,12 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
 
-	// We only need to deal with the special case of the whole sequence to be pruned.
-	if (accepted != PROPAGATE_BOTHWAYS && // will interface be restricted at all?
-	    children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS)  // still undecided?
-	{
+	if (accepted == PROPAGATE_BOTHWAYS)
+		return;  // There is nothing to prune
+
+	// If whole chain is still undecided, prune all children
+	if (children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS &&
+	    children().back()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS) {
 		pruneInterfaces(children().begin(), children().end(), accepted);
 
 		// reset my pull interfaces, if first/last child don't pull anymore
@@ -471,7 +473,8 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 		if (!children().back()->pimpl()->ends())
 			ends_.reset();
 	}
-	if (interfaceFlags() == UNKNOWN)
+
+	if (interfaceFlags() == InterfaceFlags())
 		throw InitStageException(*me(), "failed to derive propagation direction");
 }
 
@@ -508,8 +511,8 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 
 	// nothing to do if:
 	// - accepted == 0: interface still unknown
-	// - accepted == PROPAGATE_FORWARDS | PROPAGATE_BACKWARDS: no change
-	if (accepted != UNKNOWN && accepted != InterfaceFlags({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS}))
+	// - accepted == PROPAGATE_BOTHWAYS: no change
+	if (accepted != UNKNOWN && accepted != PROPAGATE_BOTHWAYS)
 		pruneInterfaces(first, end, accepted);
 }
 
