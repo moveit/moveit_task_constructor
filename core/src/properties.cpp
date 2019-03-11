@@ -142,6 +142,14 @@ void Property::setCurrentValue(const boost::any &value)
 	initialized_from_ = 1; // manually initialized TODO: use enums
 }
 
+void Property::setDefaultValue(const boost::any& value)
+{
+	if (!value.empty() && type_info_ != typeid(boost::any) && value.type() != type_info_)
+		throw Property::type_error(value.type().name(), type_info_.name());
+
+	default_ = value;
+}
+
 void Property::reset()
 {
 	if (initialized_from_ == 0)  // TODO: use enum

@@ -134,7 +134,7 @@ protected:
 			if (start) accepted |= WRITES_PREV_END;
 			if (end) accepted |= WRITES_NEXT_START;
 			container.pimpl()->pruneInterface(accepted);
-			container.validateConnectivity();
+			container.pimpl()->validateConnectivity();
 			if (!expect_failure) return; // as expected
 			ADD_FAILURE() << "init() didn't recognize a failure condition as expected\n" << container;
 		} catch (const InitStageException &e) {
@@ -235,7 +235,6 @@ TEST_F(SerialTest, init_empty) {
 TEST_F(SerialTest, init_connecting) {
 	EXPECT_INIT_SUCCESS(false, false, CONN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_FAILURE(true, true, CONN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags({CONNECT, GENERATE}));
@@ -246,7 +245,6 @@ TEST_F(SerialTest, init_connecting) {
 TEST_F(SerialTest, init_generator) {
 	EXPECT_INIT_SUCCESS(true, true, GEN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
 
 	EXPECT_INIT_FAILURE(false, false, GEN); // generator wants to push, but container cannot propagate pushes
 
@@ -259,15 +257,48 @@ TEST_F(SerialTest, init_forward) {
 	EXPECT_INIT_FAILURE(true, true, FW);
 	EXPECT_INIT_FAILURE(true, false, FW);
 
+	// wrong inner connectivity
+	EXPECT_INIT_FAILURE(false, false, FW, BW);
+	EXPECT_INIT_FAILURE(true, true, BW, FW);
+
 	// these should be fine
 	EXPECT_INIT_SUCCESS(false, true, FW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
 
 	EXPECT_INIT_SUCCESS(false, true, FW, FW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
 
 	EXPECT_INIT_SUCCESS(true, true, GEN, FW);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+	EXPECT_INIT_SUCCESS(true, true, BW, GEN, FW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
+
+
+	EXPECT_INIT_SUCCESS(false, true, ANY, FW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	EXPECT_INIT_SUCCESS(false, true, FW, ANY);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	EXPECT_INIT_SUCCESS(true, false, ANY, BW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
+	EXPECT_INIT_SUCCESS(true, false, BW, ANY);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
+
+	EXPECT_INIT_SUCCESS(false, true, BOTH, FW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	EXPECT_INIT_SUCCESS(false, true, FW, BOTH);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	EXPECT_INIT_SUCCESS(true, false, BOTH, BW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
+	EXPECT_INIT_SUCCESS(true, false, BW, BOTH);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 }
 
 TEST_F(SerialTest, init_backward) {
@@ -278,10 +309,10 @@ TEST_F(SerialTest, init_backward) {
 
 	// these should be fine
 	EXPECT_INIT_SUCCESS(true, false, BW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 
 	EXPECT_INIT_SUCCESS(true, false, BW, BW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), container.pimpl()->children().front()->pimpl()->interfaceFlags());
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 
 	EXPECT_INIT_SUCCESS(true, true, BW, GEN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
@@ -320,6 +351,11 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
 
 	// derive propagation direction from outer interface
+	EXPECT_INIT_SUCCESS(false, true, ANY);  // should be pruned to FW
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	EXPECT_INIT_SUCCESS(true, false, ANY);  // should be pruned to BW
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY); // -> ->
 	it = container.pimpl()->children().begin();
 	EXPECT_EQ(  (*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
@@ -346,10 +382,36 @@ TEST_F(SerialTest, interface_detection) {
 }
 
 TEST_F(SerialTest, nested_interface_detection) {
-	auto inner = std::make_unique<SerialContainer>("inner");
+	SerialContainer* inner;
+	// direction imposed from outer generator
+	container.clear();
+	inner = new SerialContainer("inner serial");
+	append(*inner, {ANY, ANY});
+	append(container, {GEN, ANY, ANY});
+	container.insert(Stage::pointer(inner), -2);
+	{SCOPED_TRACE("GEN - ANY - inner - ANY"); validateInit(true, true, {}, false);}
+
+	// direction imposed from inner generator
+	container.clear();
+	inner = new SerialContainer("inner serial");
+	append(*inner, {ANY, GEN, ANY});
+	append(container, {ANY, ANY});
+	container.insert(Stage::pointer(inner), -2);
+	{SCOPED_TRACE("ANY - inner - ANY"); validateInit(true, true, {}, false);}
+
+	container.clear();
+	inner = new SerialContainer("inner serial");
 	append(*inner, {GEN, ANY});
-	container.insert(std::move(inner));
-	validateInit(true, true, {ANY}, false);
+	container.insert(Stage::pointer(inner));
+	{SCOPED_TRACE("inner - ANY"); validateInit(true, true, {ANY}, false);}
+
+	// outer and inner generators conflict with each other
+	container.clear();
+	inner = new SerialContainer("inner serial");
+	append(*inner, {ANY, GEN, ANY});
+	append(container, {GEN, ANY, ANY});
+	container.insert(Stage::pointer(inner), -2);
+	{SCOPED_TRACE("GEN - ANY - inner - ANY"); validateInit(true, true, {}, true);}
 }
 
 

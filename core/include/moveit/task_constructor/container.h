@@ -64,8 +64,6 @@ public:
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	/// validate connectivity of children (after init() was done)
-	virtual void validateConnectivity() const;
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
@@ -88,9 +86,6 @@ public:
 	SerialContainer(const std::string& name = "serial container");
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
-	/// validate connectivity of children (after init() was done)
-	void validateConnectivity() const override;
 
 	bool canCompute() const override;
 	void compute() override;
@@ -131,9 +126,6 @@ public:
 	ParallelContainerBase(const std::string &name);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
-	/// validate connectivity of children (after init() was done)
-	void validateConnectivity() const override;
 
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);

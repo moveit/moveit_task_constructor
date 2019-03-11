@@ -54,7 +54,6 @@ namespace moveit { namespace task_constructor { namespace stages {
 ComputeIK::ComputeIK(const std::string &name, Stage::pointer &&child)
    : WrapperBase(name, std::move(child))
 {
-	setTimeout(1.0);
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector group");
 	p.declare<std::string>("group", "name of active group (derived from eef if not provided)");
@@ -254,6 +253,7 @@ void ComputeIK::compute()
 		ROS_WARN_STREAM_NAMED("ComputeIK", "Neither eef nor group are well defined");
 		return;
 	}
+	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
 
 	// extract target_pose
 	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");

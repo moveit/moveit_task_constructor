@@ -48,6 +48,7 @@
 #include <moveit/task_constructor/stage.h>
 
 #include <rviz/properties/property.h>
+#include <rviz/properties/enum_property.h>
 #include <rviz/display_group.h>
 #include <rviz/visualization_manager.h>
 #include <rviz/window_manager_interface.h>
@@ -87,15 +88,20 @@ TaskPanel::TaskPanel(QWidget* parent)
 {
 	Q_D(TaskPanel);
 
-	d->tasks_widget = new TaskView(this);
-	d->settings_widget = new TaskSettings(this);
-	layout()->addWidget(d->tasks_widget);
-	layout()->addWidget(d->settings_widget);
-	connect(d->tasks_widget, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
+	// sync checked tool button with displayed widget
+	connect(d->tool_buttons_group, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
+	        d->stackedWidget, [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
+	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
+
+	// create sub widgets with corresponding tool buttons
+	addSubPanel(new TaskView(this, d->property_root), "Tasks View", QIcon(":/icons/tasks.png"));
+	d->stackedWidget->setCurrentIndex(0); // Tasks View is show by default
+
+	// settings widget should come last
+	addSubPanel(new GlobalSettingsWidget(this, d->property_root), "Global Settings", QIcon(":/icons/settings.png"));
 
 	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
-	connect(d->button_show_settings, SIGNAL(toggled(bool)), d->settings_widget, SLOT(setVisible(bool)));
-	d->settings_widget->setVisible(d->button_show_settings->isChecked());
 
 	// if still undefined, this becomes the global instance
 	if (singleton_.isNull())
@@ -107,6 +113,24 @@ TaskPanel::~TaskPanel()
 	delete d_ptr;
 }
 
+void TaskPanel::addSubPanel(SubPanel *w, const QString& title, const QIcon& icon)
+{
+	Q_D(TaskPanel);
+
+	auto button = new QToolButton(w);
+	button->setToolTip(title);
+	button->setIcon(icon);
+	button->setCheckable(true);
+
+	int index = d->stackedWidget->count();
+	d->tool_buttons_layout->insertWidget(index, button);
+	d->tool_buttons_group->addButton(button, index);
+	d->stackedWidget->addWidget(w);
+
+	w->setWindowTitle(title);
+	connect(w, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
+}
+
 void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager)
 {
 	++display_count_;
@@ -115,8 +139,10 @@ void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager)
 	if (singleton_ || !vis_frame)
 		return; // already define, nothing to do
 
-	window_manager->addPane("Motion Planning Tasks", new TaskPanel());
-	singleton_->initialize(vis_frame->getManager());
+	QDockWidget* dock = vis_frame->addPanelByName("Motion Planning Tasks",
+	                                              "moveit_task_constructor/Motion Planning Tasks",
+	                                              Qt::LeftDockWidgetArea, true /* floating */);
+	assert(dock->widget() == singleton_);
 }
 
 void TaskPanel::decDisplayCount()
@@ -130,7 +156,11 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel *q_ptr)
    : q_ptr(q_ptr)
 {
 	setupUi(q_ptr);
+	tool_buttons_group = new QButtonGroup(q_ptr);
+	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
+	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
+	property_root = new rviz::Property("Global Settings");
 }
 
 void TaskPanel::onInitialize()
@@ -141,13 +171,19 @@ void TaskPanel::onInitialize()
 void TaskPanel::save(rviz::Config config) const
 {
 	rviz::Panel::save(config);
-	d_ptr->tasks_widget->save(config.mapMakeChild("tasks_view"));
+	for (int i=0; i < d_ptr->stackedWidget->count(); ++i) {
+		SubPanel* w = static_cast<SubPanel*>(d_ptr->stackedWidget->widget(i));
+		w->save(config.mapMakeChild(w->windowTitle()));
+	}
 }
 
 void TaskPanel::load(const rviz::Config& config)
 {
 	rviz::Panel::load(config);
-	d_ptr->tasks_widget->load(config.mapGetChild("tasks_view"));
+	for (int i=0; i < d_ptr->stackedWidget->count(); ++i) {
+		SubPanel* w = static_cast<SubPanel*>(d_ptr->stackedWidget->widget(i));
+		w->load(config.mapGetChild(w->windowTitle()));
+	}
 }
 
 void TaskPanel::showStageDockWidget()
@@ -183,15 +219,20 @@ TaskViewPrivate::TaskViewPrivate(TaskView *q_ptr)
 	tasks_view->setModel(meta_model);
 	// auto-expand newly-inserted top-level items
 	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted, [this](const QModelIndex &parent, int first, int last){
-		if (parent.isValid() && !parent.parent().isValid()) {
+		if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
+			int expand = this->q_ptr->initial_task_expand->getOptionInt();
 			for (int row = first; row <= last; ++row) {
 				QModelIndex child = parent.child(row, 0);
-				// expand inserted items
-				setExpanded(tasks_view, child, true);
-				// collapse up to first level
-				setExpanded(tasks_view, child, false, 1);
-				// expand inserted item
-				setExpanded(tasks_view, child, true, 0);
+				if (expand != TaskView::EXPAND_NONE) {
+					// recursively expand all inserted items
+					setExpanded(tasks_view, child, true);
+				}
+				if (expand == TaskView::EXPAND_TOP) {
+					// collapse up to first level
+					setExpanded(tasks_view, child, false, 1);
+					// expand inserted item
+					setExpanded(tasks_view, child, true, 0);
+				}
 			}
 			tasks_view->setExpanded(parent, true);  // expand parent group item
 		}
@@ -233,8 +274,8 @@ void TaskViewPrivate::lock(TaskDisplay* display)
 	locked_display_ = display;
 }
 
-TaskView::TaskView(QWidget *parent)
-   : QWidget(parent), d_ptr(new TaskViewPrivate(this))
+TaskView::TaskView(moveit_rviz_plugin::TaskPanel *parent, rviz::Property *root)
+   : SubPanel(parent), d_ptr(new TaskViewPrivate(this))
 {
 	Q_D(TaskView);
 
@@ -253,6 +294,14 @@ TaskView::TaskView(QWidget *parent)
 	connect(d_ptr->tasks_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
 	connect(d_ptr->solutions_view->header(), SIGNAL(sectionResized(int,int,int)), this, SIGNAL(configChanged()));
 	connect(d_ptr->solutions_view->header(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)), this, SIGNAL(configChanged()));
+
+	// configuration settings
+	auto configs = new rviz::Property("Task View Settings", QVariant(), QString(), root);
+	initial_task_expand = new rviz::EnumProperty("Task Expansion", "All Expanded",
+	                                             "Configure how to initially expand new tasks", configs);
+	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
+	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
+	initial_task_expand->addOption("All Closed", EXPAND_NONE);
 }
 
 TaskView::~TaskView()
@@ -424,21 +473,35 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection &selected, const 
 }
 
 
-TaskSettingsPrivate::TaskSettingsPrivate(TaskSettings *q_ptr)
+GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget *q_ptr, rviz::Property *root)
    : q_ptr(q_ptr)
 {
 	setupUi(q_ptr);
+	properties = new rviz::PropertyTreeModel(root, q_ptr);
+	view->setModel(properties);
 }
 
-TaskSettings::TaskSettings(QWidget *parent)
-   : QWidget(parent), d_ptr(new TaskSettingsPrivate(this))
+GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel *parent, rviz::Property *root)
+   : SubPanel(parent), d_ptr(new GlobalSettingsWidgetPrivate(this, root))
 {
-	Q_D(TaskSettings);
+	Q_D(GlobalSettingsWidget);
+	connect(d->properties, &rviz::PropertyTreeModel::configChanged,
+	        this, &GlobalSettingsWidget::configChanged);
 }
 
-TaskSettings::~TaskSettings()
+GlobalSettingsWidget::~GlobalSettingsWidget()
 {
 	delete d_ptr;
+}
+
+void GlobalSettingsWidget::save(rviz::Config config)
+{
+	d_ptr->properties->getRoot()->save(config);
+}
+
+void GlobalSettingsWidget::load(const rviz::Config &config)
+{
+	d_ptr->properties->getRoot()->load(config);
 }
 
 }

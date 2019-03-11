@@ -84,6 +84,15 @@ InterfaceFlags StagePrivate::interfaceFlags() const
 	return f;
 }
 
+void StagePrivate::validateConnectivity() const
+{
+	// check that the required interface is provided
+	InterfaceFlags required = requiredInterface();
+	InterfaceFlags actual = interfaceFlags();
+	if ((required & actual) != required)
+		throw InitStageException(*me(), "required interface is not satisfied");
+}
+
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution)
 {
 	solution->setCreator(this);
@@ -350,13 +359,21 @@ const char* direction(const StagePrivate& stage) {
 	return "<-";
 }
 
-const char* flowSymbol(moveit::task_constructor::InterfaceFlags f) {
-	if (f == InterfaceFlags(CONNECT)) return "∞";
-	if (f == InterfaceFlags(PROPAGATE_FORWARDS)) return "↓";
-	if (f == InterfaceFlags(PROPAGATE_BACKWARDS)) return "↑";
-	if (f == PROPAGATE_BOTHWAYS) return "⇅";
-	if (f == InterfaceFlags(GENERATE)) return "↕";
-	return "?";
+const char* flowSymbol(InterfaceFlags f) {
+	if (f == InterfaceFlags())
+		return "?"; // unknown interface
+
+	// f should have either INPUT or OUTPUT flags set (not both)
+	assert(static_cast<bool>(f & INPUT_IF_MASK) ^ static_cast<bool>(f & OUTPUT_IF_MASK));
+
+	if (f & INPUT_IF_MASK) {
+		if (f == READS_START) return "->";
+		if (f == WRITES_PREV_END) return "<-";
+	} else if (f & OUTPUT_IF_MASK) {
+		if (f == READS_END) return "<-";
+		if (f == WRITES_NEXT_START) return "->";
+	}
+	return "<->";
 }
 
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
@@ -413,11 +430,32 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 
 void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	int dir = 0;
-	if (accepted & PROPAGATE_FORWARDS)
+	if ((accepted & PROPAGATE_FORWARDS) == PROPAGATE_FORWARDS)
 		dir |= PropagatingEitherWay::FORWARD;
-	if (accepted & PROPAGATE_BACKWARDS)
+	if ((accepted & PROPAGATE_BACKWARDS) == PROPAGATE_BACKWARDS)
 		dir |= PropagatingEitherWay::BACKWARD;
 	initInterface(PropagatingEitherWay::Direction(dir));
+}
+
+void PropagatingEitherWayPrivate::validateConnectivity() const
+{
+	InterfaceFlags required = requiredInterface();
+	InterfaceFlags actual = interfaceFlags();
+	if (actual == UNKNOWN)
+		throw InitStageException(*me(), "not connected in any direction");
+
+	InitStageException errors;
+	if ((actual & READS_START) && !(actual & WRITES_NEXT_START))
+		errors.push_back(*me(), "Cannot push forwards");
+	if ((actual & READS_END) && !(actual & WRITES_PREV_END))
+		errors.push_back(*me(), "Cannot push backwards");
+
+	if (required_interface_dirs_ == PropagatingEitherWay::BOTHWAY &&
+	    (required & actual) != required)
+		ROS_WARN_STREAM_NAMED("PropagatingEitherWay", "Cannot propagate " <<
+		                      (actual & PROPAGATE_FORWARDS ? "backwards" : "forwards"));
+
+	if (errors) throw errors;
 }
 
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
@@ -427,7 +465,7 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const
 		f |= PROPAGATE_FORWARDS;
 	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
 		f |= PROPAGATE_BACKWARDS;
-	// if required_interface_dirs_ == ANYWAY, we don't require an interface
+	// if required_interface_dirs_ == AUTO, we don't require an interface
 	// but the parent container auto-derives the propagation direction
 	return f;
 }
@@ -512,7 +550,7 @@ void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_mo
 	// pretend that we offer both interface directions during init().
 	// This is needed due to a chicken-egg-problem: interface auto-detection requires
 	// the context (external pushing interfaces prevEnds, nextStarts) to be set,
-	// while the are ony set if we detected the correct interface...
+	// while they are ony set if we detected the correct interface...
 	if (impl->required_interface_dirs_ == AUTO)
 		impl->initInterface(BOTHWAY);
 	// otherwise the interface is already fixed and well-defined

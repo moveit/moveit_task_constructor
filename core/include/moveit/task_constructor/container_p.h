@@ -97,6 +97,8 @@ public:
 		return const_cast<const ContainerBasePrivate*>(this)->traverseStages(const_processor, cur_depth, max_depth);
 	}
 
+	void validateConnectivity() const override;
+
 	// forward these methods to the public interface for containers
 	bool canCompute() const override;
 	void compute() override;
@@ -162,6 +164,8 @@ public:
 
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
+	// validate connectivity of chain
+	void validateConnectivity() const override;
 
 private:
 	// connect cur stage to its predecessor and successor
@@ -213,6 +217,8 @@ public:
 
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
+
+	void validateConnectivity() const override;
 
 private:
 	/// callback for new externally received states
