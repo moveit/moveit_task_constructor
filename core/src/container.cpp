@@ -459,6 +459,9 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
 
+	// reading is always allowed if current interface flags do so
+	accepted |= (interfaceFlags() & InterfaceFlags({READS_START, READS_END}));
+
 	if (accepted == PROPAGATE_BOTHWAYS)
 		return;  // There is nothing to prune
 
@@ -466,13 +469,19 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS &&
 	    children().back()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS) {
 		pruneInterfaces(children().begin(), children().end(), accepted);
-
-		// reset my pull interfaces, if first/last child don't pull anymore
-		if (!children().front()->pimpl()->starts())
-			starts_.reset();
-		if (!children().back()->pimpl()->ends())
-			ends_.reset();
+	} else { // otherwise only prune the first / last child's input / output interface
+		StagePrivate* child_impl;
+		child_impl = children().front()->pimpl();
+		child_impl->pruneInterface((accepted & INPUT_IF_MASK) | (child_impl->interfaceFlags() & OUTPUT_IF_MASK));
+		child_impl = children().back()->pimpl();
+		child_impl->pruneInterface((accepted & OUTPUT_IF_MASK) | (child_impl->interfaceFlags() & INPUT_IF_MASK));
 	}
+
+	// reset my pull interfaces, if first/last child don't pull anymore
+	if (!children().front()->pimpl()->starts())
+		starts_.reset();
+	if (!children().back()->pimpl()->ends())
+		ends_.reset();
 
 	if (interfaceFlags() == InterfaceFlags())
 		throw InitStageException(*me(), "failed to derive propagation direction");
@@ -527,11 +536,11 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 		// range should only contain stages with unknown required interface
 		assert(impl->requiredInterface() == UNKNOWN);
 
-		// remove push interfaces
-		if (!(accepted & PROPAGATE_BACKWARDS))
+		// remove push interfaces if not accepted
+		if (!(accepted & WRITES_PREV_END))
 			impl->setPrevEnds(InterfacePtr());
 
-		if (!(accepted & PROPAGATE_FORWARDS))
+		if (!(accepted & WRITES_NEXT_START))
 			impl->setNextStarts(InterfacePtr());
 	}
 	// 2nd sweep: recursively prune children

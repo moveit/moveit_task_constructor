@@ -429,9 +429,9 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 
 void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	int dir = 0;
-	if (accepted & PROPAGATE_FORWARDS)
+	if ((accepted & PROPAGATE_FORWARDS) == PROPAGATE_FORWARDS)
 		dir |= PropagatingEitherWay::FORWARD;
-	if (accepted & PROPAGATE_BACKWARDS)
+	if ((accepted & PROPAGATE_BACKWARDS) == PROPAGATE_BACKWARDS)
 		dir |= PropagatingEitherWay::BACKWARD;
 	initInterface(PropagatingEitherWay::Direction(dir));
 }
