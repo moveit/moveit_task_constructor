@@ -47,6 +47,8 @@ MOVEIT_CLASS_FORWARD(PlanningPipeline)
 
 namespace moveit { namespace task_constructor { namespace solvers {
 
+MOVEIT_CLASS_FORWARD(PipelinePlanner)
+
 /** Use MoveIt's PlanningPipeline to plan a trajectory between to scenes */
 class PipelinePlanner : public PlannerInterface {
 public:

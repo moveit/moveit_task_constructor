@@ -249,8 +249,6 @@ private:
 class PropertyMap
 {
 	std::map<std::string, Property> props_;
-	typedef std::map<std::string, Property>::iterator iterator;
-	typedef std::map<std::string, Property>::const_iterator const_iterator;
 
 	/// implementation of declare methods
 	Property& declare(const std::string& name, const Property::type_info& type_info,
@@ -285,6 +283,9 @@ public:
 		return const_cast<PropertyMap*>(this)->property(name);
 	}
 
+	typedef std::map<std::string, Property>::iterator iterator;
+	typedef std::map<std::string, Property>::const_iterator const_iterator;
+
 	iterator begin() { return props_.begin(); }
 	iterator end() { return props_.end(); }
 	const_iterator begin() const { return props_.begin(); }
@@ -311,7 +312,7 @@ public:
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
 
-	/// Gt the value of a property. Throws undeclared if unknown name
+	/// Get the value of a property. Throws undeclared if unknown name
 	const boost::any& get(const std::string& name) const;
 
 	/// Get typed value of property. Throws undeclared, undefined, or bad_any_cast.
@@ -339,7 +340,7 @@ public:
 	void performInitFrom(Property::SourceFlags source, const PropertyMap& other);
 };
 
-// boost::any needs a specialization to avoid recursion
+// boost::any needs a specialization to avoid infinite recursion
 template <>
 void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value);
 

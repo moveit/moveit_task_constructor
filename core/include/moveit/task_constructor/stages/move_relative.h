@@ -52,7 +52,8 @@ namespace moveit { namespace task_constructor { namespace stages {
 /** Perform a Cartesian motion relative to some link */
 class MoveRelative : public PropagatingEitherWay {
 public:
-	MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner);
+	MoveRelative(const std::string& name = "move relative",
+	             const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	void computeForward(const InterfaceState& from) override;

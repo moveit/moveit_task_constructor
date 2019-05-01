@@ -46,7 +46,7 @@ namespace moveit { namespace task_constructor { namespace stages {
 
 class GeneratePose : public MonitoringGenerator {
 public:
-	GeneratePose(const std::string& name);
+	GeneratePose(const std::string& name = "generate pose");
 
 	void reset() override;
 	bool canCompute() const override;
