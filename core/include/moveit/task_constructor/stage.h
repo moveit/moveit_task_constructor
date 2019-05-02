@@ -83,8 +83,8 @@ typedef Flags<InterfaceFlag> InterfaceFlags;
 
 // some useful constants
 constexpr InterfaceFlags UNKNOWN;
-constexpr InterfaceFlags INPUT_IF_MASK({READS_START, WRITES_PREV_END});
-constexpr InterfaceFlags OUTPUT_IF_MASK({READS_END, WRITES_NEXT_START});
+constexpr InterfaceFlags START_IF_MASK({READS_START, WRITES_PREV_END});
+constexpr InterfaceFlags END_IF_MASK({READS_END, WRITES_NEXT_START});
 constexpr InterfaceFlags PROPAGATE_BOTHWAYS({PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS});
 
 MOVEIT_CLASS_FORWARD(Interface)
@@ -235,6 +235,13 @@ protected:
 
 
 class PropagatingEitherWayPrivate;
+/** Base class for stages that can propagate InterfaceStates
+ *
+ *  They read an InterfaceState on one side (start or end) and
+ *  push a new InterfaceState to the opposite site.
+ *  By default, the class auto-derives its actual propagation direction from the context.
+ *  In order to enforce forward, backward, or bothway propagation, one can use restrictDirection().
+ */
 class PropagatingEitherWay : public ComputeBase {
 public:
 	PRIVATE_CLASS(PropagatingEitherWay)

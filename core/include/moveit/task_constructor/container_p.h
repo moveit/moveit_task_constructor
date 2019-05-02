@@ -125,6 +125,9 @@ protected:
 		bool allowed = (required & WRITES_NEXT_START) || (required == UNKNOWN);
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
+	// report error about mismatching interface (start or end as determined by mask)
+	void mismatchingInterface(InitStageException& errors, const StagePrivate& child,
+	                          const InterfaceFlags mask) const;
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
@@ -181,6 +184,12 @@ private:
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end,
 	                     InterfaceFlags accepted);
+	// store first/last child's interface as required for this container
+	void storeRequiredInterface(container_type::const_iterator first,
+	                            container_type::const_iterator end);
+
+private:
+	InterfaceFlags required_interface_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 

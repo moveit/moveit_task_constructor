@@ -352,7 +352,7 @@ const char* direction(const StagePrivate& stage) {
 
 	bool own_if = f & own;
 	bool other_if = f & other;
-	bool reverse = own & INPUT_IF_MASK;
+	bool reverse = own & START_IF_MASK;
 	if (own_if && other_if) return "<>";
 	if (!own_if && !other_if) return "--";
 	if (other_if ^ reverse) return "->";
@@ -360,20 +360,20 @@ const char* direction(const StagePrivate& stage) {
 }
 
 const char* flowSymbol(InterfaceFlags f) {
-	if (f == InterfaceFlags())
+	if (f == UNKNOWN)
 		return "?"; // unknown interface
 
 	// f should have either INPUT or OUTPUT flags set (not both)
-	assert(static_cast<bool>(f & INPUT_IF_MASK) ^ static_cast<bool>(f & OUTPUT_IF_MASK));
+	assert(static_cast<bool>(f & START_IF_MASK) ^ static_cast<bool>(f & END_IF_MASK));
 
-	if (f & INPUT_IF_MASK) {
-		if (f == READS_START) return "->";
-		if (f == WRITES_PREV_END) return "<-";
-	} else if (f & OUTPUT_IF_MASK) {
-		if (f == READS_END) return "<-";
-		if (f == WRITES_NEXT_START) return "->";
+	if (f & START_IF_MASK) {
+		if (f == READS_START) return "↓";
+		if (f == WRITES_PREV_END) return "↑";
+	} else if (f & END_IF_MASK) {
+		if (f == READS_END) return "↑";
+		if (f == WRITES_NEXT_START) return "↓";
 	}
-	return "<->";
+	return "⇅";
 }
 
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
