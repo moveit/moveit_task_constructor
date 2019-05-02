@@ -287,18 +287,11 @@ TEST_F(SerialTest, init_forward) {
 	EXPECT_INIT_SUCCESS(true, false, BW, ANY);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 
-
-	EXPECT_INIT_SUCCESS(false, true, BOTH, FW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
-
-	EXPECT_INIT_SUCCESS(false, true, FW, BOTH);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
-
-	EXPECT_INIT_SUCCESS(true, false, BOTH, BW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
-
-	EXPECT_INIT_SUCCESS(true, false, BW, BOTH);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	// BOTH requires propagation in both directions, while FW/BW can only match one dir
+	EXPECT_INIT_FAILURE(true, true, BOTH, FW);
+	EXPECT_INIT_FAILURE(true, true, FW, BOTH);
+	EXPECT_INIT_FAILURE(true, true, BOTH, BW);
+	EXPECT_INIT_FAILURE(true, true, BW, BOTH);
 }
 
 TEST_F(SerialTest, init_backward) {
@@ -315,9 +308,6 @@ TEST_F(SerialTest, init_backward) {
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 
 	EXPECT_INIT_SUCCESS(true, true, BW, GEN);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
-
-	EXPECT_INIT_SUCCESS(true, true, BW, GEN, FW);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 }
 
