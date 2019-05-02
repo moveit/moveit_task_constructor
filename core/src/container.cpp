@@ -359,14 +359,17 @@ SerialContainerPrivate::SerialContainerPrivate(SerialContainer *me, const std::s
    : ContainerBasePrivate(me, name)
 {}
 
-// a serial container's required interface is derived from the actual input interface
-// of the first child and the actual output interface of the last child
+// a serial container's required interface is derived from the required input interfaces
+// of the first and last children. After resolving, it is remembered in required_interface_.
 InterfaceFlags SerialContainerPrivate::requiredInterface() const
 {
+	if ((required_interface_ & START_IF_MASK) && (required_interface_ & END_IF_MASK))
+		return required_interface_;
+
 	if (children().empty())
 		return UNKNOWN;
-	return (children().front()->pimpl()->interfaceFlags() & START_IF_MASK)
-	     | (children().back()->pimpl()->interfaceFlags() & END_IF_MASK);
+	return (children().front()->pimpl()->requiredInterface() & START_IF_MASK)
+	     | (children().back()->pimpl()->requiredInterface() & END_IF_MASK);
 }
 
 // connect cur stage to its predecessor and successor by setting the push interface pointers
@@ -415,6 +418,7 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 	auto impl = pimpl();
 	impl->starts_.reset();
 	impl->ends_.reset();
+	impl->required_interface_ = UNKNOWN;
 
 	// recursively init all children, throws if there are no children
 	ContainerBase::init(robot_model);
@@ -455,6 +459,16 @@ void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model)
 		                                          std::placeholders::_2)));
 }
 
+// prune interface for children in range [first, last) to given direction
+void SerialContainerPrivate::storeRequiredInterface(container_type::const_iterator first,
+                                                    container_type::const_iterator end)
+{
+	if (first == children().begin())
+		required_interface_ |= children().front()->pimpl()->interfaceFlags() & START_IF_MASK;
+	if (end == children().end() && !children().empty())
+		required_interface_ |= children().back()->pimpl()->interfaceFlags() & END_IF_MASK;
+}
+
 // called by parent asking for pruning of this' interface
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty()) return;
@@ -483,7 +497,7 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (!children().back()->pimpl()->ends())
 		ends_.reset();
 
-	if (interfaceFlags() == InterfaceFlags())
+	if (interfaceFlags() == UNKNOWN)
 		throw InitStageException(*me(), "failed to derive propagation direction");
 }
 
@@ -492,7 +506,10 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first,
                                              container_type::const_iterator end)
 {
-	if (first == end) return;  // nothing to do in this case
+	if (first == end) {
+		storeRequiredInterface(first, end);
+		return;  // nothing to do in this case
+	}
 
 	// determine accepted interface from available push interfaces
 	InterfaceFlags accepted;
@@ -549,6 +566,8 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 		StagePrivate* impl = (*it)->pimpl();
 		impl->pruneInterface(accepted);
 	}
+
+	storeRequiredInterface(first, end);
 }
 
 void SerialContainerPrivate::validateConnectivity() const

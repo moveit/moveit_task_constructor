@@ -178,6 +178,12 @@ private:
 	void pruneInterfaces(container_type::const_iterator first,
 	                     container_type::const_iterator end,
 	                     InterfaceFlags accepted);
+	// store first/last child's interface as required for this container
+	void storeRequiredInterface(container_type::const_iterator first,
+	                            container_type::const_iterator end);
+
+private:
+	InterfaceFlags required_interface_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
