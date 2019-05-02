@@ -235,6 +235,13 @@ protected:
 
 
 class PropagatingEitherWayPrivate;
+/** Base class for stages that can propagate InterfaceStates
+ *
+ *  They read an InterfaceState on one side (start or end) and
+ *  push a new InterfaceState to the opposite site.
+ *  By default, the class auto-derives its actual propagation direction from the context.
+ *  In order to enforce forward, backward, or bothway propagation, one can use restrictDirection().
+ */
 class PropagatingEitherWay : public ComputeBase {
 public:
 	PRIVATE_CLASS(PropagatingEitherWay)

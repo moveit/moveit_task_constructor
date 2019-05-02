@@ -519,7 +519,7 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	} // else: for last child we cannot determine the interface yet
 
 	// nothing to do if:
-	// - accepted == 0: interface still unknown
+	// - accepted == UNKNOWN: interface still unknown
 	// - accepted == PROPAGATE_BOTHWAYS: no change
 	if (accepted != UNKNOWN && accepted != PROPAGATE_BOTHWAYS)
 		pruneInterfaces(first, end, accepted);
