@@ -100,6 +100,16 @@ void ContainerBasePrivate::validateConnectivity() const
 	if (errors) throw errors;
 }
 
+void ContainerBasePrivate::mismatchingInterface(InitStageException& errors, const StagePrivate& child,
+                                                const InterfaceFlags mask) const {
+	boost::format desc("%1% interface of '%2%' (%3%) doesn't match mine (%4%)");
+	errors.push_back(*me(), (desc
+	                         % (mask == START_IF_MASK ? "start" : "end")
+	                         % child.name()
+	                         % flowSymbol(child.interfaceFlags() & mask)
+	                         % flowSymbol(interfaceFlags() & mask)).str());
+}
+
 bool ContainerBasePrivate::canCompute() const
 {
 	// call the method of the public interface
@@ -573,7 +583,6 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 void SerialContainerPrivate::validateConnectivity() const
 {
 	InitStageException errors;
-	boost::format desc("%1% interface of '%2%' (%3%) doesn't match mine (%4%)");
 
 	// recursively validate children
 	try { ContainerBasePrivate::validateConnectivity(); }
@@ -585,14 +594,12 @@ void SerialContainerPrivate::validateConnectivity() const
 		const auto my_flags = this->interfaceFlags();
 		auto child_flags = start->interfaceFlags() & START_IF_MASK;
 		if (child_flags != (my_flags & START_IF_MASK))
-			errors.push_back(*me(), (desc % "input" % start->name() % flowSymbol(child_flags)
-			                         % flowSymbol(my_flags & START_IF_MASK)).str());
+			mismatchingInterface(errors, *start, START_IF_MASK);
 
 		const StagePrivate* last = children().back()->pimpl();
 		child_flags = last->interfaceFlags() & END_IF_MASK;
 		if (child_flags != (my_flags & END_IF_MASK))
-			errors.push_back(*me(), (desc % "output" % last->name() % flowSymbol(child_flags)
-			                         % flowSymbol(my_flags & END_IF_MASK)).str());
+			mismatchingInterface(errors, *last, END_IF_MASK);
 	}
 
 	// validate connectivity of children amongst each other
@@ -722,14 +729,16 @@ void ParallelContainerBasePrivate::validateConnectivity() const
 	InitStageException errors;
 	InterfaceFlags my_interface = interfaceFlags();
 	InterfaceFlags children_interfaces;
-	boost::format desc("interface of child '%1%' (%2%) doesn't match mine (%3%)");
 
 	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : children()) {
 		InterfaceFlags current = child->pimpl()->interfaceFlags();
 		children_interfaces |= current;  // compute union of all children interfaces
-		if ((current & my_interface) != current)
-			errors.push_back(*me(), (desc % child->name() % flowSymbol(current) % flowSymbol(my_interface)).str());
+
+		if ((current & my_interface & START_IF_MASK) != (current & START_IF_MASK))
+			mismatchingInterface(errors, *child->pimpl(), START_IF_MASK);
+		if ((current & my_interface & END_IF_MASK) != (current & END_IF_MASK))
+			mismatchingInterface(errors, *child->pimpl(), END_IF_MASK);
 	}
 	// check that there is a child matching the expected push interfaces
 	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))

@@ -122,6 +122,9 @@ protected:
 		bool allowed = (required & WRITES_NEXT_START) || (required == UNKNOWN);
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
+	// report error about mismatching interface (start or end as determined by mask)
+	void mismatchingInterface(InitStageException& errors, const StagePrivate& child,
+	                          const InterfaceFlags mask) const;
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
