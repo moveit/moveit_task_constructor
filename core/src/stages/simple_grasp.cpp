@@ -91,7 +91,7 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.declare<std::string>("object");
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
 
-		allow_touch->setCallback([this, forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
+		allow_touch->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 			collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
 			const std::string& eef = p.get<std::string>("eef");
 			const std::string& object = p.get<std::string>("object");
@@ -125,7 +125,7 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward)
 		p.declare<std::string>("object");
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
 
-		attach->setCallback([this, forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
+		attach->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p){
 				const std::string& eef = p.get<std::string>("eef");
 				moveit_msgs::AttachedCollisionObject obj;
 				obj.object.operation = forward ? (int8_t) moveit_msgs::CollisionObject::ADD

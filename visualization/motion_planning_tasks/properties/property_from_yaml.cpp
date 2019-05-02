@@ -133,6 +133,7 @@ rviz::Property* Parser::process(const yaml_event_t& event,
 	case YAML_SEQUENCE_START_EVENT: return processSequence(name, description, old);
 	case YAML_MAPPING_START_EVENT: return processMapping(name, description, old);
 	case YAML_SCALAR_EVENT: return createScalar(name, description, byteArray(event), old);
+	default: break;
 	}
 	assert(false);  // should not be reached
 }

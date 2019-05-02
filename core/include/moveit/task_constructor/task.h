@@ -89,7 +89,7 @@ public:
 
 	// TODO: use Stage::insert as well?
 	void add(Stage::pointer &&stage);
-	void clear() override;
+	void clear() final;
 
 	/// enable introspection publishing for use with rviz
 	void enableIntrospection(bool enable = true);
@@ -103,7 +103,7 @@ public:
 	void erase(TaskCallbackList::const_iterator which);
 
 	/// reset all stages
-	void reset() override;
+	void reset() final;
 	/// initialize all stages with given scene
 	void init();
 

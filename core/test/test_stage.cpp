@@ -25,7 +25,7 @@ public:
 		pimpl()->setNextStarts(next);
 	}
 
-	void init(const moveit::core::RobotModelConstPtr &robot_model) {
+	void init(const moveit::core::RobotModelConstPtr &robot_model) override {
 		ps.reset((new PlanningScene(robot_model)));
 	}
 

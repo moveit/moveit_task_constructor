@@ -836,7 +836,7 @@ WrapperBase::WrapperBase(const std::string &name, Stage::pointer &&child)
 WrapperBase::WrapperBase(WrapperBasePrivate *impl, Stage::pointer &&child)
    : ParallelContainerBase(impl)
 {
-	if (child) insert(std::move(child));
+	if (child) WrapperBase::insert(std::move(child));
 }
 
 bool WrapperBase::insert(Stage::pointer &&stage, int before)

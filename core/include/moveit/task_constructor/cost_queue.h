@@ -7,12 +7,12 @@
 #include <algorithm>
 
 /// ValueOrPointeeLess provides correct comparison for plain and pointer-like types
-template <typename T, typename Default = void>
+template <typename T, typename = bool>
 struct ValueOrPointeeLess : public std::less<T> {};
 
 /// The following template-specialization is for pointer-like types
 template <typename T>
-struct ValueOrPointeeLess<T, decltype(*std::declval<T>(), std::declval<void>())> {
+struct ValueOrPointeeLess<T, decltype(*std::declval<T>() < *std::declval<T>())> {
 	bool operator()(const T& x, const T& y) const {
 		return *x < *y;
 	}

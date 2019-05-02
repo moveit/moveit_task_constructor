@@ -187,7 +187,7 @@ void Task::enableIntrospection(bool enable)
 	else if (!enable && introspection_) {
 		// reset introspection instance of all stages
 		pimpl()->setIntrospection(nullptr);
-		pimpl()->traverseStages([this](Stage& stage, int) {
+		pimpl()->traverseStages([](Stage& stage, int) {
 			stage.pimpl()->setIntrospection(nullptr);
 			return true;
 		}, 1, UINT_MAX);

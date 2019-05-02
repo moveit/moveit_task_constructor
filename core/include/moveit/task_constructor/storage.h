@@ -192,6 +192,8 @@ class StagePrivate;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase {
 public:
+	virtual ~SolutionBase() = default;
+
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 

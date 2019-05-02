@@ -153,6 +153,8 @@ void GeneratePlacePose::compute() {
 			target_pose.linear() = orig_object_pose.linear();
 			spawner(target_pose, 1);
 			return;
+		default:
+			break;
 		}
 	}
 
