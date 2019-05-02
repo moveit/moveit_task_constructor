@@ -365,8 +365,8 @@ InterfaceFlags SerialContainerPrivate::requiredInterface() const
 {
 	if (children().empty())
 		return UNKNOWN;
-	return (children().front()->pimpl()->interfaceFlags() & INPUT_IF_MASK)
-	     | (children().back()->pimpl()->interfaceFlags() & OUTPUT_IF_MASK);
+	return (children().front()->pimpl()->interfaceFlags() & START_IF_MASK)
+	     | (children().back()->pimpl()->interfaceFlags() & END_IF_MASK);
 }
 
 // connect cur stage to its predecessor and successor by setting the push interface pointers
@@ -472,9 +472,9 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	} else { // otherwise only prune the first / last child's input / output interface
 		StagePrivate* child_impl;
 		child_impl = children().front()->pimpl();
-		child_impl->pruneInterface((accepted & INPUT_IF_MASK) | (child_impl->interfaceFlags() & OUTPUT_IF_MASK));
+		child_impl->pruneInterface((accepted & START_IF_MASK) | (child_impl->interfaceFlags() & END_IF_MASK));
 		child_impl = children().back()->pimpl();
-		child_impl->pruneInterface((accepted & OUTPUT_IF_MASK) | (child_impl->interfaceFlags() & INPUT_IF_MASK));
+		child_impl->pruneInterface((accepted & END_IF_MASK) | (child_impl->interfaceFlags() & START_IF_MASK));
 	}
 
 	// reset my pull interfaces, if first/last child don't pull anymore
@@ -563,16 +563,16 @@ void SerialContainerPrivate::validateConnectivity() const
 	if (!children().empty()) {
 		const StagePrivate* start = children().front()->pimpl();
 		const auto my_flags = this->interfaceFlags();
-		auto child_flags = start->interfaceFlags() & INPUT_IF_MASK;
-		if (child_flags != (my_flags & INPUT_IF_MASK))
+		auto child_flags = start->interfaceFlags() & START_IF_MASK;
+		if (child_flags != (my_flags & START_IF_MASK))
 			errors.push_back(*me(), (desc % "input" % start->name() % flowSymbol(child_flags)
-			                         % flowSymbol(my_flags & INPUT_IF_MASK)).str());
+			                         % flowSymbol(my_flags & START_IF_MASK)).str());
 
 		const StagePrivate* last = children().back()->pimpl();
-		child_flags = last->interfaceFlags() & OUTPUT_IF_MASK;
-		if (child_flags != (my_flags & OUTPUT_IF_MASK))
+		child_flags = last->interfaceFlags() & END_IF_MASK;
+		if (child_flags != (my_flags & END_IF_MASK))
 			errors.push_back(*me(), (desc % "output" % last->name() % flowSymbol(child_flags)
-			                         % flowSymbol(my_flags & OUTPUT_IF_MASK)).str());
+			                         % flowSymbol(my_flags & END_IF_MASK)).str());
 	}
 
 	// validate connectivity of children amongst each other
