@@ -533,8 +533,9 @@ void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator firs
 	// 1st sweep: remove push interfaces
 	for (auto it = first; it != end; ++it) {
 		StagePrivate* impl = (*it)->pimpl();
-		// range should only contain stages with unknown required interface
-		assert(impl->requiredInterface() == UNKNOWN);
+		// the required interface should be a subset of the accepted one
+		if ((impl->requiredInterface() & accepted) != impl->requiredInterface())
+			throw InitStageException(*impl->me(), "Required interface not satisfied after pruning");
 
 		// remove push interfaces if not accepted
 		if (!(accepted & WRITES_PREV_END))
