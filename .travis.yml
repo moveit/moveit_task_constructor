@@ -15,10 +15,10 @@ notifications:
 env:
   global:
     - ROS_DISTRO=melodic
-    - ROS_REPO=ros
     - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
-    - ROS_DISTRO=melodic
+    - ROS_REPO=ros
+    - DOCKER_IMAGE=moveit/moveit:master-source
 
 before_script:
   - git clone -q --depth=1 https://github.com/ros-planning/moveit_ci.git .moveit_ci

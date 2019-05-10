@@ -10,5 +10,5 @@
     version: master
 - git:
     local-name: mtc_pour
-    uri: https://github.com/rhaschke/mtc_pour.git
+    uri: https://github.com/TAMS-Group/mtc_pour.git
     version: master
