@@ -71,6 +71,20 @@ void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link)
 	setIKFrame(pose_msg);
 }
 
+void MoveTo::setGoal(const std::map<std::string, double>& joints) {
+	moveit_msgs::RobotState robot_state;
+	robot_state.joint_state.name.reserve(joints.size());
+	robot_state.joint_state.position.reserve(joints.size());
+
+	for (auto& joint : joints)
+	{
+		robot_state.joint_state.name.push_back(joint.first);
+		robot_state.joint_state.position.push_back(joint.second);
+	}
+	robot_state.is_diff = true;
+	setProperty("goal", robot_state);
+}
+
 void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
 {
 	PropagatingEitherWay::init(robot_model);

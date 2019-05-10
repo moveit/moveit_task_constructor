@@ -95,6 +95,9 @@ public:
 		setProperty("goal", robot_state);
 	}
 
+	/// move joints by name to their mapped target value
+	void setGoal(const std::map<std::string, double>& joints);
+
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
 		setProperty("path_constraints", std::move(path_constraints));
 	}
