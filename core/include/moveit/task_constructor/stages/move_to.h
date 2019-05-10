@@ -95,19 +95,7 @@ public:
 	}
 
 	/// move joints by name to their mapped target value
-	void setGoal(const std::map<std::string, double>& joints) {
-		moveit_msgs::RobotState robot_state;
-		robot_state.joint_state.name.reserve(joints.size());
-		robot_state.joint_state.position.reserve(joints.size());
-
-		for (auto& joint : joints)
-		{
-			robot_state.joint_state.name.push_back(joint.first);
-			robot_state.joint_state.position.push_back(joint.second);
-		}
-		robot_state.is_diff = true;
-		setProperty("goal", robot_state);
-	}
+	void setGoal(const std::map<std::string, double>& joints);
 
 	void setPathConstraints(moveit_msgs::Constraints path_constraints){
 		setProperty("path_constraints", std::move(path_constraints));
