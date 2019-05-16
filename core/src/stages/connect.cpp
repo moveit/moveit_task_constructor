@@ -187,12 +187,12 @@ SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::
 {
 	assert(sub_trajectories.size() + 1 == intermediate_scenes.size());
 	auto scene_it = intermediate_scenes.begin();
-	planning_scene::PlanningSceneConstPtr start = *scene_it;
+	planning_scene::PlanningSceneConstPtr start_ps = *scene_it;
 	const InterfaceState* state = &from;
 
 	SolutionSequence::container_type sub_solutions;
 	for (const auto &sub : sub_trajectories) {
-		planning_scene::PlanningSceneConstPtr end = *++scene_it;
+		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
 
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
 		inserted->setCreator(pimpl_);
@@ -201,14 +201,15 @@ SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::
 
 		// provide meaningful start/end states
 		subsolutions_.back().setStartState(*state);
-		state = &*states_.insert(states_.end(), InterfaceState(end));
 
-		if (sub_solutions.size() < sub_trajectories.size())
+		// for all but last scene, create a new state
+		if (sub_solutions.size() < sub_trajectories.size()) {
+			state = &*states_.insert(states_.end(), InterfaceState(end_ps));
 			subsolutions_.back().setEndState(*state);
-		else
+		} else
 			subsolutions_.back().setEndState(to);
 
-		start = end;
+		start_ps = end_ps;
 	}
 
 	return std::make_shared<SolutionSequence>(std::move(sub_solutions));
