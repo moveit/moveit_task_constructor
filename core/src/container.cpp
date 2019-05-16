@@ -304,8 +304,19 @@ struct SolutionCollector {
 	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
 
 	void operator()(const SolutionSequence::container_type& trace, double cost) {
-		// traced path should not extend past container boundaries
-		assert(trace.size() <= max_depth);
+#ifndef NDEBUG
+		// Traced path should not extend past container boundaries, i.e. trace.size() <= max_depth
+		// However, as the Merging-Connect's solution may be composed of several subsolutions, we need to disregard those
+		size_t len = trace.size();
+		const StagePrivate* prev_creator = nullptr;
+		for (const auto& s : trace) {
+			if (s->creator() == prev_creator)
+				--len;
+			else
+				prev_creator = s->creator();
+		}
+		assert(len <= max_depth);
+#endif
 		solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
