@@ -176,10 +176,8 @@ TaskListModel::~TaskListModel() {
 	// inform MetaTaskListModel that we will remove our stuff
 	removeRows(0, rowCount());
 	// free RemoteTaskModels
-	for (auto& pair : remote_tasks_) {
-		if (pair.second)
-			delete pair.second;
-	}
+	for (auto& pair : remote_tasks_)
+		delete pair.second;
 }
 
 void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr &scene)
@@ -352,7 +350,7 @@ bool TaskListModel::dropMimeData(const QMimeData *mime, Qt::DropAction action, i
 		std::unique_ptr<moveit::task_constructor::ContainerBase> container
 		      (dynamic_cast<moveit::task_constructor::ContainerBase*>(stage));
 		if (!container) { // only accept container at root level
-			if (stage) delete stage;
+			delete stage;
 			return false;
 		}
 

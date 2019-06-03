@@ -166,9 +166,7 @@ TaskSolutionVisualization::~TaskSolutionVisualization()
 
   scene_render_.reset();
   robot_render_.reset();
-  if (slider_dock_panel_)
-    delete slider_dock_panel_;
-
+  delete slider_dock_panel_;
   delete marker_visual_;
 
   if (main_scene_node_)

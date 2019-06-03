@@ -297,10 +297,8 @@ void TaskDisplay::onTasksRemoved(const QModelIndex &parent, int first, int last)
 {
 	if (parent.isValid()) return; // only handle top-level items
 
-	for (; first <= last; ++first) {
-		rviz::Property *child = tasks_property_->takeChildAt(first);
-		delete child;
-	}
+	for (; first <= last; ++first)
+		delete tasks_property_->takeChildAt(first);
 }
 
 void TaskDisplay::onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
