@@ -43,6 +43,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <ros/console.h>
+#include <utility>
 
 namespace moveit { namespace task_constructor {
 

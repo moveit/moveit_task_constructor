@@ -69,6 +69,7 @@ namespace moveit { namespace task_constructor {
 class ContainerBasePrivate : public StagePrivate
 {
 	friend class ContainerBase;
+	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	typedef StagePrivate::container_type container_type;

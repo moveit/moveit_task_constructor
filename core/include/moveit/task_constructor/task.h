@@ -51,16 +51,13 @@ namespace moveit { namespace core {
 	MOVEIT_CLASS_FORWARD(RobotState)
 }}
 
-namespace robot_model_loader {
-	MOVEIT_CLASS_FORWARD(RobotModelLoader)
-}
-
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
+class TaskPrivate;
 /** A Task is the root of a tree of stages.
  *
  * Actually a tasks wraps a single container (by default a SerialContainer),
@@ -68,6 +65,8 @@ MOVEIT_CLASS_FORWARD(Task)
  */
 class Task : protected WrapperBase {
 public:
+	PRIVATE_CLASS(Task)
+
 	// +1 TODO: move into MoveIt! core
 	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
 	                                                            const std::string &ns = "move_group",
@@ -81,7 +80,7 @@ public:
 
 	std::string id() const;
 
-	const moveit::core::RobotModelConstPtr& getRobotModel() const { return robot_model_; }
+	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
 	/// load robot model from given parameter
@@ -146,14 +145,6 @@ protected:
 	void onNewSolution(const SolutionBase &s) override;
 
 private:
-	std::string id_;
-	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
-	moveit::core::RobotModelConstPtr robot_model_;
-	bool preempt_requested_;
-
-	// introspection and monitoring
-	std::unique_ptr<Introspection> introspection_;
-	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {

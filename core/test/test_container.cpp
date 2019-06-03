@@ -1,6 +1,9 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/stage_p.h>
-#include <moveit/task_constructor/task.h>
+#include <moveit/task_constructor/task_p.h>
+#include <moveit/task_constructor/stages/fixed_state.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/utils/robot_model_test_utils.h>
 
 #include "gtest_value_printers.h"
 #include <gtest/gtest.h>
@@ -14,6 +17,15 @@ public:
 	GeneratorMockup(int runs = 0) : Generator("generator"), runs(runs) {}
 	bool canCompute() const override { return runs > 0; }
 	void compute() override { if (runs > 0) --runs; }
+};
+
+class MonitoringGeneratorMockup : public MonitoringGenerator {
+public:
+	MonitoringGeneratorMockup(Stage* monitored)
+	   : MonitoringGenerator("monitoring generator", monitored) {}
+	bool canCompute() const override { return false; }
+	void compute() override {}
+	void onNewSolution(const SolutionBase &s) override {}
 };
 
 class PropagatorMockup : public PropagatingEitherWay {
@@ -535,4 +547,41 @@ TEST(Task, move) {
 	t1 = std::move(t2);
 	EXPECT_EQ(t1.stages()->numChildren(), 2u);
 	EXPECT_EQ(t2.stages()->numChildren(), 0u);
+}
+
+TEST(Task, reuse) {
+	// create dummy robot model
+	moveit::core::RobotModelBuilder builder("robot", "base");
+   builder.addChain("base->a->b->c", "continuous");
+   builder.addGroupChain("base", "c", "group");
+   moveit::core::RobotModelConstPtr robot_model = builder.build();
+
+	Task t("first");
+	t.setRobotModel(robot_model);
+
+	auto configure = [] (Task& t) {
+		auto ref = new stages::FixedState("fixed");
+		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
+		ref->setState(scene);
+
+		t.add(Stage::pointer(ref));
+		t.add(std::make_unique<ConnectMockup>());
+		t.add(std::make_unique<MonitoringGeneratorMockup>(ref));
+	};
+
+	try {
+		configure(t);
+		t.plan(1);
+
+		t = Task("second");
+		t.setRobotModel(robot_model);
+		EXPECT_EQ(static_cast<void*>(t.pimpl()->me()), static_cast<void*>(&t));
+		EXPECT_EQ(t.pimpl()->children().size(), 1u);
+		EXPECT_EQ(static_cast<void*>(t.stages()->pimpl()->parent()), static_cast<void*>(&t));
+
+		configure(t);
+		t.plan(1);
+	} catch (const InitStageException &e) {
+		ADD_FAILURE() << "InitStageException:" << std::endl << e << t;
+	}
 }

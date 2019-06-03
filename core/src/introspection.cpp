@@ -35,6 +35,7 @@
 /* Authors: Robert Haschke */
 
 #include <moveit/task_constructor/stage_p.h>
+#include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/storage.h>
@@ -59,8 +60,8 @@ std::string getProcessId() {
 
 class IntrospectionPrivate {
 public:
-	IntrospectionPrivate(const Task &task)
-	   : nh_(std::string("~/") + task.id()) // topics + services are advertised in private namespace
+	IntrospectionPrivate(const TaskPrivate *task)
+	   : nh_(std::string("~/") + task->id()) // topics + services are advertised in private namespace
 	   , task_(task)
 	   , process_id_(getProcessId())
 	{
@@ -72,14 +73,14 @@ public:
 	void resetMaps () {
 		// reset maps
 		stage_to_id_map_.clear();
-		stage_to_id_map_[&task_] = 0; // root is task having ID = 0
+		stage_to_id_map_[task_] = 0; // root is task having ID = 0
 
 		id_solution_bimap_.clear();
 	}
 
 	ros::NodeHandle nh_;
 	/// associated task
-	const Task &task_;
+	const TaskPrivate *task_;
 	const std::string process_id_;
 
 	/// publish task detailed description and current state
@@ -91,11 +92,11 @@ public:
 	ros::ServiceServer get_solution_service_;
 
 	/// mapping from stages to their id
-	std::map<const void*, moveit_task_constructor_msgs::StageStatistics::_id_type> stage_to_id_map_;
+	std::map<const StagePrivate*, moveit_task_constructor_msgs::StageStatistics::_id_type> stage_to_id_map_;
 	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
 };
 
-Introspection::Introspection(const Task &task)
+Introspection::Introspection(const TaskPrivate* task)
    : impl(new IntrospectionPrivate(task))
 {
 	impl->get_solution_service_ = impl->nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, this);
@@ -123,7 +124,7 @@ void Introspection::reset()
 	// send empty task description message to indicate reset
 	::moveit_task_constructor_msgs::TaskDescription msg;
 	msg.process_id = impl->process_id_;
-	msg.id = impl->task_.id();
+	msg.id = impl->task_->id();
 	impl->task_description_publisher_.publish(msg);
 
 	impl->resetMaps();
@@ -139,7 +140,7 @@ void Introspection::fillSolution(moveit_task_constructor_msgs::Solution &msg,
 {
 	s.fillMessage(msg, this);
 	msg.process_id = impl->process_id_;
-	msg.task_id = impl->task_.id();
+	msg.task_id = impl->task_->id();
 	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
 }
 
@@ -152,7 +153,7 @@ void Introspection::publishSolution(const SolutionBase &s)
 
 void Introspection::publishAllSolutions(bool wait)
 {
-	for (const auto& solution : impl->task_.solutions()) {
+	for (const auto& solution : impl->task_->stages()->solutions()) {
 		publishSolution(*solution);
 
 		if (wait) {
@@ -183,11 +184,11 @@ bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Reque
 
 uint32_t Introspection::stageId(const Stage* const s)
 {
-	return impl->stage_to_id_map_.insert(std::make_pair(s, impl->stage_to_id_map_.size())).first->second;
+	return impl->stage_to_id_map_.insert(std::make_pair(s->pimpl(), impl->stage_to_id_map_.size())).first->second;
 }
 uint32_t Introspection::stageId(const Stage* const s) const
 {
-	auto it = impl->stage_to_id_map_.find(s);
+	auto it = impl->stage_to_id_map_.find(s->pimpl());
 	if (it == impl->stage_to_id_map_.end())
 		throw std::runtime_error("unknown stage");
 	return it->second;
@@ -232,7 +233,7 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 			desc.properties.push_back(p);
 		}
 
-		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent());
+		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent()->pimpl());
 		assert (it != impl->stage_to_id_map_.cend());
 		desc.parent_id = it->second;
 
@@ -242,9 +243,9 @@ moveit_task_constructor_msgs::TaskDescription& Introspection::fillTaskDescriptio
 	};
 
 	msg.stages.clear();
-	impl->task_.stages()->traverseRecursively(stageProcessor);
+	impl->task_->stages()->traverseRecursively(stageProcessor);
 
-	msg.id = impl->task_.id();
+	msg.id = impl->task_->id();
 	msg.process_id = impl->process_id_;
 	return msg;
 }
@@ -264,9 +265,9 @@ moveit_task_constructor_msgs::TaskStatistics& Introspection::fillTaskStatistics(
 	};
 
 	msg.stages.clear();
-	impl->task_.stages()->traverseRecursively(stageProcessor);
+	impl->task_->stages()->traverseRecursively(stageProcessor);
 
-	msg.id = impl->task_.id();
+	msg.id = impl->task_->id();
 	msg.process_id = impl->process_id_;
 	return msg;
 }

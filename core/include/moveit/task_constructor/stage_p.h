@@ -54,6 +54,7 @@ class ContainerBase;
 class StagePrivate {
 	friend class Stage;
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	/// container type used to store children
@@ -124,7 +125,7 @@ public:
 	bool storeFailures() const { return introspection_ != nullptr; }
 
 protected:
-	Stage* const me_; // associated/owning Stage instance
+	Stage* me_; // associated/owning Stage instance
 	std::string name_;
 	PropertyMap properties_;
 

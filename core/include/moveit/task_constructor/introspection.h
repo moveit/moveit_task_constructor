@@ -52,9 +52,9 @@
 namespace moveit { namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Stage)
-MOVEIT_CLASS_FORWARD(Task)
 MOVEIT_CLASS_FORWARD(SolutionBase)
 
+class TaskPrivate;
 class IntrospectionPrivate;
 
 /** The Introspection class provides publishing of task state and solutions.
@@ -65,7 +65,7 @@ class Introspection {
 	IntrospectionPrivate *impl;
 
 public:
-	Introspection(const Task &task);
+	Introspection(const TaskPrivate *task);
 	Introspection(const Introspection &other) = delete;
 	~Introspection();
 
