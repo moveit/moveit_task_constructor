@@ -219,21 +219,32 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
                                 const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                 const moveit::core::RobotState& state)
 {
+	// set cost
+	double cost = 0;
+	for (const auto& trajectory: sub_trajectories) {
+		for (const double& d: trajectory->getWayPointDurations()) {
+			cost += d;
+		}
+	}
+
 	// no need to merge if there is only a single sub trajectory
-	if (sub_trajectories.size() == 1)
-		return std::make_shared<SubTrajectory>(sub_trajectories[0]);
+	if (sub_trajectories.size() == 1) {
+		return std::make_shared<SubTrajectory>(sub_trajectories[0], cost);
+	}
 
 	auto jmg = merged_jmg_.get();
 	assert(jmg);
 	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg);
-	if (!trajectory)
+	if (!trajectory) {
 		return SubTrajectoryPtr();
+	}
 
 	// check merged trajectory for collisions
-	if (!intermediate_scenes.front()->isPathValid(*trajectory, properties().get<moveit_msgs::Constraints>("path_constraints")))
+	if (!intermediate_scenes.front()->isPathValid(*trajectory, properties().get<moveit_msgs::Constraints>("path_constraints"))) {
 		return SubTrajectoryPtr();
+	}
 
-	return std::make_shared<SubTrajectory>(trajectory);
+	return std::make_shared<SubTrajectory>(trajectory, cost);
 }
 
 } } }
