@@ -236,8 +236,8 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 	// set cost
 	double cost = 0;
-	for (const double& d: robot_trajectory->getWayPointDurations()) {
-		cost += d;
+	for (const double& distance: robot_trajectory->getWayPointDurations()) {
+		cost += distance;
 	}
 
 	// store result

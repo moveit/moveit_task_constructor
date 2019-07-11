@@ -222,8 +222,8 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 	// set cost
 	double cost = 0;
 	for (const auto& trajectory: sub_trajectories) {
-		for (const double& d: trajectory->getWayPointDurations())
-			cost += d;
+		for (const double& distance: trajectory->getWayPointDurations())
+			cost += distance;
 	}
 
 	// no need to merge if there is only a single sub trajectory
