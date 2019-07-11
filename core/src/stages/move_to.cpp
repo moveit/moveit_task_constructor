@@ -234,11 +234,18 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 	}
 
+	// set cost
+	double cost = 0;
+	for (const double& d: robot_trajectory->getWayPointDurations()) {
+		cost += d;
+	}
+
 	// store result
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD) robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
+		solution.setCost(cost);
 		if (!success)
 			solution.markAsFailure();
 	}
