@@ -379,7 +379,7 @@ void ComputeIK::compute()
 		tried_current_state_as_seed= true;
 
 		size_t previous = ik_solutions.size();
-		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link->getName(), remaining_time, isValid);
+		bool succeeded = sandbox_state.setFromIK(jmg, target_pose, link->getName(), 1, remaining_time, isValid);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();

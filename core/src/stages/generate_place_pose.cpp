@@ -53,6 +53,7 @@ GeneratePlacePose::GeneratePlacePose(const std::string& name)
 	auto& p = properties();
 	p.declare<std::string>("object");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame");
+	p.declare<bool>("augment_rotations");
 }
 
 void GeneratePlacePose::onNewSolution(const SolutionBase& s)
@@ -138,25 +139,27 @@ void GeneratePlacePose::compute() {
 		}
 	};
 
-	if (object->getShapes().size() == 1) {
-		switch (object->getShapes()[0]->type) {
-		case shapes::CYLINDER:
-			spawner(target_pose, 2);
-			return;
+  if (props.get<bool>("augment_rotations")) {
+    if (object->getShapes().size() == 1) {
+      switch (object->getShapes()[0]->type) {
+        case shapes::CYLINDER:
+          spawner(target_pose, 2);
+          return;
 
-		case shapes::BOX: {  // consider 180/90 degree rotations about z axis
-			const double *dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
-			spawner(target_pose, 2, (std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
-			return;
-		}
-		case shapes::SPHERE:  // keep original orientation and rotate about world's z
-			target_pose.linear() = orig_object_pose.linear();
-			spawner(target_pose, 1);
-			return;
-		default:
-			break;
-		}
-	}
+        case shapes::BOX: {  // consider 180/90 degree rotations about z axis
+                            const double *dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
+                            spawner(target_pose, 2, (std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
+                            return;
+                          }
+        case shapes::SPHERE:  // keep original orientation and rotate about world's z
+                          target_pose.linear() = orig_object_pose.linear();
+                          spawner(target_pose, 1);
+                          return;
+        default:
+                          break;
+      }
+    }
+  }
 
 	// any other case: only try given target pose
 	spawner(target_pose, 1, 1);

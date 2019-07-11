@@ -54,6 +54,9 @@ public:
 
 	void setObject(const std::string &object) { setProperty("object", object); }
 
+	void setAugmentRotations(bool augment_rotations) { setProperty("augment_rotations",
+                                                                  augment_rotations); }
+
 protected:
 	void onNewSolution(const SolutionBase& s) override;
 };
