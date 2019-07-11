@@ -56,6 +56,7 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name)
 
 	p.declare<boost::any>("pregrasp", "pregrasp posture");
 	p.declare<boost::any>("grasp", "grasp posture");
+        p.declare<bool>("top_grasp_enabled", "If true grasps from top instead of the side");
 }
 
 void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
@@ -126,10 +127,48 @@ void GenerateGraspPose::compute() {
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
+        // Top Grasp functionality
+        bool top_grasp = props.get<bool>("top_grasp_enabled");
+        Eigen::Isometry3d top_pose = Eigen::Isometry3d::Identity();
+        Eigen::Vector3d rotation = Eigen::Vector3d::UnitZ();
+        if (top_grasp)
+        {
+                // Get object
+                auto col_obj = scene->getWorld()->getObject(props.get<std::string>("object"));
+                double object_height = 0.0;
+                if (col_obj && !(*col_obj).shapes_.empty())
+                {
+                        if ((*(*col_obj).shapes_[0]).type == shapes::ShapeType::CYLINDER)
+                        {
+                                const shapes::Cylinder* cylinder = dynamic_cast<const shapes::Cylinder*>((*col_obj).shapes_[0].get());
+                                object_height = cylinder->length;
+                        }
+                        else if ((*(*col_obj).shapes_[0]).type == shapes::ShapeType::BOX)
+                        {
+                                const shapes::Box* box = dynamic_cast<const shapes::Box*>((*col_obj).shapes_[0].get());
+                                object_height = box->size[2];
+                        }
+                        else if ((*(*col_obj).shapes_[0]).type == shapes::ShapeType::SPHERE)
+                        {
+                                const shapes::Sphere* sphere = dynamic_cast<const shapes::Sphere*>((*col_obj).shapes_[0].get());
+                                object_height = 0;
+                        }
+                        else if ((*(*col_obj).shapes_[0]).type == shapes::ShapeType::CONE)
+                        {
+                                const shapes::Cone* cone = dynamic_cast<const shapes::Cone*>((*col_obj).shapes_[0].get());
+                                object_height = cone->length;
+                        }
+
+                        // Make Get new pose
+                        top_pose = Eigen::Translation3d(0, 0, object_height / 2 ) * Eigen::AngleAxisd( M_PI / 2, Eigen::Vector3d::UnitY());
+                        rotation = Eigen::Vector3d::UnitX();
+                }
+        }
+
 	double current_angle_ = 0.0;
 	while (current_angle_ < 2.*M_PI && current_angle_ > -2.*M_PI) {
 		// rotate object pose about z-axis
-		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
+                Eigen::Isometry3d target_pose = top_pose * (Eigen::AngleAxisd(current_angle_, rotation));
 		current_angle_ += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);
