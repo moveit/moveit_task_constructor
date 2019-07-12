@@ -552,9 +552,9 @@ TEST(Task, move) {
 TEST(Task, reuse) {
 	// create dummy robot model
 	moveit::core::RobotModelBuilder builder("robot", "base");
-   builder.addChain("base->a->b->c", "continuous");
-   builder.addGroupChain("base", "c", "group");
-   moveit::core::RobotModelConstPtr robot_model = builder.build();
+	builder.addChain("base->a->b->c", "continuous");
+	builder.addGroupChain("base", "c", "group");
+	moveit::core::RobotModelConstPtr robot_model = builder.build();
 
 	Task t("first");
 	t.setRobotModel(robot_model);
