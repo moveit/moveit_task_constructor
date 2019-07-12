@@ -190,6 +190,13 @@ SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::
 	planning_scene::PlanningSceneConstPtr start_ps = *scene_it;
 	const InterfaceState* state = &from;
 
+	// calculate cost
+	double cost = 0;
+	for (const auto& trajectory: sub_trajectories) {
+		for (const double& distance: trajectory->getWayPointDurations())
+			cost += distance;
+	}
+
 	SolutionSequence::container_type sub_solutions;
 	for (const auto &sub : sub_trajectories) {
 		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
@@ -212,14 +219,14 @@ SolutionSequencePtr Connect::makeSequential(const std::vector<robot_trajectory::
 		start_ps = end_ps;
 	}
 
-	return std::make_shared<SolutionSequence>(std::move(sub_solutions));
+	return std::make_shared<SolutionSequence>(std::move(sub_solutions), cost);
 }
 
 SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                                 const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                 const moveit::core::RobotState& state)
 {
-	// set cost
+	// calculate cost
 	double cost = 0;
 	for (const auto& trajectory: sub_trajectories) {
 		for (const double& distance: trajectory->getWayPointDurations())
