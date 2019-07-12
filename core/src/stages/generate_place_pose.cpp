@@ -51,9 +51,9 @@ GeneratePlacePose::GeneratePlacePose(const std::string& name)
    : GeneratePose(name)
 {
 	auto& p = properties();
-	p.declare<std::string>("object");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame");
-	p.declare<bool>("augment_rotations");
+	p.declare<std::string>("object", "The id of the attached object");
+	p.declare<geometry_msgs::PoseStamped>("ik_frame", "The IK frame transform considered for sampled poses");
+	p.declare<bool>("consider_symmetry", true, "Enable sampling shape-symmetric rotations around the Z-axis");
 }
 
 void GeneratePlacePose::onNewSolution(const SolutionBase& s)
@@ -139,7 +139,7 @@ void GeneratePlacePose::compute() {
 		}
 	};
 
-  if (props.get<bool>("augment_rotations")) {
+  if (props.get<bool>("consider_symmetry")) {
     if (object->getShapes().size() == 1) {
       switch (object->getShapes()[0]->type) {
         case shapes::CYLINDER:
