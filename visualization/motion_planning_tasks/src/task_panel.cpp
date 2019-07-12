@@ -56,6 +56,7 @@
 #include <rviz/panel_dock_widget.h>
 #include <ros/console.h>
 #include <QPointer>
+#include <QButtonGroup>
 
 namespace moveit_rviz_plugin {
 
