@@ -1,4 +1,4 @@
-<package>
+<package format="2">
 	<name>moveit_task_constructor_core</name>
 	<version>0.0.0</version>
 	<description>MoveIt Task Pipeline</description>
@@ -9,27 +9,18 @@
 
 	<buildtool_depend>catkin</buildtool_depend>
 
-	<build_depend>eigen_conversions</build_depend>
-	<build_depend>geometry_msgs</build_depend>
-	<build_depend>roscpp</build_depend>
-	<build_depend>moveit_core</build_depend>
-	<build_depend>moveit_ros_planning</build_depend>
-	<build_depend>moveit_ros_planning_interface</build_depend>
-	<build_depend>moveit_task_constructor_msgs</build_depend>
-	<build_depend>visualization_msgs</build_depend>
-	<build_depend>rviz_marker_tools</build_depend>
-
-	<run_depend>eigen_conversions</run_depend>
-	<run_depend>geometry_msgs</run_depend>
-	<run_depend>roscpp</run_depend>
-	<run_depend>moveit_core</run_depend>
-	<run_depend>moveit_ros_planning</run_depend>
-	<run_depend>moveit_ros_planning_interface</run_depend>
-	<run_depend>moveit_task_constructor_msgs</run_depend>
-	<run_depend>visualization_msgs</run_depend>
-	<run_depend>rviz_marker_tools</run_depend>
+	<depend>eigen_conversions</depend>
+	<depend>geometry_msgs</depend>
+	<depend>roscpp</depend>
+	<depend>moveit_core</depend>
+	<depend>moveit_ros_planning</depend>
+	<depend>moveit_ros_planning_interface</depend>
+	<depend>moveit_task_constructor_msgs</depend>
+	<depend>visualization_msgs</depend>
+	<depend>rviz_marker_tools</depend>
 
 	<test_depend>rosunit</test_depend>
+	<test_depend>rostest</test_depend>
 
 	<export>
 		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>

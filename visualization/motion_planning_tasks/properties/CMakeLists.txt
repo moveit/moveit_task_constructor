@@ -4,7 +4,7 @@ set(SOURCES
 	property_factory.cpp
 )
 
-include(FindPkgConfig)
+find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML yaml-0.1)
 if (YAML_FOUND)
 	# Only cmake > 3.12 provides XXX_LINK_LIBRARIES. Find the absolute path manually

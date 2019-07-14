@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-	<package>
+<package format="2">
 	<name>moveit_task_constructor_capabilities</name>
 	<version>0.0.0</version>
 	<description>
@@ -13,16 +12,12 @@
 
 	<buildtool_depend>catkin</buildtool_depend>
 
-	<build_depend>moveit_core</build_depend>
-	<build_depend>moveit_ros_move_group</build_depend>
-	<build_depend>pluginlib</build_depend>
-	<build_depend>std_msgs</build_depend>
-	<build_depend>moveit_task_constructor_msgs</build_depend>
-
-	<run_depend>moveit_core</run_depend>
-	<run_depend>moveit_ros_move_group</run_depend>
-	<run_depend>pluginlib</run_depend>
-	<run_depend>std_msgs</run_depend>
+	<depend>moveit_core</depend>
+	<depend>moveit_ros_move_group</depend>
+	<depend>actionlib</depend>
+	<depend>pluginlib</depend>
+	<depend>std_msgs</depend>
+	<depend>moveit_task_constructor_msgs</depend>
 
 	<export>
 		<moveit_ros_move_group plugin="${prefix}/capabilities_plugin_description.xml"/>
