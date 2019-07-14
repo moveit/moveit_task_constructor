@@ -45,12 +45,15 @@
 #include <map>
 #include <climits>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(JointModelGroup)
 MOVEIT_CLASS_FORWARD(RobotState)
-} }
+}
+}
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
 /* A container needs to decouple its own (external) interfaces
  * from those (internal) of its children.
@@ -89,12 +92,11 @@ public:
 	bool remove(ContainerBasePrivate::const_iterator pos);
 
 	/// traversing all stages up to max_depth
-	bool traverseStages(const ContainerBase::StageCallback &processor,
-	                    unsigned int cur_depth, unsigned int max_depth) const;
+	bool traverseStages(const ContainerBase::StageCallback& processor, unsigned int cur_depth,
+	                    unsigned int max_depth) const;
 
 	/// non-const version
-	bool traverseStages(const NonConstStageCallback &processor,
-	                    unsigned int cur_depth, unsigned int max_depth) {
+	bool traverseStages(const NonConstStageCallback& processor, unsigned int cur_depth, unsigned int max_depth) {
 		const auto& const_processor = [&processor](const Stage& stage, unsigned int depth) {
 			return processor(const_cast<Stage&>(stage), depth);
 		};
@@ -111,7 +113,7 @@ public:
 	InterfacePtr pendingForward() const { return pending_forward_; }
 
 protected:
-	ContainerBasePrivate(ContainerBase *me, const std::string &name);
+	ContainerBasePrivate(ContainerBase* me, const std::string& name);
 
 	// Set child's push interfaces: allow pushing if child requires it or
 	// if the interface is unknown: in this case greedily assume a push interface.
@@ -127,14 +129,12 @@ protected:
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 	// report error about mismatching interface (start or end as determined by mask)
-	void mismatchingInterface(InitStageException& errors, const StagePrivate& child,
-	                          const InterfaceFlags mask) const;
+	void mismatchingInterface(InitStageException& errors, const StagePrivate& child, const InterfaceFlags mask) const;
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 	/// lift solution from internal to external level
-	void liftSolution(SolutionBasePtr solution,
-	                  const InterfaceState *internal_from, const InterfaceState *internal_to);
+	void liftSolution(SolutionBasePtr solution, const InterfaceState* internal_from, const InterfaceState* internal_to);
 
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }
@@ -154,17 +154,17 @@ private:
 };
 PIMPL_FUNCTIONS(ContainerBase)
 
-
 /* A solution of a SerialContainer needs to connect start to end via a full path.
  * The solution of a single child stage is usually disconnected to the container's start or end.
  * Only if all the children in the chain have found a coherent solution from start to end,
  * this solution can be announced as a solution of the SerialContainer.
  */
-class SerialContainerPrivate : public ContainerBasePrivate {
+class SerialContainerPrivate : public ContainerBasePrivate
+{
 	friend class SerialContainer;
 
 public:
-	SerialContainerPrivate(SerialContainer* me, const std::string &name);
+	SerialContainerPrivate(SerialContainer* me, const std::string& name);
 
 	// containers derive their required interface from their children
 	InterfaceFlags requiredInterface() const override;
@@ -179,51 +179,45 @@ private:
 	bool connect(container_type::const_iterator cur);
 
 	// called by init() to prune interfaces for children in range [first, last)
-	void pruneInterfaces(container_type::const_iterator first,
-	                     container_type::const_iterator end);
+	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end);
 	// prune interface for children in range [first, last) to given direction
-	void pruneInterfaces(container_type::const_iterator first,
-	                     container_type::const_iterator end,
+	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end,
 	                     InterfaceFlags accepted);
 	// store first/last child's interface as required for this container
-	void storeRequiredInterface(container_type::const_iterator first,
-	                            container_type::const_iterator end);
+	void storeRequiredInterface(container_type::const_iterator first, container_type::const_iterator end);
 
 private:
 	InterfaceFlags required_interface_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
-
 /** Wrap an existing solution - for use in parallel containers and wrappers.
  *
  * This essentially wraps a solution of a child and thus allows
  * for new clones of start / end states, which in turn will
  * have separate incoming/outgoing trajectories */
-class WrappedSolution : public SolutionBase {
+class WrappedSolution : public SolutionBase
+{
 public:
 	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost, std::string comment)
-		: SolutionBase(creator, cost, std::move(comment)), wrapped_(wrapped)
-	{}
+	  : SolutionBase(creator, cost, std::move(comment)), wrapped_(wrapped) {}
 	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped, double cost)
-		: SolutionBase(creator, cost), wrapped_(wrapped)
-	{}
+	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(StagePrivate* creator, const SolutionBase* wrapped)
-		: WrappedSolution(creator, wrapped, wrapped->cost())
-	{}
-	void fillMessage(moveit_task_constructor_msgs::Solution &solution,
+	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
+	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
 
 private:
 	const SolutionBase* wrapped_;
 };
 
-
-class ParallelContainerBasePrivate : public ContainerBasePrivate {
+class ParallelContainerBasePrivate : public ContainerBasePrivate
+{
 	friend class ParallelContainerBase;
 
 public:
-	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string &name);
+	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name);
 
 	// containers derive their required interface from their children
 	InterfaceFlags requiredInterface() const override;
@@ -239,8 +233,8 @@ private:
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
-
-class WrapperBasePrivate : public ParallelContainerBasePrivate {
+class WrapperBasePrivate : public ParallelContainerBasePrivate
+{
 	friend class WrapperBase;
 
 public:
@@ -248,8 +242,8 @@ public:
 };
 PIMPL_FUNCTIONS(WrapperBase)
 
-
-class MergerPrivate : public ParallelContainerBasePrivate {
+class MergerPrivate : public ParallelContainerBasePrivate
+{
 	friend class Merger;
 
 	moveit::core::JointModelGroupPtr jmg_merged_;
@@ -268,12 +262,12 @@ public:
 	void onNewGeneratorSolution(const SolutionBase& s);
 	void mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
 	                         const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner);
-	void merge(const ChildSolutionList& sub_solutions,
-	           const planning_scene::PlanningSceneConstPtr& start_scene, const Spawner& spawner);
+	void merge(const ChildSolutionList& sub_solutions, const planning_scene::PlanningSceneConstPtr& start_scene,
+	           const Spawner& spawner);
 
 	void sendForward(SubTrajectory&& t, const InterfaceState* from);
 	void sendBackward(SubTrajectory&& t, const InterfaceState* to);
 };
 PIMPL_FUNCTIONS(Merger)
-
-} }
+}
+}

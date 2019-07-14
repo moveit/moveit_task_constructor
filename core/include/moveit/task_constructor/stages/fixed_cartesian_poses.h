@@ -42,9 +42,12 @@
 #include <moveit/task_constructor/cost_queue.h>
 #include <geometry_msgs/PoseStamped.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-class FixedCartesianPoses : public MonitoringGenerator {
+class FixedCartesianPoses : public MonitoringGenerator
+{
 public:
 	FixedCartesianPoses(const std::string& name = "generate poses");
 
@@ -58,5 +61,6 @@ protected:
 	void onNewSolution(const SolutionBase& s) override;
 	ordered<const SolutionBase*> upstream_solutions_;
 };
-
-} } }
+}
+}
+}

@@ -44,13 +44,18 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 class RobotState;
-} }
-namespace moveit { namespace task_constructor { namespace stages {
+}
+}
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Perform a Cartesian motion relative to some link */
-class MoveRelative : public PropagatingEitherWay {
+class MoveRelative : public PropagatingEitherWay
+{
 public:
 	MoveRelative(const std::string& name = "move relative",
 	             const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
@@ -59,30 +64,21 @@ public:
 	void computeForward(const InterfaceState& from) override;
 	void computeBackward(const InterfaceState& to) override;
 
-	void setGroup(const std::string& group) {
-		setProperty("group", group);
-	}
+	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
-		setProperty("ik_frame", pose);
-	}
+	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Isometry3d pose; pose = p;
+		Eigen::Isometry3d pose;
+		pose = p;
 		setIKFrame(pose, link);
 	}
-	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Isometry3d::Identity(), link);
-	}
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	/// set minimum / maximum distance to move
-	void setMinDistance(double distance) {
-		setProperty("min_distance", distance);
-	}
-	void setMaxDistance(double distance) {
-		setProperty("max_distance", distance);
-	}
+	void setMinDistance(double distance) { setProperty("min_distance", distance); }
+	void setMaxDistance(double distance) { setProperty("max_distance", distance); }
 	void setMinMaxDistance(double min_distance, double max_distance) {
 		setProperty("min_distance", min_distance);
 		setProperty("max_distance", max_distance);
@@ -93,25 +89,20 @@ public:
 	}
 
 	/// perform twist motion on specified link
-	void setDirection(const geometry_msgs::TwistStamped& twist) {
-		setProperty("direction", twist);
-	}
+	void setDirection(const geometry_msgs::TwistStamped& twist) { setProperty("direction", twist); }
 	/// translate link along given direction
-	void setDirection(const geometry_msgs::Vector3Stamped& direction) {
-		setProperty("direction", direction);
-	}
+	void setDirection(const geometry_msgs::Vector3Stamped& direction) { setProperty("direction", direction); }
 	/// move specified joint variables by given amount
-	void setDirection(const std::map<std::string, double>& joint_deltas) {
-		setProperty("direction", joint_deltas);
-	}
+	void setDirection(const std::map<std::string, double>& joint_deltas) { setProperty("direction", joint_deltas); }
 
 protected:
 	// return false if trajectory shouldn't be stored
-	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
-	             SubTrajectory &trajectory, Direction dir);
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
+	             Direction dir);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
 };
-
-} } }
+}
+}
+}

@@ -41,8 +41,14 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
 
-namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace core {
+MOVEIT_CLASS_FORWARD(RobotModel)
+}
+}
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 class GenerateGraspPose;
 
@@ -56,7 +62,8 @@ class GenerateGraspPose;
  * Grasping and UnGrasping only differs in the order of subtasks. Hence, the base class
  * provides the common functionality for grasping (forward = true) and ungrasping (forward = false).
  */
-class SimpleGraspBase : public SerialContainer {
+class SimpleGraspBase : public SerialContainer
+{
 	moveit::core::RobotModelConstPtr model_;
 
 protected:
@@ -71,32 +78,32 @@ public:
 	void setObject(const std::string& object) { setProperty("object", object); }
 
 	/// set properties of IK solver
-	void setIKFrame(const geometry_msgs::PoseStamped &transform) { setProperty("ik_frame", transform); }
+	void setIKFrame(const geometry_msgs::PoseStamped& transform) { setProperty("ik_frame", transform); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& t, const std::string& link) {
-		Eigen::Isometry3d transform; transform = t;
+		Eigen::Isometry3d transform;
+		transform = t;
 		setIKFrame(transform, link);
 	}
-	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Isometry3d::Identity(), link);
-	}
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	void setMaxIKSolutions(uint32_t max_ik_solutions) { setProperty("max_ik_solutions", max_ik_solutions); }
 };
 
-
 /// specialization of SimpleGraspBase to realize grasping
-class SimpleGrasp : public SimpleGraspBase {
+class SimpleGrasp : public SimpleGraspBase
+{
 public:
 	SimpleGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "grasp");
 };
 
-
 /// specialization of SimpleGraspBase to realize ungrasping
-class SimpleUnGrasp : public SimpleGraspBase {
+class SimpleUnGrasp : public SimpleGraspBase
+{
 public:
 	SimpleUnGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "ungrasp");
 };
-
-} } }
+}
+}
+}

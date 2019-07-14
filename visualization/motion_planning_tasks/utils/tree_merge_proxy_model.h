@@ -48,72 +48,74 @@ class TreeMergeProxyModelPrivate;
  *  Each embedded model becomes a top-level item (with a given name)
  *  and all the model's top-level items will appear as its children.
  */
-class TreeMergeProxyModel : public QAbstractItemModel {
+class TreeMergeProxyModel : public QAbstractItemModel
+{
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TreeMergeProxyModel)
 	TreeMergeProxyModelPrivate* d_ptr;
 
 protected:
 	/// method called when a model is removed
-	virtual void onRemoveModel(QAbstractItemModel *model);
+	virtual void onRemoveModel(QAbstractItemModel* model);
 
 public:
-	TreeMergeProxyModel(QObject *parent = nullptr);
+	TreeMergeProxyModel(QObject* parent = nullptr);
 	~TreeMergeProxyModel();
 
 	/// number of embedded models
 	size_t modelCount() const;
 	/// return true if this index corresponds to an embedded model's grouping item
-	bool isGroupItem(const QModelIndex &index) const;
+	bool isGroupItem(const QModelIndex& index) const;
 	/// return true if this index corresponds to a top-level item of an embedded model
-	bool isToplevel(const QModelIndex &index) const;
+	bool isToplevel(const QModelIndex& index) const;
 
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-	int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-	QModelIndex parent(const QModelIndex &index) const override;
+	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex& index) const override;
 
-	Qt::ItemFlags flags(const QModelIndex & index) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+	Qt::ItemFlags flags(const QModelIndex& index) const override;
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
 
 	void setMimeTypes(const QStringList& mime_types);
 	QStringList mimeTypes() const override;
-	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+	bool dropMimeData(const QMimeData* mime, Qt::DropAction action, int row, int column,
+	                  const QModelIndex& parent) override;
 
-	bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+	bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 
 	/// insert a new sub model, pos is relative to modelCount()
-	bool insertModel(const QString& name, QAbstractItemModel *model, int pos = -1);
+	bool insertModel(const QString& name, QAbstractItemModel* model, int pos = -1);
 
 	/// retrieve source model and source index corresponding to given proxy index
-	std::pair<QAbstractItemModel*, QModelIndex> getModel(const QModelIndex &index) const;
+	std::pair<QAbstractItemModel*, QModelIndex> getModel(const QModelIndex& index) const;
 	/// retrieve row index of given source model
 	int getRow(const QAbstractItemModel* model) const;
 
 public Q_SLOTS:
 	/// remove (first) matching model
-	bool removeModel(QAbstractItemModel *model);
+	bool removeModel(QAbstractItemModel* model);
 	/// remove model at given position (relative to modelCount())
 	bool removeModel(int pos);
 
 private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceDestroyed(QObject*))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsInserted(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeRemoved(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsRemoved(QModelIndex,int,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeMoved(QModelIndex,int,int,QModelIndex,int))
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsMoved(QModelIndex,int,int,QModelIndex,int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeInserted(QModelIndex, int, int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsInserted(QModelIndex, int, int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeRemoved(QModelIndex, int, int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsRemoved(QModelIndex, int, int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsAboutToBeMoved(QModelIndex, int, int, QModelIndex, int))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceRowsMoved(QModelIndex, int, int, QModelIndex, int))
 
-#if QT_VERSION >= 0x050000 // due to moc issue we need to use the hex number
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex,QVector<int>))
+#if QT_VERSION >= 0x050000  // due to moc issue we need to use the hex number
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex, QModelIndex, QVector<int>))
 #else
-	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex,QModelIndex))
+	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex, QModelIndex))
 #endif
 };
-
-} }
+}
+}

@@ -57,48 +57,43 @@
 #include <OgreSceneNode.h>
 #include <QTimer>
 
-namespace moveit_rviz_plugin
-{
+namespace moveit_rviz_plugin {
 
-TaskDisplay::TaskDisplay() : Display()
-{
+TaskDisplay::TaskDisplay() : Display() {
 	task_list_model_.reset(new TaskListModel);
 	task_list_model_->setSolutionClient(&get_solution_client);
 
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
-	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex,int,int)),
-	        this, SLOT(onTasksInserted(QModelIndex,int,int)));
-	connect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex,int,int)),
-	        this, SLOT(onTasksRemoved(QModelIndex,int,int)));
-	connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-	        this, SLOT(onTaskDataChanged(QModelIndex,QModelIndex)));
+	connect(task_list_model_.get(), SIGNAL(rowsInserted(QModelIndex, int, int)), this,
+	        SLOT(onTasksInserted(QModelIndex, int, int)));
+	connect(task_list_model_.get(), SIGNAL(rowsAboutToBeRemoved(QModelIndex, int, int)), this,
+	        SLOT(onTasksRemoved(QModelIndex, int, int)));
+	connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this,
+	        SLOT(onTaskDataChanged(QModelIndex, QModelIndex)));
 
-	robot_description_property_ =
-	      new rviz::StringProperty("Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
-	                               this, SLOT(changedRobotDescription()), this);
+	robot_description_property_ = new rviz::StringProperty(
+	    "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
+	    this, SLOT(changedRobotDescription()), this);
 
-	task_solution_topic_property_ =
-	      new rviz::RosTopicProperty("Task Solution Topic", "",
-	                                 ros::message_traits::datatype<moveit_task_constructor_msgs::Solution>(),
-	                                 "The topic on which task solutions (moveit_msgs::Solution messages) are received",
-	                                 this, SLOT(changedTaskSolutionTopic()), this);
+	task_solution_topic_property_ = new rviz::RosTopicProperty(
+	    "Task Solution Topic", "", ros::message_traits::datatype<moveit_task_constructor_msgs::Solution>(),
+	    "The topic on which task solutions (moveit_msgs::Solution messages) are received", this,
+	    SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));
-	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)),
-	        task_list_model_.get(), SLOT(highlightStage(size_t)));
+	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)), task_list_model_.get(),
+	        SLOT(highlightStage(size_t)));
 
-	tasks_property_ =
-	      new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
+	tasks_property_ = new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
 
-TaskDisplay::~TaskDisplay()
-{
-	if (context_) TaskPanel::decDisplayCount();
+TaskDisplay::~TaskDisplay() {
+	if (context_)
+		TaskPanel::decDisplayCount();
 }
 
-void TaskDisplay::onInitialize()
-{
+void TaskDisplay::onInitialize() {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
@@ -107,12 +102,10 @@ void TaskDisplay::onInitialize()
 	mainloop_jobs_.addJob([this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
 }
 
-void TaskDisplay::loadRobotModel()
-{
+void TaskDisplay::loadRobotModel() {
 	rdf_loader_.reset(new rdf_loader::RDFLoader(robot_description_property_->getStdString()));
 
-	if (!rdf_loader_->getURDF())
-	{
+	if (!rdf_loader_->getURDF()) {
 		this->setStatus(rviz::StatusProperty::Error, "Robot Model",
 		                "Failed to load from parameter " + robot_description_property_->getString());
 		return;
@@ -120,7 +113,7 @@ void TaskDisplay::loadRobotModel()
 	this->setStatus(rviz::StatusProperty::Ok, "Robot Model", "Successfully loaded");
 
 	const srdf::ModelSharedPtr& srdf =
-	      rdf_loader_->getSRDF() ? rdf_loader_->getSRDF() : srdf::ModelSharedPtr(new srdf::Model());
+	    rdf_loader_->getSRDF() ? rdf_loader_->getSRDF() : srdf::ModelSharedPtr(new srdf::Model());
 	robot_model_.reset(new robot_model::RobotModel(rdf_loader_->getURDF(), srdf));
 
 	// Send to child class
@@ -134,44 +127,37 @@ void TaskDisplay::loadRobotModel()
 	changedTaskSolutionTopic();
 }
 
-void TaskDisplay::reset()
-{
+void TaskDisplay::reset() {
 	Display::reset();
 	loadRobotModel();
 	trajectory_visual_->reset();
 }
 
-void TaskDisplay::save(rviz::Config config) const
-{
+void TaskDisplay::save(rviz::Config config) const {
 	Display::save(config);
 }
 
-void TaskDisplay::load(const rviz::Config &config)
-{
+void TaskDisplay::load(const rviz::Config& config) {
 	Display::load(config);
 }
 
-void TaskDisplay::onEnable()
-{
+void TaskDisplay::onEnable() {
 	Display::onEnable();
 	loadRobotModel();
 	calculateOffsetPosition();
 }
 
-void TaskDisplay::onDisable()
-{
+void TaskDisplay::onDisable() {
 	Display::onDisable();
 	trajectory_visual_->onDisable();
 }
 
-void TaskDisplay::fixedFrameChanged()
-{
+void TaskDisplay::fixedFrameChanged() {
 	Display::fixedFrameChanged();
 	calculateOffsetPosition();
 }
 
-void TaskDisplay::calculateOffsetPosition()
-{
+void TaskDisplay::calculateOffsetPosition() {
 	if (!robot_model_)
 		return;
 
@@ -184,34 +170,29 @@ void TaskDisplay::calculateOffsetPosition()
 	scene_node_->setOrientation(orientation);
 }
 
-void TaskDisplay::update(float wall_dt, float ros_dt)
-{
+void TaskDisplay::update(float wall_dt, float ros_dt) {
 	Display::update(wall_dt, ros_dt);
 	mainloop_jobs_.executeJobs();
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
 
-void TaskDisplay::setName(const QString& name)
-{
+void TaskDisplay::setName(const QString& name) {
 	BoolProperty::setName(name);
 	trajectory_visual_->setName(name);
 }
 
-void TaskDisplay::changedRobotDescription()
-{
+void TaskDisplay::changedRobotDescription() {
 	if (isEnabled())
 		reset();
 	else
 		loadRobotModel();
 }
 
-inline std::string getUniqueId(const std::string& process_id, const std::string& task_id)
-{
+inline std::string getUniqueId(const std::string& process_id, const std::string& task_id) {
 	return process_id + "/" + task_id;
 }
 
-void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg)
-{
+void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
@@ -219,8 +200,7 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 	});
 }
 
-void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg)
-{
+void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
@@ -228,20 +208,18 @@ void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStati
 	});
 }
 
-void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg)
-{
+void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->task_id);
 	mainloop_jobs_.addJob([this, id, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		if (s) trajectory_visual_->showTrajectory(s, false);
+		if (s)
+			trajectory_visual_->showTrajectory(s, false);
 		return;
 	});
 }
 
-
-void TaskDisplay::changedTaskSolutionTopic()
-{
+void TaskDisplay::changedTaskSolutionTopic() {
 	// postpone setup until scene is well-defined
 	if (!trajectory_visual_->getScene())
 		return;
@@ -271,20 +249,22 @@ void TaskDisplay::changedTaskSolutionTopic()
 	task_solution_sub = update_nh_.subscribe(base_ns + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
 
 	// service to request solutions
-	get_solution_client = update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
+	get_solution_client =
+	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
 
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
 
-void TaskDisplay::setSolutionStatus(bool ok)
-{
-	if (ok) setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
-	else setStatus(rviz::StatusProperty::Warn, "Solution", "Retrieval failed");
+void TaskDisplay::setSolutionStatus(bool ok) {
+	if (ok)
+		setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
+	else
+		setStatus(rviz::StatusProperty::Warn, "Solution", "Retrieval failed");
 }
 
-void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last)
-{
-	if (parent.isValid()) return; // only handle top-level items
+void TaskDisplay::onTasksInserted(const QModelIndex& parent, int first, int last) {
+	if (parent.isValid())
+		return;  // only handle top-level items
 
 	TaskListModel* m = static_cast<TaskListModel*>(sender());
 	for (; first <= last; ++first) {
@@ -293,25 +273,25 @@ void TaskDisplay::onTasksInserted(const QModelIndex &parent, int first, int last
 	}
 }
 
-void TaskDisplay::onTasksRemoved(const QModelIndex &parent, int first, int last)
-{
-	if (parent.isValid()) return; // only handle top-level items
+void TaskDisplay::onTasksRemoved(const QModelIndex& parent, int first, int last) {
+	if (parent.isValid())
+		return;  // only handle top-level items
 
 	for (; first <= last; ++first)
 		delete tasks_property_->takeChildAt(first);
 }
 
-void TaskDisplay::onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight)
-{
-	if (topLeft.parent().isValid()) return; // only handle top-level items
+void TaskDisplay::onTaskDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) {
+	if (topLeft.parent().isValid())
+		return;  // only handle top-level items
 
 	for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
-		rviz::Property *child = tasks_property_->childAt(row);
+		rviz::Property* child = tasks_property_->childAt(row);
 		assert(child);
 
-		if (topLeft.column() <= 0 && 0 <= bottomRight.column()) // name changed
+		if (topLeft.column() <= 0 && 0 <= bottomRight.column())  // name changed
 			child->setName(topLeft.sibling(row, 0).data().toString());
-		if (topLeft.column() <= 1 && 1 <= bottomRight.column()) // #solutions changed
+		if (topLeft.column() <= 1 && 1 <= bottomRight.column())  // #solutions changed
 			child->setValue(topLeft.sibling(row, 1).data());
 	}
 }

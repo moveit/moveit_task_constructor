@@ -40,27 +40,23 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
-namespace moveit { namespace task_constructor { namespace solvers {
+namespace moveit {
+namespace task_constructor {
+namespace solvers {
 
-CartesianPath::CartesianPath()
-{
+CartesianPath::CartesianPath() {
 	auto& p = properties();
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
 	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
 }
 
-void CartesianPath::init(const core::RobotModelConstPtr &robot_model)
-{
-}
+void CartesianPath::init(const core::RobotModelConstPtr& robot_model) {}
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
-                         const planning_scene::PlanningSceneConstPtr& to,
-                         const moveit::core::JointModelGroup *jmg,
-                         double timeout,
-                         robot_trajectory::RobotTrajectoryPtr& result,
-                         const moveit_msgs::Constraints& path_constraints)
-{
+                         const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
+                         double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                         const moveit_msgs::Constraints& path_constraints) {
 	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
 	if (!link) {
 		ROS_WARN_STREAM("no unique tip for joint model group: " << jmg->getName());
@@ -68,39 +64,31 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 	}
 
 	// reach pose of forward kinematics
-	return plan(from, *link, to->getCurrentState().getGlobalLinkTransform(link),
-	            jmg, timeout, result, path_constraints);
+	return plan(from, *link, to->getCurrentState().getGlobalLinkTransform(link), jmg, timeout, result, path_constraints);
 }
 
-bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
-                         const moveit::core::LinkModel &link,
-                         const Eigen::Isometry3d &target,
-                         const moveit::core::JointModelGroup *jmg,
-                         double timeout,
-                         robot_trajectory::RobotTrajectoryPtr &result,
-                         const moveit_msgs::Constraints& path_constraints)
-{
+bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+                         const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
+                         robot_trajectory::RobotTrajectoryPtr& result,
+                         const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
 
 	kinematic_constraints::KinematicConstraintSet kcs(sandbox_scene->getRobotModel());
 	kcs.add(path_constraints, sandbox_scene->getTransforms());
 
-	auto isValid = [&sandbox_scene, &kcs](moveit::core::RobotState* state,
-	      const moveit::core::JointModelGroup* jmg,
-	      const double* joint_positions) {
+	auto isValid = [&sandbox_scene, &kcs](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
+	                                      const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName())
-		      && kcs.decide(*state).satisfied;
+		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) &&
+		       kcs.decide(*state).satisfied;
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
 	double achieved_fraction = sandbox_scene->getCurrentStateNonConst().computeCartesianPath(
-	                              jmg, trajectory, &link, target, true,
-	                              props.get<double>("step_size"),
-	                              props.get<double>("jump_threshold"),
-	                              isValid);
+	    jmg, trajectory, &link, target, true, props.get<double>("step_size"), props.get<double>("jump_threshold"),
+	    isValid);
 
 	if (!trajectory.empty()) {
 		result.reset(new robot_trajectory::RobotTrajectory(sandbox_scene->getRobotModel(), jmg));
@@ -108,12 +96,12 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 			result->addSuffixWayPoint(waypoint, 0.0);
 
 		trajectory_processing::IterativeParabolicTimeParameterization timing;
-		timing.computeTimeStamps(*result,
-		                         props.get<double>("max_velocity_scaling_factor"),
+		timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 		                         props.get<double>("max_acceleration_scaling_factor"));
 	}
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }
-
-} } }
+}
+}
+}

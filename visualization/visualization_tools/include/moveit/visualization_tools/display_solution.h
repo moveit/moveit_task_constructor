@@ -39,17 +39,18 @@
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <moveit/macros/class_forward.h>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
-} }
+}
+}
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }
 namespace robot_trajectory {
 MOVEIT_CLASS_FORWARD(RobotTrajectory)
 }
-namespace Ogre
-{
+namespace Ogre {
 class SceneNode;
 }
 namespace rviz {
@@ -69,7 +70,8 @@ class DisplaySolution
 	/// start scene
 	planning_scene::PlanningSceneConstPtr start_scene_;
 
-	struct Data {
+	struct Data
+	{
 		/// end scene for each sub trajectory
 		planning_scene::PlanningSceneConstPtr scene_;
 		/// sub trajectories, might be empty
@@ -99,13 +101,12 @@ public:
 
 	float getWayPointDurationFromPrevious(const IndexPair& idx_pair) const;
 	float getWayPointDurationFromPrevious(size_t index) const {
-		if (index >= steps_) return 0.1;  // display time of last waypoint before switching to final scene
+		if (index >= steps_)
+			return 0.1;  // display time of last waypoint before switching to final scene
 		return getWayPointDurationFromPrevious(indexPair(index));
 	}
 	const moveit::core::RobotStatePtr& getWayPointPtr(const IndexPair& idx_pair) const;
-	const moveit::core::RobotStatePtr& getWayPointPtr(size_t index) const {
-		return getWayPointPtr(indexPair(index));
-	}
+	const moveit::core::RobotStatePtr& getWayPointPtr(size_t index) const { return getWayPointPtr(indexPair(index)); }
 	const planning_scene::PlanningSceneConstPtr& startScene() const { return start_scene_; }
 	const planning_scene::PlanningSceneConstPtr& scene(const IndexPair& idx_pair) const;
 	const planning_scene::PlanningSceneConstPtr& scene(size_t index) const {
@@ -114,21 +115,14 @@ public:
 		return scene(indexPair(index));
 	}
 	const std::string& comment(const IndexPair& idx_pair) const;
-	const std::string& comment(size_t index) const {
-		return comment(indexPair(index));
-	}
+	const std::string& comment(size_t index) const { return comment(indexPair(index)); }
 	uint32_t creatorId(const IndexPair& idx_pair) const;
 
 	const MarkerVisualizationPtr markers(const IndexPair& idx_pair) const;
-	const MarkerVisualizationPtr markers(size_t index) const {
-		return markers(indexPair(index));
-	}
-	const MarkerVisualizationPtr markersOfSubTrajectory(size_t index) const {
-		return data_.at(index).markers_;
-	}
+	const MarkerVisualizationPtr markers(size_t index) const { return markers(indexPair(index)); }
+	const MarkerVisualizationPtr markersOfSubTrajectory(size_t index) const { return data_.at(index).markers_; }
 
-	void setFromMessage(const planning_scene::PlanningScenePtr &start_scene,
+	void setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
 	                    const moveit_task_constructor_msgs::Solution& msg);
 };
-
 }

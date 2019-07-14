@@ -37,24 +37,22 @@
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-FixedState::FixedState(const std::string &name)
-   : Generator(name)
-{}
+FixedState::FixedState(const std::string& name) : Generator(name) {}
 
-void FixedState::setState(const planning_scene::PlanningScenePtr& scene)
-{
+void FixedState::setState(const planning_scene::PlanningScenePtr& scene) {
 	scene_ = scene;
 }
 
-void FixedState::reset()
-{
+void FixedState::reset() {
 	Generator::reset();
 	ran_ = false;
 }
 
-bool FixedState::canCompute() const{
+bool FixedState::canCompute() const {
 	return !ran_ && scene_;
 }
 
@@ -62,5 +60,6 @@ void FixedState::compute() {
 	spawn(InterfaceState(scene_), 0.0);
 	ran_ = true;
 }
-
-} } }
+}
+}
+}

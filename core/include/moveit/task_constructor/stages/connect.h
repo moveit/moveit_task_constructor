@@ -43,11 +43,15 @@
 
 #include <moveit_msgs/Constraints.h>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
-} }
+}
+}
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Connect arbitrary InterfaceStates by motion planning
  *
@@ -57,12 +61,17 @@ namespace moveit { namespace task_constructor { namespace stages {
  * Finally, an attempt is made to merge the sub trajectories of individual planning results.
  * If this fails, the sequential planning result is returned.
  */
-class Connect : public Connecting {
+class Connect : public Connecting
+{
 protected:
-	bool compatible(const InterfaceState &from_state, const InterfaceState &to_state) const override;
+	bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const override;
 
 public:
-	enum MergeMode { SEQUENTIAL = 0, WAYPOINTS = 1 };
+	enum MergeMode
+	{
+		SEQUENTIAL = 0,
+		WAYPOINTS = 1
+	};
 
 	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
 	Connect(const std::string& name = "connect", const GroupPlannerVector& planners = {});
@@ -73,7 +82,7 @@ public:
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void compute(const InterfaceState &from, const InterfaceState &to) override;
+	void compute(const InterfaceState& from, const InterfaceState& to) override;
 
 protected:
 	SolutionSequencePtr makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
@@ -89,5 +98,6 @@ protected:
 	std::list<SubTrajectory> subsolutions_;
 	std::list<InterfaceState> states_;
 };
-
-} } }
+}
+}
+}

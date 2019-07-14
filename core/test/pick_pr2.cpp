@@ -13,22 +13,22 @@
 
 using namespace moveit::task_constructor;
 
-void spawnObject(){
+void spawnObject() {
 	moveit::planning_interface::PlanningSceneInterface psi;
 
 	moveit_msgs::CollisionObject o;
-	o.id= "object";
-	o.header.frame_id= "base_link";
+	o.id = "object";
+	o.header.frame_id = "base_link";
 	o.primitive_poses.resize(1);
-	o.primitive_poses[0].position.x= 0.53;
-	o.primitive_poses[0].position.y= 0.05;
-	o.primitive_poses[0].position.z= 0.84;
-	o.primitive_poses[0].orientation.w= 1.0;
+	o.primitive_poses[0].position.x = 0.53;
+	o.primitive_poses[0].position.y = 0.05;
+	o.primitive_poses[0].position.z = 0.84;
+	o.primitive_poses[0].orientation.w = 1.0;
 	o.primitives.resize(1);
-	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
 	o.primitives[0].dimensions.resize(2);
-	o.primitives[0].dimensions[0]= 0.23;
-	o.primitives[0].dimensions[1]= 0.03;
+	o.primitives[0].dimensions[0] = 0.23;
+	o.primitives[0].dimensions[1] = 0.03;
 	psi.applyCollisionObject(o);
 }
 
@@ -42,7 +42,7 @@ TEST(PR2, pick) {
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
-	stages::Connect::GroupPlannerVector planners = {{"left_arm", pipeline}, {"left_gripper", pipeline}};
+	stages::Connect::GroupPlannerVector planners = { { "left_arm", pipeline }, { "left_gripper", pipeline } };
 	auto connect = std::make_unique<stages::Connect>("connect", planners);
 	connect->properties().configureInitFrom(Stage::PARENT);
 	t.add(std::move(connect));
@@ -76,7 +76,7 @@ TEST(PR2, pick) {
 	try {
 		spawnObject();
 		t.plan();
-	} catch (const InitStageException &e) {
+	} catch (const InitStageException& e) {
 		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
@@ -85,7 +85,7 @@ TEST(PR2, pick) {
 	EXPECT_LE(solutions, 10u);
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "pr2");
 	ros::AsyncSpinner spinner(1);

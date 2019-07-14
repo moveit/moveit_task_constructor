@@ -40,27 +40,23 @@
 
 #include <type_traits>
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
 // detect STL-like containers by presence of cbegin(), cend() methods
-template<typename T, typename _ = void>
-struct is_container : std::false_type {};
+template <typename T, typename _ = void>
+struct is_container : std::false_type
+{};
 
-template<typename... Ts>
-struct is_container_helper {};
+template <typename... Ts>
+struct is_container_helper
+{};
 
-template<typename T>
+template <typename T>
 struct is_container<
-        T,
-        std::conditional_t<
-            false,
-            is_container_helper<
-                typename T::const_iterator,
-                decltype(std::declval<T>().cbegin()),
-                decltype(std::declval<T>().cend())
-                >,
-            void
-            >
-        > : public std::true_type {};
-
-} }
+    T, std::conditional_t<false, is_container_helper<typename T::const_iterator, decltype(std::declval<T>().cbegin()),
+                                                     decltype(std::declval<T>().cend())>,
+                          void> > : public std::true_type
+{};
+}
+}

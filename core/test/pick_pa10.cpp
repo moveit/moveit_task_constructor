@@ -21,18 +21,18 @@ using namespace moveit::task_constructor;
 
 void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	moveit_msgs::CollisionObject o;
-	o.id= "object";
-	o.header.frame_id= "world";
+	o.id = "object";
+	o.header.frame_id = "world";
 	o.primitive_poses.resize(1);
-	o.primitive_poses[0].position.x= 0.3;
-	o.primitive_poses[0].position.y= 0.23;
-	o.primitive_poses[0].position.z= 0.10;
-	o.primitive_poses[0].orientation.w= 1.0;
+	o.primitive_poses[0].position.x = 0.3;
+	o.primitive_poses[0].position.y = 0.23;
+	o.primitive_poses[0].position.z = 0.10;
+	o.primitive_poses[0].orientation.w = 1.0;
 	o.primitives.resize(1);
-	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
 	o.primitives[0].dimensions.resize(2);
-	o.primitives[0].dimensions[0]= 0.23;
-	o.primitives[0].dimensions[1]= 0.03;
+	o.primitives[0].dimensions[0] = 0.23;
+	o.primitives[0].dimensions[1] = 0.03;
 	scene->processCollisionObjectMsg(o);
 }
 
@@ -73,7 +73,7 @@ TEST(PA10, pick) {
 	}
 
 	{
-		stages::Connect::GroupPlannerVector planners = {{"left_hand", pipeline}, {"left_arm", pipeline}};
+		stages::Connect::GroupPlannerVector planners = { { "left_hand", pipeline }, { "left_arm", pipeline } };
 		auto move = std::make_unique<stages::Connect>("connect", planners);
 		move->properties().configureInitFrom(Stage::PARENT);
 		t.add(std::move(move));
@@ -103,20 +103,21 @@ TEST(PA10, pick) {
 		gengrasp->setMonitoredStage(initial_stage);
 
 		auto filter = std::make_unique<stages::PredicateFilter>("filtered");
-		gengrasp->properties().exposeTo(filter->properties(), {"eef"});
+		gengrasp->properties().exposeTo(filter->properties(), { "eef" });
 		filter->properties().configureInitFrom(Stage::PARENT);
 		filter->insert(std::move(gengrasp));
 		filter->setPredicate([](const SolutionBase& s, std::string& comment) {
 			bool accept = s.cost() < 2;
-			if (!accept) comment += " (rejected)";
+			if (!accept)
+				comment += " (rejected)";
 			return accept;
 		});
 
 		auto ik = std::make_unique<stages::ComputeIK>("compute ik", std::move(filter));
-		PropertyMap &props = ik->properties();
-		props.configureInitFrom(Stage::PARENT, {"group", "eef", "default_pose"});
-		props.configureInitFrom(Stage::INTERFACE, {"target_pose"});  // derived from child's solution
-		ik->setIKFrame(Eigen::Translation3d(0,0,.05) * Eigen::AngleAxisd(-0.5*M_PI, Eigen::Vector3d::UnitY()),
+		PropertyMap& props = ik->properties();
+		props.configureInitFrom(Stage::PARENT, { "group", "eef", "default_pose" });
+		props.configureInitFrom(Stage::INTERFACE, { "target_pose" });  // derived from child's solution
+		ik->setIKFrame(Eigen::Translation3d(0, 0, .05) * Eigen::AngleAxisd(-0.5 * M_PI, Eigen::Vector3d::UnitY()),
 		               "lh_tool_frame");
 		ik->setMaxIKSolutions(1);
 		t.add(std::move(ik));
@@ -126,7 +127,8 @@ TEST(PA10, pick) {
 		auto move = std::make_unique<stages::ModifyPlanningScene>("allow object collision");
 		move->restrictDirection(stages::ModifyPlanningScene::FORWARD);
 
-		move->allowCollisions("object", t.getRobotModel()->getJointModelGroup("left_hand")->getLinkModelNamesWithCollisionGeometry(), true);
+		move->allowCollisions(
+		    "object", t.getRobotModel()->getJointModelGroup("left_hand")->getLinkModelNamesWithCollisionGeometry(), true);
 		t.add(std::move(move));
 	}
 
@@ -147,7 +149,7 @@ TEST(PA10, pick) {
 
 	{
 		auto move = std::make_unique<stages::MoveRelative>("lift object", cartesian);
-		move->properties().configureInitFrom(Stage::PARENT, {"group"});
+		move->properties().configureInitFrom(Stage::PARENT, { "group" });
 		move->setMinMaxDistance(0.03, 0.05);
 		move->properties().set("marker_ns", std::string("lift"));
 		move->setIKFrame("lh_tool_frame");
@@ -161,7 +163,7 @@ TEST(PA10, pick) {
 
 	{
 		auto move = std::make_unique<stages::MoveRelative>("shift object", cartesian);
-		move->properties().configureInitFrom(Stage::PARENT, {"group"});
+		move->properties().configureInitFrom(Stage::PARENT, { "group" });
 		move->setMinMaxDistance(0.1, 0.2);
 		move->properties().set("marker_ns", std::string("lift"));
 		move->setIKFrame("lh_tool_frame");
@@ -176,7 +178,7 @@ TEST(PA10, pick) {
 
 	try {
 		t.plan();
-	} catch (const InitStageException &e) {
+	} catch (const InitStageException& e) {
 		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
@@ -185,7 +187,7 @@ TEST(PA10, pick) {
 	EXPECT_LE(solutions, 10u);
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "pa10");
 	ros::AsyncSpinner spinner(1);

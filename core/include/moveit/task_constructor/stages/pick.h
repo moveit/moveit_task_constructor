@@ -40,7 +40,8 @@
 #include <moveit/task_constructor/container.h>
 #include <geometry_msgs/TwistStamped.h>
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
 namespace solvers {
 MOVEIT_CLASS_FORWARD(CartesianPath)
@@ -64,77 +65,62 @@ namespace stages {
  * The end effector postures corresponding to pre-grasp and grasp as well as
  * the end effector's Cartesian pose needs to be provided by an external grasp stage.
  */
-class PickPlaceBase : public SerialContainer {
+class PickPlaceBase : public SerialContainer
+{
 	solvers::CartesianPathPtr cartesian_solver_;
 	Stage* grasp_stage_ = nullptr;
 	Stage* approach_stage_ = nullptr;
 	Stage* lift_stage_ = nullptr;
 
 public:
-	PickPlaceBase(Stage::pointer &&grasp_stage, const std::string& name, bool forward);
+	PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& name, bool forward);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	void setEndEffector(const std::string& eef) {
-		properties().set<std::string>("eef", eef);
-	}
-	void setObject(const std::string& object) {
-		properties().set<std::string>("object", object);
-	}
+	void setEndEffector(const std::string& eef) { properties().set<std::string>("eef", eef); }
+	void setObject(const std::string& object) { properties().set<std::string>("object", object); }
 
 	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
 
-	void setApproachRetract(const geometry_msgs::TwistStamped& motion,
-	                        double min_distance, double max_distance);
+	void setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
 
-	void setLiftPlace(const geometry_msgs::TwistStamped& motion,
-	                  double min_distance, double max_distance);
+	void setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
 	void setLiftPlace(const std::map<std::string, double>& joints);
 };
 
-
 /// specialization of PickPlaceBase to realize picking
-class Pick : public PickPlaceBase {
+class Pick : public PickPlaceBase
+{
 public:
 	Pick(Stage::pointer&& grasp_stage = Stage::pointer(), const std::string& name = "pick")
-	   : PickPlaceBase(std::move(grasp_stage), name, true)
-	{}
+	  : PickPlaceBase(std::move(grasp_stage), name, true) {}
 
-	void setApproachMotion(const geometry_msgs::TwistStamped& motion,
-	                       double min_distance, double max_distance) {
+	void setApproachMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 		setApproachRetract(motion, min_distance, max_distance);
 	}
 
-	void setLiftMotion(const geometry_msgs::TwistStamped& motion,
-	                   double min_distance, double max_distance) {
+	void setLiftMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 		setLiftPlace(motion, min_distance, max_distance);
 	}
-	void setLiftMotion(const std::map<std::string, double>& joints) {
-		setLiftPlace(joints);
-	}
+	void setLiftMotion(const std::map<std::string, double>& joints) { setLiftPlace(joints); }
 };
-
 
 /// specialization of PickPlaceBase to realize placing
-class Place : public PickPlaceBase {
+class Place : public PickPlaceBase
+{
 public:
 	Place(Stage::pointer&& ungrasp_stage = Stage::pointer(), const std::string& name = "place")
-	   : PickPlaceBase(std::move(ungrasp_stage), name, false)
-	{}
+	  : PickPlaceBase(std::move(ungrasp_stage), name, false) {}
 
-	void setRetractMotion(const geometry_msgs::TwistStamped& motion,
-	                      double min_distance, double max_distance) {
+	void setRetractMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 		setApproachRetract(motion, min_distance, max_distance);
 	}
 
-	void setPlaceMotion(const geometry_msgs::TwistStamped& motion,
-	                   double min_distance, double max_distance) {
+	void setPlaceMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 		setLiftPlace(motion, min_distance, max_distance);
 	}
-	void setPlaceMotion(const std::map<std::string, double>& joints) {
-		setLiftPlace(joints);
-	}
+	void setPlaceMotion(const std::map<std::string, double>& joints) { setLiftPlace(joints); }
 };
-
-
-} } }
+}
+}
+}

@@ -40,8 +40,8 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 
-namespace moveit { namespace task_constructor {
-
+namespace moveit {
+namespace task_constructor {
 
 /// create a new JointModelGroup comprising all joints of the given groups
 moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups);
@@ -53,8 +53,7 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
  * The list of duplicate joints is returned in \e duplicates and in \e names (as a comma-separated list) */
 bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
                     std::vector<const moveit::core::JointModel*> joints,
-                    std::vector<const moveit::core::JointModel*>& duplicates,
-                    std::string& names);
+                    std::vector<const moveit::core::JointModel*>& duplicates, std::string& names);
 
 /** merge all sub trajectories into a single RobotTrajectory for parallel execution
  *
@@ -63,7 +62,8 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
  * or created on the fly. This JMG needs to stay alive during the lifetime of the trajectory.
  * For now, only the trajectory path is considered. Timings, velocities, etc. are ignored.
  */
-robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                           const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group);
-
-} }
+robot_trajectory::RobotTrajectoryPtr
+merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+      const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group);
+}
+}

@@ -40,34 +40,31 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 typedef std::vector<geometry_msgs::PoseStamped> PosesList;
 
-FixedCartesianPoses::FixedCartesianPoses(const std::string& name)
-   : MonitoringGenerator(name)
-{
+FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGenerator(name) {
 	auto& p = properties();
 	p.declare<PosesList>("poses", PosesList(), "target poses to spawn");
 }
 
-void FixedCartesianPoses::addPose(const geometry_msgs::PoseStamped& pose)
-{
+void FixedCartesianPoses::addPose(const geometry_msgs::PoseStamped& pose) {
 	moveit::task_constructor::Property& poses = properties().property("poses");
 	if (!poses.defined())
-		poses.setValue(PosesList({pose}));
+		poses.setValue(PosesList({ pose }));
 	else
 		boost::any_cast<PosesList&>(poses.value()).push_back(pose);
 }
 
-void FixedCartesianPoses::reset()
-{
+void FixedCartesianPoses::reset() {
 	upstream_solutions_.clear();
 	MonitoringGenerator::reset();
 }
 
-void FixedCartesianPoses::onNewSolution(const SolutionBase& s)
-{
+void FixedCartesianPoses::onNewSolution(const SolutionBase& s) {
 	// It's safe to store a pointer to this solution, as the generating stage stores it
 	upstream_solutions_.push(&s);
 }
@@ -81,8 +78,7 @@ void FixedCartesianPoses::compute() {
 		return;
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
-	for (geometry_msgs::PoseStamped pose : properties().get<PosesList>("poses"))
-	{
+	for (geometry_msgs::PoseStamped pose : properties().get<PosesList>("poses")) {
 		if (pose.header.frame_id.empty())
 			pose.header.frame_id = scene->getPlanningFrame();
 		else if (!scene->knowsFrameTransform(pose.header.frame_id)) {
@@ -101,5 +97,6 @@ void FixedCartesianPoses::compute() {
 		spawn(std::move(state), std::move(trajectory));
 	}
 }
-
-} } }
+}
+}
+}

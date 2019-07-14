@@ -41,17 +41,14 @@
 
 namespace moveit_rviz_plugin {
 
-FactoryModel::FactoryModel(rviz::Factory &factory, const QString& mime_type, QObject *parent)
-   : QStandardItemModel(parent)
-   , mime_type_(mime_type)
-{
-	setHorizontalHeaderLabels({tr("Name")});
+FactoryModel::FactoryModel(rviz::Factory& factory, const QString& mime_type, QObject* parent)
+  : QStandardItemModel(parent), mime_type_(mime_type) {
+	setHorizontalHeaderLabels({ tr("Name") });
 	fillTree(factory);
 }
 
-void FactoryModel::fillTree(rviz::Factory &factory)
-{
-	QIcon default_package_icon = rviz::loadPixmap( "package://rviz/icons/default_package_icon.png" );
+void FactoryModel::fillTree(rviz::Factory& factory) {
+	QIcon default_package_icon = rviz::loadPixmap("package://rviz/icons/default_package_icon.png");
 
 	QStringList classes = factory.getDeclaredClassIds();
 	classes.sort();
@@ -59,24 +56,19 @@ void FactoryModel::fillTree(rviz::Factory &factory)
 	// Map from package names to the corresponding top-level tree widget items.
 	std::map<QString, QStandardItem*> package_items;
 
-	for(const QString& lookup_name : classes)
-	{
+	for (const QString& lookup_name : classes) {
 		QString package = factory.getClassPackage(lookup_name);
 
 		QStandardItem* package_item;
 		auto mi = package_items.find(package);
-		if(mi == package_items.end())
-		{
+		if (mi == package_items.end()) {
 			package_item = new QStandardItem(default_package_icon, package);
 			package_items[package] = package_item;
 			appendRow(package_item);
-		}
-		else
-		{
+		} else {
 			package_item = mi->second;
 		}
-		QStandardItem* class_item = new QStandardItem(factory.getIcon(lookup_name),
-		                                              factory.getClassName(lookup_name));
+		QStandardItem* class_item = new QStandardItem(factory.getIcon(lookup_name), factory.getClassName(lookup_name));
 		class_item->setWhatsThis(factory.getClassDescription(lookup_name));
 		class_item->setData(lookup_name, Qt::UserRole);
 		class_item->setDragEnabled(true);
@@ -84,16 +76,14 @@ void FactoryModel::fillTree(rviz::Factory &factory)
 	}
 }
 
-QStringList FactoryModel::mimeTypes() const
-{
+QStringList FactoryModel::mimeTypes() const {
 	return { mime_type_ };
 }
 
-QMimeData *FactoryModel::mimeData(const QModelIndexList &indexes) const
-{
+QMimeData* FactoryModel::mimeData(const QModelIndexList& indexes) const {
 	QSet<int> rows_considered;
 	QMimeData* mime_data = new QMimeData();
-	for (const auto &index : indexes) {
+	for (const auto& index : indexes) {
 		if (rows_considered.contains(index.row()))
 			continue;
 		// mime data is lookup_name
@@ -101,5 +91,4 @@ QMimeData *FactoryModel::mimeData(const QModelIndexList &indexes) const
 	}
 	return mime_data;
 }
-
 }

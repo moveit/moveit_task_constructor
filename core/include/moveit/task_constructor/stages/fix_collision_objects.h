@@ -43,9 +43,12 @@
 #include <geometry_msgs/Vector3.h>
 #include <moveit/collision_detection/collision_common.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-class FixCollisionObjects : public PropagatingEitherWay {
+class FixCollisionObjects : public PropagatingEitherWay
+{
 public:
 	FixCollisionObjects(const std::string& name = "fix collisions of objects");
 
@@ -56,7 +59,8 @@ public:
 	void setMaxPenetration(double penetration) { setProperty("max_penetration", penetration); }
 
 private:
-	SubTrajectory fixCollisions(planning_scene::PlanningScene &scene) const;
+	SubTrajectory fixCollisions(planning_scene::PlanningScene& scene) const;
 };
-
-} } }
+}
+}
+}

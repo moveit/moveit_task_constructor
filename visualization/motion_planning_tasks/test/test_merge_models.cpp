@@ -6,40 +6,38 @@
 
 using namespace moveit_rviz_plugin::utils;
 
-void createStandardItems(QStandardItem *parent, int rows, int columns, int depth, int d_rows = 0) {
-	if (depth <= 0 || rows <= 0 || columns <= 0) return;
+void createStandardItems(QStandardItem* parent, int rows, int columns, int depth, int d_rows = 0) {
+	if (depth <= 0 || rows <= 0 || columns <= 0)
+		return;
 
 	for (int row = 0; row < rows; ++row) {
 		QList<QStandardItem*> items;
 		for (int column = 0; column < columns; ++column)
 			items << new QStandardItem(QString("%2: %0, %1").arg(row).arg(column).arg(depth));
 		parent->appendRow(items);
-		createStandardItems(items.first(), rows + d_rows, columns, depth-1, d_rows);
+		createStandardItems(items.first(), rows + d_rows, columns, depth - 1, d_rows);
 	}
 }
 
-QStandardItemModel *createStandardModel(QObject *parent, int rows, int columns, int depth, int d_rows = 0) {
-	QStandardItemModel *model = new QStandardItemModel(parent);
+QStandardItemModel* createStandardModel(QObject* parent, int rows, int columns, int depth, int d_rows = 0) {
+	QStandardItemModel* model = new QStandardItemModel(parent);
 	createStandardItems(model->invisibleRootItem(), rows, columns, depth, d_rows);
 	return model;
 }
 
 // tell gtest how to print QVariant
 ::std::ostream& operator<<(::std::ostream& os, const QVariant& value) {
-  return os << value.toString().toStdString();
+	return os << value.toString().toStdString();
 }
 
 // compare structure and content of proxy and source model
-void checkEquality(const QAbstractItemModel *proxy_model,
-                   const QModelIndex &proxy_parent,
-                   const QAbstractItemModel *source_model,
-                   const QModelIndex &source_parent)
-{
+void checkEquality(const QAbstractItemModel* proxy_model, const QModelIndex& proxy_parent,
+                   const QAbstractItemModel* source_model, const QModelIndex& source_parent) {
 	ASSERT_EQ(proxy_model->rowCount(proxy_parent), source_model->rowCount(source_parent));
 	ASSERT_EQ(proxy_model->columnCount(proxy_parent), source_model->columnCount(source_parent));
 
-	for (int r = proxy_model->rowCount(proxy_parent)-1; r >= 0; --r) {
-		for (int c = proxy_model->columnCount(proxy_parent)-1; c >= 0; --c) {
+	for (int r = proxy_model->rowCount(proxy_parent) - 1; r >= 0; --r) {
+		for (int c = proxy_model->columnCount(proxy_parent) - 1; c >= 0; --c) {
 			QModelIndex proxy_child = proxy_model->index(r, c, proxy_parent);
 			QModelIndex source_child = source_model->index(r, c, source_parent);
 
@@ -58,13 +56,13 @@ void checkEquality(const QAbstractItemModel *proxy_model,
 }
 
 template <class T>
-void modifySourceModel(QAbstractItemModel* src, T* proxy, const QModelIndex &src_index) {
+void modifySourceModel(QAbstractItemModel* src, T* proxy, const QModelIndex& src_index) {
 	bool called = false;
-	const char *new_value = "foo";
+	const char* new_value = "foo";
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	auto con = proxy->connect(proxy, &T::dataChanged, [&called, &src_index, new_value]
-	                          (const QModelIndex &topLeft, const QModelIndex &bottomRight) {
+	auto con = proxy->connect(proxy, &T::dataChanged, [&called, &src_index, new_value](const QModelIndex& topLeft,
+	                                                                                   const QModelIndex& bottomRight) {
 		EXPECT_EQ(topLeft.row(), src_index.row());
 		EXPECT_EQ(topLeft.column(), src_index.column());
 
@@ -91,7 +89,7 @@ TEST(TreeMergeModel, basics) {
 	EXPECT_EQ(tree.rowCount(), 0);
 	EXPECT_EQ(tree.columnCount(), 0);
 
-	QAbstractItemModel *m = createStandardModel(&tree, 2, 3, 2);
+	QAbstractItemModel* m = createStandardModel(&tree, 2, 3, 2);
 	tree.insertModel("M1", m);
 	EXPECT_FALSE(tree.insertModel("M1", m));  // a model may only inserted once
 
@@ -113,14 +111,13 @@ TEST(TreeMergeModel, basics) {
 
 	checkEquality(&tree, idx, m, QModelIndex());
 
-
 	// add second model
 	m = createStandardModel(&tree, 3, 3, 2);
 	tree.insertModel("M2", m);
 
 	// modify underlying model before accessing anything else
-	modifySourceModel(m, &tree, m->index(1,1));
-	modifySourceModel(m, &tree, m->index(0,2, m->index(1,0)));
+	modifySourceModel(m, &tree, m->index(1, 1));
+	modifySourceModel(m, &tree, m->index(0, 2, m->index(1, 0)));
 
 	EXPECT_EQ(tree.rowCount(), 2);
 	EXPECT_EQ(tree.columnCount(), 3);
@@ -143,7 +140,6 @@ TEST(TreeMergeModel, basics) {
 	EXPECT_EQ(tree.rowCount(), 2);
 	EXPECT_EQ(tree.rowCount(idx), 2);
 
-
 	// remove first model
 	ASSERT_TRUE(tree.removeModel(0));
 	EXPECT_EQ(tree.rowCount(), 1);
@@ -162,13 +158,13 @@ TEST(FlatMergeModel, basics) {
 	EXPECT_EQ(flat.rowCount(), 0);
 	EXPECT_EQ(flat.columnCount(), 0);
 
-	QAbstractItemModel *m1 = createStandardModel(&flat, 2, 3, 2);
+	QAbstractItemModel* m1 = createStandardModel(&flat, 2, 3, 2);
 	flat.insertModel(m1);
 	EXPECT_FALSE(flat.insertModel(m1));  // a model may only be inserted once
 
 	// modify underlying model before accessing anything else
-	modifySourceModel(m1, &flat, m1->index(1,1));
-	modifySourceModel(m1, &flat, m1->index(0,2, m1->index(1,0)));
+	modifySourceModel(m1, &flat, m1->index(1, 1));
+	modifySourceModel(m1, &flat, m1->index(0, 2, m1->index(1, 0)));
 
 	EXPECT_EQ(flat.rowCount(), 2);
 	EXPECT_EQ(flat.columnCount(), 3);
@@ -183,20 +179,20 @@ TEST(FlatMergeModel, basics) {
 
 	checkEquality(&flat, QModelIndex(), m1, QModelIndex());
 
-
 	// add second model
-	QAbstractItemModel *m2 = createStandardModel(&flat, 3, 3, 1);
+	QAbstractItemModel* m2 = createStandardModel(&flat, 3, 3, 1);
 	flat.insertModel(m2);
 
-	EXPECT_EQ(flat.rowCount(), 2+3);
+	EXPECT_EQ(flat.rowCount(), 2 + 3);
 	EXPECT_EQ(flat.columnCount(), 3);
 	EXPECT_EQ(flat.index(2, 0).data(), m2->index(0, 0).data());
 
-	EXPECT_EQ(flat.getModel(flat.index(1,1)), std::make_pair(m1, m1->index(1,1)));
-	EXPECT_EQ(flat.getModel(flat.index(2,2)), std::make_pair(m2, m2->index(0,2)));
+	EXPECT_EQ(flat.getModel(flat.index(1, 1)), std::make_pair(m1, m1->index(1, 1)));
+	EXPECT_EQ(flat.getModel(flat.index(2, 2)), std::make_pair(m2, m2->index(0, 2)));
 }
 
-class FlatMergeModelRemove : public ::testing::Test {
+class FlatMergeModelRemove : public ::testing::Test
+{
 protected:
 	FlatMergeProxyModel flat;
 	void SetUp() {
@@ -207,25 +203,25 @@ protected:
 };
 
 TEST_F(FlatMergeModelRemove, remove1) {
-	ASSERT_EQ(flat.rowCount(), 1+2+3);
+	ASSERT_EQ(flat.rowCount(), 1 + 2 + 3);
 	EXPECT_TRUE(flat.removeRows(0, 1));
-	EXPECT_EQ(flat.rowCount(), 2+3);
+	EXPECT_EQ(flat.rowCount(), 2 + 3);
 }
 
 TEST_F(FlatMergeModelRemove, remove2) {
-	ASSERT_EQ(flat.rowCount(), 1+2+3);
+	ASSERT_EQ(flat.rowCount(), 1 + 2 + 3);
 	EXPECT_TRUE(flat.removeRows(0, 2));
-	EXPECT_EQ(flat.rowCount(), 1+3);
+	EXPECT_EQ(flat.rowCount(), 1 + 3);
 }
 
 TEST_F(FlatMergeModelRemove, remove3) {
-	ASSERT_EQ(flat.rowCount(), 1+2+3);
+	ASSERT_EQ(flat.rowCount(), 1 + 2 + 3);
 	EXPECT_TRUE(flat.removeRows(0, 3));
 	EXPECT_EQ(flat.rowCount(), 3);
 }
 
 TEST_F(FlatMergeModelRemove, remove4) {
-	ASSERT_EQ(flat.rowCount(), 1+2+3);
+	ASSERT_EQ(flat.rowCount(), 1 + 2 + 3);
 	EXPECT_TRUE(flat.removeRows(2, 2));
-	EXPECT_EQ(flat.rowCount(), 1+1+2);
+	EXPECT_EQ(flat.rowCount(), 1 + 1 + 2);
 }

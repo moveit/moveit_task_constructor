@@ -44,11 +44,11 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-GenerateGraspPose::GenerateGraspPose(const std::string& name)
-   : GeneratePose(name)
-{
+GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector");
 	p.declare<std::string>("object");
@@ -58,11 +58,13 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name)
 	p.declare<boost::any>("grasp", "grasp posture");
 }
 
-void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
-{
+void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	InitStageException errors;
-	try { GeneratePose::init(robot_model); }
-	catch (InitStageException &e) { errors.append(e); }
+	try {
+		GeneratePose::init(robot_model);
+	} catch (InitStageException& e) {
+		errors.append(e);
+	}
 
 	const auto& props = properties();
 
@@ -85,11 +87,11 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model)
 			errors.push_back(*this, "unknown end effector pose: " + name);
 	}
 
-	if (errors) throw errors;
+	if (errors)
+		throw errors;
 }
 
-void GenerateGraspPose::onNewSolution(const SolutionBase& s)
-{
+void GenerateGraspPose::onNewSolution(const SolutionBase& s) {
 	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
 
 	const auto& props = properties();
@@ -120,14 +122,14 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState &robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg , props.get<std::string>("pregrasp"));
+	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
 	double current_angle_ = 0.0;
-	while (current_angle_ < 2.*M_PI && current_angle_ > -2.*M_PI) {
+	while (current_angle_ < 2. * M_PI && current_angle_ > -2. * M_PI) {
 		// rotate object pose about z-axis
 		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
 		current_angle_ += props.get<double>("angle_delta");
@@ -135,7 +137,7 @@ void GenerateGraspPose::compute() {
 		InterfaceState state(scene);
 		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
 		state.properties().set("target_pose", target_pose_msg);
-		props.exposeTo(state.properties(), {"pregrasp", "grasp"});
+		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
@@ -147,5 +149,6 @@ void GenerateGraspPose::compute() {
 		spawn(std::move(state), std::move(trajectory));
 	}
 }
-
-} } }
+}
+}
+}
