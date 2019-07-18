@@ -53,9 +53,10 @@ class BaseTaskModel;
 class TaskListModel;
 class TaskDisplay;
 
-class TaskPanelPrivate : public Ui_TaskPanel {
+class TaskPanelPrivate : public Ui_TaskPanel
+{
 public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
+	TaskPanelPrivate(TaskPanel* q_ptr);
 
 	TaskPanel* q_ptr;
 	QButtonGroup* tool_buttons_group;
@@ -64,33 +65,30 @@ public:
 	rviz::WindowManagerInterface* window_manager_;
 };
 
-
-class TaskViewPrivate : public Ui_TaskView {
+class TaskViewPrivate : public Ui_TaskView
+{
 public:
-	TaskViewPrivate(TaskView *q_ptr);
+	TaskViewPrivate(TaskView* q_ptr);
 
 	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
+	inline std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex& index) const;
 
 	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
+	inline std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 
 	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
+	void lock(TaskDisplay* display);
 
-	TaskView *q_ptr;
+	TaskView* q_ptr;
 	QPointer<TaskDisplay> locked_display_;
 };
 
-
-class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget {
+class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget
+{
 public:
-	GlobalSettingsWidgetPrivate(GlobalSettingsWidget *q_ptr, rviz::Property *root);
+	GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root);
 
-	GlobalSettingsWidget *q_ptr;
-	rviz::PropertyTreeModel *properties;
+	GlobalSettingsWidget* q_ptr;
+	rviz::PropertyTreeModel* properties;
 };
-
 }

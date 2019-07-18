@@ -42,12 +42,12 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <moveit/robot_state/conversions.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner)
-   : PropagatingEitherWay(name)
-   , planner_(planner)
-{
+  : PropagatingEitherWay(name), planner_(planner) {
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
@@ -63,8 +63,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	                                    "constraints to maintain during trajectory");
 }
 
-void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link)
-{
+void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
@@ -76,8 +75,7 @@ void MoveTo::setGoal(const std::map<std::string, double>& joints) {
 	robot_state.joint_state.name.reserve(joints.size());
 	robot_state.joint_state.position.reserve(joints.size());
 
-	for (auto& joint : joints)
-	{
+	for (auto& joint : joints) {
 		robot_state.joint_state.name.push_back(joint.first);
 		robot_state.joint_state.position.push_back(joint.second);
 	}
@@ -85,14 +83,12 @@ void MoveTo::setGoal(const std::map<std::string, double>& joints) {
 	setProperty("goal", robot_state);
 }
 
-void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model)
-{
+void MoveTo::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	PropagatingEitherWay::init(robot_model);
 	planner_->init(robot_model);
 }
 
-bool MoveTo::getJointStateGoal(const boost::any& goal,
-                               const moveit::core::JointModelGroup* jmg,
+bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::JointModelGroup* jmg,
                                moveit::core::RobotState& state) {
 	try {
 		// try named joint pose
@@ -100,7 +96,8 @@ bool MoveTo::getJointStateGoal(const boost::any& goal,
 		if (!state.setToDefaultValues(jmg, named_joint_pose))
 			throw InitStageException(*this, "Unknown joint pose: " + named_joint_pose);
 		return true;
-	} catch (const boost::bad_any_cast&) {}
+	} catch (const boost::bad_any_cast&) {
+	}
 
 	try {
 		// try RobotState
@@ -110,24 +107,24 @@ bool MoveTo::getJointStateGoal(const boost::any& goal,
 
 		// validate specified joints
 		const auto& accepted = jmg->getJointModelNames();
-		for (const auto &name : msg.joint_state.name)
+		for (const auto& name : msg.joint_state.name)
 			if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
 				throw InitStageException(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
-		for (const auto &name : msg.multi_dof_joint_state.joint_names)
+		for (const auto& name : msg.multi_dof_joint_state.joint_names)
 			if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
 				throw InitStageException(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
 
 		moveit::core::robotStateMsgToRobotState(msg, state, false);
 		return true;
-	} catch (const boost::bad_any_cast&) {}
+	} catch (const boost::bad_any_cast&) {
+	}
 
 	return false;
 }
 
 bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-                         const planning_scene::PlanningScenePtr& scene,
-                         Eigen::Isometry3d& target_eigen, decltype(std::declval<SolutionBase>().markers())& markers)
-{
+                         const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
+                         decltype(std::declval<SolutionBase>().markers()) & markers) {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
 		tf::poseMsgToEigen(target.pose, target_eigen);
@@ -148,9 +145,8 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 }
 
 bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-                          const planning_scene::PlanningScenePtr& scene,
-                          Eigen::Isometry3d& target_eigen, decltype(std::declval<SolutionBase>().markers())&)
-{
+                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
+                          decltype(std::declval<SolutionBase>().markers()) &) {
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
 		Eigen::Vector3d target_point;
@@ -169,8 +165,8 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 	return true;
 }
 
-bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
-                     SubTrajectory &solution, Direction dir) {
+bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& solution,
+                     Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
@@ -196,14 +192,14 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
-	} else { // Cartesian goal
+	} else {  // Cartesian goal
 		const moveit::core::LinkModel* link;
 		Eigen::Isometry3d target_eigen;
 
 		// Cartesian targets require an IK reference frame
 		geometry_msgs::PoseStamped ik_pose_msg;
 		const boost::any& value = props.get("ik_frame");
-		if (value.empty()) { // property undefined
+		if (value.empty()) {  // property undefined
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
 				ROS_WARN_STREAM_NAMED("MoveTo", "Failed to derive IK target link");
@@ -236,14 +232,15 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 	// set cost
 	double cost = 0;
-	for (const double& distance: robot_trajectory->getWayPointDurations()) {
+	for (const double& distance : robot_trajectory->getWayPointDurations()) {
 		cost += distance;
 	}
 
 	// store result
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD) robot_trajectory->reverse();
+		if (dir == BACKWARD)
+			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 		solution.setCost(cost);
 		if (!success)
@@ -254,7 +251,7 @@ bool MoveTo::compute(const InterfaceState &state, planning_scene::PlanningSceneP
 
 // -1 TODO: move these as default implementation to PropagateEitherWay?
 // Essentially, here compute() is a class-specific worker function
-void MoveTo::computeForward(const InterfaceState &from){
+void MoveTo::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
 
@@ -264,8 +261,7 @@ void MoveTo::computeForward(const InterfaceState &from){
 		silentFailure();
 }
 
-void MoveTo::computeBackward(const InterfaceState &to)
-{
+void MoveTo::computeBackward(const InterfaceState& to) {
 	planning_scene::PlanningScenePtr from;
 	SubTrajectory trajectory;
 
@@ -274,5 +270,6 @@ void MoveTo::computeBackward(const InterfaceState &to)
 	else
 		silentFailure();
 }
-
-} } }
+}
+}
+}

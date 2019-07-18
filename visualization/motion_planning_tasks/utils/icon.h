@@ -33,7 +33,8 @@ class QIcon;
 class QPixmap;
 class QString;
 
-namespace moveit_rviz_plugin { namespace utils {
+namespace moveit_rviz_plugin {
+namespace utils {
 
 typedef QPair<QString, QColor> IconMaskAndColor;
 
@@ -42,7 +43,8 @@ typedef QPair<QString, QColor> IconMaskAndColor;
 class Icon : public QVector<IconMaskAndColor>
 {
 public:
-	enum IconStyleOption {
+	enum IconStyleOption
+	{
 		None = 0,
 		Tint = 1,
 		DropShadow = 2,
@@ -56,8 +58,8 @@ public:
 
 	Icon();
 	Icon(std::initializer_list<IconMaskAndColor> args, IconStyleOptions style = ToolBarStyle);
-	Icon(const QString &imageFileName);
-	Icon(const Icon &other) = default;
+	Icon(const QString& imageFileName);
+	Icon(const Icon& other) = default;
 
 	QIcon icon() const;
 	// Same as icon() but without disabled state.
@@ -69,17 +71,17 @@ public:
 
 	// Returns either the classic or a themed icon depending on
 	// the current Theme::FlatModeIcons flag.
-	static QIcon sideBarIcon(const Icon &classic, const Icon &flat);
+	static QIcon sideBarIcon(const Icon& classic, const Icon& flat);
 	// Like sideBarIcon plus added action mode for the flat icon
-	static QIcon modeIcon(const Icon &classic, const Icon &flat, const Icon &flatActive);
+	static QIcon modeIcon(const Icon& classic, const Icon& flat, const Icon& flatActive);
 
 	// Combined icon pixmaps in Normal and Disabled states from several QIcons
-	static QIcon combinedIcon(const QList<QIcon> &icons);
+	static QIcon combinedIcon(const QList<QIcon>& icons);
 
 private:
 	IconStyleOptions m_style = None;
 };
-
-} }
+}
+}
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(moveit_rviz_plugin::utils::Icon::IconStyleOptions)

@@ -41,12 +41,12 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner)
-   : PropagatingEitherWay(name)
-   , planner_(planner)
-{
+  : PropagatingEitherWay(name), planner_(planner) {
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
@@ -63,23 +63,20 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	                                    "constraints to maintain during trajectory");
 }
 
-void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link)
-{
+void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setIKFrame(pose_msg);
 }
 
-void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model)
-{
+void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	PropagatingEitherWay::init(robot_model);
 	planner_->init(robot_model);
 }
 
-static bool getJointStateFromOffset(const boost::any& direction,
-                                     const moveit::core::JointModelGroup* jmg,
-                                     moveit::core::RobotState& robot_state) {
+static bool getJointStateFromOffset(const boost::any& direction, const moveit::core::JointModelGroup* jmg,
+                                    moveit::core::RobotState& robot_state) {
 	try {
 		const auto& accepted = jmg->getJointModelNames();
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
@@ -87,7 +84,8 @@ static bool getJointStateFromOffset(const boost::any& direction,
 			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
 			auto jm = robot_state.getRobotModel()->getJointModel(index);
 			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end())
-				throw std::runtime_error("Cannot plan for joint '" + j.first + "' that is not part of group '" + jmg->getName() + "'");
+				throw std::runtime_error("Cannot plan for joint '" + j.first + "' that is not part of group '" +
+				                         jmg->getName() + "'");
 
 			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
 			robot_state.enforceBounds(jm);
@@ -101,8 +99,8 @@ static bool getJointStateFromOffset(const boost::any& direction,
 	return false;
 }
 
-bool MoveRelative::compute(const InterfaceState &state, planning_scene::PlanningScenePtr& scene,
-                           SubTrajectory &solution, Direction dir) {
+bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
+                           SubTrajectory& solution, Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
@@ -136,7 +134,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		geometry_msgs::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
 		const boost::any& value = props.get("ik_frame");
-		if (value.empty()) { // property undefined
+		if (value.empty()) {  // property undefined
 			//  determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
@@ -158,9 +156,10 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 		double linear_norm = 0.0, angular_norm = 0.0;
 
 		Eigen::Isometry3d target_eigen;
-		Eigen::Isometry3d link_pose = scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
+		Eigen::Isometry3d link_pose =
+		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
-		try { // try to extract Twist
+		try {  // try to extract Twist
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.twist.linear, linear);
@@ -196,12 +195,14 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
 			target_eigen = link_pose;
-			target_eigen.linear() = target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
+			target_eigen.linear() =
+			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
 			target_eigen.translation() += linear;
 			goto COMPUTE;
-		} catch (const boost::bad_any_cast&) { /* continue with Vector */ }
+		} catch (const boost::bad_any_cast&) { /* continue with Vector */
+		}
 
-		try { // try to extract Vector
+		try {  // try to extract Vector
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.vector, linear);
@@ -226,7 +227,7 @@ bool MoveRelative::compute(const InterfaceState &state, planning_scene::Planning
 			return false;
 		}
 
-COMPUTE:
+	COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
@@ -253,7 +254,7 @@ COMPUTE:
 				snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
 				solution.setComment(msg);
 			}
-		} else if (min_distance == 0.0) { // if min_distance is zero, we succeed in any case
+		} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
 			success = true;
 		}
 
@@ -264,12 +265,11 @@ COMPUTE:
 			m.header.frame_id = scene->getPlanningFrame();
 			if (linear_norm > 1e-3) {
 				// +1 TODO: arrow could be split into "valid" and "invalid" part (as red cylinder)
-				rviz_marker_tools::setColor(m.color, success ? rviz_marker_tools::LIME_GREEN
-				                                             : rviz_marker_tools::RED);
+				rviz_marker_tools::setColor(m.color, success ? rviz_marker_tools::LIME_GREEN : rviz_marker_tools::RED);
 				rviz_marker_tools::makeArrow(m, linear_norm);
 				auto quat = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), linear);
 				Eigen::Vector3d pos(link_pose.translation());
-				if (dir == BACKWARD)  {
+				if (dir == BACKWARD) {
 					// flip arrow direction
 					quat = quat * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
 					// arrow tip at goal pose
@@ -285,7 +285,8 @@ COMPUTE:
 	// store result
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD) robot_trajectory->reverse();
+		if (dir == BACKWARD)
+			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 		if (!success)
 			solution.markAsFailure();
@@ -293,8 +294,7 @@ COMPUTE:
 	return true;
 }
 
-void MoveRelative::computeForward(const InterfaceState &from)
-{
+void MoveRelative::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
 
@@ -304,8 +304,7 @@ void MoveRelative::computeForward(const InterfaceState &from)
 		silentFailure();
 }
 
-void MoveRelative::computeBackward(const InterfaceState &to)
-{
+void MoveRelative::computeBackward(const InterfaceState& to) {
 	planning_scene::PlanningScenePtr from;
 	SubTrajectory trajectory;
 
@@ -314,5 +313,6 @@ void MoveRelative::computeBackward(const InterfaceState &to)
 	else
 		silentFailure();
 }
-
-} } }
+}
+}
+}

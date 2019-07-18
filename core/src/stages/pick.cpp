@@ -7,11 +7,12 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& name, bool forward)
-   : SerialContainer(name)
-{
+  : SerialContainer(name) {
 	PropertyMap& p = properties();
 	p.declare<std::string>("object", "name of object to grasp");
 	p.declare<std::string>("eef", "end effector name");
@@ -22,7 +23,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
 
 	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
-	int insertion_position = forward ? -1 : 0; // insert children at end / front, i.e. normal or reverse order
+	int insertion_position = forward ? -1 : 0;  // insert children at end / front, i.e. normal or reverse order
 
 	auto init_ik_frame = [](const PropertyMap& other) -> boost::any {
 		geometry_msgs::PoseStamped pose;
@@ -46,7 +47,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 	}
 
 	grasp_stage_ = grasp_stage.get();
-	grasp_stage->properties().configureInitFrom(Stage::PARENT, {"eef", "object"});
+	grasp_stage->properties().configureInitFrom(Stage::PARENT, { "eef", "object" });
 	insert(std::move(grasp_stage), insertion_position);
 
 	{
@@ -60,16 +61,16 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 	}
 }
 
-void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model)
-{
+void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	// inherit properties from parent
 	PropertyMap* p = &properties();
 	p->performInitFrom(Stage::PARENT, parent()->properties());
 
 	// init internal properties
-	const std::string &eef = p->get<std::string>("eef");
-	const moveit::core::JointModelGroup *jmg = robot_model->getEndEffector(eef);
-	if (!jmg) throw InitStageException(*this, "unknown end effector: " + eef);
+	const std::string& eef = p->get<std::string>("eef");
+	const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+	if (!jmg)
+		throw InitStageException(*this, "unknown end effector: " + eef);
 
 	p->set<std::string>("eef_group", jmg->getName());
 	p->set<std::string>("eef_parent_group", jmg->getEndEffectorParentGroup().first);
@@ -78,26 +79,25 @@ void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model)
 	SerialContainer::init(robot_model);
 }
 
-void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance)
-{
+void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance,
+                                       double max_distance) {
 	auto& p = approach_stage_->properties();
 	p.set("direction", motion);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance)
-{
+void PickPlaceBase::setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 	auto& p = lift_stage_->properties();
 	p.set("direction", motion);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftPlace(const std::map<std::string, double>& joints)
-{
+void PickPlaceBase::setLiftPlace(const std::map<std::string, double>& joints) {
 	auto& p = lift_stage_->properties();
 	p.set("joints", joints);
 }
-
-} } }
+}
+}
+}

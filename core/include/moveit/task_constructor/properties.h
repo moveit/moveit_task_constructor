@@ -56,7 +56,6 @@ class PropertyMap;
 /// initializer function, using given name from the passed property map
 boost::any fromName(const PropertyMap& other, const std::string& other_name);
 
-
 /** Property is a wrapper for a boost::any value, also providing a default value and a description.
  *
  * Properties can be configured to be initialized from another PropertyMap - if still undefined.
@@ -67,13 +66,13 @@ boost::any fromName(const PropertyMap& other, const std::string& other_name);
  * Using reset() the default value can be restored.
  * setCurrentValue() and setDefaultValue() only set the specific value.
  */
-class Property {
+class Property
+{
 	friend class PropertyMap;
 
 	/// typed constructor is only accessible via PropertyMap
-	Property(const boost::typeindex::type_info& type_info,
-	         const std::string &description,
-	         const boost::any &default_value);
+	Property(const boost::typeindex::type_info& type_info, const std::string& description,
+	         const boost::any& default_value);
 
 public:
 	typedef boost::typeindex::type_info type_info;
@@ -127,9 +126,9 @@ public:
 	/// return true, if property initialized from given SourceId
 	bool initsFrom(SourceFlags source) const;
 	/// configure initialization from source using an arbitrary function
-	Property &configureInitFrom(SourceFlags source, const InitializerFunction& f);
+	Property& configureInitFrom(SourceFlags source, const InitializerFunction& f);
 	/// configure initialization from source using given other property name
-	Property &configureInitFrom(SourceFlags source, const std::string& name);
+	Property& configureInitFrom(SourceFlags source, const std::string& name);
 
 private:
 	std::string description_;
@@ -143,46 +142,54 @@ private:
 	InitializerFunction initializer_;
 };
 
-
-class Property::error : public std::runtime_error {
+class Property::error : public std::runtime_error
+{
 protected:
 	std::string property_name_;
 	std::string msg_;
+
 public:
 	explicit error(const std::string& msg);
 	const std::string& name() const { return property_name_; }
 	void setName(const std::string& name);
 	const char* what() const noexcept override { return msg_.c_str(); }
 };
-class Property::undeclared : public Property::error {
+class Property::undeclared : public Property::error
+{
 public:
 	explicit undeclared(const std::string& name, const std::string& msg = "undeclared");
 };
-class Property::undefined : public Property::error {
+class Property::undefined : public Property::error
+{
 public:
 	explicit undefined(const std::string& name, const std::string& msg = "undefined");
 };
-class Property::type_error : public Property::error {
+class Property::type_error : public Property::error
+{
 public:
 	explicit type_error(const std::string& current_type, const std::string& declared_type);
 };
 
-
 // hasSerialize<T>::value provides a true/false constexpr depending on whether operator<< is supported.
 // This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
 template <typename T, typename = std::ostream&>
-struct hasSerialize : std::false_type {};
+struct hasSerialize : std::false_type
+{};
 
 template <typename T>
-struct hasSerialize<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type {};
+struct hasSerialize<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type
+{};
 
 template <typename T, typename = std::istream&>
-struct hasDeserialize : std::false_type {};
+struct hasDeserialize : std::false_type
+{};
 
 template <typename T>
-struct hasDeserialize<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type {};
+struct hasDeserialize<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type
+{};
 
-class PropertySerializerBase {
+class PropertySerializerBase
+{
 public:
 	typedef std::string (*SerializeFunction)(const boost::any&);
 	typedef boost::any (*DeserializeFunction)(const std::string&);
@@ -191,33 +198,31 @@ public:
 	static boost::any dummyDeserialize(const std::string&) { return boost::any(); }
 
 protected:
-	static bool insert(const std::type_index& type_index, const std::string& type_name,
-	                   SerializeFunction serialize, DeserializeFunction deserialize);
+	static bool insert(const std::type_index& type_index, const std::string& type_name, SerializeFunction serialize,
+	                   DeserializeFunction deserialize);
 };
 
 /// utility class to register serializer/deserializer functions for a property of type T
 template <typename T>
-class PropertySerializer : protected PropertySerializerBase {
+class PropertySerializer : protected PropertySerializerBase
+{
 public:
-	PropertySerializer() {
-		insert(typeid(T), typeName<T>(), &serialize, &deserialize);
-	}
+	PropertySerializer() { insert(typeid(T), typeName<T>(), &serialize, &deserialize); }
 
 	template <class Q = T>
-	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
-	typeName() {
+	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type typeName() {
 		return ros::message_traits::DataType<T>::value();
 	}
 
 	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type
-	typeName() { return typeid(T).name(); }
+	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type typeName() {
+		return typeid(T).name();
+	}
 
 private:
 	/** Serialization based on std::[io]stringstream */
 	template <class Q = T>
-	static typename std::enable_if<hasSerialize<Q>::value, std::string>::type
-	serialize(const boost::any& value) {
+	static typename std::enable_if<hasSerialize<Q>::value, std::string>::type serialize(const boost::any& value) {
 		std::ostringstream oss;
 		oss << boost::any_cast<T>(value);
 		return oss.str();
@@ -233,13 +238,15 @@ private:
 
 	/** No serialization available */
 	template <class Q = T>
-	static typename std::enable_if<!hasSerialize<Q>::value, std::string>::type
-	serialize(const boost::any& value) { return dummySerialize(value); }
+	static typename std::enable_if<!hasSerialize<Q>::value, std::string>::type serialize(const boost::any& value) {
+		return dummySerialize(value);
+	}
 	template <class Q = T>
 	static typename std::enable_if<!hasSerialize<Q>::value || !hasDeserialize<Q>::value, boost::any>::type
-	deserialize(const std::string& wire) { return dummyDeserialize(wire); }
+	deserialize(const std::string& wire) {
+		return dummyDeserialize(wire);
+	}
 };
-
 
 /** PropertyMap is map of (name, Property) pairs.
  *
@@ -251,19 +258,19 @@ class PropertyMap
 	std::map<std::string, Property> props_;
 
 	/// implementation of declare methods
-	Property& declare(const std::string& name, const Property::type_info& type_info,
-	                  const std::string& description, const boost::any& default_value);
+	Property& declare(const std::string& name, const Property::type_info& type_info, const std::string& description,
+	                  const boost::any& default_value);
+
 public:
 	/// declare a property for future use
-	template<typename T>
+	template <typename T>
 	Property& declare(const std::string& name, const std::string& description = "") {
 		PropertySerializer<T>();  // register serializer/deserializer
 		return declare(name, typeid(T), description, boost::any());
 	}
 	/// declare a property with default value
-	template<typename T>
-	Property& declare(const std::string& name, const T& default_value,
-	                  const std::string& description = "") {
+	template <typename T>
+	Property& declare(const std::string& name, const T& default_value, const std::string& description = "") {
 		PropertySerializer<T>();  // register serializer/deserializer
 		return declare(name, typeid(T), description, default_value);
 	}
@@ -275,13 +282,11 @@ public:
 	void exposeTo(PropertyMap& other, const std::string& name, const std::string& other_name) const;
 
 	/// check whether given property is declared
-	bool hasProperty(const std::string &name) const;
+	bool hasProperty(const std::string& name) const;
 
 	/// get the property with given name, throws Property::undeclared for unknown name
-	Property& property(const std::string &name);
-	const Property& property(const std::string &name) const {
-		return const_cast<PropertyMap*>(this)->property(name);
-	}
+	Property& property(const std::string& name);
+	const Property& property(const std::string& name) const { return const_cast<PropertyMap*>(this)->property(name); }
 
 	typedef std::map<std::string, Property>::iterator iterator;
 	typedef std::map<std::string, Property>::const_iterator const_iterator;
@@ -292,7 +297,7 @@ public:
 	const_iterator end() const { return props_.end(); }
 
 	/// allow initialization from given source for listed properties - always using the same name
-	void configureInitFrom(Property::SourceFlags source, const std::set<std::string> &properties = {});
+	void configureInitFrom(Property::SourceFlags source, const std::set<std::string>& properties = {});
 
 	/// set (and, if neccessary, declare) the value of a property
 	template <typename T>
@@ -305,9 +310,7 @@ public:
 	}
 
 	/// overloading: const char* is stored as std::string
-	inline void set(const std::string& name, const char* value){
-		set<std::string>(name, value);
-	}
+	inline void set(const std::string& name, const char* value) { set<std::string>(name, value); }
 
 	/// temporarily set the value of a property
 	void setCurrent(const std::string& name, const boost::any& value);
@@ -316,7 +319,7 @@ public:
 	const boost::any& get(const std::string& name) const;
 
 	/// Get typed value of property. Throws undeclared, undefined, or bad_any_cast.
-	template<typename T>
+	template <typename T>
 	const T& get(const std::string& name) const {
 		const boost::any& value = get(name);
 		if (value.empty())
@@ -324,7 +327,7 @@ public:
 		return boost::any_cast<const T&>(value);
 	}
 	/// get typed value of property, using fallback if undefined. Throws bad_any_cast on type mismatch.
-	template<typename T>
+	template <typename T>
 	const T& get(const std::string& name, const T& fallback) const {
 		const boost::any& value = get(name);
 		return (value.empty()) ? fallback : boost::any_cast<const T&>(value);
@@ -344,5 +347,5 @@ public:
 template <>
 void PropertyMap::set<boost::any>(const std::string& name, const boost::any& value);
 
-} // namespace task_constructor
-} // namespace moveit
+}  // namespace task_constructor
+}  // namespace moveit

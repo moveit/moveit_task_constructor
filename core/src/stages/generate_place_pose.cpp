@@ -45,18 +45,17 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-GeneratePlacePose::GeneratePlacePose(const std::string& name)
-   : GeneratePose(name)
-{
+GeneratePlacePose::GeneratePlacePose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<std::string>("object");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame");
 }
 
-void GeneratePlacePose::onNewSolution(const SolutionBase& s)
-{
+void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
 	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
 
 	const auto& props = properties();
@@ -90,8 +89,7 @@ void GeneratePlacePose::compute() {
 	const moveit::core::RobotState& robot_state = scene->getCurrentState();
 	const auto& props = properties();
 
-	const moveit::core::AttachedBody* object
-	      = robot_state.getAttachedBody(props.get<std::string>("object"));
+	const moveit::core::AttachedBody* object = robot_state.getAttachedBody(props.get<std::string>("object"));
 	// current object_pose w.r.t. planning frame
 	const Eigen::Isometry3d& orig_object_pose = object->getGlobalCollisionBodyTransforms()[0];
 
@@ -108,8 +106,8 @@ void GeneratePlacePose::compute() {
 	Eigen::Isometry3d object_to_ik = orig_object_pose.inverse() * ik_frame;
 
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &object_to_ik, this]
-	               (const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
+	auto spawner = [&s, &scene, &object_to_ik, this](const Eigen::Isometry3d& nominal, uint z_flips,
+	                                                 uint z_rotations = 10) {
 		for (uint flip = 0; flip < z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
@@ -117,8 +115,8 @@ void GeneratePlacePose::compute() {
 				// rotate object at target pose about world's z-axis
 				Eigen::Vector3d pos = object.translation();
 				object.pretranslate(-pos)
-				      .prerotate(Eigen::AngleAxisd(i * 2.*M_PI / z_rotations, Eigen::Vector3d::UnitZ()))
-				      .pretranslate(pos);
+				    .prerotate(Eigen::AngleAxisd(i * 2. * M_PI / z_rotations, Eigen::Vector3d::UnitZ()))
+				    .pretranslate(pos);
 
 				// target ik_frame's pose w.r.t. planning frame
 				geometry_msgs::PoseStamped target_pose_msg;
@@ -140,26 +138,27 @@ void GeneratePlacePose::compute() {
 
 	if (object->getShapes().size() == 1) {
 		switch (object->getShapes()[0]->type) {
-		case shapes::CYLINDER:
-			spawner(target_pose, 2);
-			return;
+			case shapes::CYLINDER:
+				spawner(target_pose, 2);
+				return;
 
-		case shapes::BOX: {  // consider 180/90 degree rotations about z axis
-			const double *dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
-			spawner(target_pose, 2, (std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
-			return;
-		}
-		case shapes::SPHERE:  // keep original orientation and rotate about world's z
-			target_pose.linear() = orig_object_pose.linear();
-			spawner(target_pose, 1);
-			return;
-		default:
-			break;
+			case shapes::BOX: {  // consider 180/90 degree rotations about z axis
+				const double* dims = static_cast<const shapes::Box&>(*object->getShapes()[0]).size;
+				spawner(target_pose, 2, (std::abs(dims[0] - dims[1]) < 1e-5) ? 4 : 2);
+				return;
+			}
+			case shapes::SPHERE:  // keep original orientation and rotate about world's z
+				target_pose.linear() = orig_object_pose.linear();
+				spawner(target_pose, 1);
+				return;
+			default:
+				break;
 		}
 	}
 
 	// any other case: only try given target pose
 	spawner(target_pose, 1, 1);
 }
-
-} } }
+}
+}
+}

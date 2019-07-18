@@ -17,6 +17,7 @@ env:
     - ROS_DISTRO=melodic
     - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
+    - TEST=clang-format
     - ROS_REPO=ros-shadow-fixed
     - DOCKER_IMAGE=moveit/moveit:master-source
 

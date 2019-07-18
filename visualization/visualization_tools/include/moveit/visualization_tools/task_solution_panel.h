@@ -46,49 +46,42 @@
 #include <QLabel>
 #include <QPushButton>
 
-namespace moveit_rviz_plugin
-{
+namespace moveit_rviz_plugin {
 class TaskSolutionPanel : public rviz::Panel
 {
-  Q_OBJECT
+	Q_OBJECT
 
 public:
-  TaskSolutionPanel(QWidget* parent = 0);
+	TaskSolutionPanel(QWidget* parent = 0);
 
-  virtual ~TaskSolutionPanel();
+	virtual ~TaskSolutionPanel();
 
-  void onInitialize();
-  void onEnable();
-  void onDisable();
-  void update(int way_point_count);
+	void onInitialize();
+	void onEnable();
+	void onDisable();
+	void update(int way_point_count);
 
-  // Switches between pause and play mode
-  void pauseButton(bool check);
+	// Switches between pause and play mode
+	void pauseButton(bool check);
 
-  void setSliderPosition(int position);
+	void setSliderPosition(int position);
 
-  int getSliderPosition() const
-  {
-    return slider_->sliderPosition();
-  }
+	int getSliderPosition() const { return slider_->sliderPosition(); }
 
-  bool isPaused() const
-  {
-    return paused_;
-  }
+	bool isPaused() const { return paused_; }
 
 private Q_SLOTS:
-  void sliderValueChanged(int value);
-  void buttonClicked();
+	void sliderValueChanged(int value);
+	void buttonClicked();
 
 protected:
-  QSlider* slider_;
-  QLabel* maximum_label_;
-  QLabel* minimum_label_;
-  QPushButton* button_;
+	QSlider* slider_;
+	QLabel* maximum_label_;
+	QLabel* minimum_label_;
+	QPushButton* button_;
 
-  bool paused_;
-  bool empty_;
+	bool paused_;
+	bool empty_;
 };
 
 }  // namespace moveit_rviz_plugin

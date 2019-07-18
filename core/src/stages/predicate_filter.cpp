@@ -44,21 +44,25 @@
 
 #include <functional>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-PredicateFilter::PredicateFilter(const std::string &name, Stage::pointer &&child)
-	: WrapperBase(name, std::move(child))
-{
-   auto& p = properties();
+PredicateFilter::PredicateFilter(const std::string& name, Stage::pointer&& child)
+  : WrapperBase(name, std::move(child)) {
+	auto& p = properties();
 	p.declare<Predicate>("predicate", "predicate to filter wrapped solutions");
 	p.declare<bool>("ignore_filter", false);
 }
 
-void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model)
-{
+void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	InitStageException errors;
 
-	try { WrapperBase::init(robot_model); } catch (InitStageException &e) { errors.append(e); }
+	try {
+		WrapperBase::init(robot_model);
+	} catch (InitStageException& e) {
+		errors.append(e);
+	}
 
 	const auto& props = properties();
 
@@ -69,11 +73,11 @@ void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model)
 		errors.append(e);
 	}
 
-	if (errors) throw errors;
+	if (errors)
+		throw errors;
 }
 
-void PredicateFilter::onNewSolution(const SolutionBase &s)
-{
+void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	const auto& props = properties();
 
 	std::string comment = s.comment();
@@ -84,5 +88,6 @@ void PredicateFilter::onNewSolution(const SolutionBase &s)
 
 	liftSolution(s, cost, comment);
 }
-
-} } }
+}
+}
+}

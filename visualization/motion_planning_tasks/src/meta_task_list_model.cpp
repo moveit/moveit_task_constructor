@@ -40,20 +40,16 @@
 
 namespace moveit_rviz_plugin {
 
-MetaTaskListModel::MetaTaskListModel()
-{
-	connect(this, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-	        this, SLOT(onRowsRemoved(QModelIndex,int,int)));
+MetaTaskListModel::MetaTaskListModel() {
+	connect(this, SIGNAL(rowsRemoved(QModelIndex, int, int)), this, SLOT(onRowsRemoved(QModelIndex, int, int)));
 }
 
-MetaTaskListModel &MetaTaskListModel::instance()
-{
+MetaTaskListModel& MetaTaskListModel::instance() {
 	static MetaTaskListModel instance_;
 	return instance_;
 }
 
-bool MetaTaskListModel::insertModel(TaskListModel *model, TaskDisplay *display)
-{
+bool MetaTaskListModel::insertModel(TaskListModel* model, TaskDisplay* display) {
 	if (!model || !display)
 		return false;
 	if (display_.contains(display))
@@ -67,17 +63,16 @@ bool MetaTaskListModel::insertModel(TaskListModel *model, TaskDisplay *display)
 	return true;
 }
 
-void MetaTaskListModel::onRowsRemoved(const QModelIndex &parent, int first, int last)
-{
+void MetaTaskListModel::onRowsRemoved(const QModelIndex& parent, int first, int last) {
 	if (!parent.isValid()) {
-		display_.remove(first, last-first+1);
+		display_.remove(first, last - first + 1);
 	}
 }
 
-void MetaTaskListModel::onDisplayNameChanged(const QString &name)
-{
+void MetaTaskListModel::onDisplayNameChanged(const QString& name) {
 	int row = display_.indexOf(static_cast<TaskDisplay*>(sender()));
-	if (row < 0) return;
+	if (row < 0)
+		return;
 
 	QModelIndex idx = index(row, 0);
 	if (idx.data() == name)
@@ -86,8 +81,7 @@ void MetaTaskListModel::onDisplayNameChanged(const QString &name)
 	setData(idx, name, Qt::EditRole);
 }
 
-bool MetaTaskListModel::setData(const QModelIndex &index, const QVariant &value, int role)
-{
+bool MetaTaskListModel::setData(const QModelIndex& index, const QVariant& value, int role) {
 	bool result = TreeMergeProxyModel::setData(index, value, role);
 	if (result && isGroupItem(index)) {
 		display_.at(index.row())->setName(value.toString());
@@ -95,26 +89,22 @@ bool MetaTaskListModel::setData(const QModelIndex &index, const QVariant &value,
 	return result;
 }
 
-bool MetaTaskListModel::removeRows(int row, int count, const QModelIndex &parent)
-{
+bool MetaTaskListModel::removeRows(int row, int count, const QModelIndex& parent) {
 	if (!parent.isValid())  // forbid removal of top-level items (displays)
 		return false;
 	return TreeMergeProxyModel::removeRows(row, count, parent);
 }
 
-std::pair<TaskListModel*, TaskDisplay*>
-MetaTaskListModel::getTaskListModel(const QModelIndex &index) const
-{
-	QAbstractItemModel *m = getModel(index).first;
-	if (!m) return std::make_pair(nullptr, nullptr);
+std::pair<TaskListModel*, TaskDisplay*> MetaTaskListModel::getTaskListModel(const QModelIndex& index) const {
+	QAbstractItemModel* m = getModel(index).first;
+	if (!m)
+		return std::make_pair(nullptr, nullptr);
 
 	Q_ASSERT(dynamic_cast<TaskListModel*>(m));
 	return std::make_pair(static_cast<TaskListModel*>(m), display_.at(getRow(m)));
 }
 
-std::pair<BaseTaskModel*, QModelIndex>
-MetaTaskListModel::getTaskModel(const QModelIndex &index) const
-{
+std::pair<BaseTaskModel*, QModelIndex> MetaTaskListModel::getTaskModel(const QModelIndex& index) const {
 	if (!index.isValid())
 		return std::make_pair(nullptr, QModelIndex());
 
@@ -128,5 +118,4 @@ MetaTaskListModel::getTaskModel(const QModelIndex &index) const
 	Q_ASSERT(dynamic_cast<BaseTaskModel*>(m.first));
 	return std::make_pair(static_cast<BaseTaskModel*>(m.first), m.second);
 }
-
 }

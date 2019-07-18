@@ -48,8 +48,7 @@
 
 #include <memory>
 
-namespace move_group
-{
+namespace move_group {
 
 class ExecuteTaskSolutionCapability : public MoveGroupCapability
 {
@@ -59,7 +58,8 @@ public:
 	virtual void initialize();
 
 private:
-	bool constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution, plan_execution::ExecutableMotionPlan& plan);
+	bool constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,
+	                         plan_execution::ExecutableMotionPlan& plan);
 
 	void goalCallback(const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal);
 	void preemptCallback();
@@ -67,4 +67,4 @@ private:
 	std::unique_ptr<actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>> as_;
 };
 
-} // namespace move_group
+}  // namespace move_group

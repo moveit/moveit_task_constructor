@@ -42,9 +42,12 @@
 #include <moveit/task_constructor/cost_queue.h>
 #include <geometry_msgs/PoseStamped.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-class GeneratePose : public MonitoringGenerator {
+class GeneratePose : public MonitoringGenerator
+{
 public:
 	GeneratePose(const std::string& name = "generate pose");
 
@@ -52,13 +55,12 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
-	void setPose(const geometry_msgs::PoseStamped pose){
-		setProperty("pose", std::move(pose));
-	}
+	void setPose(const geometry_msgs::PoseStamped pose) { setProperty("pose", std::move(pose)); }
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;
 	ordered<const SolutionBase*> upstream_solutions_;
 };
-
-} } }
+}
+}
+}

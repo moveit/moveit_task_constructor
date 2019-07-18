@@ -43,7 +43,9 @@ MOVEIT_CLASS_FORWARD(RobotState)
 }
 }
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Stage Wrapper to filter generated solutions by custom criteria
  *
@@ -51,19 +53,19 @@ namespace moveit { namespace task_constructor { namespace stages {
  * Solutions are accepted if predicate(s) == true.
  * Rejected solutions are forwarded as failures with an optional comment
  */
-class PredicateFilter : public WrapperBase {
+class PredicateFilter : public WrapperBase
+{
 public:
 	typedef std::function<bool(const SolutionBase&, std::string&)> Predicate;
 
-	PredicateFilter(const std::string &name, Stage::pointer &&child = Stage::pointer());
+	PredicateFilter(const std::string& name, Stage::pointer&& child = Stage::pointer());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	void onNewSolution(const SolutionBase &s) override;
+	void onNewSolution(const SolutionBase& s) override;
 
-	void setPredicate(const Predicate& p){
-		setProperty("predicate", p);
-	}
+	void setPredicate(const Predicate& p) { setProperty("predicate", p); }
 };
-
-} } }
+}
+}
+}

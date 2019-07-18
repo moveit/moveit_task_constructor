@@ -40,23 +40,21 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-GeneratePose::GeneratePose(const std::string& name)
-   : MonitoringGenerator(name)
-{
+GeneratePose::GeneratePose(const std::string& name) : MonitoringGenerator(name) {
 	auto& p = properties();
 	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
 }
 
-void GeneratePose::reset()
-{
+void GeneratePose::reset() {
 	upstream_solutions_.clear();
 	MonitoringGenerator::reset();
 }
 
-void GeneratePose::onNewSolution(const SolutionBase& s)
-{
+void GeneratePose::onNewSolution(const SolutionBase& s) {
 	// It's safe to store a pointer to this solution, as the generating stage stores it
 	upstream_solutions_.push(&s);
 }
@@ -88,5 +86,6 @@ void GeneratePose::compute() {
 
 	spawn(std::move(state), std::move(trajectory));
 }
-
-} } }
+}
+}
+}

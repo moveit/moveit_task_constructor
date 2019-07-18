@@ -42,13 +42,16 @@
 #include <moveit/task_constructor/task.h>
 
 namespace robot_model_loader {
-	MOVEIT_CLASS_FORWARD(RobotModelLoader)
+MOVEIT_CLASS_FORWARD(RobotModelLoader)
 }
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
-class TaskPrivate : public WrapperBasePrivate {
+class TaskPrivate : public WrapperBasePrivate
+{
 	friend class Task;
+
 public:
 	TaskPrivate(Task* me, const std::string& id);
 	const std::string& id() const { return id_; }
@@ -65,8 +68,8 @@ private:
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;
-	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
+	std::list<Task::TaskCallback> task_cbs_;  // functions to monitor task's planning progress
 };
 PIMPL_FUNCTIONS(Task)
-
-} }
+}
+}

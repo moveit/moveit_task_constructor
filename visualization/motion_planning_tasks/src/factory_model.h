@@ -50,10 +50,9 @@ class FactoryModel : public QStandardItemModel
 	void fillTree(rviz::Factory& factory);
 
 public:
-	FactoryModel(rviz::Factory& factory, const QString &mime_type, QObject *parent = nullptr);
+	FactoryModel(rviz::Factory& factory, const QString& mime_type, QObject* parent = nullptr);
 
 	QStringList mimeTypes() const override;
-	QMimeData* mimeData(const QModelIndexList &indexes) const override;
+	QMimeData* mimeData(const QModelIndexList& indexes) const override;
 };
-
 }

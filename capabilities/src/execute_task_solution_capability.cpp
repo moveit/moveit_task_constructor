@@ -45,23 +45,23 @@
 namespace {
 
 // TODO: move to moveit::core::RobotModel
-const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::RobotModel& model, const std::vector<std::string>& joints) {
+const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::RobotModel& model,
+                                                         const std::vector<std::string>& joints) {
 	std::set<std::string> joint_set(joints.begin(), joints.end());
 
 	const std::vector<const moveit::core::JointModelGroup*>& jmgs = model.getJointModelGroups();
 
-	for(const moveit::core::JointModelGroup* jmg : jmgs){
+	for (const moveit::core::JointModelGroup* jmg : jmgs) {
 		const std::vector<std::string>& jmg_joints = jmg->getJointModelNames();
 		std::set<std::string> jmg_joint_set(jmg_joints.begin(), jmg_joints.end());
 
 		// return group if sets agree on all active joints
-		if(std::includes(jmg_joint_set.begin(), jmg_joint_set.end(), joint_set.begin(), joint_set.end())) {
+		if (std::includes(jmg_joint_set.begin(), jmg_joint_set.end(), joint_set.begin(), joint_set.end())) {
 			std::set<std::string> difference;
-			std::set_difference(jmg_joint_set.begin(), jmg_joint_set.end(),
-			                    joint_set.begin(), joint_set.end(),
+			std::set_difference(jmg_joint_set.begin(), jmg_joint_set.end(), joint_set.begin(), joint_set.end(),
 			                    std::inserter(difference, difference.begin()));
 			unsigned int acceptable = 0;
-			for(const std::string& diff_joint : difference){
+			for (const std::string& diff_joint : difference) {
 				const moveit::core::JointModel* diff_jm = model.getJointModel(diff_joint);
 				if (diff_jm->isPassive() || diff_jm->getMimic() || diff_jm->getType() == moveit::core::JointModel::FIXED)
 					++acceptable;
@@ -73,28 +73,23 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 
 	return nullptr;
 }
-
 }
 
+namespace move_group {
 
-namespace move_group
-{
-
-ExecuteTaskSolutionCapability::ExecuteTaskSolutionCapability()
-	: MoveGroupCapability("ExecuteTaskSolution")
-{}
+ExecuteTaskSolutionCapability::ExecuteTaskSolutionCapability() : MoveGroupCapability("ExecuteTaskSolution") {}
 
 void ExecuteTaskSolutionCapability::initialize() {
 	// configure the action server
 	as_.reset(new actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>(
-		root_node_handle_, "execute_task_solution",
-		std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1), false));
-	as_->registerPreemptCallback(
-		std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this));
+	    root_node_handle_, "execute_task_solution",
+	    std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1), false));
+	as_->registerPreemptCallback(std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this));
 	as_->start();
 }
 
-void ExecuteTaskSolutionCapability::goalCallback(const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal) {
+void ExecuteTaskSolutionCapability::goalCallback(
+    const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal) {
 	moveit_task_constructor_msgs::ExecuteTaskSolutionResult result;
 
 	if (!context_->plan_execution_) {
@@ -105,7 +100,7 @@ void ExecuteTaskSolutionCapability::goalCallback(const moveit_task_constructor_m
 	}
 
 	plan_execution::ExecutableMotionPlan plan;
-	if(!constructMotionPlan(goal->solution, plan))
+	if (!constructMotionPlan(goal->solution, plan))
 		result.error_code.val = moveit_msgs::MoveItErrorCodes::INVALID_MOTION_PLAN;
 	else {
 		ROS_INFO_NAMED("ExecuteTaskSolution", "Executing TaskSolution");
@@ -123,7 +118,7 @@ void ExecuteTaskSolutionCapability::goalCallback(const moveit_task_constructor_m
 }
 
 void ExecuteTaskSolutionCapability::preemptCallback() {
-	if(context_->plan_execution_)
+	if (context_->plan_execution_)
 		context_->plan_execution_->stop();
 }
 
@@ -134,54 +129,55 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 	robot_state::RobotState state(model);
 	{
 		planning_scene_monitor::LockedPlanningSceneRO scene(context_->planning_scene_monitor_);
-		state= scene->getCurrentState();
+		state = scene->getCurrentState();
 	}
 
 	plan.plan_components_.reserve(solution.sub_trajectory.size());
-	for(size_t i= 0; i < solution.sub_trajectory.size(); ++i) {
+	for (size_t i = 0; i < solution.sub_trajectory.size(); ++i) {
 		const moveit_task_constructor_msgs::SubTrajectory& sub_traj = solution.sub_trajectory[i];
 
 		plan.plan_components_.emplace_back();
 		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
 
 		// define individual variable for use in closure below
-		const std::string description = std::to_string(i+1) + "/"
-		                                + std::to_string(solution.sub_trajectory.size())
-		                                + " - subsolution " + std::to_string(sub_traj.info.id)
-		                                + " of stage " + std::to_string(sub_traj.info.stage_id);
+		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size()) +
+		                                " - subsolution " + std::to_string(sub_traj.info.id) + " of stage " +
+		                                std::to_string(sub_traj.info.stage_id);
 
 		exec_traj.description_ = description;
 
 		const moveit::core::JointModelGroup* group = nullptr;
 		{
 			std::vector<std::string> joint_names(sub_traj.trajectory.joint_trajectory.joint_names);
-			joint_names.insert(joint_names.end(),
-			                   sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
+			joint_names.insert(joint_names.end(), sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
 			                   sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.end());
 			if (joint_names.size()) {
 				group = findJointModelGroup(*model, joint_names);
-				if(!group){
-					ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {" << boost::algorithm::join(joint_names, ", ") << "}" );
+				if (!group) {
+					ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {"
+					                                                  << boost::algorithm::join(joint_names, ", ") << "}");
 					return false;
 				}
-				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution", group->getName().c_str());
+				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution",
+				                group->getName().c_str());
 			}
 		}
 		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this,sub_traj,description](const plan_execution::ExecutableMotionPlan*){
-			if(!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)){
-				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description );
+		exec_traj.effect_on_success_ = [this, sub_traj, description](const plan_execution::ExecutableMotionPlan*) {
+			if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)) {
+				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
 				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
 			}
 			return true;
 		};
 
-		if(!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff.robot_state) &&
-		   !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)){
-			ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "invalid intermediate robot state in scene diff of SubTrajectory " << description);
+		if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff.robot_state) &&
+		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
+			ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution",
+			                       "invalid intermediate robot state in scene diff of SubTrajectory " << description);
 			return false;
 		}
 	}

@@ -41,31 +41,29 @@
 #include <moveit/task_constructor/solvers/planner_interface.h>
 #include <moveit/macros/class_forward.h>
 
-namespace moveit { namespace task_constructor { namespace solvers {
+namespace moveit {
+namespace task_constructor {
+namespace solvers {
 
 MOVEIT_CLASS_FORWARD(JointInterpolationPlanner)
 
 /** Use MoveIt's PlanningPipeline to plan a trajectory between to scenes */
-class JointInterpolationPlanner : public PlannerInterface {
+class JointInterpolationPlanner : public PlannerInterface
+{
 public:
-    JointInterpolationPlanner();
+	JointInterpolationPlanner();
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	          const planning_scene::PlanningSceneConstPtr& to,
-	          const core::JointModelGroup *jmg,
-	          double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
+	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	          const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	          const moveit::core::LinkModel &link,
-	          const Eigen::Isometry3d& target,
-	          const core::JointModelGroup *jmg,
-	          double timeout,
+	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	          const Eigen::Isometry3d& target, const core::JointModelGroup* jmg, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints= moveit_msgs::Constraints()) override;
+	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 };
-
-} } }
+}
+}
+}

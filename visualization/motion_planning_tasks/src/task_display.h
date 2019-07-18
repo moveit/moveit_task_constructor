@@ -51,88 +51,92 @@
 #include <moveit_task_constructor_msgs/Solution.h>
 #endif
 
-namespace rviz
-{
+namespace rviz {
 class StringProperty;
 class RosTopicProperty;
 }
 
-namespace moveit { namespace core { MOVEIT_CLASS_FORWARD(RobotModel) } }
-namespace rdf_loader { MOVEIT_CLASS_FORWARD(RDFLoader) }
+namespace moveit {
+namespace core {
+MOVEIT_CLASS_FORWARD(RobotModel)
+}
+}
+namespace rdf_loader {
+MOVEIT_CLASS_FORWARD(RDFLoader)
+}
 
-namespace moveit_rviz_plugin
-{
+namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 class TaskListModel;
 
 class TaskDisplay : public rviz::Display
 {
-  Q_OBJECT
+	Q_OBJECT
 
 public:
-  TaskDisplay();
-  ~TaskDisplay();
+	TaskDisplay();
+	~TaskDisplay();
 
-  void loadRobotModel();
+	void loadRobotModel();
 
-  void update(float wall_dt, float ros_dt) override;
-  void reset() override;
-  void save(rviz::Config config) const;
-  void load(const rviz::Config &config);
+	void update(float wall_dt, float ros_dt) override;
+	void reset() override;
+	void save(rviz::Config config) const;
+	void load(const rviz::Config& config);
 
-  void setName(const QString& name);
-  void setSolutionStatus(bool ok);
+	void setName(const QString& name);
+	void setSolutionStatus(bool ok);
 
-  TaskListModel& getTaskListModel() { return *task_list_model_; }
-  TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
+	TaskListModel& getTaskListModel() { return *task_list_model_; }
+	TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }
 
-  inline void clearMarkers() { trajectory_visual_->clearMarkers(); }
-  inline void addMarkers(const DisplaySolutionPtr &s) { trajectory_visual_->addMarkers(s); }
+	inline void clearMarkers() { trajectory_visual_->clearMarkers(); }
+	inline void addMarkers(const DisplaySolutionPtr& s) { trajectory_visual_->addMarkers(s); }
 
 protected:
-  void onInitialize() override;
-  void onEnable() override;
-  void onDisable() override;
-  void fixedFrameChanged() override;
-  void calculateOffsetPosition();
+	void onInitialize() override;
+	void onEnable() override;
+	void onDisable() override;
+	void fixedFrameChanged() override;
+	void calculateOffsetPosition();
 
 private Q_SLOTS:
-  /**
-   * \brief Slot Event Functions
-   */
-  void changedRobotDescription();
-  void changedTaskSolutionTopic();
-  void onTasksInserted(const QModelIndex& parent, int first, int last);
-  void onTasksRemoved(const QModelIndex& parent, int first, int last);
-  void onTaskDataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight);
+	/**
+	 * \brief Slot Event Functions
+	 */
+	void changedRobotDescription();
+	void changedTaskSolutionTopic();
+	void onTasksInserted(const QModelIndex& parent, int first, int last);
+	void onTasksRemoved(const QModelIndex& parent, int first, int last);
+	void onTaskDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 
-  void taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg);
-  void taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg);
-  void taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg);
+	void taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg);
+	void taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg);
+	void taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg);
 
 protected:
-  ros::Subscriber task_solution_sub;
-  ros::Subscriber task_description_sub;
-  ros::Subscriber task_statistics_sub;
-  ros::ServiceClient get_solution_client;
+	ros::Subscriber task_solution_sub;
+	ros::Subscriber task_description_sub;
+	ros::Subscriber task_statistics_sub;
+	ros::ServiceClient get_solution_client;
 
-  // handle processing of task+solution messages in Qt mainloop
-  moveit::tools::JobQueue mainloop_jobs_;
+	// handle processing of task+solution messages in Qt mainloop
+	moveit::tools::JobQueue mainloop_jobs_;
 
-  // The trajectory playback component
-  std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
-  // The TaskListModel storing actual task and solution data
-  std::unique_ptr<TaskListModel> task_list_model_;
+	// The trajectory playback component
+	std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
+	// The TaskListModel storing actual task and solution data
+	std::unique_ptr<TaskListModel> task_list_model_;
 
-  // Load robot model
-  rdf_loader::RDFLoaderPtr rdf_loader_;
-  moveit::core::RobotModelConstPtr robot_model_;
+	// Load robot model
+	rdf_loader::RDFLoaderPtr rdf_loader_;
+	moveit::core::RobotModelConstPtr robot_model_;
 
-  // Properties
-  rviz::StringProperty* robot_description_property_;
-  rviz::RosTopicProperty* task_solution_topic_property_;
-  rviz::Property* tasks_property_;
+	// Properties
+	rviz::StringProperty* robot_description_property_;
+	rviz::RosTopicProperty* task_solution_topic_property_;
+	rviz::Property* tasks_property_;
 };
 
 }  // namespace moveit_rviz_plugin

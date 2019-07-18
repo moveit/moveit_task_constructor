@@ -13,22 +13,22 @@
 
 using namespace moveit::task_constructor;
 
-void spawnObject(){
+void spawnObject() {
 	moveit::planning_interface::PlanningSceneInterface psi;
 
 	moveit_msgs::CollisionObject o;
-	o.id= "object";
-	o.header.frame_id= "table_top";
+	o.id = "object";
+	o.header.frame_id = "table_top";
 	o.primitive_poses.resize(1);
-	o.primitive_poses[0].position.x= -0.2;
-	o.primitive_poses[0].position.y= 0.13;
-	o.primitive_poses[0].position.z= 0.12;
-	o.primitive_poses[0].orientation.w= 1.0;
+	o.primitive_poses[0].position.x = -0.2;
+	o.primitive_poses[0].position.y = 0.13;
+	o.primitive_poses[0].position.z = 0.12;
+	o.primitive_poses[0].orientation.w = 1.0;
 	o.primitives.resize(1);
-	o.primitives[0].type= shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
 	o.primitives[0].dimensions.resize(2);
-	o.primitives[0].dimensions[0]= 0.23;
-	o.primitives[0].dimensions[1]= 0.03;
+	o.primitives[0].dimensions[0] = 0.23;
+	o.primitives[0].dimensions[1] = 0.03;
 	psi.applyCollisionObject(o);
 }
 
@@ -44,7 +44,7 @@ TEST(UR5, pick) {
 	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
-	stages::Connect::GroupPlannerVector planners = {{"arm", pipeline}, {"gripper", pipeline}};
+	stages::Connect::GroupPlannerVector planners = { { "arm", pipeline }, { "gripper", pipeline } };
 	auto connect = std::make_unique<stages::Connect>("connect", planners);
 	connect->properties().configureInitFrom(Stage::PARENT);
 	t.add(std::move(connect));
@@ -57,7 +57,7 @@ TEST(UR5, pick) {
 	grasp_generator->setMonitoredStage(initial_stage);
 
 	auto grasp = std::make_unique<stages::SimpleGrasp>(std::unique_ptr<MonitoringGenerator>(grasp_generator));
-	grasp->setIKFrame(Eigen::Translation3d(.03,0,0), "s_model_tool0");
+	grasp->setIKFrame(Eigen::Translation3d(.03, 0, 0), "s_model_tool0");
 	grasp->setMaxIKSolutions(8);
 
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp));
@@ -78,7 +78,7 @@ TEST(UR5, pick) {
 	try {
 		spawnObject();
 		t.plan();
-	} catch (const InitStageException &e) {
+	} catch (const InitStageException& e) {
 		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
 	}
 
@@ -87,7 +87,7 @@ TEST(UR5, pick) {
 	EXPECT_LE(solutions, 60u);
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "ur5");
 	ros::AsyncSpinner spinner(1);

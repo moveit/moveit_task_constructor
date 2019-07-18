@@ -52,9 +52,11 @@ class DisplayContext;
 namespace planning_scene {
 class PlanningScene;
 }
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 class Stage;
-} }
+}
+}
 
 namespace moveit_rviz_plugin {
 
@@ -75,10 +77,12 @@ public:
 
 	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&,
 	                                      const planning_scene::PlanningScene* scene,
-	                                      rviz::DisplayContext* display_context)> PropertyFactoryFunction;
+	                                      rviz::DisplayContext* display_context)>
+	    PropertyFactoryFunction;
 	typedef std::function<rviz::PropertyTreeModel*(moveit::task_constructor::PropertyMap&,
 	                                               const planning_scene::PlanningScene* scene,
-	                                               rviz::DisplayContext* display_context)> TreeFactoryFunction;
+	                                               rviz::DisplayContext* display_context)>
+	    TreeFactoryFunction;
 
 	/// register a factory function for type T
 	template <typename T>
@@ -89,30 +93,31 @@ public:
 
 	/// register a factory function for stage T
 	template <typename T>
-	inline void registerStage(const TreeFactoryFunction& f) { registerStage(typeid(T), f); }
+	inline void registerStage(const TreeFactoryFunction& f) {
+		registerStage(typeid(T), f);
+	}
 
 	/// create rviz::Property for given MTC Property
-	rviz::Property* create(const std::string &prop_name, moveit::task_constructor::Property &prop,
-	                       const planning_scene::PlanningScene *scene, rviz::DisplayContext *display_context) const;
+	rviz::Property* create(const std::string& prop_name, moveit::task_constructor::Property& prop,
+	                       const planning_scene::PlanningScene* scene, rviz::DisplayContext* display_context) const;
 	/// create rviz::Property for property of given name, type, description, and value
 	static rviz::Property* createDefault(const std::string& name, const std::string& type,
 	                                     const std::string& description, const std::string& value,
-	                                     rviz::Property* old=nullptr);
+	                                     rviz::Property* old = nullptr);
 
 	/// create PropertyTreeModel for given Stage
-	rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::Stage &stage,
+	rviz::PropertyTreeModel* createPropertyTreeModel(moveit::task_constructor::Stage& stage,
 	                                                 const planning_scene::PlanningScene* scene,
 	                                                 rviz::DisplayContext* display_context);
 
 	/// turn a PropertyMap into an rviz::PropertyTreeModel
-	rviz::PropertyTreeModel* defaultPropertyTreeModel(moveit::task_constructor::PropertyMap &properties,
+	rviz::PropertyTreeModel* defaultPropertyTreeModel(moveit::task_constructor::PropertyMap& properties,
 	                                                  const planning_scene::PlanningScene* scene,
 	                                                  rviz::DisplayContext* display_context);
 
 	/// add all properties from map that are not yet in root
-	void addRemainingProperties(rviz::Property *root, moveit::task_constructor::PropertyMap &properties,
-	                            const planning_scene::PlanningScene* scene,
-	                            rviz::DisplayContext* display_context);
+	void addRemainingProperties(rviz::Property* root, moveit::task_constructor::PropertyMap& properties,
+	                            const planning_scene::PlanningScene* scene, rviz::DisplayContext* display_context);
 
 private:
 	std::map<std::string, PropertyFactoryFunction> property_registry_;
@@ -126,5 +131,4 @@ private:
 	void registerType(const std::string& type_name, const PropertyFactoryFunction& f);
 	void registerStage(const std::type_index& type_index, const TreeFactoryFunction& f);
 };
-
 }

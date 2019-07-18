@@ -41,7 +41,9 @@
 #include <memory>
 #include <limits>
 
-namespace ros { class ServiceClient; }
+namespace ros {
+class ServiceClient;
+}
 
 namespace moveit_rviz_plugin {
 
@@ -50,7 +52,8 @@ class RemoteSolutionModel;
  *
  *  filled via TaskDescription + TaskStatistics messages
  */
-class RemoteTaskModel : public BaseTaskModel {
+class RemoteTaskModel : public BaseTaskModel
+{
 	Q_OBJECT
 	struct Node;
 	Node* const root_;
@@ -59,56 +62,56 @@ class RemoteTaskModel : public BaseTaskModel {
 	std::map<uint32_t, Node*> id_to_stage_;
 	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
 
-	inline Node* node(const QModelIndex &index) const;
+	inline Node* node(const QModelIndex& index) const;
 	QModelIndex index(const Node* n) const;
 
 	Node* node(uint32_t stage_id) const;
 	inline RemoteSolutionModel* getSolutionModel(uint32_t stage_id) const;
-	void setSolutionData(const moveit_task_constructor_msgs::SolutionInfo &info);
+	void setSolutionData(const moveit_task_constructor_msgs::SolutionInfo& info);
 
 public:
-	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr &scene, rviz::DisplayContext *display_context, QObject *parent = nullptr);
+	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
+	                QObject* parent = nullptr);
 	~RemoteTaskModel();
 
-	void setSolutionClient(ros::ServiceClient *client);
+	void setSolutionClient(ros::ServiceClient* client);
 
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-	QModelIndex parent(const QModelIndex &index) const override;
+	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex& index) const override;
 
-	Qt::ItemFlags flags(const QModelIndex & index) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+	Qt::ItemFlags flags(const QModelIndex& index) const override;
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
 
 	QModelIndex indexFromStageId(size_t id) const override;
-	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type &msg);
-	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type &msg);
-	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution &msg);
+	void processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type& msg);
+	void processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type& msg);
+	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg);
 
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
-	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
+	DisplaySolutionPtr getSolution(const QModelIndex& index) override;
 
 	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
 
-
 /** Model representing solutions of a remote task */
-class RemoteSolutionModel : public QAbstractTableModel {
+class RemoteSolutionModel : public QAbstractTableModel
+{
 	Q_OBJECT
-	struct Data {
+	struct Data
+	{
 		uint32_t id;
 		double cost;  // nan if unknown, inf if failed
 		QString comment;
 		uint32_t creation_rank;  // rank, ordered by creation
 		uint32_t cost_rank;  // rank, ordering by cost
 
-		Data(uint32_t id, float cost, uint32_t cost_rank, const QString& name=QString())
-		   : id(id), cost(cost), comment(name), creation_rank(0), cost_rank(cost_rank) {}
+		Data(uint32_t id, float cost, uint32_t cost_rank, const QString& name = QString())
+		  : id(id), cost(cost), comment(name), creation_rank(0), cost_rank(cost_rank) {}
 
-		inline bool operator<(const Data& other) const {
-			return this->id < other.id;
-		}
+		inline bool operator<(const Data& other) const { return this->id < other.id; }
 	};
 	// successful and failed solutions ordered by id / creation
 	typedef std::list<Data> DataList;
@@ -122,24 +125,24 @@ class RemoteSolutionModel : public QAbstractTableModel {
 	double max_cost_ = std::numeric_limits<double>::infinity();
 	std::vector<DataList::iterator> sorted_;
 
-	inline bool isVisible (const Data& item) const;
+	inline bool isVisible(const Data& item) const;
 	void processSolutionIDs(const std::vector<uint32_t>& ids, bool successful);
 	void sortInternal();
 
 public:
-	RemoteSolutionModel(QObject *parent = nullptr);
+	RemoteSolutionModel(QObject* parent = nullptr);
 
 	uint numSuccessful() const { return data_.size() - num_failed_data_; }
 	uint numFailed() const { return num_failed_; }
 
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-	int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 	void sort(int column, Qt::SortOrder order) override;
 
-	void setSolutionData(uint32_t id, float cost, const QString &comment);
-	void processSolutionIDs(const std::vector<uint32_t> &successful, const std::vector<uint32_t> &failed, size_t num_failed);
+	void setSolutionData(uint32_t id, float cost, const QString& comment);
+	void processSolutionIDs(const std::vector<uint32_t>& successful, const std::vector<uint32_t>& failed,
+	                        size_t num_failed);
 };
-
 }

@@ -49,16 +49,21 @@ MOVEIT_CLASS_FORWARD(PlanningScene)
 namespace robot_trajectory {
 MOVEIT_CLASS_FORWARD(RobotTrajectory)
 }
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(LinkModel)
 MOVEIT_CLASS_FORWARD(RobotModel)
 MOVEIT_CLASS_FORWARD(JointModelGroup)
-} }
+}
+}
 
-namespace moveit { namespace task_constructor { namespace solvers {
+namespace moveit {
+namespace task_constructor {
+namespace solvers {
 
 MOVEIT_CLASS_FORWARD(PlannerInterface)
-class PlannerInterface {
+class PlannerInterface
+{
 	// these properties take precedence over stage properties
 	PropertyMap properties_;
 
@@ -69,28 +74,22 @@ public:
 	PropertyMap& properties() { return properties_; }
 	const PropertyMap& properties() const { return properties_; }
 
-	void setProperty(const std::string& name, const boost::any& value) {
-		properties_.set(name, value);
-	}
+	void setProperty(const std::string& name, const boost::any& value) { properties_.set(name, value); }
 
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model) = 0;
 
 	/// plan trajectory between to robot states
-	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	                  const planning_scene::PlanningSceneConstPtr& to,
-	                  const moveit::core::JointModelGroup *jmg,
-	                  double timeout,
+	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	                  const moveit::core::JointModelGroup* jmg, double timeout,
 	                  robot_trajectory::RobotTrajectoryPtr& result,
 	                  const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) = 0;
 
 	/// plan trajectory from current robot state to Cartesian target
-	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from,
-	                  const moveit::core::LinkModel &link,
-	                  const Eigen::Isometry3d& target,
-	                  const moveit::core::JointModelGroup *jmg,
-	                  double timeout,
+	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	                  const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
 	                  robot_trajectory::RobotTrajectoryPtr& result,
 	                  const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) = 0;
 };
-
-} } }
+}
+}
+}

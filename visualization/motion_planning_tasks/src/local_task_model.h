@@ -41,43 +41,41 @@
 
 namespace moveit_rviz_plugin {
 
-class LocalTaskModel
-      : public BaseTaskModel
-      , public moveit::task_constructor::Task
+class LocalTaskModel : public BaseTaskModel, public moveit::task_constructor::Task
 {
 	Q_OBJECT
 	typedef moveit::task_constructor::StagePrivate Node;
-	Node *root_;
+	Node* root_;
 	StageFactoryPtr stage_factory_;
 	std::map<Node*, rviz::PropertyTreeModel*> properties_;
 
-	inline Node* node(const QModelIndex &index) const;
-	QModelIndex index(Node *n) const;
+	inline Node* node(const QModelIndex& index) const;
+	QModelIndex index(Node* n) const;
 
 public:
-	LocalTaskModel(ContainerBase::pointer &&container, const planning_scene::PlanningSceneConstPtr &scene,
-	               rviz::DisplayContext* display_context, QObject *parent = nullptr);
-	int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+	LocalTaskModel(ContainerBase::pointer&& container, const planning_scene::PlanningSceneConstPtr& scene,
+	               rviz::DisplayContext* display_context, QObject* parent = nullptr);
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
-	QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
-	QModelIndex parent(const QModelIndex &index) const override;
+	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
+	QModelIndex parent(const QModelIndex& index) const override;
 
-	Qt::ItemFlags flags(const QModelIndex & index) const override;
-	QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+	Qt::ItemFlags flags(const QModelIndex& index) const override;
+	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
 
-	bool removeRows(int row, int count, const QModelIndex &parent) override;
+	bool removeRows(int row, int count, const QModelIndex& parent) override;
 
 	/// providing a StageFactory makes the model accepting drops
-	void setStageFactory(const StageFactoryPtr &factory) override;
-	bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+	void setStageFactory(const StageFactoryPtr& factory) override;
+	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column,
+	                  const QModelIndex& parent) override;
 
 	QModelIndex indexFromStageId(size_t id) const override;
 
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
-	DisplaySolutionPtr getSolution(const QModelIndex &index) override;
+	DisplaySolutionPtr getSolution(const QModelIndex& index) override;
 
 	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
-
 }

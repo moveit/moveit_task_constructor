@@ -38,10 +38,10 @@
 #include <moveit/task_constructor/merge.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
-moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups)
-{
+moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups) {
 	if (groups.size() <= 1)
 		throw std::runtime_error("Expected multiple groups");
 
@@ -66,9 +66,7 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 
 bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
                     std::vector<const moveit::core::JointModel*> joints,
-                    std::vector<const moveit::core::JointModel*>& duplicates,
-                    std::string& names)
-{
+                    std::vector<const moveit::core::JointModel*>& duplicates, std::string& names) {
 	duplicates.clear();
 	names.clear();
 	for (const moveit::core::JointModelGroup* jmg : groups) {
@@ -78,7 +76,8 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
 				if (jm->getType() != moveit::core::JointModel::FIXED &&  // fixed joints are OK
 				    std::find(duplicates.begin(), duplicates.end(), jm) == duplicates.end()) {
 					duplicates.push_back(jm);
-					if (!names.empty()) names.append(", ");
+					if (!names.empty())
+						names.append(", ");
 					names.append(jm->getName());
 				}
 				continue;
@@ -89,14 +88,14 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
 	return duplicates.size() > 0;
 }
 
-robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-                                           const robot_state::RobotState& base_state, moveit::core::JointModelGroup*& merged_group)
-{
+robot_trajectory::RobotTrajectoryPtr
+merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+      const robot_state::RobotState& base_state, moveit::core::JointModelGroup*& merged_group) {
 	if (sub_trajectories.size() <= 1)
 		throw std::runtime_error("Expected multiple sub solutions");
 
-	const std::vector<const moveit::core::JointModel*> *merged_joints
-	      = merged_group ? &merged_group->getJointModels() : nullptr;
+	const std::vector<const moveit::core::JointModel*>* merged_joints =
+	    merged_group ? &merged_group->getJointModels() : nullptr;
 	std::set<const moveit::core::JointModel*> jset;
 	std::vector<const moveit::core::JointModelGroup*> groups;
 	groups.reserve(sub_trajectories.size());
@@ -118,7 +117,7 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 				if (std::find(merged_joints->cbegin(), merged_joints->cend(), jm) == merged_joints->cend())
 					throw std::runtime_error("subsolutions refers to unknown joint: " + jm->getName());
 			}
-		} else // accumulate set of joints
+		} else  // accumulate set of joints
 			jset.insert(joints.cbegin(), joints.cend());
 
 		max_num_joints = std::max(max_num_joints, joints.size());
@@ -129,8 +128,10 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	if (num_merged != num_joints) {
 		// overlapping joint groups: analyse in more detail
 		std::vector<const moveit::core::JointModel*> joints;
-		if (merged_joints) joints = *merged_joints;
-		else joints.insert(joints.end(), jset.cbegin(), jset.cend());
+		if (merged_joints)
+			joints = *merged_joints;
+		else
+			joints.insert(joints.end(), jset.cbegin(), jset.cend());
 
 		std::vector<const moveit::core::JointModel*> duplicates;
 		std::string names;
@@ -178,5 +179,5 @@ robot_trajectory::RobotTrajectoryPtr merge(const std::vector<robot_trajectory::R
 	timing.computeTimeStamps(*merged_traj, 1.0, 1.0);
 	return merged_traj;
 }
-
-} }
+}
+}

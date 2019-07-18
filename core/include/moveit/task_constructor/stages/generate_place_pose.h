@@ -40,22 +40,26 @@
 
 #include <moveit/task_constructor/stages/generate_pose.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Simple IK pose generator to place an attached object in a specific pose
  *
  * The "pose" property, inherited from GeneratePose specifies the target pose
  * of the grasped object. This stage transforms this pose into a target pose for the ik_frame */
-class GeneratePlacePose : public GeneratePose {
+class GeneratePlacePose : public GeneratePose
+{
 public:
 	GeneratePlacePose(const std::string& name = "place pose");
 
 	void compute() override;
 
-	void setObject(const std::string &object) { setProperty("object", object); }
+	void setObject(const std::string& object) { setProperty("object", object); }
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;
 };
-
-} } }
+}
+}
+}

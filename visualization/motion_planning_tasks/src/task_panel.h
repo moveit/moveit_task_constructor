@@ -56,9 +56,9 @@ class TaskSolutionVisualization;
 MOVEIT_CLASS_FORWARD(TaskListModel)
 MOVEIT_CLASS_FORWARD(TaskPanel)
 
-
 /// Base class for all sub panels within the Task Panel
-class SubPanel : public QWidget {
+class SubPanel : public QWidget
+{
 	Q_OBJECT
 public:
 	SubPanel(QWidget* parent = nullptr) : QWidget(parent) {}
@@ -70,28 +70,27 @@ Q_SIGNALS:
 	void configChanged();
 };
 
-
 /** The TaskPanel is the central panel of this plugin, collecting various sub panels. */
 class TaskPanelPrivate;
-class TaskPanel: public rviz::Panel
+class TaskPanel : public rviz::Panel
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TaskPanel)
-	TaskPanelPrivate *d_ptr;
+	TaskPanelPrivate* d_ptr;
 
 public:
 	TaskPanel(QWidget* parent = 0);
 	~TaskPanel();
 
 	/// add a new sub panel widget
-	void addSubPanel(SubPanel* w, const QString &title, const QIcon &icon);
+	void addSubPanel(SubPanel* w, const QString& title, const QIcon& icon);
 
 	/** Increment/decrement use count of singleton TaskPanel instance.
 	 *
 	 * If not yet done, an instance is created. If use count drops to zero,
 	 * the global instance is destroyed.
 	 */
-	static void incDisplayCount(rviz::WindowManagerInterface *window_manager);
+	static void incDisplayCount(rviz::WindowManagerInterface* window_manager);
 	static void decDisplayCount();
 
 	void onInitialize() override;
@@ -102,7 +101,6 @@ protected Q_SLOTS:
 	void showStageDockWidget();
 };
 
-
 class MetaTaskListModel;
 /** TaskView displays all known tasks.
  *
@@ -111,14 +109,20 @@ class MetaTaskListModel;
  *  successful solutions and failed solution attempts.
 */
 class TaskViewPrivate;
-class TaskView : public SubPanel {
+class TaskView : public SubPanel
+{
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TaskView)
-	TaskViewPrivate *d_ptr;
+	TaskViewPrivate* d_ptr;
 
 protected:
 	// configuration settings
-	enum TaskExpand { EXPAND_TOP=1, EXPAND_ALL, EXPAND_NONE };
+	enum TaskExpand
+	{
+		EXPAND_TOP = 1,
+		EXPAND_ALL,
+		EXPAND_NONE
+	};
 	rviz::EnumProperty* initial_task_expand;
 
 public:
@@ -133,24 +137,23 @@ public Q_SLOTS:
 
 protected Q_SLOTS:
 	void removeSelectedStages();
-	void onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous);
-	void onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous);
-	void onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+	void onCurrentStageChanged(const QModelIndex& current, const QModelIndex& previous);
+	void onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous);
+	void onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 };
 
-
 class GlobalSettingsWidgetPrivate;
-class GlobalSettingsWidget : public SubPanel {
+class GlobalSettingsWidget : public SubPanel
+{
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(GlobalSettingsWidget)
-	GlobalSettingsWidgetPrivate *d_ptr;
+	GlobalSettingsWidgetPrivate* d_ptr;
 
 public:
 	GlobalSettingsWidget(TaskPanel* parent, rviz::Property* root);
 	~GlobalSettingsWidget();
 
 	void save(rviz::Config config) override;
-	void load(const rviz::Config &config) override;
+	void load(const rviz::Config& config) override;
 };
-
 }

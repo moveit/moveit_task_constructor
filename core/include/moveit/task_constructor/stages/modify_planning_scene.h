@@ -43,11 +43,15 @@
 #include <moveit/task_constructor/type_traits.h>
 #include <map>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(JointModelGroup)
-} }
+}
+}
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Allow modification of planning scene
  *
@@ -57,10 +61,12 @@ namespace moveit { namespace task_constructor { namespace stages {
  * - Attach or detach objects to robot links.
  * - Spawn or remove objects.
  */
-class ModifyPlanningScene : public PropagatingEitherWay {
+class ModifyPlanningScene : public PropagatingEitherWay
+{
 public:
 	typedef std::vector<std::string> Names;
-	typedef std::function<void(const planning_scene::PlanningScenePtr& scene, const PropertyMap& properties)> ApplyCallback;
+	typedef std::function<void(const planning_scene::PlanningScenePtr& scene, const PropertyMap& properties)>
+	    ApplyCallback;
 	ModifyPlanningScene(const std::string& name = "modify planning scene");
 
 	void computeForward(const InterfaceState& from) override;
@@ -77,11 +83,13 @@ public:
 	inline void detachObject(const std::string& object, const std::string& link);
 
 	/// conviency methods accepting any container of object names
-	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	template <typename T, typename E = typename std::enable_if_t<
+	                          is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
 	inline void attachObjects(const T& objects, const std::string& link) {
 		attachObjects(Names(objects.cbegin(), objects.cend()), link, true);
 	}
-	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
+	template <typename T, typename E = typename std::enable_if_t<
+	                          is_container<T>::value && std::is_base_of<std::string, typename T::value_type>::value>>
 	inline void detachObjects(const T& objects, const std::string& link) {
 		attachObjects(Names(objects.cbegin(), objects.cend()), link, false);
 	}
@@ -90,39 +98,42 @@ public:
 	void allowCollisions(const Names& first, const Names& second, bool allow);
 	/// allow / forbid collisions for pair (first, second)
 	void allowCollisions(const std::string& first, const std::string& second, bool allow) {
-		allowCollisions(Names{first}, Names{second}, allow);
+		allowCollisions(Names{ first }, Names{ second }, allow);
 	}
 	/// allow / forbid all collisions for given object
-	void allowCollisions(const std::string& object, bool allow) {
-		allowCollisions(Names({object}), Names(), allow);
-	}
+	void allowCollisions(const std::string& object, bool allow) { allowCollisions(Names({ object }), Names(), allow); }
 
 	/// conveniency method accepting arbitrary container types
 	template <typename T1, typename T2,
-	          typename E1 = typename std::enable_if_t<is_container<T1>::value && std::is_convertible<typename T1::value_type, std::string>::value>,
-	          typename E2 = typename std::enable_if_t<is_container<T2>::value && std::is_convertible<typename T1::value_type, std::string>::value>>
+	          typename E1 = typename std::enable_if_t<is_container<T1>::value &&
+	                                                  std::is_convertible<typename T1::value_type, std::string>::value>,
+	          typename E2 = typename std::enable_if_t<is_container<T2>::value &&
+	                                                  std::is_convertible<typename T1::value_type, std::string>::value>>
 	inline void allowCollisions(const T1& first, const T2& second, bool enable_collision) {
 		allowCollisions(Names(first.cbegin(), first.cend()), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and an arbitrary container of names
-	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
+	template <typename T, typename E = typename std::enable_if_t<
+	                          is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
 	inline void allowCollisions(const std::string& first, const T& second, bool enable_collision) {
-		allowCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
+		allowCollisions(Names({ first }), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting const char* and an arbitrary container of names
-	template <typename T, typename E = typename std::enable_if_t<is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
+	template <typename T, typename E = typename std::enable_if_t<
+	                          is_container<T>::value && std::is_convertible<typename T::value_type, std::string>::value>>
 	inline void allowCollisions(const char* first, const T& second, bool enable_collision) {
-		allowCollisions(Names({first}), Names(second.cbegin(), second.cend()), enable_collision);
+		allowCollisions(Names({ first }), Names(second.cbegin(), second.cend()), enable_collision);
 	}
 	/// conveniency method accepting std::string and JointModelGroup
 	void allowCollisions(const std::string& first, const moveit::core::JointModelGroup& jmg, bool allow);
 
 protected:
 	// list of objects to attach (true) / detach (false) to a given link
-	std::map<std::string, std::pair<Names, bool> > attach_objects_;
+	std::map<std::string, std::pair<Names, bool>> attach_objects_;
 
 	// list of objects to mutually
-	struct CollisionMatrixPairs {
+	struct CollisionMatrixPairs
+	{
 		Names first;
 		Names second;
 		bool allow;
@@ -132,18 +143,19 @@ protected:
 
 protected:
 	// apply stored modifications to scene
-	InterfaceState apply(const InterfaceState &from, bool invert);
-	void attachObjects(planning_scene::PlanningScene &scene, const std::pair<std::string, std::pair<Names, bool> >& pair, bool invert);
-	void allowCollisions(planning_scene::PlanningScene &scene, const CollisionMatrixPairs& pairs, bool invert);
+	InterfaceState apply(const InterfaceState& from, bool invert);
+	void attachObjects(planning_scene::PlanningScene& scene, const std::pair<std::string, std::pair<Names, bool>>& pair,
+	                   bool invert);
+	void allowCollisions(planning_scene::PlanningScene& scene, const CollisionMatrixPairs& pairs, bool invert);
 };
 
-
-inline void ModifyPlanningScene::attachObject(const std::string &object, const std::string &link) {
-	attachObjects(Names({object}), link, true);
+inline void ModifyPlanningScene::attachObject(const std::string& object, const std::string& link) {
+	attachObjects(Names({ object }), link, true);
 }
 
-inline void ModifyPlanningScene::detachObject(const std::string &object, const std::string &link) {
-	attachObjects(Names({object}), link, false);
+inline void ModifyPlanningScene::detachObject(const std::string& object, const std::string& link) {
+	attachObjects(Names({ object }), link, false);
 }
-
-} } }
+}
+}
+}

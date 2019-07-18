@@ -47,14 +47,15 @@
 
 using namespace moveit::task_constructor;
 
-class TaskListModelTest : public ::testing::Test {
+class TaskListModelTest : public ::testing::Test
+{
 protected:
 	moveit_rviz_plugin::TaskListModel model;
 	int children = 0;
 	int num_inserts = 0;
 	int num_updates = 0;
 
-	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string &name) {
+	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name) {
 		moveit_task_constructor_msgs::TaskDescription t;
 		t.id = name;
 		uint id = 0, root_id;
@@ -74,7 +75,7 @@ protected:
 		return t;
 	}
 
-	void validate(QAbstractItemModel& model, const std::initializer_list<const char*> &expected) {
+	void validate(QAbstractItemModel& model, const std::initializer_list<const char*>& expected) {
 		// validate root index
 		ASSERT_EQ(model.rowCount(), static_cast<int>(expected.size()));
 		EXPECT_EQ(model.columnCount(), 3);
@@ -115,7 +116,10 @@ protected:
 	}
 
 	void populateAndValidate() {
-		{ SCOPED_TRACE("empty"); validate(model, {}); }
+		{
+			SCOPED_TRACE("empty");
+			validate(model, {});
+		}
 		EXPECT_EQ(num_inserts, 0);
 		EXPECT_EQ(num_updates, 0);
 
@@ -125,11 +129,13 @@ protected:
 			num_updates = 0;
 			model.processTaskDescriptionMessage("1", genMsg("first"));
 
-			if (i == 0) EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
-			else EXPECT_EQ(num_inserts, 0);
+			if (i == 0)
+				EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
+			else
+				EXPECT_EQ(num_inserts, 0);
 			EXPECT_EQ(num_updates, 0);
 
-			validate(model, {"first"});
+			validate(model, { "first" });
 		}
 		for (int i = 0; i < 2; ++i) {
 			SCOPED_TRACE("second i=" + std::to_string(i));
@@ -137,19 +143,19 @@ protected:
 			num_updates = 0;
 			model.processTaskDescriptionMessage("2", genMsg("second"));  // 1 notify for inserted task
 
-			if (i == 0) EXPECT_EQ(num_inserts, 1);
-			else EXPECT_EQ(num_inserts, 0);
+			if (i == 0)
+				EXPECT_EQ(num_inserts, 1);
+			else
+				EXPECT_EQ(num_inserts, 0);
 			EXPECT_EQ(num_updates, 0);
 
-			validate(model, {"first", "second"});
+			validate(model, { "first", "second" });
 		}
 	}
 
 	void SetUp() {
-		QObject::connect(&model, &QAbstractItemModel::rowsAboutToBeInserted,
-		                 [this](){ ++num_inserts; });
-		QObject::connect(&model, &QAbstractItemModel::dataChanged,
-		                 [this](){ ++num_updates; });
+		QObject::connect(&model, &QAbstractItemModel::rowsAboutToBeInserted, [this]() { ++num_inserts; });
+		QObject::connect(&model, &QAbstractItemModel::dataChanged, [this]() { ++num_updates; });
 	}
 	void TearDown() {}
 };
@@ -160,12 +166,12 @@ TEST_F(TaskListModelTest, remoteTaskModel) {
 	moveit_rviz_plugin::RemoteTaskModel m(scene, nullptr);
 	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
-	validate(m, {"first"});
+	validate(m, { "first" });
 }
 
 TEST_F(TaskListModelTest, localTaskModel) {
 	int argc = 0;
-	char *argv = nullptr;
+	char* argv = nullptr;
 	ros::init(argc, &argv, "testLocalTaskModel");
 
 	children = 3;
@@ -175,7 +181,10 @@ TEST_F(TaskListModelTest, localTaskModel) {
 	for (int i = 0; i != children; ++i)
 		m.add(std::make_unique<stages::CurrentState>(std::to_string(i)));
 
-	{ SCOPED_TRACE("localTaskModel"); validate(m, {task_name}); }
+	{
+		SCOPED_TRACE("localTaskModel");
+		validate(m, { task_name });
+	}
 }
 
 TEST_F(TaskListModelTest, noChildren) {
@@ -192,13 +201,13 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
 	model.processTaskDescriptionMessage("1", genMsg("first"));
-	validate(model, {"first"}); // validation visits root node
+	validate(model, { "first" });  // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
 	model.processTaskDescriptionMessage("1", genMsg("first"));
-	validate(model, {"first"});
+	validate(model, { "first" });
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
 	EXPECT_EQ(num_updates, 0);
@@ -209,7 +218,7 @@ TEST_F(TaskListModelTest, deletion) {
 	model.processTaskDescriptionMessage("1", genMsg("first"));
 	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
-	QObject::connect(m, &QObject::destroyed, [&num_deletes](){++num_deletes;});
+	QObject::connect(m, &QObject::destroyed, [&num_deletes]() { ++num_deletes; });
 
 	model.removeModel(m);
 	// process deleteLater() events
