@@ -101,11 +101,9 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
-	if (!planner_->generatePlan(from, req, res))
-		return false;
-
+	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return true;
+	return success;
 }
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
@@ -127,11 +125,9 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
-	if (!planner_->generatePlan(from, req, res))
-		return false;
-
+	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return true;
+	return success;
 }
 }
 }
