@@ -189,6 +189,8 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 	// calculate cost
 	double cost = 0;
 	for (const auto& trajectory : sub_trajectories) {
+		if (!trajectory)
+			continue;
 		for (const double& distance : trajectory->getWayPointDurations())
 			cost += distance;
 	}
@@ -224,6 +226,8 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 	// calculate cost
 	double cost = 0;
 	for (const auto& trajectory : sub_trajectories) {
+		if (!trajectory)
+			continue;
 		for (const double& distance : trajectory->getWayPointDurations())
 			cost += distance;
 	}
