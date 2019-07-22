@@ -1,0 +1,42 @@
+# planning group names
+group_name: "panda_arm"
+eef_name: "hand"
+hand_name: "hand"
+hand_frame: "panda_link8"
+
+# surface
+table_surface_frame: "world"
+object_surface_frame: "table"
+surface_link: "table"
+
+# collision object
+# CYLINDER object specifications
+object_name: "object"
+object_height: 0.25
+object_radius: 0.02
+object_pos_x: 0.0
+object_pos_y: -0.1
+
+table_height: 0.1
+table_width: 0.4
+table_length: 0.4
+table_pos_x: 0.5
+table_pos_y: -0.25
+
+# gripper grasp frame transform
+grasp_offset_x: 0.15 # horizontal
+grasp_offset_z: 0.0 # vertical
+grasp_rotation_z: 0.5 # rotation around Z access
+
+# place pose metrics (x/y position on table_top)
+place_pos_x: 0.1
+place_pos_y: 0.1
+place_surface_offset: 0.10001 # place offset from table
+
+# valid distance range when approaching an object for picking
+approach_object_min_dist: 0.10
+approach_object_max_dist: 0.15
+
+# valid height range when lifting an object after pick
+lift_object_min_dist: 0.01
+lift_object_max_dist: 0.1
