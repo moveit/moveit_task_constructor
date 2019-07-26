@@ -40,11 +40,13 @@
 
 #include <moveit/task_constructor/stage.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
-
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Spawn a pre-defined PlanningScene state */
-class FixedState : public Generator {
+class FixedState : public Generator
+{
 public:
 	FixedState(const std::string& name = "initial state");
 	void setState(const planning_scene::PlanningScenePtr& scene);
@@ -57,5 +59,6 @@ protected:
 	planning_scene::PlanningScenePtr scene_;
 	bool ran_ = false;
 };
-
-} } }
+}
+}
+}

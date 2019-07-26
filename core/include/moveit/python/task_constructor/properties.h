@@ -9,20 +9,21 @@ namespace python {
 
 void export_properties();
 
-class PropertyConverterBase {
+class PropertyConverterBase
+{
 public:
 	typedef boost::python::object (*to_python_converter_function)(const boost::any&);
 	typedef boost::any (*from_python_converter_function)(const boost::python::object&);
 
 protected:
 	static bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name,
-	                   to_python_converter_function to,
-	                   from_python_converter_function from);
+	                   to_python_converter_function to, from_python_converter_function from);
 };
 
 /// utility class to register C++ / Python converters for a property of type T
 template <typename T>
-class PropertyConverter : protected PropertyConverterBase {
+class PropertyConverter : protected PropertyConverterBase
+{
 public:
 	PropertyConverter() {
 		auto type_info = boost::python::type_id<T>();
@@ -33,20 +34,18 @@ private:
 	static boost::python::object toPython(const boost::any& value) {
 		return boost::python::object(boost::any_cast<T>(value));
 	}
-	static boost::any fromPython(const boost::python::object& bpo) {
-		return T(boost::python::extract<T>(bpo));
-	}
+	static boost::any fromPython(const boost::python::object& bpo) { return T(boost::python::extract<T>(bpo)); }
 
 	template <class Q = T>
-	typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type
-	rosMsgName() {
+	typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type rosMsgName() {
 		RosMsgConverter<T>();  // register ROS msg converter
 		return ros::message_traits::DataType<T>::value();
 	}
 
 	template <class Q = T>
-	typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type
-	rosMsgName() { return std::string(); }  // empty string if T isn't a ROS msg
+	typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type rosMsgName() {
+		return std::string();
+	}  // empty string if T isn't a ROS msg
 };
 
 namespace properties {
@@ -56,16 +55,14 @@ namespace properties {
  * New method property<PropertyType>(const char* name) adds a property getter/setter.
  */
 
-template <
-    class W // class being wrapped
-    , class X1 = ::boost::python::detail::not_specified
-    , class X2 = ::boost::python::detail::not_specified
-    , class X3 = ::boost::python::detail::not_specified
-    >
+template <class W  // class being wrapped
+          ,
+          class X1 = ::boost::python::detail::not_specified, class X2 = ::boost::python::detail::not_specified,
+          class X3 = ::boost::python::detail::not_specified>
 class class_ : public boost::python::class_<W, X1, X2, X3>
 {
 public:
-	typedef class_<W,X1,X2,X3> self;
+	typedef class_<W, X1, X2, X3> self;
 	// forward all constructors
 	using boost::python::class_<W, X1, X2, X3>::class_;
 
@@ -80,16 +77,15 @@ public:
 			props.set(name, boost::any(value));
 		};
 
-		boost::python::class_<W, X1, X2, X3>::add_property
-		      (name, boost::python::make_function
-		       (getter, boost::python::default_call_policies(),
-		        boost::mpl::vector<PropertyType, const W&>()),
-		       boost::python::make_function
-		       (setter, boost::python::default_call_policies(),
-		        boost::mpl::vector<void, W&, const PropertyType&>()),
-		       docstr);
+		boost::python::class_<W, X1, X2, X3>::add_property(
+		    name, boost::python::make_function(getter, boost::python::default_call_policies(),
+		                                       boost::mpl::vector<PropertyType, const W&>()),
+		    boost::python::make_function(setter, boost::python::default_call_policies(),
+		                                 boost::mpl::vector<void, W&, const PropertyType&>()),
+		    docstr);
 		return *this;
 	}
 };
-
-} } }
+}
+}
+}

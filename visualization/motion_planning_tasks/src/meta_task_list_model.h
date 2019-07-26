@@ -55,7 +55,8 @@ MOVEIT_CLASS_FORWARD(TaskDisplay)
  *
  *  This is a singleton instance.
  */
-class MetaTaskListModel : public utils::TreeMergeProxyModel {
+class MetaTaskListModel : public utils::TreeMergeProxyModel
+{
 	Q_OBJECT
 
 	// 1:1 correspondence of displays to models
@@ -70,8 +71,8 @@ class MetaTaskListModel : public utils::TreeMergeProxyModel {
 	using utils::TreeMergeProxyModel::insertModel;
 
 private Q_SLOTS:
-	void onRowsRemoved(const QModelIndex &parent, int first, int last);
-	void onDisplayNameChanged(const QString &name);
+	void onRowsRemoved(const QModelIndex& parent, int first, int last);
+	void onDisplayNameChanged(const QString& name);
 
 public:
 	static MetaTaskListModel& instance();
@@ -79,13 +80,12 @@ public:
 	/// insert a new TaskListModel together with it's associated display
 	bool insertModel(TaskListModel* model, TaskDisplay* display);
 
-	bool setData(const QModelIndex &index, const QVariant &value, int role) override;
-	bool removeRows(int row, int count, const QModelIndex &parent) override;
+	bool setData(const QModelIndex& index, const QVariant& value, int role) override;
+	bool removeRows(int row, int count, const QModelIndex& parent) override;
 
 	/// retrieve TaskListModel and TaskDisplay corresponding to given index
-	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex &index) const;
+	std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex& index) const;
 	/// retrieve TaskModel and its source index corresponding to given proxy index
 	std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 };
-
 }

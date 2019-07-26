@@ -43,33 +43,25 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <assert.h>
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
-const planning_scene::PlanningScenePtr&
-ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
+const planning_scene::PlanningScenePtr& ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
 	// ensure scene's state is updated
 	if (scene->getCurrentState().dirty())
 		scene->getCurrentStateNonConst().update();
 	return scene;
 }
 
-InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps)
-   : scene_(ensureUpdated(ps))
-{
-}
+InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps) : scene_(ensureUpdated(ps)) {}
 
-InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
-   : scene_(ps)
-{
+InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps) : scene_(ps) {
 	if (scene_->getCurrentState().dirty())
 		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
-InterfaceState::InterfaceState(const InterfaceState &other)
-   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_)
-{
-}
-
+InterfaceState::InterfaceState(const InterfaceState& other)
+  : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
 bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
 	// infinite costs go always last
@@ -86,13 +78,10 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 		return this->depth() > other.depth();
 }
 
-
-Interface::Interface(const Interface::NotifyFunction &notify)
-   : notify_(notify)
-{}
+Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
 
 // Announce a new InterfaceState
-void Interface::add(InterfaceState &state) {
+void Interface::add(InterfaceState& state) {
 	// require valid scene
 	assert(state.scene());
 	// incoming and outgoing must not contain elements both
@@ -113,37 +102,36 @@ void Interface::add(InterfaceState &state) {
 		it->priority_ = InterfaceState::Priority(1, state.incomingTrajectories().front()->cost());
 	else if (!state.outgoingTrajectories().empty())
 		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
-	else // otherwise, assume priority was well defined before
+	else  // otherwise, assume priority was well defined before
 		assert(it->priority_ >= InterfaceState::Priority(1, 0.0));
 
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);
 	// and finally call notify callback
-	if (notify_) notify_(it, false);
+	if (notify_)
+		notify_(it, false);
 }
 
-Interface::container_type Interface::remove(iterator it)
-{
+Interface::container_type Interface::remove(iterator it) {
 	container_type result;
 	moveTo(it, result, result.end());
 	it->owner_ = nullptr;
 	return result;
 }
 
-void Interface::updatePriority(InterfaceState *state, const InterfaceState::Priority& priority)
-{
+void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
 	if (priority != state->priority()) {
 		auto it = std::find_if(begin(), end(), [state](const InterfaceState* other) { return state == other; });
 		// state should be part of the interface
 		assert(it != end());
 		state->priority_ = priority;
 		update(it);
-		if (notify_) notify_(it, true);
+		if (notify_)
+			notify_(it, true);
 	}
 }
 
-void SolutionBase::setCreator(StagePrivate *creator)
-{
+void SolutionBase::setCreator(StagePrivate* creator) {
 	assert(creator_ == nullptr || creator_ == creator);  // creator must only set once
 	creator_ = creator;
 }
@@ -152,45 +140,36 @@ void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
 
+void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
+	info.id = introspection ? introspection->solutionId(*this) : 0;
+	info.cost = this->cost();
+	info.comment = this->comment();
+	const Introspection* ci = introspection;
+	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
 
+	const auto& markers = this->markers();
+	info.markers.resize(markers.size());
+	std::copy(markers.begin(), markers.end(), info.markers.begin());
+}
 
-void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution &msg,
-                                Introspection *introspection) const {
+void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
-	t.id = introspection ? introspection->solutionId(*this) : 0;
-	t.cost = this->cost();
-	t.comment = this->comment();
-
-	const Introspection *ci = introspection;
-	t.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	SolutionBase::fillInfo(t.info, introspection);
 
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
-	const auto& markers = this->markers();
-	t.markers.clear();
-	std::copy(markers.begin(), markers.end(), std::back_inserter(t.markers));
-
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
-
-
-void SolutionSequence::push_back(const SolutionBase& solution)
-{
+void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
 }
 
-void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
-                                   Introspection* introspection) const
-{
+void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
 	moveit_task_constructor_msgs::SubSolution sub_msg;
-	sub_msg.id = introspection ? introspection->solutionId(*this) : 0;
-	sub_msg.cost = this->cost();
-
-	const Introspection *ci = introspection;
-	sub_msg.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	SolutionBase::fillInfo(sub_msg.info, introspection);
 
 	// Usually subsolutions originate from another stage than this solution.
 	// However, the Connect stage will announce sub solutions created by itself
@@ -218,10 +197,9 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution &msg,
 			auto end = msg.sub_trajectory.end();
 			std::advance(it, current);
 			for (; it != end; ++it)
-				it->id = 0;
+				it->info.id = 0;
 		}
 	}
 }
-
-
-} }
+}
+}

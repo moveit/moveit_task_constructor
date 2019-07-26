@@ -14,21 +14,17 @@ template <typename T>
 struct DurationConverter
 {
 	// Determine if obj can be converted into duration
-	static void* convertible(PyObject* obj)
-	{
+	static void* convertible(PyObject* obj) {
 		bp::object bpo(bp::borrowed(obj));
 		// either expect a double or an object providing a "to_sec" function
-		if (PyFloat_Check(obj) ||
-		    (PyObject_HasAttrString(obj, "to_sec") && PyFloat_Check(bpo.attr("to_sec")().ptr())))
+		if (PyFloat_Check(obj) || (PyObject_HasAttrString(obj, "to_sec") && PyFloat_Check(bpo.attr("to_sec")().ptr())))
 			return obj;
 		else
 			return 0;
 	}
 
 	// Convert obj into a duration
-	static void construct(PyObject* obj,
-	                      bp::converter::rvalue_from_python_stage1_data* data)
-	{
+	static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data) {
 		double value = 0.0;
 		if (PyObject_HasAttrString(obj, "to_sec")) {
 			bp::object bpo(bp::borrowed(obj));
@@ -42,14 +38,13 @@ struct DurationConverter
 
 		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
 		void* storage = reinterpret_cast<bp::converter::rvalue_from_python_storage<T>*>(data)->storage.bytes;
-		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's convertible variable.
+		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's
+		// convertible variable.
 		data->convertible = new (storage) T(value);
 	}
 
 	// Convert duration to python
-	static PyObject* convert(const T& x) {
-		return PyFloat_FromDouble(x.toSec());
-	}
+	static PyObject* convert(const T& x) { return PyFloat_FromDouble(x.toSec()); }
 
 	DurationConverter() {  // constructor registers type converter with boost::python
 		bp::converter::registry::push_back(&DurationConverter<T>::convertible, &DurationConverter::construct,
@@ -58,7 +53,8 @@ struct DurationConverter
 	}
 };
 
-class ConverterInit {
+class ConverterInit
+{
 public:
 	ConverterInit() {
 		DurationConverter<ros::Duration>();
@@ -66,5 +62,5 @@ public:
 	}
 };
 static ConverterInit init;
-
-} }
+}
+}

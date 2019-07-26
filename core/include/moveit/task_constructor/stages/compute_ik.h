@@ -37,6 +37,7 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/cost_queue.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
 
@@ -47,7 +48,9 @@ MOVEIT_CLASS_FORWARD(JointModelGroup)
 }
 }
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Wrapper for any pose generator stage to compute IK poses for a Cartesian pose.
  *
@@ -62,48 +65,49 @@ namespace moveit { namespace task_constructor { namespace stages {
  * Properties of the internally received InterfaceState can be forwarded to the
  * newly generated, externally exposed InterfaceState.
  */
-class ComputeIK : public WrapperBase {
+class ComputeIK : public WrapperBase
+{
 public:
-	ComputeIK(const std::string &name="IK", Stage::pointer &&child = Stage::pointer());
+	ComputeIK(const std::string& name = "IK", Stage::pointer&& child = Stage::pointer());
 
-	void init(const core::RobotModelConstPtr &robot_model);
-	void onNewSolution(const SolutionBase &s) override;
+	void reset() override;
+	void init(const core::RobotModelConstPtr& robot_model) override;
+	void onNewSolution(const SolutionBase& s) override;
 
-	void setEndEffector(const std::string& eef) {
-		setProperty("eef", eef);
-	}
+	bool canCompute() const override;
+
+	void compute() override;
+
+	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
 
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
-		setProperty("ik_frame", pose);
-	}
-	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose;
+		pose = p;
 		setIKFrame(pose, link);
 	}
-	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Affine3d::Identity(), link);
-	}
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	/// setters for target pose
-	void setTargetPose(const geometry_msgs::PoseStamped &pose) {
-		setProperty("target_pose", pose);
-	}
-	void setTargetPose(const Eigen::Affine3d& pose, const std::string& frame = "");
+	void setTargetPose(const geometry_msgs::PoseStamped& pose) { setProperty("target_pose", pose); }
+	void setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame = "");
 	template <typename T>
 	void setTargetPose(const T& p, const std::string& frame = "") {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose;
+		pose = p;
 		setTargetPose(pose, frame);
 	}
 
-	void setMaxIKSolutions(uint32_t n) {
-		setProperty("max_ik_solutions", n);
-	}
-	void setIgnoreCollisions(bool flag) {
-		setProperty("ignore_collisions", flag);
-	}
-};
+	void setMaxIKSolutions(uint32_t n) { setProperty("max_ik_solutions", n); }
+	void setIgnoreCollisions(bool flag) { setProperty("ignore_collisions", flag); }
+	void setMinSolutionDistance(double distance) { setProperty("min_solution_distance", distance); }
 
-} } }
+protected:
+	ordered<const SolutionBase*> upstream_solutions_;
+};
+}
+}
+}

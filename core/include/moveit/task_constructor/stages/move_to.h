@@ -44,12 +44,17 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PointStamped.h>
 
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 class RobotState;
-} }
-namespace moveit { namespace task_constructor { namespace stages {
+}
+}
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-class MoveTo : public PropagatingEitherWay {
+class MoveTo : public PropagatingEitherWay
+{
 public:
 	MoveTo(const std::string& name = "move to",
 	       const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
@@ -58,61 +63,52 @@ public:
 	void computeForward(const InterfaceState& from) override;
 	void computeBackward(const InterfaceState& to) override;
 
-	void setGroup(const std::string& group) {
-		setProperty("group", group);
-	}
+	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped &pose) {
-		setProperty("ik_frame", pose);
-	}
-	void setIKFrame(const Eigen::Affine3d& pose, const std::string& link);
+	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Affine3d pose; pose = p;
+		Eigen::Isometry3d pose;
+		pose = p;
 		setIKFrame(pose, link);
 	}
-	void setIKFrame(const std::string& link) {
-		setIKFrame(Eigen::Affine3d::Identity(), link);
-	}
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	/// move link to given pose
-	void setGoal(const geometry_msgs::PoseStamped& pose) {
-		setProperty("goal", pose);
-	}
+	void setGoal(const geometry_msgs::PoseStamped& pose) { setProperty("goal", pose); }
 
 	/// move link to given point, keeping current orientation
-	void setGoal(const geometry_msgs::PointStamped& point) {
-		setProperty("goal", point);
-	}
+	void setGoal(const geometry_msgs::PointStamped& point) { setProperty("goal", point); }
 
 	/// move joint model group to given named pose
-	void setGoal(const std::string& named_joint_pose) {
-		setProperty("goal", named_joint_pose);
-	}
+	void setGoal(const std::string& named_joint_pose) { setProperty("goal", named_joint_pose); }
 
 	/// move joints specified in msg to their target values
-	void setGoal(const moveit_msgs::RobotState& robot_state) {
-		setProperty("goal", robot_state);
-	}
+	void setGoal(const moveit_msgs::RobotState& robot_state) { setProperty("goal", robot_state); }
 
-	void setPathConstraints(moveit_msgs::Constraints path_constraints){
+	/// move joints by name to their mapped target value
+	void setGoal(const std::map<std::string, double>& joints);
+
+	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
 protected:
 	// return false if trajectory shouldn't be stored
-	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr &scene,
-	             SubTrajectory &trajectory, Direction dir);
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
+	             Direction dir);
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
 	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-	                 const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
-	                 decltype(std::declval<SolutionBase>().markers())& markers);
+	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
+	                 decltype(std::declval<SolutionBase>().markers()) & markers);
 	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-	                  const planning_scene::PlanningScenePtr& scene, Eigen::Affine3d& target_eigen,
-	                  decltype(std::declval<SolutionBase>().markers())&);
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
+	                  decltype(std::declval<SolutionBase>().markers()) &);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
 };
-
-} } }
+}
+}
+}

@@ -44,39 +44,38 @@
 #include <moveit/kinematic_constraints/utils.h>
 #include <eigen_conversions/eigen_msg.h>
 
-namespace moveit { namespace task_constructor { namespace solvers {
+namespace moveit {
+namespace task_constructor {
+namespace solvers {
 
-PipelinePlanner::PipelinePlanner()
-{
+PipelinePlanner::PipelinePlanner() {
 	auto& p = properties();
 	p.declare<std::string>("planner", "", "planner id");
 
 	p.declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
-	p.declare<moveit_msgs::WorkspaceParameters>("workspace_parameters", moveit_msgs::WorkspaceParameters(), "allowed workspace of mobile base?");
+	p.declare<moveit_msgs::WorkspaceParameters>("workspace_parameters", moveit_msgs::WorkspaceParameters(),
+	                                            "allowed workspace of mobile base?");
 
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");
 	p.declare<double>("goal_position_tolerance", 1e-4, "tolerance for reaching position goals");
 	p.declare<double>("goal_orientation_tolerance", 1e-4, "tolerance for reaching orientation goals");
 
 	p.declare<bool>("display_motion_plans", false,
-		"publish generated solutions on topic " + planning_pipeline::PlanningPipeline::DISPLAY_PATH_TOPIC);
+	                "publish generated solutions on topic " + planning_pipeline::PlanningPipeline::DISPLAY_PATH_TOPIC);
 	p.declare<bool>("publish_planning_requests", false,
-		"publish motion planning requests on topic " + planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
+	                "publish motion planning requests on topic " +
+	                    planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
-void PipelinePlanner::init(const core::RobotModelConstPtr &robot_model)
-{
+void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	planner_ = Task::createPlanner(robot_model);
 
 	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
 	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
 
-void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
-                           const PropertyMap& p,
-                           const moveit::core::JointModelGroup *jmg,
-                           double timeout)
-{
+void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMap& p,
+                           const moveit::core::JointModelGroup* jmg, double timeout) {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
 	req.allowed_planning_time = timeout;
@@ -89,38 +88,28 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req,
 }
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const planning_scene::PlanningSceneConstPtr& to,
-                           const moveit::core::JointModelGroup *jmg,
-                           double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints)
-{
+                           const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
+                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                           const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
 
 	req.goal_constraints.resize(1);
-	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
-	                             to->getCurrentState(), jmg,
-	                             props.get<double>("goal_joint_tolerance"));
+	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(to->getCurrentState(), jmg,
+	                                                                          props.get<double>("goal_joint_tolerance"));
 	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(from, req, res))
-		return false;
-
+	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return true;
+	return success;
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const moveit::core::LinkModel &link,
-                           const Eigen::Affine3d& target_eigen,
-                           const moveit::core::JointModelGroup *jmg,
-                           double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints)
-{
+bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+                           const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
+                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                           const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
@@ -131,17 +120,15 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 
 	req.goal_constraints.resize(1);
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
-	                             link.getName(), target,
-	                             props.get<double>("goal_position_tolerance"),
-	                             props.get<double>("goal_orientation_tolerance"));
+	    link.getName(), target, props.get<double>("goal_position_tolerance"),
+	    props.get<double>("goal_orientation_tolerance"));
 	req.path_constraints = path_constraints;
 
 	::planning_interface::MotionPlanResponse res;
-	if(!planner_->generatePlan(from, req, res))
-		return false;
-
+	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return true;
+	return success;
 }
-
-} } }
+}
+}
+}

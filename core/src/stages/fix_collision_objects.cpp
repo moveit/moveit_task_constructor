@@ -48,38 +48,32 @@
 namespace vm = visualization_msgs;
 namespace cd = collision_detection;
 
-namespace moveit { namespace task_constructor { namespace stages {
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-FixCollisionObjects::FixCollisionObjects(const std::string &name)
-  : PropagatingEitherWay(name)
-{
+FixCollisionObjects::FixCollisionObjects(const std::string& name) : PropagatingEitherWay(name) {
 	auto& p = properties();
 	p.declare<double>("max_penetration", "maximally corrected penetration depth");
 	p.declare<geometry_msgs::Vector3>("direction", "direction vector to use for corrections");
 }
 
-
-
-void FixCollisionObjects::computeForward(const InterfaceState &from)
-{
+void FixCollisionObjects::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to = from.scene()->diff();
 	sendForward(from, InterfaceState(to), fixCollisions(*to));
 }
 
-void FixCollisionObjects::computeBackward(const InterfaceState &to)
-{
+void FixCollisionObjects::computeBackward(const InterfaceState& to) {
 	planning_scene::PlanningScenePtr from = to.scene()->diff();
 	sendBackward(InterfaceState(from), to, fixCollisions(*from));
 }
 
-bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d& correction, double max_penetration)
-{
+bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d& correction, double max_penetration) {
 	correction.setZero();
 	for (const cd::Contact& c : contacts) {
-		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT &&
-		     c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
-			ROS_WARN_STREAM_NAMED("FixCollisionObjects", "Cannot fix collision between "
-			                      << c.body_name_1 << " and " << c.body_name_2);
+		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT && c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
+			ROS_WARN_STREAM_NAMED("FixCollisionObjects", "Cannot fix collision between " << c.body_name_1 << " and "
+			                                                                             << c.body_name_2);
 			return false;
 		}
 		if (c.body_type_1 == cd::BodyTypes::WORLD_OBJECT)
@@ -94,8 +88,7 @@ bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d
 	return true;
 }
 
-SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &scene) const
-{
+SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& scene) const {
 	SubTrajectory result;
 	const auto& props = properties();
 	double max_penetration = props.get<double>("max_penetration");
@@ -110,7 +103,6 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 	req.verbose = false;
 	req.distance = false;
 
-
 	vm::Marker m;
 	m.header.frame_id = scene.getPlanningFrame();
 	m.ns = "collisions";
@@ -119,8 +111,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 	while (!failure) {
 		res.clear();
 		scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(),
-		                                               scene.getCurrentState(),
-		                                               scene.getAllowedCollisionMatrix());
+		                                               scene.getCurrentState(), scene.getAllowedCollisionMatrix());
 		if (!res.collision)
 			return result;
 
@@ -133,10 +124,11 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 			failure = depth > max_penetration;
 
 			// marker indicating correction
-			const cd::Contact &c = info.second.front();
+			const cd::Contact& c = info.second.front();
 			rviz_marker_tools::setColor(m.color, failure ? rviz_marker_tools::RED : rviz_marker_tools::GREEN);
 			tf::poseEigenToMsg(Eigen::Translation3d(c.pos) *
-			                   Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction), m.pose);
+			                       Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction),
+			                   m.pose);
 			rviz_marker_tools::makeArrow(m, depth, true);
 			result.markers().push_back(m);
 			if (failure)
@@ -147,7 +139,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
-			scene.getWorldNonConst()->moveObject(name, Eigen::Affine3d(Eigen::Translation3d(correction)));
+			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));
 		}
 	}
 
@@ -155,5 +147,6 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene &
 	result.markAsFailure();
 	return result;
 }
-
-} } }
+}
+}
+}

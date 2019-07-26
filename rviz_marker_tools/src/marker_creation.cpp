@@ -7,119 +7,123 @@ namespace vm = visualization_msgs;
 
 namespace rviz_marker_tools {
 
-std_msgs::ColorRGBA &setColor(std_msgs::ColorRGBA &color, Color color_id, double alpha)
-{
+std_msgs::ColorRGBA& setColor(std_msgs::ColorRGBA& color, Color color_id, double alpha) {
 	switch (color_id) {
-	case RED:
-		color.r = 0.8;
-		color.g = 0.1;
-		color.b = 0.1;
-		color.a = alpha;
-		break;
-	case GREEN:
-		color.r = 0.1;
-		color.g = 0.8;
-		color.b = 0.1;
-		color.a = alpha;
-		break;
-	case BLUE:
-		color.r = 0.1;
-		color.g = 0.1;
-		color.b = 0.8;
-		color.a = alpha;
-		break;
-	case WHITE:
-		color.r = 1.0;
-		color.g = 1.0;
-		color.b = 1.0;
-		color.a = alpha;
-		break;
-	case GREY:
-		color.r = 0.9;
-		color.g = 0.9;
-		color.b = 0.9;
-		color.a = alpha;
-		break;
-	case DARK_GREY:
-		color.r = 0.6;
-		color.g = 0.6;
-		color.b = 0.6;
-		color.a = alpha;
-		break;
-	case BLACK:
-		color.r = 0.0;
-		color.g = 0.0;
-		color.b = 0.0;
-		color.a = alpha;
-		break;
-	case YELLOW:
-		color.r = 1.0;
-		color.g = 1.0;
-		color.b = 0.0;
-		color.a = alpha;
-		break;
-	case ORANGE:
-		color.r = 1.0;
-		color.g = 0.5;
-		color.b = 0.0;
-		color.a = alpha;
-		break;
-	case BROWN:
-		color.r = 0.597;
-		color.g = 0.296;
-		color.b = 0.0;
-		color.a = alpha;
-		break;
-	case PINK:
-		color.r = 1.0;
-		color.g = 0.4;
-		color.b = 1;
-		color.a = alpha;
-		break;
-	case LIME_GREEN:
-		color.r = 0.6;
-		color.g = 1.0;
-		color.b = 0.2;
-		color.a = alpha;
-		break;
-	case PURPLE:
-		color.r = 0.597;
-		color.g = 0.0;
-		color.b = 0.597;
-		color.a = alpha;
-		break;
-	case CYAN:
-		color.r = 0.0;
-		color.g = 1.0;
-		color.b = 1.0;
-		color.a = alpha;
-		break;
-	case MAGENTA:
-		color.r = 1.0;
-		color.g = 0.0;
-		color.b = 1.0;
-		color.a = alpha;
-		break;
+		case RED:
+			color.r = 0.8;
+			color.g = 0.1;
+			color.b = 0.1;
+			color.a = alpha;
+			break;
+		case GREEN:
+			color.r = 0.1;
+			color.g = 0.8;
+			color.b = 0.1;
+			color.a = alpha;
+			break;
+		case BLUE:
+			color.r = 0.1;
+			color.g = 0.1;
+			color.b = 0.8;
+			color.a = alpha;
+			break;
+		case WHITE:
+			color.r = 1.0;
+			color.g = 1.0;
+			color.b = 1.0;
+			color.a = alpha;
+			break;
+		case GREY:
+			color.r = 0.9;
+			color.g = 0.9;
+			color.b = 0.9;
+			color.a = alpha;
+			break;
+		case DARK_GREY:
+			color.r = 0.6;
+			color.g = 0.6;
+			color.b = 0.6;
+			color.a = alpha;
+			break;
+		case BLACK:
+			color.r = 0.0;
+			color.g = 0.0;
+			color.b = 0.0;
+			color.a = alpha;
+			break;
+		case YELLOW:
+			color.r = 1.0;
+			color.g = 1.0;
+			color.b = 0.0;
+			color.a = alpha;
+			break;
+		case ORANGE:
+			color.r = 1.0;
+			color.g = 0.5;
+			color.b = 0.0;
+			color.a = alpha;
+			break;
+		case BROWN:
+			color.r = 0.597;
+			color.g = 0.296;
+			color.b = 0.0;
+			color.a = alpha;
+			break;
+		case PINK:
+			color.r = 1.0;
+			color.g = 0.4;
+			color.b = 1;
+			color.a = alpha;
+			break;
+		case LIME_GREEN:
+			color.r = 0.6;
+			color.g = 1.0;
+			color.b = 0.2;
+			color.a = alpha;
+			break;
+		case PURPLE:
+			color.r = 0.597;
+			color.g = 0.0;
+			color.b = 0.597;
+			color.a = alpha;
+			break;
+		case CYAN:
+			color.r = 0.0;
+			color.g = 1.0;
+			color.b = 1.0;
+			color.a = alpha;
+			break;
+		case MAGENTA:
+			color.r = 1.0;
+			color.g = 0.0;
+			color.b = 1.0;
+			color.a = alpha;
+			break;
 	}
 	return color;
 }
 
+// interpolate between start and end with fraction in range from 0..1
 double interpolate(double start, double end, double fraction) {
-	return start * fraction + end * (1.0 - fraction);
+	return start * (1.0 - fraction) + end * fraction;
 }
 
 std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::ColorRGBA& other, double fraction) {
-	if (fraction < 0.0) fraction = 0.0;
-	if (fraction > 1.0) fraction = 1.0;
-	color.r += interpolate(other.r-color.r, other.r, fraction);
-	color.g += interpolate(other.g-color.g, other.g, fraction);
-	color.b += interpolate(other.b-color.b, other.b, fraction);
+	if (fraction < 0.0)
+		fraction = 0.0;
+	if (fraction > 1.0)
+		fraction = 1.0;
+	color.r = interpolate(color.r, other.r, fraction);
+	color.g = interpolate(color.g, other.g, fraction);
+	color.b = interpolate(color.b, other.b, fraction);
+	color.a = interpolate(color.a, other.a, fraction);
 	return color;
 }
 
 std_msgs::ColorRGBA& brighten(std_msgs::ColorRGBA& color, double fraction) {
 	static std_msgs::ColorRGBA white;
-	if (white.r == 0.0) setColor(white, WHITE);
+	if (white.r == 0.0)
+		setColor(white, WHITE);
 	return interpolate(color, white, fraction);
 }
 
@@ -134,18 +138,18 @@ std_msgs::ColorRGBA getColor(Color color, double alpha) {
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Affine3d& second) {
+geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
 	geometry_msgs::Pose result;
-	Eigen::Affine3d result_eigen;
+	Eigen::Isometry3d result_eigen;
 	tf::poseMsgToEigen(first, result_eigen);
 	result_eigen = result_eigen * second;
 	tf::poseEigenToMsg(result_eigen, result);
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const Eigen::Affine3d& first, const geometry_msgs::Pose& second) {
+geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
 	geometry_msgs::Pose result;
-	Eigen::Affine3d result_eigen;
+	Eigen::Isometry3d result_eigen;
 	tf::poseMsgToEigen(second, result_eigen);
 	result_eigen = first * result_eigen;
 	tf::poseEigenToMsg(result_eigen, result);
@@ -272,54 +276,49 @@ vm::Marker& makeMesh(vm::Marker& m, const std::string& filename, double sx, doub
 	return m;
 }
 
-vm::Marker& makeArrow(vm::Marker &m, double scale, bool tip_at_origin) {
+vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
 	m.scale.y = m.scale.z = 0.1 * scale;
 	m.scale.x = scale;
 	prepareMarker(m, vm::Marker::ARROW);
 	if (tip_at_origin)
-		m.pose = composePoses(m.pose, Eigen::Translation3d(-scale, 0, 0) * Eigen::Affine3d::Identity());
+		m.pose = composePoses(m.pose, Eigen::Translation3d(-scale, 0, 0) * Eigen::Isometry3d::Identity());
 	return m;
 }
 
-vm::Marker& makeText(vm::Marker& m, const std::string &text)
-{
+vm::Marker& makeText(vm::Marker& m, const std::string& text) {
 	prepareMarker(m, vm::Marker::TEXT_VIEW_FACING);
 	m.text = text;
 	return m;
 }
 
-vm::Marker& makeFromGeometry(vm::Marker &m, const urdf::Geometry& geom) {
+vm::Marker& makeFromGeometry(vm::Marker& m, const urdf::Geometry& geom) {
 	switch (geom.type) {
-	case urdf::Geometry::SPHERE:
-	{
-		const urdf::Sphere& sphere = static_cast<const urdf::Sphere&>(geom);
-		makeSphere(m, sphere.radius);
-		break;
-	}
-	case urdf::Geometry::BOX:
-	{
-		const urdf::Box& box = static_cast<const urdf::Box&>(geom);
-		makeBox(m, box.dim.x, box.dim.y, box.dim.z);
-		break;
-	}
-	case urdf::Geometry::CYLINDER:
-	{
-		const urdf::Cylinder& cylinder = static_cast<const urdf::Cylinder&>(geom);
-		makeCylinder(m, 2.0*cylinder.radius, cylinder.length);
-		break;
-	}
-	case urdf::Geometry::MESH:
-	{
-		const urdf::Mesh& mesh = static_cast<const urdf::Mesh&>(geom);
-		makeMesh(m, mesh.filename, mesh.scale.x, mesh.scale.y, mesh.scale.z);
-		break;
-	}
-	default:
-		ROS_WARN("Unsupported geometry type: %d", geom.type);
-		break;
+		case urdf::Geometry::SPHERE: {
+			const urdf::Sphere& sphere = static_cast<const urdf::Sphere&>(geom);
+			makeSphere(m, sphere.radius);
+			break;
+		}
+		case urdf::Geometry::BOX: {
+			const urdf::Box& box = static_cast<const urdf::Box&>(geom);
+			makeBox(m, box.dim.x, box.dim.y, box.dim.z);
+			break;
+		}
+		case urdf::Geometry::CYLINDER: {
+			const urdf::Cylinder& cylinder = static_cast<const urdf::Cylinder&>(geom);
+			makeCylinder(m, 2.0 * cylinder.radius, cylinder.length);
+			break;
+		}
+		case urdf::Geometry::MESH: {
+			const urdf::Mesh& mesh = static_cast<const urdf::Mesh&>(geom);
+			makeMesh(m, mesh.filename, mesh.scale.x, mesh.scale.y, mesh.scale.z);
+			break;
+		}
+		default:
+			ROS_WARN("Unsupported geometry type: %d", geom.type);
+			break;
 	}
 
 	return m;
 }
 
-} // namespace rviz_marker_tools
+}  // namespace rviz_marker_tools

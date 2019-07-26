@@ -50,8 +50,13 @@
 #include <memory>
 #include <QPointer>
 
-namespace ros { class ServiceClient; }
-namespace rviz { class PropertyTreeModel; }
+namespace ros {
+class ServiceClient;
+}
+namespace rviz {
+class PropertyTreeModel;
+class DisplayContext;
+}
 
 namespace moveit_rviz_plugin {
 
@@ -63,27 +68,33 @@ typedef std::shared_ptr<StageFactory> StageFactoryPtr;
 StageFactoryPtr getStageFactory();
 
 /** Base class to represent a single local or remote Task as a Qt model. */
-class BaseTaskModel : public QAbstractItemModel {
+class BaseTaskModel : public QAbstractItemModel
+{
 	Q_OBJECT
 protected:
 	unsigned int flags_ = 0;
+	planning_scene::PlanningSceneConstPtr scene_;
+	rviz::DisplayContext* display_context_;
 
 public:
-	enum TaskModelFlag {
-		LOCAL_MODEL    = 0x01,
-		IS_DESTROYED   = 0x02,
+	enum TaskModelFlag
+	{
+		LOCAL_MODEL = 0x01,
+		IS_DESTROYED = 0x02,
 		IS_INITIALIZED = 0x04,
-		IS_RUNNING     = 0x08,
+		IS_RUNNING = 0x08,
 	};
 
-	BaseTaskModel(QObject *parent = nullptr) : QAbstractItemModel(parent) {}
+	BaseTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
+	              QObject* parent = nullptr)
+	  : QAbstractItemModel(parent), scene_(scene), display_context_(display_context) {}
 
-	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-	QVariant data(const QModelIndex &index, int role) const override;
+	QVariant data(const QModelIndex& index, int role) const override;
 
-	virtual void setStageFactory(const StageFactoryPtr &factory) {}
-	Qt::ItemFlags flags(const QModelIndex &index) const override;
+	virtual void setStageFactory(const StageFactoryPtr& factory) {}
+	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	unsigned int taskFlags() const { return flags_; }
 	static QVariant flowIcon(moveit::task_constructor::InterfaceFlags f);
 
@@ -93,26 +104,28 @@ public:
 	/// get solution model for given stage index
 	virtual QAbstractItemModel* getSolutionModel(const QModelIndex& index) = 0;
 	/// get solution for given solution index
-	virtual DisplaySolutionPtr getSolution(const QModelIndex &index) = 0;
+	virtual DisplaySolutionPtr getSolution(const QModelIndex& index) = 0;
 
 	/// get property model for given stage index
 	virtual rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) = 0;
 };
-
 
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
  *
  *  Each TaskDisplay owns a TaskListModel to maintain the list of tasks published on
  *  a monitoring topic.
  *
- *  Local instances are created by insertLocalTask().
+ *  Local instances are created by createLocalTaskModel() or in dropMimeData().
  *  Remote instances are discovered via processTaskMessage() / processSolutionMessage().
  */
-class TaskListModel : public utils::FlatMergeProxyModel {
+class TaskListModel : public utils::FlatMergeProxyModel
+{
 	Q_OBJECT
 
 	// planning scene / robot model used by all tasks in this model
 	planning_scene::PlanningSceneConstPtr scene_;
+	// rviz::DisplayContext used to show (interactive) markers by the property models
+	rviz::DisplayContext* display_context_ = nullptr;
 
 	// map from remote task IDs to tasks
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
@@ -126,49 +139,47 @@ class TaskListModel : public utils::FlatMergeProxyModel {
 	QPointer<BaseTaskModel> active_task_model_;
 	QPersistentModelIndex highlighted_row_index_;
 
-	void onRemoveModel(QAbstractItemModel *model) override;
+	void onRemoveModel(QAbstractItemModel* model) override;
 
 public:
-	TaskListModel(QObject *parent = nullptr);
+	TaskListModel(QObject* parent = nullptr);
 	~TaskListModel();
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
+	void setDisplayContext(rviz::DisplayContext* display_context);
 	void setSolutionClient(ros::ServiceClient* client);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
-	int columnCount(const QModelIndex &parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
 	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
-	QVariant data(const QModelIndex &index, int role) const override;
+	QVariant data(const QModelIndex& index, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskDescriptionMessage(const std::string &id, const moveit_task_constructor_msgs::TaskDescription &msg);
+	void processTaskDescriptionMessage(const std::string& id, const moveit_task_constructor_msgs::TaskDescription& msg);
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskStatisticsMessage(const std::string &id, const moveit_task_constructor_msgs::TaskStatistics &msg);
+	void processTaskStatisticsMessage(const std::string& id, const moveit_task_constructor_msgs::TaskStatistics& msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	DisplaySolutionPtr processSolutionMessage(const std::string &id, const moveit_task_constructor_msgs::Solution &msg);
+	DisplaySolutionPtr processSolutionMessage(const std::string& id, const moveit_task_constructor_msgs::Solution& msg);
 
 	/// insert a TaskModel, pos is relative to modelCount()
-	inline bool insertModel(BaseTaskModel* model, int pos = -1) {
-		Q_ASSERT(model && model->columnCount() == columnCount());
-		// pass on stage factory
-		model->setStageFactory(stage_factory_);
-		// forward to base class method
-		return FlatMergeProxyModel::insertModel(model, pos);
-	}
+	bool insertModel(BaseTaskModel* model, int pos = -1);
+	/// create a new LocalTaskModel
+	BaseTaskModel* createLocalTaskModel();
 
 	/// providing a StageFactory makes the model accepting drops
-	void setStageFactory(const StageFactoryPtr &factory);
-	bool dropMimeData(const QMimeData *mime, Qt::DropAction action, int row, int column, const QModelIndex &parent) override;
+	void setStageFactory(const StageFactoryPtr& factory);
+	bool dropMimeData(const QMimeData* mime, Qt::DropAction action, int row, int column,
+	                  const QModelIndex& parent) override;
 	Qt::DropActions supportedDropActions() const override;
-	Qt::ItemFlags flags(const QModelIndex &index) const override;
+	Qt::ItemFlags flags(const QModelIndex& index) const override;
 
 protected Q_SLOTS:
 	void highlightStage(size_t id);
 };
 
-
-class AutoAdjustingTreeView : public QTreeView {
+class AutoAdjustingTreeView : public QTreeView
+{
 	Q_OBJECT
 	Q_PROPERTY(int stretchSection READ stretchSection WRITE setStretchSection)
 
@@ -177,25 +188,24 @@ class AutoAdjustingTreeView : public QTreeView {
 	int stretch_section_ = -1;
 
 public:
-	AutoAdjustingTreeView(QWidget *parent = nullptr);
+	AutoAdjustingTreeView(QWidget* parent = nullptr);
 
 	int stretchSection() const { return stretch_section_; }
 	void setStretchSection(int section);
 
-	void setAutoHideSections(const QList<int> &sections);
+	void setAutoHideSections(const QList<int>& sections);
 
-	void setModel(QAbstractItemModel *model) override;
+	void setModel(QAbstractItemModel* model) override;
 	QSize viewportSizeHint() const override;
-	void resizeEvent(QResizeEvent *event) override;
+	void resizeEvent(QResizeEvent* event) override;
 };
 
-
-class TaskListView : public AutoAdjustingTreeView {
+class TaskListView : public AutoAdjustingTreeView
+{
 	Q_OBJECT
 public:
-	TaskListView(QWidget *parent = nullptr);
+	TaskListView(QWidget* parent = nullptr);
 
-	void dropEvent(QDropEvent *event) override;
+	void dropEvent(QDropEvent* event) override;
 };
-
 }

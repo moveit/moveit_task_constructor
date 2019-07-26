@@ -8,3 +8,7 @@
     local-name: mtc_demos
     uri: https://github.com/ubi-agni/mtc_demos.git
     version: master
+- git:
+    local-name: mtc_pour
+    uri: https://github.com/TAMS-Group/mtc_pour.git
+    version: master

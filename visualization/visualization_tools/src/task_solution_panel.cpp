@@ -37,110 +37,98 @@
 #include <moveit/visualization_tools/task_solution_panel.h>
 #include <QHBoxLayout>
 
-namespace moveit_rviz_plugin
-{
-TaskSolutionPanel::TaskSolutionPanel(QWidget* parent) : Panel(parent)
-{
-  empty_ = false;
+namespace moveit_rviz_plugin {
+TaskSolutionPanel::TaskSolutionPanel(QWidget* parent) : Panel(parent) {
+	empty_ = false;
 }
 
-TaskSolutionPanel::~TaskSolutionPanel()
-{
+TaskSolutionPanel::~TaskSolutionPanel() {}
+
+void TaskSolutionPanel::onInitialize() {
+	slider_ = new QSlider(Qt::Horizontal);
+	slider_->setTickInterval(1);
+	slider_->setMinimum(0);
+	slider_->setMaximum(0);
+	slider_->setTickPosition(QSlider::TicksBelow);
+	slider_->setPageStep(1);
+	slider_->setEnabled(false);
+	connect(slider_, SIGNAL(valueChanged(int)), this, SLOT(sliderValueChanged(int)));
+
+	maximum_label_ = new QLabel(QString::number(slider_->maximum()));
+	minimum_label_ = new QLabel(QString::number(slider_->minimum()));
+	minimum_label_->setFixedWidth(20);
+
+	button_ = new QPushButton();
+	button_->setText("Pause");
+	button_->setEnabled(false);
+	connect(button_, SIGNAL(clicked()), this, SLOT(buttonClicked()));
+
+	QHBoxLayout* layout = new QHBoxLayout;
+	layout->addWidget(new QLabel("Waypoint:"));
+	layout->addWidget(minimum_label_);
+	layout->addWidget(slider_);
+	layout->addWidget(maximum_label_);
+	layout->addWidget(button_);
+	setLayout(layout);
+
+	paused_ = false;
+	parentWidget()->setVisible(false);
 }
 
-void TaskSolutionPanel::onInitialize()
-{
-  slider_ = new QSlider(Qt::Horizontal);
-  slider_->setTickInterval(1);
-  slider_->setMinimum(0);
-  slider_->setMaximum(0);
-  slider_->setTickPosition(QSlider::TicksBelow);
-  slider_->setPageStep(1);
-  slider_->setEnabled(false);
-  connect(slider_, SIGNAL(valueChanged(int)), this, SLOT(sliderValueChanged(int)));
-
-  maximum_label_ = new QLabel(QString::number(slider_->maximum()));
-  minimum_label_ = new QLabel(QString::number(slider_->minimum()));
-  minimum_label_->setFixedWidth(20);
-
-  button_ = new QPushButton();
-  button_->setText("Pause");
-  button_->setEnabled(false);
-  connect(button_, SIGNAL(clicked()), this, SLOT(buttonClicked()));
-
-  QHBoxLayout* layout = new QHBoxLayout;
-  layout->addWidget(new QLabel("Waypoint:"));
-  layout->addWidget(minimum_label_);
-  layout->addWidget(slider_);
-  layout->addWidget(maximum_label_);
-  layout->addWidget(button_);
-  setLayout(layout);
-
-  paused_ = false;
-  parentWidget()->setVisible(false);
+void TaskSolutionPanel::onEnable() {
+	parentWidget()->show();
 }
 
-void TaskSolutionPanel::onEnable()
-{
-  parentWidget()->show();
+void TaskSolutionPanel::onDisable() {
+	paused_ = false;
+	parentWidget()->hide();
 }
 
-void TaskSolutionPanel::onDisable()
-{
-  paused_ = false;
-  parentWidget()->hide();
+void TaskSolutionPanel::update(int way_point_count) {
+	int max_way_point = std::max(1, way_point_count - 1);
+	empty_ = (way_point_count == 0);
+
+	slider_->setEnabled(way_point_count >= 0);
+	button_->setEnabled(way_point_count >= 0);
+
+	paused_ = false;
+	slider_->setMaximum(max_way_point);
+	maximum_label_->setText(way_point_count >= 0 ? QString::number(way_point_count) : "");
+	slider_->setSliderPosition(0);
 }
 
-void TaskSolutionPanel::update(int way_point_count)
-{
-  int max_way_point = std::max(1, way_point_count - 1);
-  empty_ = (way_point_count == 0);
-
-  slider_->setEnabled(way_point_count >= 0);
-  button_->setEnabled(way_point_count >= 0);
-
-  paused_ = false;
-  slider_->setMaximum(max_way_point);
-  maximum_label_->setText(way_point_count >= 0 ? QString::number(way_point_count) : "");
-  slider_->setSliderPosition(0);
+void TaskSolutionPanel::pauseButton(bool pause) {
+	if (pause) {
+		button_->setText("Play");
+		paused_ = true;
+	} else {
+		button_->setText("Pause");
+		paused_ = false;
+		if (slider_->sliderPosition() == slider_->maximum())
+			slider_->setSliderPosition(0);
+	}
 }
 
-void TaskSolutionPanel::pauseButton(bool pause)
-{
-  if (pause)
-  {
-    button_->setText("Play");
-    paused_ = true;
-  }
-  else
-  {
-    button_->setText("Pause");
-    paused_ = false;
-    if (slider_->sliderPosition() == slider_->maximum())
-      slider_->setSliderPosition(0);
-  }
+void TaskSolutionPanel::setSliderPosition(int position) {
+	slider_->setSliderPosition(position);
 }
 
-void TaskSolutionPanel::setSliderPosition(int position)
-{
-  slider_->setSliderPosition(position);
+void TaskSolutionPanel::sliderValueChanged(int value) {
+	QString text;
+	if (!slider_->isEnabled())
+		text = "";
+	else if (empty_)
+		text = value == 0 ? "S" : "E";
+	else
+		text = QString::number(value + 1);
+	minimum_label_->setText(text);
 }
 
-void TaskSolutionPanel::sliderValueChanged(int value)
-{
-  QString text;
-  if (!slider_->isEnabled()) text = "";
-  else if (empty_) text = value == 0 ? "S" : "E";
-  else text = QString::number(value+1);
-  minimum_label_->setText(text);
-}
-
-void TaskSolutionPanel::buttonClicked()
-{
-  if (paused_)
-    pauseButton(false);
-  else
-    pauseButton(true);
+void TaskSolutionPanel::buttonClicked() {
+	if (paused_)
+		pauseButton(false);
+	else
+		pauseButton(true);
 }
 
 }  // namespace moveit_rviz_plugin

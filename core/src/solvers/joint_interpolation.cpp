@@ -40,25 +40,22 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
-namespace moveit { namespace task_constructor { namespace solvers {
+namespace moveit {
+namespace task_constructor {
+namespace solvers {
 
-JointInterpolationPlanner::JointInterpolationPlanner()
-{
+JointInterpolationPlanner::JointInterpolationPlanner() {
 	auto& p = properties();
 	p.declare<double>("max_step", 0.1, "max joint step");
 }
 
-void JointInterpolationPlanner::init(const core::RobotModelConstPtr &robot_model)
-{
-}
+void JointInterpolationPlanner::init(const core::RobotModelConstPtr& robot_model) {}
 
 bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                                      const planning_scene::PlanningSceneConstPtr& to,
-                                     const moveit::core::JointModelGroup *jmg,
-                                     double timeout,
+                                     const moveit::core::JointModelGroup* jmg, double timeout,
                                      robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& path_constraints)
-{
+                                     const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 
 	// Get maximum joint distance
@@ -90,22 +87,19 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 
 	// add timing, TODO: use a generic method to add timing via plugins
 	trajectory_processing::IterativeParabolicTimeParameterization timing;
-	timing.computeTimeStamps(*result,
-	                         props.get<double>("max_velocity_scaling_factor"),
+	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 	                         props.get<double>("max_acceleration_scaling_factor"));
 
 	return true;
 }
 
 bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const moveit::core::LinkModel &link,
-                           const Eigen::Affine3d& target_eigen,
-                           const moveit::core::JointModelGroup *jmg,
-                           double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints)
-{
-    throw std::runtime_error("Not yet implemented");
+                                     const moveit::core::LinkModel& link, const Eigen::Isometry3d& target_eigen,
+                                     const moveit::core::JointModelGroup* jmg, double timeout,
+                                     robot_trajectory::RobotTrajectoryPtr& result,
+                                     const moveit_msgs::Constraints& path_constraints) {
+	throw std::runtime_error("Not yet implemented");
 }
-
-} } }
+}
+}
+}

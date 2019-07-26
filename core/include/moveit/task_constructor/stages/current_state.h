@@ -41,11 +41,13 @@
 
 #include <moveit/task_constructor/stage.h>
 
-namespace moveit { namespace task_constructor { namespace stages {
-
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
 /** Fetch the current PlanningScene state via get_planning_scene service */
-class CurrentState : public Generator {
+class CurrentState : public Generator
+{
 public:
 	CurrentState(const std::string& name = "current state");
 
@@ -57,5 +59,6 @@ protected:
 	moveit::core::RobotModelConstPtr robot_model_;
 	planning_scene::PlanningScenePtr scene_;
 };
-
-} } }
+}
+}
+}

@@ -41,16 +41,18 @@
 
 namespace moveit_rviz_plugin {
 
+/** Provide a tree model listing all available plugins from the rviz::Factory
+ *  grouped by package name
+ */
 class FactoryModel : public QStandardItemModel
 {
 	QString mime_type_;
 	void fillTree(rviz::Factory& factory);
 
 public:
-	FactoryModel(rviz::Factory& factory, const QString &mime_type, QObject *parent = nullptr);
+	FactoryModel(rviz::Factory& factory, const QString& mime_type, QObject* parent = nullptr);
 
 	QStringList mimeTypes() const override;
-	QMimeData* mimeData(const QModelIndexList &indexes) const override;
+	QMimeData* mimeData(const QModelIndexList& indexes) const override;
 };
-
 }

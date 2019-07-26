@@ -9,11 +9,11 @@ namespace moveit {
 namespace python {
 
 /// singleton class to initialize ROS C++ (once) from Python
-class InitProxy {
+class InitProxy
+{
 public:
-	static void init(const std::string& node_name="moveit_python_wrapper",
-	                 const boost::python::dict& remappings = boost::python::dict(),
-	                 uint32_t options = 0);
+	static void init(const std::string& node_name = "moveit_python_wrapper",
+	                 const boost::python::dict& remappings = boost::python::dict(), uint32_t options = 0);
 	static void shutdown();
 
 	~InitProxy();
@@ -27,5 +27,5 @@ private:
 private:
 	std::unique_ptr<ros::AsyncSpinner> spinner;
 };
-
-} }
+}
+}

@@ -42,8 +42,7 @@
 
 namespace moveit_rviz_plugin {
 
-std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const
-{
+std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const {
 	size_t part = 0;
 	for (const auto& d : data_) {
 		if (index < d.trajectory_->getWayPointCount())
@@ -56,51 +55,41 @@ std::pair<size_t, size_t> DisplaySolution::indexPair(size_t index) const
 	return std::make_pair(part, index);
 }
 
-DisplaySolution::DisplaySolution(const DisplaySolution &master, uint32_t sub)
-   : start_scene_(sub == 0 ? master.start_scene_ : master.data_[sub-1].scene_)
-   , data_( { master.data_[sub] } )
-{
+DisplaySolution::DisplaySolution(const DisplaySolution& master, uint32_t sub)
+  : start_scene_(sub == 0 ? master.start_scene_ : master.data_[sub - 1].scene_), data_({ master.data_[sub] }) {
 	steps_ = data_.front().trajectory_->getWayPointCount();
 }
 
-float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair &idx_pair) const
-{
+float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair& idx_pair) const {
 	return data_[idx_pair.first].trajectory_->getWayPointDurationFromPrevious(idx_pair.second);
 }
 
-const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair &idx_pair) const
-{
+const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair& idx_pair) const {
 	return data_[idx_pair.first].trajectory_->getWayPointPtr(idx_pair.second);
 }
 
-const planning_scene::PlanningSceneConstPtr &DisplaySolution::scene(const IndexPair &idx_pair) const
-{
+const planning_scene::PlanningSceneConstPtr& DisplaySolution::scene(const IndexPair& idx_pair) const {
 	// start scene is parent of end scene
 	return data_[idx_pair.first].scene_->getParent();
 }
 
-const std::string &DisplaySolution::comment(const IndexPair &idx_pair) const
-{
+const std::string& DisplaySolution::comment(const IndexPair& idx_pair) const {
 	return data_[idx_pair.first].comment_;
 }
 
-uint32_t DisplaySolution::creatorId(const DisplaySolution::IndexPair &idx_pair) const
-{
+uint32_t DisplaySolution::creatorId(const DisplaySolution::IndexPair& idx_pair) const {
 	return data_[idx_pair.first].creator_id_;
 }
 
-const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::IndexPair &idx_pair) const
-{
+const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::IndexPair& idx_pair) const {
 	return data_[idx_pair.first].markers_;
 }
 
 void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
-                                     const moveit_task_constructor_msgs::Solution &msg)
-{
+                                     const moveit_task_constructor_msgs::Solution& msg) {
 	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName()) {
-		ROS_ERROR("Solution for model '%s' but model '%s' was expected",
-		         msg.start_scene.robot_model_name .c_str(),
-		         start_scene->getRobotModel()->getName().c_str());
+		ROS_ERROR("Solution for model '%s' but model '%s' was expected", msg.start_scene.robot_model_name.c_str(),
+		          start_scene->getRobotModel()->getName().c_str());
 		throw std::runtime_error("invalid robot model");
 	}
 
@@ -116,8 +105,8 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	for (const auto& sub : msg.sub_trajectory) {
 		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
 		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
-		data_[i].comment_ = sub.comment;
-		data_[i].creator_id_ = sub.stage_id;
+		data_[i].comment_ = sub.info.comment;
+		data_[i].creator_id_ = sub.info.stage_id;
 		steps_ += data_[i].trajectory_->getWayPointCount();
 
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
@@ -126,12 +115,12 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		// create new reference scene for next iteration
 		ref_scene = ref_scene->diff();
 
-		if (sub.markers.size())
-			data_[i].markers_.reset(new MarkerVisualization(sub.markers, *ref_scene));
+		if (sub.info.markers.size())
+			data_[i].markers_.reset(new MarkerVisualization(sub.info.markers, *ref_scene));
 		else
 			data_[i].markers_.reset();
 		++i;
 	}
 }
 
-} // namespace moveit_rviz_plugin
+}  // namespace moveit_rviz_plugin

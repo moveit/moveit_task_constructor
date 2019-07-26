@@ -41,7 +41,7 @@
 #include "task_panel.h"
 #include "ui_task_panel.h"
 #include "ui_task_view.h"
-#include "ui_task_settings.h"
+#include "ui_global_settings.h"
 
 #include <rviz/panel.h>
 #include <rviz/properties/property_tree_model.h>
@@ -53,43 +53,42 @@ class BaseTaskModel;
 class TaskListModel;
 class TaskDisplay;
 
-class TaskPanelPrivate : public Ui_TaskPanel {
+class TaskPanelPrivate : public Ui_TaskPanel
+{
 public:
-	TaskPanelPrivate(TaskPanel *q_ptr);
+	TaskPanelPrivate(TaskPanel* q_ptr);
 
 	TaskPanel* q_ptr;
-	TaskView* tasks_widget;
-	TaskSettings* settings_widget;
+	QButtonGroup* tool_buttons_group;
+	rviz::Property* property_root;
 
 	rviz::WindowManagerInterface* window_manager_;
 };
 
-
-class TaskViewPrivate : public Ui_TaskView {
+class TaskViewPrivate : public Ui_TaskView
+{
 public:
-	TaskViewPrivate(TaskView *q_ptr);
+	TaskViewPrivate(TaskView* q_ptr);
 
 	/// retrieve TaskListModel corresponding to given index
-	inline std::pair<TaskListModel*, TaskDisplay*>
-	getTaskListModel(const QModelIndex &index) const;
+	inline std::pair<TaskListModel*, TaskDisplay*> getTaskListModel(const QModelIndex& index) const;
 
 	/// retrieve TaskModel corresponding to given index
-	inline std::pair<BaseTaskModel*, QModelIndex>
-	getTaskModel(const QModelIndex& index) const;
+	inline std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 
 	/// unlock locked_display_ if given display is different
-	void lock(TaskDisplay *display);
+	void lock(TaskDisplay* display);
 
-	TaskView *q_ptr;
+	TaskView* q_ptr;
 	QPointer<TaskDisplay> locked_display_;
 };
 
-
-class TaskSettingsPrivate : public Ui_TaskSettings {
+class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget
+{
 public:
-	TaskSettingsPrivate(TaskSettings *q_ptr);
+	GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root);
 
-	TaskSettings *q_ptr;
+	GlobalSettingsWidget* q_ptr;
+	rviz::PropertyTreeModel* properties;
 };
-
 }

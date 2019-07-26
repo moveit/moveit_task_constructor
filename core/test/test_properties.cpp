@@ -27,12 +27,11 @@ TEST(Property, directset) {
 	PropertyMap props;
 	props.set("int1", 1);
 	EXPECT_EQ(props.get<int>("int1"), 1);
-	EXPECT_STREQ(props.property("int1").serialize().c_str(), "1");
+	EXPECT_EQ(props.property("int1").serialize(), "1");
 
 	props.set("int2", boost::any(2));
 	EXPECT_EQ(props.get<int>("int2"), 2);
-	// cannot serialize, because directly set
-	EXPECT_STREQ(props.property("int2").serialize().c_str(), "");
+	EXPECT_EQ(props.property("int2").serialize(), "2");
 }
 
 TEST(Property, redeclare) {
@@ -87,6 +86,15 @@ TEST(Property, anytype) {
 	EXPECT_EQ(props.get<std::string>("any"), "foo");
 }
 
+TEST(Property, serialize_basic) {
+	EXPECT_TRUE(hasSerialize<int>::value);
+	EXPECT_TRUE(hasDeserialize<int>::value);
+	EXPECT_TRUE(hasSerialize<double>::value);
+	EXPECT_TRUE(hasDeserialize<double>::value);
+	EXPECT_TRUE(hasSerialize<std::string>::value);
+	EXPECT_TRUE(hasDeserialize<std::string>::value);
+}
+
 TEST(Property, serialize) {
 	PropertyMap props;
 	props.declare<int>("int");
@@ -99,7 +107,8 @@ TEST(Property, serialize) {
 	EXPECT_EQ(props.property("map").serialize(), "");
 }
 
-class InitFromTest : public ::testing::Test {
+class InitFromTest : public ::testing::Test
+{
 protected:
 	void SetUp() {
 		master.declare<double>("double1", 1);
@@ -126,7 +135,7 @@ TEST_F(InitFromTest, standard) {
 }
 
 TEST_F(InitFromTest, limited) {
-	slave.configureInitFrom(1, {"double1"}); // limit init to listed props
+	slave.configureInitFrom(1, { "double1" });  // limit init to listed props
 	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double1"), 1.0);
 	EXPECT_FALSE(slave.property("double2").defined());
@@ -136,7 +145,7 @@ TEST_F(InitFromTest, limited) {
 
 TEST_F(InitFromTest, sourceId) {
 	slave.configureInitFrom(1);  // init all matching vars
-	slave.performInitFrom(2, master); // init with wrong sourceId -> no effect
+	slave.performInitFrom(2, master);  // init with wrong sourceId -> no effect
 	EXPECT_FALSE(slave.property("double1").defined());
 	EXPECT_FALSE(slave.property("double2").defined());
 	EXPECT_FALSE(slave.property("double3").defined());
@@ -150,7 +159,7 @@ TEST_F(InitFromTest, multipleSourceIds) {
 }
 
 TEST_F(InitFromTest, otherName) {
-	slave.property("double1").configureInitFrom(1, "double2"); // init double1 from double2
+	slave.property("double1").configureInitFrom(1, "double2");  // init double1 from double2
 	slave.performInitFrom(1, master);
 	EXPECT_EQ(slave.get<double>("double1"), 2.0);
 	EXPECT_FALSE(slave.property("double2").defined());

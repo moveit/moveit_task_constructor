@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>moveit_rviz_plugin::TaskSettings</class>
- <widget class="QWidget" name="moveit_rviz_plugin::TaskSettings">
+ <class>moveit_rviz_plugin::GlobalSettingsWidget</class>
+ <widget class="QWidget" name="moveit_rviz_plugin::GlobalSettingsWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -27,7 +27,7 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QVBoxLayout" name="tab_settings_layout">
+    <layout class="QVBoxLayout" name="layout">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -44,14 +44,14 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QLabel" name="settings_view_label">
+      <widget class="QLabel" name="label">
        <property name="text">
-        <string>Settings</string>
+        <string>Global Settings</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="rviz::PropertyTreeWidget" name="settings_view"/>
+      <widget class="rviz::PropertyTreeWidget" name="view"/>
      </item>
     </layout>
    </item>

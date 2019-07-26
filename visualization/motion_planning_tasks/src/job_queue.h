@@ -43,7 +43,8 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 
-namespace moveit { namespace tools {
+namespace moveit {
+namespace tools {
 
 /** Job Queue (of std::functions) */
 class JobQueue : public QObject
@@ -54,13 +55,13 @@ class JobQueue : public QObject
 	boost::condition_variable idle_condition_;
 
 public:
-	explicit JobQueue(QObject *parent = 0);
-	void addJob(const std::function<void()> &job);
+	explicit JobQueue(QObject* parent = 0);
+	void addJob(const std::function<void()>& job);
 	void clear();
 	size_t numPending();
 
 	void waitForAllJobs();
 	void executeJobs();
 };
-
-} }
+}
+}

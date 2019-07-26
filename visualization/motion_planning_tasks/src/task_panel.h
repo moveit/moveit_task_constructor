@@ -42,9 +42,12 @@
 #include <moveit/macros/class_forward.h>
 #include <QModelIndex>
 class QItemSelection;
+class QIcon;
 
 namespace rviz {
 class WindowManagerInterface;
+class Property;
+class EnumProperty;
 }
 
 namespace moveit_rviz_plugin {
@@ -53,29 +56,41 @@ class TaskSolutionVisualization;
 MOVEIT_CLASS_FORWARD(TaskListModel)
 MOVEIT_CLASS_FORWARD(TaskPanel)
 
-/** The TaskPanel displays information about manipulation tasks in the system.
- *
- *  Subscribing to task_monitoring and task_solution topics, it collects information
- *  about running tasks and their solutions and allows to inspect both,
- *  successful solutions and failed solution attempts.
- */
+/// Base class for all sub panels within the Task Panel
+class SubPanel : public QWidget
+{
+	Q_OBJECT
+public:
+	SubPanel(QWidget* parent = nullptr) : QWidget(parent) {}
+
+	virtual void save(rviz::Config config) {}
+	virtual void load(const rviz::Config& config) {}
+
+Q_SIGNALS:
+	void configChanged();
+};
+
+/** The TaskPanel is the central panel of this plugin, collecting various sub panels. */
 class TaskPanelPrivate;
-class TaskPanel: public rviz::Panel
+class TaskPanel : public rviz::Panel
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TaskPanel)
-	TaskPanelPrivate *d_ptr;
+	TaskPanelPrivate* d_ptr;
 
 public:
 	TaskPanel(QWidget* parent = 0);
 	~TaskPanel();
+
+	/// add a new sub panel widget
+	void addSubPanel(SubPanel* w, const QString& title, const QIcon& icon);
 
 	/** Increment/decrement use count of singleton TaskPanel instance.
 	 *
 	 * If not yet done, an instance is created. If use count drops to zero,
 	 * the global instance is destroyed.
 	 */
-	static void incDisplayCount(rviz::WindowManagerInterface *window_manager);
+	static void incDisplayCount(rviz::WindowManagerInterface* window_manager);
 	static void decDisplayCount();
 
 	void onInitialize() override;
@@ -86,44 +101,59 @@ protected Q_SLOTS:
 	void showStageDockWidget();
 };
 
-
 class MetaTaskListModel;
+/** TaskView displays all known tasks.
+ *
+ *  Subscribing to task_monitoring and task_solution topics, it collects information
+ *  about running tasks and their solutions and allows to inspect both,
+ *  successful solutions and failed solution attempts.
+*/
 class TaskViewPrivate;
-class TaskView : public QWidget {
+class TaskView : public SubPanel
+{
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(TaskView)
-	TaskViewPrivate *d_ptr;
+	TaskViewPrivate* d_ptr;
+
+protected:
+	// configuration settings
+	enum TaskExpand
+	{
+		EXPAND_TOP = 1,
+		EXPAND_ALL,
+		EXPAND_NONE
+	};
+	rviz::EnumProperty* initial_task_expand;
 
 public:
-	TaskView(QWidget* parent = 0);
+	TaskView(TaskPanel* parent, rviz::Property* root);
 	~TaskView();
 
-	void save(rviz::Config config);
-	void load(const rviz::Config& config);
-
-Q_SIGNALS:
-	void configChanged();
+	void save(rviz::Config config) override;
+	void load(const rviz::Config& config) override;
 
 public Q_SLOTS:
 	void addTask();
 
 protected Q_SLOTS:
 	void removeSelectedStages();
-	void onCurrentStageChanged(const QModelIndex &current, const QModelIndex &previous);
-	void onCurrentSolutionChanged(const QModelIndex &current, const QModelIndex &previous);
-	void onSolutionSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+	void onCurrentStageChanged(const QModelIndex& current, const QModelIndex& previous);
+	void onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous);
+	void onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 };
 
-
-class TaskSettingsPrivate;
-class TaskSettings : public QWidget {
+class GlobalSettingsWidgetPrivate;
+class GlobalSettingsWidget : public SubPanel
+{
 	Q_OBJECT
-	Q_DECLARE_PRIVATE(TaskSettings)
-	TaskSettingsPrivate *d_ptr;
+	Q_DECLARE_PRIVATE(GlobalSettingsWidget)
+	GlobalSettingsWidgetPrivate* d_ptr;
 
 public:
-	TaskSettings(QWidget* parent = 0);
-	~TaskSettings();
-};
+	GlobalSettingsWidget(TaskPanel* parent, rviz::Property* root);
+	~GlobalSettingsWidget();
 
+	void save(rviz::Config config) override;
+	void load(const rviz::Config& config) override;
+};
 }

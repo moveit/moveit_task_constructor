@@ -36,9 +36,7 @@
 /* Authors: Michael Goerner, Robert Haschke */
 
 #include <moveit/task_constructor/container_p.h>
-
-#include <moveit/task_constructor/task.h>
-#include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
@@ -50,35 +48,80 @@
 
 #include <functional>
 
-namespace moveit { namespace task_constructor {
+namespace {
+std::string rosNormalizeName(const std::string& name) {
+	std::string n;
+	n.reserve(name.size());
 
-Task::Task(const std::string& id, ContainerBase::pointer &&container)
-   : WrapperBase(std::string(), std::move(container)), id_(id), preempt_requested_(false)
-{
+	// drop invalid initial chars
+	auto read = name.begin(), end = name.end();
+	while (read != end && !isalpha(*read) && *read != '/' && *read != '~')
+		++read;
+
+	// copy (and correct) remaining chars
+	while (read != end) {
+		char c = *read;
+		n.push_back((isalnum(c) || c == '_') ? c : '_');
+		++read;
+	}
+	return n;
+}
+}
+
+namespace moveit {
+namespace task_constructor {
+
+TaskPrivate::TaskPrivate(Task* me, const std::string& id)
+  : WrapperBasePrivate(me, std::string()), id_(rosNormalizeName(id)), preempt_requested_(false) {}
+
+void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
+	// It only makes sense to swap pimpl instances of a Task!
+	// However, due to member protection rules, we can only implement it here
+	assert(typeid(lhs) == typeid(rhs));
+
+	// swap instances
+	::std::swap(lhs, rhs);
+	// as well as their me_ pointers
+	::std::swap(lhs->me_, rhs->me_);
+
+	// and redirect the parent pointers of children to new parents
+	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
+	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it)
+		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(lhs->me_), it);
+
+	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
+	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it)
+		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(rhs->me_), it);
+}
+
+const ContainerBase* TaskPrivate::stages() const {
+	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
+}
+
+Task::Task(const std::string& id, ContainerBase::pointer&& container)
+  : WrapperBase(new TaskPrivate(this, id), std::move(container)) {
+	if (!id.empty())
+		stages()->setName(id);
+
 	// monitor state on commandline
-	//addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
+	// addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default, but only if ros::init() was called
 	if (ros::isInitialized())
 		enableIntrospection(true);
 }
 
-Task::Task(Task&& other)
-   : WrapperBase(std::string(), std::make_unique<SerialContainer>())
-{
+Task::Task(Task&& other) : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
 	*this = std::move(other);
 }
 
-Task& Task::operator=(Task&& other)
-{
-	id_ = std::move(other.id_);
-	robot_model_ = std::move(other.robot_model_);
-	introspection_ = std::move(other.introspection_);
-	task_cbs_ = std::move(other.task_cbs_);
-	std::swap(pimpl_, other.pimpl_);
+Task& Task::operator=(Task&& other) {
+	clear();  // remove all stages of current task
+	swap(this->pimpl_, other.pimpl_);
 	return *this;
 }
 
-struct PlannerCache {
+struct PlannerCache
+{
 	typedef std::tuple<std::string, std::string, std::string> PlannerID;
 	typedef std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline>> PlannerMap;
 	typedef std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap>> ModelList;
@@ -103,47 +146,48 @@ struct PlannerCache {
 	}
 };
 
-planning_pipeline::PlanningPipelinePtr
-Task::createPlanner(const robot_model::RobotModelConstPtr& model, const std::string& ns,
-                    const std::string& planning_plugin_param_name,
-                    const std::string& adapter_plugins_param_name) {
+planning_pipeline::PlanningPipelinePtr Task::createPlanner(const robot_model::RobotModelConstPtr& model,
+                                                           const std::string& ns,
+                                                           const std::string& planning_plugin_param_name,
+                                                           const std::string& adapter_plugins_param_name) {
 	static PlannerCache cache;
-	PlannerCache::PlannerID id (ns, planning_plugin_param_name, adapter_plugins_param_name);
+	PlannerCache::PlannerID id(ns, planning_plugin_param_name, adapter_plugins_param_name);
 
 	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(model, id);
 	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
 	if (!planner) {
 		// create new entry
-		planner = std::make_shared<planning_pipeline::PlanningPipeline>
-		          (model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>(
+		    model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
 		// store in cache
 		entry = planner;
 	}
 	return planner;
 }
 
-Task::~Task()
-{
+Task::~Task() {
+	auto impl = pimpl();
 	clear();  // remove all stages
-	robot_model_.reset();
+	impl->robot_model_.reset();
 	// only destroy loader after all references to the model are gone!
-	robot_model_loader_.reset();
+	impl->robot_model_loader_.reset();
 }
 
-void Task::setRobotModel(const core::RobotModelConstPtr& robot_model)
-{
+void Task::setRobotModel(const core::RobotModelConstPtr& robot_model) {
+	auto impl = pimpl();
 	reset();  // solutions, scenes, etc become invalid
-	robot_model_ = robot_model;
+	impl->robot_model_ = robot_model;
 }
 
 void Task::loadRobotModel(const std::string& robot_description) {
-	robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(robot_description);
-	setRobotModel(robot_model_loader_->getModel());
-	if (!robot_model_)
+	auto impl = pimpl();
+	impl->robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(robot_description);
+	setRobotModel(impl->robot_model_loader_->getModel());
+	if (!impl->robot_model_)
 		throw Exception("Task failed to construct RobotModel");
 }
 
-void Task::add(Stage::pointer &&stage) {
+void Task::add(Stage::pointer&& stage) {
 	if (!stage)
 		throw std::runtime_error("stage insertion failed: invalid stage pointer");
 
@@ -151,168 +195,165 @@ void Task::add(Stage::pointer &&stage) {
 		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
 }
 
-void Task::clear()
-{
+void Task::clear() {
+	reset();
 	stages()->clear();
 }
 
-void Task::enableIntrospection(bool enable)
-{
-	if (enable && !introspection_)
-		introspection_.reset(new Introspection(*this));
-	else if (!enable && introspection_) {
+void Task::enableIntrospection(bool enable) {
+	auto impl = pimpl();
+	if (enable && !impl->introspection_)
+		impl->introspection_.reset(new Introspection(impl));
+	else if (!enable && impl->introspection_) {
 		// reset introspection instance of all stages
 		pimpl()->setIntrospection(nullptr);
-		pimpl()->traverseStages([this](Stage& stage, int) {
-			stage.pimpl()->setIntrospection(nullptr);
-			return true;
-		}, 1, UINT_MAX);
-		introspection_.reset();
+		pimpl()->traverseStages(
+		    [](Stage& stage, int) {
+			    stage.pimpl()->setIntrospection(nullptr);
+			    return true;
+			 },
+		    1, UINT_MAX);
+		impl->introspection_.reset();
 	}
 }
 
-Introspection &Task::introspection()
-{
+Introspection& Task::introspection() {
+	auto impl = pimpl();
 	enableIntrospection(true);
-	return *introspection_;
+	return *impl->introspection_;
 }
 
-Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback &&cb)
-{
-	task_cbs_.emplace_back(std::move(cb));
-	return --task_cbs_.cend();
+Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback&& cb) {
+	auto impl = pimpl();
+	impl->task_cbs_.emplace_back(std::move(cb));
+	return --(impl->task_cbs_.cend());
 }
 
-void Task::erase(TaskCallbackList::const_iterator which)
-{
-	task_cbs_.erase(which);
+void Task::erase(TaskCallbackList::const_iterator which) {
+	pimpl()->task_cbs_.erase(which);
 }
 
-void Task::reset()
-{
+void Task::reset() {
+	auto impl = pimpl();
 	// signal introspection, that this task was reset
-	if (introspection_)
-		introspection_->reset();
+	if (impl->introspection_)
+		impl->introspection_->reset();
 
 	WrapperBase::reset();
 }
 
-void Task::init()
-{
-	if (!robot_model_)
+void Task::init() {
+	auto impl = pimpl();
+	if (!impl->robot_model_)
 		loadRobotModel();
 
-	auto impl = pimpl();
 	// initialize push connections of wrapped child
-	StagePrivate *child = wrapped()->pimpl();
+	StagePrivate* child = wrapped()->pimpl();
 	child->setPrevEnds(impl->pendingBackward());
 	child->setNextStarts(impl->pendingForward());
 
 	// and *afterwards* initialize all children recursively
-	stages()->init(robot_model_);
+	stages()->init(impl->robot_model_);
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
-	stages()->pimpl()->pruneInterface(InterfaceFlags({GENERATE}));
+	stages()->pimpl()->pruneInterface(InterfaceFlags({ GENERATE }));
 	// and *finally* validate connectivity
-	stages()->validateConnectivity();
+	stages()->pimpl()->validateConnectivity();
 
 	// provide introspection instance to all stages
-	impl->setIntrospection(introspection_.get());
-	impl->traverseStages([this](Stage& stage, int) {
-		stage.pimpl()->setIntrospection(introspection_.get());
-		return true;
-	}, 1, UINT_MAX);
+	impl->setIntrospection(impl->introspection_.get());
+	impl->traverseStages(
+	    [impl](Stage& stage, int) {
+		    stage.pimpl()->setIntrospection(impl->introspection_.get());
+		    return true;
+		 },
+	    1, UINT_MAX);
 
 	// first time publish task
-	if (introspection_)
-		introspection_->publishTaskDescription();
+	if (impl->introspection_)
+		impl->introspection_->publishTaskDescription();
 }
 
-bool Task::canCompute() const
-{
+bool Task::canCompute() const {
 	return stages()->canCompute();
 }
 
-void Task::compute()
-{
+void Task::compute() {
 	stages()->compute();
 }
 
-bool Task::plan(size_t max_solutions)
-{
+bool Task::plan(size_t max_solutions) {
+	auto impl = pimpl();
 	reset();
 	init();
 
-	preempt_requested_ = false;
-	while(ros::ok() && !preempt_requested_ && canCompute() &&
-	      (max_solutions == 0 || numSolutions() < max_solutions)) {
+	impl->preempt_requested_ = false;
+	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
+	       (max_solutions == 0 || numSolutions() < max_solutions)) {
 		compute();
-		for (const auto& cb : task_cbs_)
+		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
-		if (introspection_)
-			introspection_->publishTaskState();
+		if (impl->introspection_)
+			impl->introspection_->publishTaskState();
 	}
 	printState();
 	return numSolutions() > 0;
 }
 
-void Task::preempt()
-{
-	preempt_requested_ = true;
+void Task::preempt() {
+	pimpl()->preempt_requested_ = true;
 }
 
-void Task::execute(const SolutionBase &s)
-{
+void Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
 	ac.waitForServer();
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
-	s.fillMessage(goal.solution, introspection_.get());
+	s.fillMessage(goal.solution, pimpl()->introspection_.get());
 	ac.sendGoal(goal);
 	ac.waitForResult();
 }
 
-void Task::publishAllSolutions(bool wait)
-{
+void Task::publishAllSolutions(bool wait) {
 	enableIntrospection(true);
-	introspection_->publishAllSolutions(wait);
+	pimpl()->introspection_->publishAllSolutions(wait);
 }
 
-void Task::onNewSolution(const SolutionBase &s)
-{
+void Task::onNewSolution(const SolutionBase& s) {
+	auto impl = pimpl();
 	// no need to call WrapperBase::onNewSolution!
-	if (introspection_)
-		introspection_->publishSolution(s);
+	if (impl->introspection_)
+		impl->introspection_->publishSolution(s);
 }
 
-ContainerBase* Task::stages()
-{
+ContainerBase* Task::stages() {
 	return static_cast<ContainerBase*>(WrapperBase::wrapped());
 }
 
-const ContainerBase* Task::stages() const
-{
+const ContainerBase* Task::stages() const {
 	return const_cast<Task*>(this)->stages();
 }
 
-PropertyMap &Task::properties()
-{
+PropertyMap& Task::properties() {
 	// forward to wrapped() stage
 	return wrapped()->properties();
 }
 
-void Task::setProperty(const std::string &name, const boost::any &value)
-{
+void Task::setProperty(const std::string& name, const boost::any& value) {
 	// forward to wrapped() stage
 	wrapped()->setProperty(name, value);
 }
 
-std::string Task::id() const
-{
-	return id_;
+std::string Task::id() const {
+	return pimpl()->id();
+}
+
+const core::RobotModelConstPtr& Task::getRobotModel() const {
+	auto impl = pimpl();
+	return impl->robot_model_;
 }
 
 void Task::printState(std::ostream& os) const {
 	os << *stages();
 }
-
-} }
+}
+}

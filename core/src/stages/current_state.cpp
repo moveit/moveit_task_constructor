@@ -43,26 +43,24 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <ros/ros.h>
 
+namespace moveit {
+namespace task_constructor {
+namespace stages {
 
-namespace moveit { namespace task_constructor { namespace stages {
-
-CurrentState::CurrentState(const std::string &name)
-   : Generator(name)
-{
-	auto &p = properties();
+CurrentState::CurrentState(const std::string& name) : Generator(name) {
+	auto& p = properties();
 	Property& timeout = p.property("timeout");
 	timeout.setDescription("max time to wait for get_planning_scene service");
 	timeout.setValue(-1.0);
 }
 
-void CurrentState::init(const moveit::core::RobotModelConstPtr& robot_model)
-{
+void CurrentState::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	Generator::init(robot_model);
 	robot_model_ = robot_model;
 	scene_.reset();
 }
 
-bool CurrentState::canCompute() const{
+bool CurrentState::canCompute() const {
 	return !scene_;
 }
 
@@ -78,16 +76,14 @@ void CurrentState::compute() {
 		moveit_msgs::GetPlanningScene::Response res;
 
 		req.components.components =
-		      moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS
-		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE
-		      | moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS
-		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES
-		      | moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY
-		      | moveit_msgs::PlanningSceneComponents::OCTOMAP
-		      | moveit_msgs::PlanningSceneComponents::TRANSFORMS
-		      | moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX
-		      | moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING
-		      | moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+		    moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS | moveit_msgs::PlanningSceneComponents::ROBOT_STATE |
+		    moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
+		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES |
+		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY | moveit_msgs::PlanningSceneComponents::OCTOMAP |
+		    moveit_msgs::PlanningSceneComponents::TRANSFORMS |
+		    moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
+		    moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
+		    moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
 
 		if (client.call(req, res)) {
 			scene_->setPlanningSceneMsg(res.scene);
@@ -97,8 +93,9 @@ void CurrentState::compute() {
 	}
 	ROS_WARN("failed to acquire current PlanningScene");
 }
-
-} } }
+}
+}
+}
 
 /// register plugin
 #include <pluginlib/class_list_macros.h>

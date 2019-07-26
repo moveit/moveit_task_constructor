@@ -40,7 +40,8 @@
 
 #include "stage.h"
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
 class ContainerBasePrivate;
 /** Base class for all container stages, i.e. ones that have one or more children */
@@ -51,21 +52,21 @@ public:
 	typedef std::unique_ptr<ContainerBase> pointer;
 
 	size_t numChildren() const;
+	Stage* findChild(const std::string& name) const;
 
 	typedef std::function<bool(const Stage&, int depth)> StageCallback;
 	/// traverse direct children of this container, calling the callback for each of them
-	bool traverseChildren(const StageCallback &processor) const;
+	bool traverseChildren(const StageCallback& processor) const;
 	/// traverse all children of this container recursively
-	bool traverseRecursively(const StageCallback &processor) const;
+	bool traverseRecursively(const StageCallback& processor) const;
 
 	virtual bool insert(Stage::pointer&& stage, int before = -1);
 	virtual bool remove(int pos);
+	virtual bool remove(Stage* child);
 	virtual void clear();
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	/// validate connectivity of children (after init() was done)
-	virtual void validateConnectivity() const;
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
@@ -78,7 +79,6 @@ protected:
 };
 std::ostream& operator<<(std::ostream& os, const ContainerBase& stage);
 
-
 class SerialContainerPrivate;
 /** SerialContainer allows to sequentially chain a set of child stages */
 class SerialContainer : public ContainerBase
@@ -89,31 +89,27 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	/// validate connectivity of children (after init() was done)
-	void validateConnectivity() const override;
-
 	bool canCompute() const override;
 	void compute() override;
 
 protected:
 	/// called by a (direct) child when a new solution becomes available
-	void onNewSolution(const SolutionBase &s) override;
+	void onNewSolution(const SolutionBase& s) override;
 
-	typedef std::function<void(const SolutionSequence::container_type &trace,
-	                           double trace_accumulated_cost)> SolutionProcessor;
+	typedef std::function<void(const SolutionSequence::container_type& trace, double trace_accumulated_cost)>
+	    SolutionProcessor;
 
 	/// Traverse all solution pathes starting at start and going in given direction dir
 	/// until the end, i.e. until there are no more subsolutions in the given direction
 	/// For each solution path, callback the given processor passing
 	/// the full trace (from start to end, but not including start) and its accumulated costs
-	template<Interface::Direction dir>
-	void traverse(const SolutionBase &start, const SolutionProcessor &cb,
-	              SolutionSequence::container_type &trace, double trace_cost = 0);
+	template <Interface::Direction dir>
+	void traverse(const SolutionBase& start, const SolutionProcessor& cb, SolutionSequence::container_type& trace,
+	              double trace_cost = 0);
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);
 };
-
 
 class ParallelContainerBasePrivate;
 class ParallelContainerBase;
@@ -128,36 +124,28 @@ class ParallelContainerBase : public ContainerBase
 {
 public:
 	PRIVATE_CLASS(ParallelContainerBase)
-	ParallelContainerBase(const std::string &name = "parallel container");
+	ParallelContainerBase(const std::string& name = "parallel container");
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
-	/// validate connectivity of children (after init() was done)
-	void validateConnectivity() const override;
 
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
 
 	/// lift unmodified child solution (useful for simple filtering)
-	inline void liftSolution(const SolutionBase& solution) {
-		liftSolution(solution, solution.cost());
-	}
+	inline void liftSolution(const SolutionBase& solution) { liftSolution(solution, solution.cost()); }
 	/// lift child solution to external interface, adapting the costs
-	void liftSolution(const SolutionBase& solution, double cost) {
-		liftSolution(solution, cost, solution.comment());
-	}
+	void liftSolution(const SolutionBase& solution, double cost) { liftSolution(solution, cost, solution.comment()); }
 
 	/// lift child solution to external interface, adapting the costs and comment
 	void liftSolution(const SolutionBase& solution, double cost, std::string comment);
 
 	/// spawn a new solution with given state as start and end
-	void spawn(InterfaceState &&state, SubTrajectory&& trajectory);
+	void spawn(InterfaceState&& state, SubTrajectory&& trajectory);
 	/// propagate a solution forwards
 	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
 	/// propagate a solution backwards
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory);
 };
-
 
 /** Plan for different alternatives in parallel.
  *
@@ -166,14 +154,13 @@ protected:
 class Alternatives : public ParallelContainerBase
 {
 public:
-	Alternatives(const std::string &name = "alternatives") : ParallelContainerBase(name) {}
+	Alternatives(const std::string& name = "alternatives") : ParallelContainerBase(name) {}
 
 	bool canCompute() const override;
 	void compute() override;
 
 	void onNewSolution(const SolutionBase& s) override;
 };
-
 
 /** Plan for different alternatives in sequence.
  *
@@ -186,7 +173,7 @@ class Fallbacks : public ParallelContainerBase
 	mutable Stage* active_child_ = nullptr;
 
 public:
-	Fallbacks(const std::string &name = "fallbacks") : ParallelContainerBase(name) {}
+	Fallbacks(const std::string& name = "fallbacks") : ParallelContainerBase(name) {}
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
@@ -196,17 +183,16 @@ public:
 	void onNewSolution(const SolutionBase& s) override;
 };
 
-
 class MergerPrivate;
 /** Plan for different sub tasks in parallel and finally merge all sub solutions into a single trajectory */
 class Merger : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(Merger)
-	Merger(const std::string &name = "merger");
+	Merger(const std::string& name = "merger");
 
 	void reset() override;
-	void init(const core::RobotModelConstPtr &robot_model) override;
+	void init(const core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	void compute() override;
 
@@ -214,7 +200,6 @@ protected:
 	Merger(MergerPrivate* impl);
 	void onNewSolution(const SolutionBase& s) override;
 };
-
 
 class WrapperBasePrivate;
 /** A wrapper wraps a single child stage, which can be accessed via wrapped().
@@ -228,22 +213,20 @@ class WrapperBase : public ParallelContainerBase
 {
 public:
 	PRIVATE_CLASS(WrapperBase)
-	WrapperBase(const std::string &name = "wrapper", Stage::pointer &&child = Stage::pointer());
+	WrapperBase(const std::string& name = "wrapper", Stage::pointer&& child = Stage::pointer());
 
 	/// insertion is only allowed if children() is empty
 	bool insert(Stage::pointer&& stage, int before = -1) override;
 
 	/// access the single wrapped child, NULL if still empty
 	Stage* wrapped();
-	inline const Stage* wrapped() const {
-		return const_cast<WrapperBase*>(this)->wrapped();
-	}
+	inline const Stage* wrapped() const { return const_cast<WrapperBase*>(this)->wrapped(); }
 
 	bool canCompute() const override;
 	void compute() override;
 
 protected:
-	WrapperBase(WrapperBasePrivate* impl, Stage::pointer &&child = Stage::pointer());
+	WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child = Stage::pointer());
 };
-
-} }
+}
+}

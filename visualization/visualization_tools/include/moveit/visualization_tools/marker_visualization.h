@@ -7,13 +7,11 @@
 #include <list>
 #include <memory>
 
-namespace Ogre
-{
+namespace Ogre {
 class SceneNode;
 }
 
-namespace rviz
-{
+namespace rviz {
 class DisplayContext;
 class MarkerBase;
 }
@@ -21,9 +19,11 @@ class MarkerBase;
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }
-namespace moveit { namespace core {
+namespace moveit {
+namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
-} }
+}
+}
 
 namespace moveit_rviz_plugin {
 
@@ -39,13 +39,15 @@ MOVEIT_CLASS_FORWARD(MarkerVisualization)
 class MarkerVisualization
 {
 	// list of all markers, attached to scene nodes in namespaces_
-	struct MarkerData {
+	struct MarkerData
+	{
 		visualization_msgs::MarkerPtr msg_;
 		std::shared_ptr<rviz::MarkerBase> marker_;
 
 		MarkerData(const visualization_msgs::Marker& marker);
 	};
-	struct NamespaceData {
+	struct NamespaceData
+	{
 		Ogre::SceneNode* ns_node_ = nullptr;
 		// markers grouped by frame
 		std::map<std::string, Ogre::SceneNode*> frames_;
@@ -71,33 +73,30 @@ public:
 	/// create markers (placed at planning frame of scene)
 	bool createMarkers(rviz::DisplayContext* context, Ogre::SceneNode* scene_node);
 	/// update marker position/orientation based on frames of given scene + robot_state
-	void update(const planning_scene::PlanningScene &end_scene,
-	            const moveit::core::RobotState &robot_state);
+	void update(const planning_scene::PlanningScene& end_scene, const moveit::core::RobotState& robot_state);
 
 	const std::map<std::string, NamespaceData>& namespaces() const { return namespaces_; }
-	void setVisible(const QString &ns, Ogre::SceneNode* parent_scene_node, bool visible);
+	void setVisible(const QString& ns, Ogre::SceneNode* parent_scene_node, bool visible);
 
 private:
-	void update(MarkerData &data,
-	            const planning_scene::PlanningScene &end_scene,
-	            const moveit::core::RobotState &robot_state) const;
+	void update(MarkerData& data, const planning_scene::PlanningScene& end_scene,
+	            const moveit::core::RobotState& robot_state) const;
 };
-
 
 /** rviz property allowing to group markers by their namespace
  *
  *  The class remembers which MarkerVisualization instances are currently hosted
  *  and provides the user interaction to toggle marker visibility by namespace.
  */
-class MarkerVisualizationProperty: public rviz::BoolProperty
+class MarkerVisualizationProperty : public rviz::BoolProperty
 {
 	Q_OBJECT
 
 	rviz::DisplayContext* context_ = nullptr;
-	Ogre::SceneNode* parent_scene_node_ = nullptr; // scene node provided externally
-	Ogre::SceneNode* marker_scene_node_ = nullptr; // scene node all markers are attached to
-	std::map<QString, rviz::BoolProperty*> namespaces_; // rviz properties for encountered namespaces
-	std::list<MarkerVisualizationPtr> hosted_markers_; // list of hosted MarkerVisualization instances
+	Ogre::SceneNode* parent_scene_node_ = nullptr;  // scene node provided externally
+	Ogre::SceneNode* marker_scene_node_ = nullptr;  // scene node all markers are attached to
+	std::map<QString, rviz::BoolProperty*> namespaces_;  // rviz properties for encountered namespaces
+	std::list<MarkerVisualizationPtr> hosted_markers_;  // list of hosted MarkerVisualization instances
 	rviz::BoolProperty* all_markers_at_once_;
 
 public:
@@ -111,8 +110,7 @@ public:
 	/// add markers in MarkerVisualization for display
 	void addMarkers(MarkerVisualizationPtr markers);
 	/// update pose of all markers
-	void update(const planning_scene::PlanningScene &scene,
-	            const moveit::core::RobotState &robot_state);
+	void update(const planning_scene::PlanningScene& scene, const moveit::core::RobotState& robot_state);
 
 	bool allAtOnce() const;
 
@@ -125,4 +123,4 @@ Q_SIGNALS:
 	void allAtOnceChanged(bool);
 };
 
-} // namespace moveit_rviz_plugin
+}  // namespace moveit_rviz_plugin

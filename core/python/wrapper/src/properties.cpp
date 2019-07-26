@@ -12,22 +12,19 @@ namespace {
 
 // Converter for std::set<T> to/from Python list
 template <typename T>
-struct SetConverter {
+struct SetConverter
+{
 	// Determine if obj can be converted into std::set
-	static void* convertible(PyObject* obj)
-	{
-		return PyList_Check(obj) ? obj : nullptr;
-	}
+	static void* convertible(PyObject* obj) { return PyList_Check(obj) ? obj : nullptr; }
 
 	/// Conversion from Python to C++
-	static void construct(PyObject* obj,
-	                      bp::converter::rvalue_from_python_stage1_data* data)
-	{
+	static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data) {
 		bp::object bpo(bp::borrowed(obj));
 		bp::stl_input_iterator<T> begin(bpo), end;
 		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
 		void* storage = reinterpret_cast<bp::converter::rvalue_from_python_storage<std::set<T>>*>(data)->storage.bytes;
-		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's convertible variable.
+		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's
+		// convertible variable.
 		data->convertible = new (storage) std::set<T>(begin, end);
 	}
 
@@ -40,9 +37,10 @@ struct SetConverter {
 	}
 };
 
-
-class PropertyConverterRegistry {
-	struct Entry {
+class PropertyConverterRegistry
+{
+	struct Entry
+	{
 		PropertyConverterBase::to_python_converter_function to_;
 		PropertyConverterBase::from_python_converter_function from_;
 	};
@@ -68,8 +66,7 @@ static PropertyConverterRegistry registry_singleton_;
 
 PropertyConverterRegistry::PropertyConverterRegistry() {
 	// register primitive type converters
-	bp::converter::registry::push_back(&SetConverter<std::string>::convertible,
-	                                   &SetConverter<std::string>::construct,
+	bp::converter::registry::push_back(&SetConverter<std::string>::convertible, &SetConverter<std::string>::construct,
 	                                   bp::type_id<std::set<std::string>>());
 	bp::to_python_converter<std::set<std::string>, SetConverter<std::string>>();
 
@@ -86,9 +83,8 @@ PropertyConverterRegistry::PropertyConverterRegistry() {
 
 bool PropertyConverterRegistry::insert(const bp::type_info& type_info, const std::string& ros_msg_name,
                                        PropertyConverterBase::to_python_converter_function to,
-                                       PropertyConverterBase::from_python_converter_function from)
-{
-	auto it_inserted = types_.insert(std::make_pair(type_info, Entry {to, from}));
+                                       PropertyConverterBase::from_python_converter_function from) {
+	auto it_inserted = types_.insert(std::make_pair(type_info, Entry{ to, from }));
 	if (!it_inserted.second)
 		return false;
 
@@ -104,7 +100,7 @@ bp::object PropertyConverterRegistry::toPython(const boost::any& value) {
 
 	auto it = registry_singleton_.types_.find(value.type());
 	if (it == registry_singleton_.types_.end()) {
-		std::string msg ("No Python -> C++ conversion for: ");
+		std::string msg("No Python -> C++ conversion for: ");
 		msg += boost::core::demangle(value.type().name());
 		PyErr_SetString(PyExc_TypeError, msg.c_str());
 		bp::throw_error_already_set();
@@ -114,7 +110,7 @@ bp::object PropertyConverterRegistry::toPython(const boost::any& value) {
 }
 
 boost::any PropertyConverterRegistry::fromPython(const bp::object& bpo) {
-	PyObject *o = bpo.ptr();
+	PyObject* o = bpo.ptr();
 
 	if (PyBool_Check(o))
 		return (o == Py_True);
@@ -128,7 +124,7 @@ boost::any PropertyConverterRegistry::fromPython(const bp::object& bpo) {
 	const std::string& ros_msg_name = rosMsgName(o);
 	auto it = registry_singleton_.msg_names_.find(ros_msg_name);
 	if (it == registry_singleton_.msg_names_.end()) {
-		std::string msg ("No Python -> C++ conversion for: ");
+		std::string msg("No Python -> C++ conversion for: ");
 		msg += ros_msg_name;
 		PyErr_SetString(PyExc_TypeError, msg.c_str());
 		bp::throw_error_already_set();
@@ -137,20 +133,22 @@ boost::any PropertyConverterRegistry::fromPython(const bp::object& bpo) {
 	return it->second->second.from_(bpo);
 }
 
-} // end anonymous namespace
+}  // end anonymous namespace
 
 bool PropertyConverterBase::insert(const bp::type_info& type_info, const std::string& ros_msg_name,
                                    moveit::python::PropertyConverterBase::to_python_converter_function to,
-                                   moveit::python::PropertyConverterBase::from_python_converter_function from)
-{
+                                   moveit::python::PropertyConverterBase::from_python_converter_function from) {
 	return registry_singleton_.insert(type_info, ros_msg_name, to, from);
 }
 
 namespace {
 
-struct property_pair_to_python {
+struct property_pair_to_python
+{
 	static PyObject* convert(const PropertyMap::iterator::value_type& x) {
-		return bp::incref(bp::make_tuple<std::string, bp::object>(x.first, PropertyConverterRegistry::toPython(x.second.value())).ptr());
+		return bp::incref(
+		    bp::make_tuple<std::string, bp::object>(x.first, PropertyConverterRegistry::toPython(x.second.value()))
+		        .ptr());
 	}
 };
 
@@ -174,13 +172,13 @@ void PropertyMap_configureInitFrom(PropertyMap& self, Property::SourceFlags sour
 	bp::stl_input_iterator<std::string> begin(values), end;
 	self.configureInitFrom(sources, std::set<std::string>(begin, end));
 }
-BOOST_PYTHON_FUNCTION_OVERLOADS(PropertyMap_configureInitFrom_overloads,
-                                PropertyMap_configureInitFrom, 2, 3);
+BOOST_PYTHON_FUNCTION_OVERLOADS(PropertyMap_configureInitFrom_overloads, PropertyMap_configureInitFrom, 2, 3);
 
 void PropertyMap_exposeTo_1(PropertyMap& self, PropertyMap& other, const std::string& name) {
 	self.exposeTo(other, name, name);
 }
-void PropertyMap_exposeTo_2(PropertyMap& self, PropertyMap& other, const std::string& name, const std::string& other_name) {
+void PropertyMap_exposeTo_2(PropertyMap& self, PropertyMap& other, const std::string& name,
+                            const std::string& other_name) {
 	self.exposeTo(other, name, other_name);
 }
 void PropertyMap_exposeTo_l(PropertyMap& self, PropertyMap& other, bp::list names) {
@@ -188,13 +186,12 @@ void PropertyMap_exposeTo_l(PropertyMap& self, PropertyMap& other, bp::list name
 	self.exposeTo(other, std::set<std::string>(begin, end));
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
-void export_properties()
-{
+void export_properties() {
 	bp::to_python_converter<PropertyMap::iterator::value_type, property_pair_to_python>();
 
-#if 0 // TODO
+#if 0  // TODO
 	bp::class_<Property, boost::noncopyable>("Property", bp::no_init)
 	      .def("setValue", &Property::setValue)
 	      .def("setCurrentValue", &Property::setCurrentValue)
@@ -207,17 +204,15 @@ void export_properties()
 #endif
 
 	bp::class_<PropertyMap, boost::noncopyable>("PropertyMap")
-	      .def("__getitem__", &PropertyMap_get)
-	      .def("__setitem__", &PropertyMap_set)
-	      .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
-	      .def("update", &PropertyMap_update)
-	      .def("__iter__", bp::iterator<PropertyMap>())
-	      .def("configureInitFrom", &PropertyMap_configureInitFrom,
-	           PropertyMap_configureInitFrom_overloads())
-	      .def("exposeTo", &PropertyMap_exposeTo_1)
-	      .def("exposeTo", &PropertyMap_exposeTo_2)
-	      .def("exposeTo", &PropertyMap_exposeTo_l)
-	      ;
+	    .def("__getitem__", &PropertyMap_get)
+	    .def("__setitem__", &PropertyMap_set)
+	    .def("reset", &PropertyMap::reset, "reset all properties to their defaults")
+	    .def("update", &PropertyMap_update)
+	    .def("__iter__", bp::iterator<PropertyMap>())
+	    .def("configureInitFrom", &PropertyMap_configureInitFrom, PropertyMap_configureInitFrom_overloads())
+	    .def("exposeTo", &PropertyMap_exposeTo_1)
+	    .def("exposeTo", &PropertyMap_exposeTo_2)
+	    .def("exposeTo", &PropertyMap_exposeTo_l);
 }
-
-} }
+}
+}

@@ -46,64 +46,67 @@
 
 #include <moveit/macros/class_forward.h>
 
-namespace moveit { namespace core {
-	MOVEIT_CLASS_FORWARD(RobotModel)
-	MOVEIT_CLASS_FORWARD(RobotState)
-}}
-
-namespace robot_model_loader {
-	MOVEIT_CLASS_FORWARD(RobotModelLoader)
+namespace moveit {
+namespace core {
+MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(RobotState)
+}
 }
 
-namespace moveit { namespace task_constructor {
+namespace moveit {
+namespace task_constructor {
 
 MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(ContainerBase)
 MOVEIT_CLASS_FORWARD(Task)
 
+class TaskPrivate;
 /** A Task is the root of a tree of stages.
  *
  * Actually a tasks wraps a single container (by default a SerialContainer),
  * which serves as the root of all stages.
  */
-class Task : protected WrapperBase {
+class Task : protected WrapperBase
+{
 public:
+	PRIVATE_CLASS(Task)
+
 	// +1 TODO: move into MoveIt! core
-	static planning_pipeline::PlanningPipelinePtr createPlanner(const moveit::core::RobotModelConstPtr &model,
-	                                                            const std::string &ns = "move_group",
-	                                                            const std::string &planning_plugin_param_name = "planning_plugin",
-	                                                            const std::string &adapter_plugins_param_name = "request_adapters");
+	static planning_pipeline::PlanningPipelinePtr
+	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
+	              const std::string& planning_plugin_param_name = "planning_plugin",
+	              const std::string& adapter_plugins_param_name = "request_adapters");
 	Task(const std::string& id = "",
-	     ContainerBase::pointer &&container = std::make_unique<SerialContainer>("task pipeline"));
-	Task(Task &&other);
+	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
+	Task(Task&& other);
 	Task& operator=(Task&& other);
 	~Task();
 
 	std::string id() const;
 
-	const moveit::core::RobotModelConstPtr& getRobotModel() const { return robot_model_; }
+	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
 	/// load robot model from given parameter
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
 	// TODO: use Stage::insert as well?
-	void add(Stage::pointer &&stage);
-	void clear() override;
+	void add(Stage::pointer&& stage);
+	void clear() final;
 
 	/// enable introspection publishing for use with rviz
 	void enableIntrospection(bool enable = true);
-	Introspection &introspection();
+	Introspection& introspection();
 
-	typedef std::function<void(const Task &t)> TaskCallback;
+	typedef std::function<void(const Task& t)> TaskCallback;
 	typedef std::list<TaskCallback> TaskCallbackList;
 	/// add function to be called after each top-level iteration
-	TaskCallbackList::const_iterator addTaskCallback(TaskCallback &&cb);
+	TaskCallbackList::const_iterator addTaskCallback(TaskCallback&& cb);
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
 	/// reset all stages
-	void reset() override;
+	void reset() final;
 	/// initialize all stages with given scene
 	void init();
 
@@ -115,7 +118,7 @@ public:
 	void execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
-	void printState(std::ostream &os = std::cout) const;
+	void printState(std::ostream& os = std::cout) const;
 
 	size_t numSolutions() const { return solutions().size(); }
 	const ordered<SolutionBaseConstPtr>& solutions() const { return stages()->solutions(); }
@@ -126,39 +129,27 @@ public:
 
 	// +1 TODO: convenient access to arbitrary stage by name. traverse hierarchy using / separator?
 	/// access stage tree
-	ContainerBase *stages();
-	const ContainerBase *stages() const;
+	ContainerBase* stages();
+	const ContainerBase* stages() const;
 
 	/// properties access
 	PropertyMap& properties();
-	const PropertyMap& properties() const {
-		return const_cast<Task*>(this)->properties();
-	}
+	const PropertyMap& properties() const { return const_cast<Task*>(this)->properties(); }
 	void setProperty(const std::string& name, const boost::any& value);
 	/// overload: const char* values are stored as std::string
-	inline void setProperty(const std::string& name, const char* value) {
-		setProperty(name, std::string(value));
-	}
+	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 
 protected:
 	bool canCompute() const override;
 	void compute() override;
-	void onNewSolution(const SolutionBase &s) override;
+	void onNewSolution(const SolutionBase& s) override;
 
 private:
-	std::string id_;
-	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
-	moveit::core::RobotModelConstPtr robot_model_;
-	bool preempt_requested_;
-
-	// introspection and monitoring
-	std::unique_ptr<Introspection> introspection_;
-	std::list<Task::TaskCallback> task_cbs_; // functions to monitor task's planning progress
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {
 	task.printState(os);
 	return os;
 }
-
-} }
+}
+}
