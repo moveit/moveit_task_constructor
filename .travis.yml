@@ -1,6 +1,6 @@
 # This config file for Travis CI utilizes https://github.com/ros-planning/moveit_ci package.
 sudo: required
-dist: trusty
+dist: xenial
 services:
   - docker
 language: cpp
