@@ -88,7 +88,7 @@ PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle
   double grasp_offset_x = pnh.param<double>("grasp_offset_x", 0.1);
   double grasp_offset_z = pnh.param<double>("prasp_offset_z", 0.0);
   grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotation, Eigen::Vector3d::UnitZ()) *
-    Eigen::Translation3d(grasp_offset_x, 0, grasp_offset_z);
+                           Eigen::Translation3d(grasp_offset_x, 0, grasp_offset_z);
 }
 
 void PickPlaceTask::init()
