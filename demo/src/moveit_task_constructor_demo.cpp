@@ -116,7 +116,11 @@ int main(int argc, char** argv)
   moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
   pick_place_task.init();
   if (pick_place_task.plan())
+  {
+    ROS_INFO("Planning succeded");
     pick_place_task.execute();
+  }
+  ROS_INFO("Planning failed");
 
   // Keep introspection alive
   ros::waitForShutdown();

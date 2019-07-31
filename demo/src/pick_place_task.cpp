@@ -104,7 +104,7 @@ void PickPlaceTask::init()
 
   // Sampling planner
   auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
-  sampling_planner->setProperty("goal_joint_tolerance", 1e-3);
+  sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
 
   // Cartesian planner
   auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
