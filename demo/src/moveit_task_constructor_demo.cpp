@@ -49,11 +49,11 @@ void spawnTable()
   ros::NodeHandle pnh("~");
   std::string table_name = pnh.param<std::string>("table_name", "table");
   std::string surface_frame = pnh.param<std::string>("table_surface_frame", "world");
-  double height = pnh.param<double>("table_height", 0.3);
-  double width = pnh.param<double>("table_width", 0.5);
-  double length = pnh.param<double>("table_length", 0.5);
+  double height = pnh.param<double>("table_height", 0.1);
+  double width = pnh.param<double>("table_width", 0.4);
+  double length = pnh.param<double>("table_length", 0.4);
   double position_x = pnh.param<double>("table_pos_x", 0.5);
-  double position_y = pnh.param<double>("table_pos_y", 0.0);
+  double position_y = pnh.param<double>("table_pos_y", -0.25);
 
   moveit::planning_interface::PlanningSceneInterface psi;
   moveit_msgs::CollisionObject object;
@@ -77,11 +77,11 @@ void spawnObject()
   ros::NodeHandle pnh("~");
   std::string object_name = pnh.param<std::string>("object_name", "object");
   std::string surface_frame = pnh.param<std::string>("object_surface_frame", "world");
-  double height = pnh.param<double>("object_height", 0.2);
-  double radius = pnh.param<double>("object_radius", 0.03);
+  double height = pnh.param<double>("object_height", 0.25);
+  double radius = pnh.param<double>("object_radius", 0.02);
   double position_x = pnh.param<double>("object_pos_x", 0.0);
-  double position_y = pnh.param<double>("object_pos_y", 0.0);
-  double table_height = pnh.param<double>("table_height", 0.3);
+  double position_y = pnh.param<double>("object_pos_y", -0.1);
+  double table_height = pnh.param<double>("table_height", 0.1);
   double place_surface_offset = pnh.param<double>("place_surface_offset", 0.0001);
 
   moveit::planning_interface::PlanningSceneInterface psi;

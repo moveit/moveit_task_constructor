@@ -63,13 +63,13 @@ PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle
   surface_link_ = pnh.param<std::string>("surface_link", "table");
   support_surfaces_ = { surface_link_ };
   //  table_name_ = pnh.param<std::string>("table_name", "FAKE");
-  table_height_ = pnh.param<double>("table_height", 0.3);
-  table_length_ = pnh.param<double>("table_length", 0.5);
-  table_width_ = pnh.param<double>("table_width", 0.5);
+  table_height_ = pnh.param<double>("table_height", 0.1);
+  table_length_ = pnh.param<double>("table_length", 0.4);
+  table_width_ = pnh.param<double>("table_width", 0.4);
 
   object_name_ = pnh.param<std::string>("object_name", "object");
-  object_height_ = pnh.param<double>("object_height", 0.2);
-  object_radius_ = pnh.param<double>("object_radius", 0.03);
+  object_height_ = pnh.param<double>("object_height", 0.25);
+  object_radius_ = pnh.param<double>("object_radius", 0.02);
   // Pick
   approach_object_min_dist_ = pnh.param<double>("approach_object_min_dist", 0.1);
   approach_object_max_dist_ = pnh.param<double>("approach_object_max_dist", 0.15);
@@ -79,16 +79,19 @@ PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle
   lift_object_max_dist_ = pnh.param<double>("lift_object_max_dist", 0.1);
 
   // Place
-  place_surface_offset_ = pnh.param<double>("place_surface_offset", 0.01);
+  place_surface_offset_ = pnh.param<double>("place_surface_offset", 0.0001);
   place_pos_x_ = pnh.param<double>("place_pos_x", 0.1);
   place_pos_y_ = pnh.param<double>("place_pos_y", 0.1);
 
   // compute hand grasp frame
-  double rotation = pnh.param<double>("grasp_rotation_z", 1.0);
+  double rotationy = pnh.param<double>("grasp_rotationy", 1.5);
+  double rotationx = pnh.param<double>("grasp_rotationx", 0.75);
   double grasp_offset_x = pnh.param<double>("grasp_offset_x", 0.1);
+  double grasp_offset_y = pnh.param<double>("grasp_offset_y", 0.0);
   double grasp_offset_z = pnh.param<double>("prasp_offset_z", 0.0);
-  grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotation, Eigen::Vector3d::UnitZ()) *
-                           Eigen::Translation3d(grasp_offset_x, 0, grasp_offset_z);
+  grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotationy, Eigen::Vector3d::UnitY()) *
+                           Eigen::AngleAxisd(M_PI * rotationx, Eigen::Vector3d::UnitX()) *
+                           Eigen::Translation3d(grasp_offset_x, grasp_offset_y, grasp_offset_z);
 }
 
 void PickPlaceTask::init()
@@ -193,7 +196,7 @@ void PickPlaceTask::init()
       // Set hand forward direction
       geometry_msgs::Vector3Stamped vec;
       vec.header.frame_id = hand_frame_;
-      vec.vector.x = 1.0;
+      vec.vector.z = 1.0;
       stage->setDirection(vec);
       grasp->insert(std::move(stage));
     }
@@ -350,7 +353,7 @@ void PickPlaceTask::init()
       p.pose.orientation.w = 1;
       p.pose.position.x = place_pos_x_;
       p.pose.position.y = place_pos_y_;
-      p.pose.position.z = 0.5 * object_height_ + place_surface_offset_;
+      p.pose.position.z = 0.5 * object_height_ + place_surface_offset_ + 0.5 * table_height_;
       stage->setPose(p);
       stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
 
@@ -403,7 +406,7 @@ void PickPlaceTask::init()
       stage->properties().set("marker_ns", "retreat");
       geometry_msgs::Vector3Stamped vec;
       vec.header.frame_id = hand_frame_;
-      vec.vector.x = -1.0;
+      vec.vector.z = -1.0;
       stage->setDirection(vec);
       place->insert(std::move(stage));
     }
