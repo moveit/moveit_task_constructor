@@ -2,7 +2,7 @@
 
 Description: A simple pick & place demo using MoveIt Task Constructor. This uses the Panda from Franka Emika
 
-Developed by Henning Kayser & Simon Goldstien at [PickNik Consulting](http://picknik.ai/)
+Developed by Henning Kayser & Simon Goldstein at [PickNik Consulting](http://picknik.ai/)
 
 ## Run
 
