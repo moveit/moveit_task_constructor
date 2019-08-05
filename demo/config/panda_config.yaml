@@ -1,13 +1,20 @@
 # planning group names
-group_name: "panda_arm"
+arm_group_name: "panda_arm"
 eef_name: "hand"
 hand_name: "hand"
 hand_frame: "panda_link8"
+number_of_plans: 10
+
+# Poses
+open_gripper_pose: "open"
+close_gripper_pose: "close"
+home_pose: "ready"
 
 # surface
-table_surface_frame: "world"
-object_surface_frame: "table"
+table_refrence_frame: "world"
+object_refrence_frame: "table/table_top"
 surface_link: "table"
+world_frame: "world"
 
 # collision object
 # CYLINDER object specifications
@@ -15,10 +22,12 @@ object_name: "object"
 object_height: 0.25
 object_radius: 0.02
 object_pos_x: 0.0
-object_pos_y: -0.1
+object_pos_y: 0.0
 
+table_name: "table"
+table_subframe_name: "table_top"
 table_height: 0.1
-table_width: 0.4
+table_width: 0.5
 table_length: 0.4
 table_pos_x: 0.5
 table_pos_y: -0.25
@@ -27,8 +36,8 @@ table_pos_y: -0.25
 grasp_offset_x: 0.1 # X
 grasp_offset_y: 0.0 # Y
 grasp_offset_z: 0.0 # Z
-grasp_rotationY: 1.5 # rotation
-grasp_rotationX: 0.75 # rotation
+grasp_rotation_x: 0.75 # rotation X axis
+grasp_rotation_y: 1.5 # rotation Y axis
 
 # place pose metrics (x/y position on table_top)
 place_pos_x: 0.1

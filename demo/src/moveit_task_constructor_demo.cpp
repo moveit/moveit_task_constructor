@@ -45,20 +45,20 @@
 
 void spawnTable()
 {
-  ros::Duration(1.0).sleep();
   ros::NodeHandle pnh("~");
-  std::string table_name = pnh.param<std::string>("table_name", "table");
-  std::string surface_frame = pnh.param<std::string>("table_surface_frame", "world");
-  double height = pnh.param<double>("table_height", 0.1);
-  double width = pnh.param<double>("table_width", 0.4);
-  double length = pnh.param<double>("table_length", 0.4);
-  double position_x = pnh.param<double>("table_pos_x", 0.5);
-  double position_y = pnh.param<double>("table_pos_y", -0.25);
+  std::string table_name = pnh.param<std::string>("table_name", "table_name");
+  std::string table_subframe_name = pnh.param<std::string>("table_subframe_name", "table_subframe_name");
+  std::string table_refrence_frame = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
+  double height = pnh.param<double>("table_height", 0.0);
+  double width = pnh.param<double>("table_width", 0.0);
+  double length = pnh.param<double>("table_length", 0.0);
+  double position_x = pnh.param<double>("table_pos_x", 0.0);
+  double position_y = pnh.param<double>("table_pos_y", 0.0);
 
   moveit::planning_interface::PlanningSceneInterface psi;
   moveit_msgs::CollisionObject object;
   object.id = table_name = table_name;
-  object.header.frame_id = surface_frame;
+  object.header.frame_id = table_refrence_frame;
   object.primitives.resize(1);
   object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
   object.primitives[0].dimensions = { length, width, height };
@@ -67,37 +67,43 @@ void spawnTable()
   object.primitive_poses[0].position.y = position_y;
   object.primitive_poses[0].position.z = 0.5 * height;
   object.primitive_poses[0].orientation.w = 1.0;
+
+  // Make the table top subframe at the center of the top surface
+  object.subframe_names.resize(1);
+  object.subframe_poses.resize(1);
+  object.subframe_names[0] = table_subframe_name;
+  object.subframe_poses[0].position.x = position_x;
+  object.subframe_poses[0].position.y = position_y;
+  object.subframe_poses[0].position.z = height;
+
   psi.applyCollisionObject(object);
-  ros::Duration(1.0).sleep();
 }
 
 void spawnObject()
 {
-  ros::Duration(1.0).sleep();
   ros::NodeHandle pnh("~");
-  std::string object_name = pnh.param<std::string>("object_name", "object");
-  std::string surface_frame = pnh.param<std::string>("object_surface_frame", "world");
-  double height = pnh.param<double>("object_height", 0.25);
-  double radius = pnh.param<double>("object_radius", 0.02);
+  std::string object_name = pnh.param<std::string>("object_name", "name_of_moved_object");
+  std::string object_refrence_frame = pnh.param<std::string>("object_refrence_frame", "frame_object_lays_upon");
+  double height = pnh.param<double>("object_height", 0.0);
+  double radius = pnh.param<double>("object_radius", 0.0);
   double position_x = pnh.param<double>("object_pos_x", 0.0);
-  double position_y = pnh.param<double>("object_pos_y", -0.1);
-  double table_height = pnh.param<double>("table_height", 0.1);
-  double place_surface_offset = pnh.param<double>("place_surface_offset", 0.0001);
+  double position_y = pnh.param<double>("object_pos_y", 0.0);
+  double table_height = pnh.param<double>("table_height", 0.0);
+  double place_surface_offset = pnh.param<double>("place_surface_offset", 0.0);
 
   moveit::planning_interface::PlanningSceneInterface psi;
   moveit_msgs::CollisionObject object;
   object.id = object_name = object_name;
-  object.header.frame_id = surface_frame;
+  object.header.frame_id = object_refrence_frame;
   object.primitives.resize(1);
   object.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
   object.primitives[0].dimensions = { height, radius };
   object.primitive_poses.resize(1);
   object.primitive_poses[0].position.x = position_x;
   object.primitive_poses[0].position.y = position_y;
-  object.primitive_poses[0].position.z = 0.5 * (height + table_height) + place_surface_offset;
+  object.primitive_poses[0].position.z = 0.5 * height + place_surface_offset;
   object.primitive_poses[0].orientation.w = 1.0;
   psi.applyCollisionObject(object);
-  ros::Duration(1.0).sleep();
 }
 
 int main(int argc, char** argv)
@@ -109,8 +115,11 @@ int main(int argc, char** argv)
   spinner.start();
 
   // Add table and object to planning scene
+  ros::Duration(0.3).sleep();
   spawnTable();
+  ros::Duration(0.3).sleep();
   spawnObject();
+  ros::Duration(0.3).sleep();
 
   // Construct and run pick/place task
   moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);

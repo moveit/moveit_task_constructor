@@ -89,23 +89,29 @@ private:
   moveit::task_constructor::TaskPtr task_;
 
   // planning group properties
-  std::string group_name_;
+  std::string arm_group_name_;
   std::string eef_name_;
   std::string hand_name_;
   std::string hand_frame_;
 
   // object + surface
   std::vector<std::string> support_surfaces_;
-  std::string table_surface_frame_;
-  std::string object_surface_frame_;
+  std::string table_refrence_frame_;
+  std::string object_refrence_frame_;
   std::string surface_link_;
   std::string object_name_;
-  //  std::string table_name_;
+  std::string table_name_;
+  std::string world_frame_;
   double object_height_;
   double object_radius_;
   double table_height_;
   double table_length_;
   double table_width_;
+
+  // pose_names
+  std::string open_gripper_pose_;
+  std::string close_gripper_pose_;
+  std::string home_pose_;
 
   // execution
   actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
