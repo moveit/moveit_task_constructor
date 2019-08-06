@@ -66,66 +66,65 @@
 #ifndef MOVEIT_TASK_CONSTRUCTOR_DEMO_PICK_PLACE_TASK_H
 #define MOVEIT_TASK_CONSTRUCTOR_DEMO_PICK_PLACE_TASK_H
 
-namespace moveit_task_constructor_demo
-{
+namespace moveit_task_constructor_demo {
 using namespace moveit::task_constructor;
 
 class PickPlaceTask
 {
 public:
-  PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
-  ~PickPlaceTask() = default;
+	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
+	~PickPlaceTask() = default;
 
-  void init();
+	void init();
 
-  bool plan();
+	bool plan();
 
-  bool execute();
+	bool execute();
 
 private:
-  ros::NodeHandle nh_;
+	ros::NodeHandle nh_;
 
-  std::string task_name_;
-  moveit::task_constructor::TaskPtr task_;
+	std::string task_name_;
+	moveit::task_constructor::TaskPtr task_;
 
-  // planning group properties
-  std::string arm_group_name_;
-  std::string eef_name_;
-  std::string hand_name_;
-  std::string hand_frame_;
+	// planning group properties
+	std::string arm_group_name_;
+	std::string eef_name_;
+	std::string hand_name_;
+	std::string hand_frame_;
 
-  // object + surface
-  std::vector<std::string> support_surfaces_;
-  std::string table_refrence_frame_;
-  std::string object_refrence_frame_;
-  std::string surface_link_;
-  std::string object_name_;
-  std::string table_name_;
-  std::string world_frame_;
-  double object_height_;
-  double object_radius_;
-  double table_height_;
-  double table_length_;
-  double table_width_;
+	// object + surface
+	std::vector<std::string> support_surfaces_;
+	std::string table_refrence_frame_;
+	std::string object_refrence_frame_;
+	std::string surface_link_;
+	std::string object_name_;
+	std::string table_name_;
+	std::string world_frame_;
+	double object_height_;
+	double object_radius_;
+	double table_height_;
+	double table_length_;
+	double table_width_;
 
-  // pose_names
-  std::string open_gripper_pose_;
-  std::string close_gripper_pose_;
-  std::string home_pose_;
+	// pose_names
+	std::string open_gripper_pose_;
+	std::string close_gripper_pose_;
+	std::string home_pose_;
 
-  // execution
-  actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
+	// execution
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
 
-  // ros params
-  double approach_object_min_dist_;
-  double approach_object_max_dist_;
-  double lift_object_min_dist_;
-  double lift_object_max_dist_;
-  double place_pos_x_;
-  double place_pos_y_;
-  double place_surface_offset_;
+	// ros params
+	double approach_object_min_dist_;
+	double approach_object_max_dist_;
+	double lift_object_min_dist_;
+	double lift_object_max_dist_;
+	double place_pos_x_;
+	double place_pos_y_;
+	double place_surface_offset_;
 
-  Eigen::Isometry3d grasp_frame_transform_;
+	Eigen::Isometry3d grasp_frame_transform_;
 };
 }  // moveit_task_constructor_demo
 #endif  // MOVEIT_TASK_CONSTRUCTOR_DEMO_PICK_PLACE_TASK_H
