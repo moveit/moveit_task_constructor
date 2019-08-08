@@ -12,7 +12,7 @@ home_pose: "ready"
 
 # surface
 table_refrence_frame: "world"
-object_refrence_frame: "table/table_top"
+object_refrence_frame: "table"
 surface_link: "table"
 world_frame: "world"
 
@@ -25,7 +25,6 @@ object_pos_x: 0.0
 object_pos_y: 0.0
 
 table_name: "table"
-table_subframe_name: "table_top"
 table_height: 0.1
 table_width: 0.5
 table_length: 0.4

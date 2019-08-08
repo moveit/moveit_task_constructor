@@ -354,7 +354,7 @@ void PickPlaceTask::init() {
 			p.pose.orientation.w = 1;
 			p.pose.position.x = place_pos_x_;
 			p.pose.position.y = place_pos_y_;
-			p.pose.position.z = 0.5 * object_height_ + place_surface_offset_;
+			p.pose.position.z = 0.5 * (object_height_ + table_height_) + place_surface_offset_;
 			stage->setPose(p);
 			stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
 

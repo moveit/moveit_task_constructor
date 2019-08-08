@@ -46,7 +46,6 @@
 void spawnTable() {
 	ros::NodeHandle pnh("~");
 	std::string table_name = pnh.param<std::string>("table_name", "table_name");
-	std::string table_subframe_name = pnh.param<std::string>("table_subframe_name", "table_subframe_name");
 	std::string table_refrence_frame = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
 	double height = pnh.param<double>("table_height", 0.0);
 	double width = pnh.param<double>("table_width", 0.0);
@@ -66,15 +65,6 @@ void spawnTable() {
 	object.primitive_poses[0].position.y = position_y;
 	object.primitive_poses[0].position.z = 0.5 * height;
 	object.primitive_poses[0].orientation.w = 1.0;
-
-	// Make the table top subframe at the center of the top surface
-	object.subframe_names.resize(1);
-	object.subframe_poses.resize(1);
-	object.subframe_names[0] = table_subframe_name;
-	object.subframe_poses[0].position.x = position_x;
-	object.subframe_poses[0].position.y = position_y;
-	object.subframe_poses[0].position.z = height;
-
 	psi.applyCollisionObject(object);
 }
 
@@ -99,7 +89,7 @@ void spawnObject() {
 	object.primitive_poses.resize(1);
 	object.primitive_poses[0].position.x = position_x;
 	object.primitive_poses[0].position.y = position_y;
-	object.primitive_poses[0].position.z = 0.5 * height + place_surface_offset;
+	object.primitive_poses[0].position.z = 0.5 * (height + table_height) + place_surface_offset;
 	object.primitive_poses[0].orientation.w = 1.0;
 	psi.applyCollisionObject(object);
 }
