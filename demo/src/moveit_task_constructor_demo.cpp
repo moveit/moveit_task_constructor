@@ -43,7 +43,13 @@
 #include <geometry_msgs/Pose.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
-void spawnTable() {
+void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
+	bool success = false;
+	while (!success)
+		success = psi.applyCollisionObject(object);
+}
+
+moveit_msgs::CollisionObject createTable() {
 	ros::NodeHandle pnh("~");
 	std::string table_name = pnh.param<std::string>("table_name", "table_name");
 	std::string table_refrence_frame = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
@@ -53,7 +59,6 @@ void spawnTable() {
 	double position_x = pnh.param<double>("table_pos_x", 0.0);
 	double position_y = pnh.param<double>("table_pos_y", 0.0);
 
-	moveit::planning_interface::PlanningSceneInterface psi;
 	moveit_msgs::CollisionObject object;
 	object.id = table_name = table_name;
 	object.header.frame_id = table_refrence_frame;
@@ -65,10 +70,10 @@ void spawnTable() {
 	object.primitive_poses[0].position.y = position_y;
 	object.primitive_poses[0].position.z = 0.5 * height;
 	object.primitive_poses[0].orientation.w = 1.0;
-	psi.applyCollisionObject(object);
+	return object;
 }
 
-void spawnObject() {
+moveit_msgs::CollisionObject createObject() {
 	ros::NodeHandle pnh("~");
 	std::string object_name = pnh.param<std::string>("object_name", "name_of_moved_object");
 	std::string object_refrence_frame = pnh.param<std::string>("object_refrence_frame", "frame_object_lays_upon");
@@ -79,7 +84,6 @@ void spawnObject() {
 	double table_height = pnh.param<double>("table_height", 0.0);
 	double place_surface_offset = pnh.param<double>("place_surface_offset", 0.0);
 
-	moveit::planning_interface::PlanningSceneInterface psi;
 	moveit_msgs::CollisionObject object;
 	object.id = object_name = object_name;
 	object.header.frame_id = object_refrence_frame;
@@ -91,7 +95,7 @@ void spawnObject() {
 	object.primitive_poses[0].position.y = position_y;
 	object.primitive_poses[0].position.z = 0.5 * (height + table_height) + place_surface_offset;
 	object.primitive_poses[0].orientation.w = 1.0;
-	psi.applyCollisionObject(object);
+	return object;
 }
 
 int main(int argc, char** argv) {
@@ -102,15 +106,13 @@ int main(int argc, char** argv) {
 	spinner.start();
 
 	// Add table and object to planning scene
-	ros::Duration(0.3).sleep();
-	spawnTable();
-	ros::Duration(0.3).sleep();
-	spawnObject();
-	ros::Duration(0.3).sleep();
+	moveit::planning_interface::PlanningSceneInterface psi;
+	spawnObject(psi, createTable());
+	spawnObject(psi, createObject());
 
 	// Construct and run pick/place task
 	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
-        pick_place_task.loadParameters();
+	pick_place_task.loadParameters();
 	pick_place_task.init();
 	if (pick_place_task.plan()) {
 		ROS_INFO("Planning succeded");
