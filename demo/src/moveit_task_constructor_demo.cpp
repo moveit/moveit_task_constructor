@@ -110,6 +110,7 @@ int main(int argc, char** argv) {
 
 	// Construct and run pick/place task
 	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
+        pick_place_task.loadParameters();
 	pick_place_task.init();
 	if (pick_place_task.plan()) {
 		ROS_INFO("Planning succeded");

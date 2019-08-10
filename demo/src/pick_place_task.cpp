@@ -40,63 +40,65 @@ namespace moveit_task_constructor_demo {
 PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh)
   : nh_(nh), task_name_(task_name), execute_("execute_task_solution", true) {
 	ROS_INFO("waiting for task execution");
+}
 
-	/****************************************************
-	 *                                                  *
-	 *               Load Parameters                    *
-	 *                                                  *
-	 ***************************************************/
-	ros::NodeHandle pnh("~");
+void PickPlaceTask::loadParameters() {
+        /****************************************************
+         *                                                  *
+         *               Load Parameters                    *
+         *                                                  *
+         ***************************************************/
+         ros::NodeHandle pnh("~");
 
-	// Planning group properties
-	arm_group_name_ = pnh.param<std::string>("arm_group_name", "arm_group_name");
-	hand_name_ = pnh.param<std::string>("hand_name", "hand_group_name");
-	eef_name_ = pnh.param<std::string>("eef_name", "eef_name");
-	hand_frame_ = pnh.param<std::string>("hand_frame", "hand_frame_name");
-	world_frame_ = pnh.param<std::string>("world_frame", "world_frame_name");
+         // Planning group properties
+         arm_group_name_ = pnh.param<std::string>("arm_group_name", "arm_group_name");
+         hand_name_ = pnh.param<std::string>("hand_name", "hand_group_name");
+         eef_name_ = pnh.param<std::string>("eef_name", "eef_name");
+         hand_frame_ = pnh.param<std::string>("hand_frame", "hand_frame_name");
+         world_frame_ = pnh.param<std::string>("world_frame", "world_frame_name");
 
-	// poses
-	open_gripper_pose_ = pnh.param<std::string>("open_gripper_pose", "open_pose");
-	close_gripper_pose_ = pnh.param<std::string>("close_gripper_pose", "close_pose");
-	home_pose_ = pnh.param<std::string>("home_pose", "home_pose");
+         // poses
+         open_gripper_pose_ = pnh.param<std::string>("open_gripper_pose", "open_pose");
+         close_gripper_pose_ = pnh.param<std::string>("close_gripper_pose", "close_pose");
+         home_pose_ = pnh.param<std::string>("home_pose", "home_pose");
 
-	// Object + surface
-	table_name_ = pnh.param<std::string>("table_name", "table_name");
-	table_height_ = pnh.param<double>("table_height", 0.0);
-	table_length_ = pnh.param<double>("table_length", 0.0);
-	table_width_ = pnh.param<double>("table_width", 0.0);
+         // Object + surface
+         table_name_ = pnh.param<std::string>("table_name", "table_name");
+         table_height_ = pnh.param<double>("table_height", 0.0);
+         table_length_ = pnh.param<double>("table_length", 0.0);
+         table_width_ = pnh.param<double>("table_width", 0.0);
 
-	object_name_ = pnh.param<std::string>("object_name", "name_of_moved_object");
-	object_height_ = pnh.param<double>("object_height", 0.0);
-	object_radius_ = pnh.param<double>("object_radius", 0.0);
+         object_name_ = pnh.param<std::string>("object_name", "name_of_moved_object");
+         object_height_ = pnh.param<double>("object_height", 0.0);
+         object_radius_ = pnh.param<double>("object_radius", 0.0);
 
-	table_refrence_frame_ = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
-	object_refrence_frame_ = pnh.param<std::string>("object_refrence_frame", "frame_object_lays_upon");
-	surface_link_ = pnh.param<std::string>("surface_link", "name_of_table");
-	support_surfaces_ = { surface_link_ };
+         table_refrence_frame_ = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
+         object_refrence_frame_ = pnh.param<std::string>("object_refrence_frame", "frame_object_lays_upon");
+         surface_link_ = pnh.param<std::string>("surface_link", "name_of_table");
+         support_surfaces_ = { surface_link_ };
 
-	// Pick
-	approach_object_min_dist_ = pnh.param<double>("approach_object_min_dist", 0.0);
-	approach_object_max_dist_ = pnh.param<double>("approach_object_max_dist", 0.0);
+         // Pick
+         approach_object_min_dist_ = pnh.param<double>("approach_object_min_dist", 0.0);
+         approach_object_max_dist_ = pnh.param<double>("approach_object_max_dist", 0.0);
 
-	// Lift
-	lift_object_min_dist_ = pnh.param<double>("lift_object_min_dist", 0.0);
-	lift_object_max_dist_ = pnh.param<double>("lift_object_max_dist", 0.0);
+         // Lift
+         lift_object_min_dist_ = pnh.param<double>("lift_object_min_dist", 0.0);
+         lift_object_max_dist_ = pnh.param<double>("lift_object_max_dist", 0.0);
 
-	// Place
-	place_surface_offset_ = pnh.param<double>("place_surface_offset", 0.0);
-	place_pos_x_ = pnh.param<double>("place_pos_x", 0.0);
-	place_pos_y_ = pnh.param<double>("place_pos_y", 0.0);
+         // Place
+         place_surface_offset_ = pnh.param<double>("place_surface_offset", 0.0);
+         place_pos_x_ = pnh.param<double>("place_pos_x", 0.0);
+         place_pos_y_ = pnh.param<double>("place_pos_y", 0.0);
 
-	// compute hand grasp frame
-	double rotationy = pnh.param<double>("grasp_rotation_y", 0.0);
-	double rotationx = pnh.param<double>("grasp_rotation_x", 0.0);
-	double grasp_offset_x = pnh.param<double>("grasp_offset_x", 0.0);
-	double grasp_offset_y = pnh.param<double>("grasp_offset_y", 0.0);
-	double grasp_offset_z = pnh.param<double>("prasp_offset_z", 0.0);
-	grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotationy, Eigen::Vector3d::UnitY()) *
-	                         Eigen::AngleAxisd(M_PI * rotationx, Eigen::Vector3d::UnitX()) *
-	                         Eigen::Translation3d(grasp_offset_x, grasp_offset_y, grasp_offset_z);
+         // compute hand grasp frame
+         double rotationy = pnh.param<double>("grasp_rotation_y", 0.0);
+         double rotationx = pnh.param<double>("grasp_rotation_x", 0.0);
+         double grasp_offset_x = pnh.param<double>("grasp_offset_x", 0.0);
+         double grasp_offset_y = pnh.param<double>("grasp_offset_y", 0.0);
+         double grasp_offset_z = pnh.param<double>("prasp_offset_z", 0.0);
+         grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotationy, Eigen::Vector3d::UnitY()) *
+                Eigen::AngleAxisd(M_PI * rotationx, Eigen::Vector3d::UnitX()) *
+                Eigen::Translation3d(grasp_offset_x, grasp_offset_y, grasp_offset_z);
 }
 
 void PickPlaceTask::init() {

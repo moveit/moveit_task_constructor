@@ -75,6 +75,8 @@ public:
 	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
 	~PickPlaceTask() = default;
 
+        void loadParameters();
+
 	void init();
 
 	bool plan();
