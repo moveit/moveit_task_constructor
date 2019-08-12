@@ -44,9 +44,8 @@
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
-	bool success = false;
-	while (!success)
-		success = psi.applyCollisionObject(object);
+	if (!psi.applyCollisionObject(object))
+		throw std::runtime_error("Failed to spawn object: " + object.id);
 }
 
 moveit_msgs::CollisionObject createTable() {
