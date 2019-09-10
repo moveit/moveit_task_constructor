@@ -35,11 +35,12 @@
 */
 
 #include <moveit_task_constructor_demo/pick_place_task.h>
+#include <rosparam_shortcuts/rosparam_shortcuts.h>
 
 namespace moveit_task_constructor_demo {
+constexpr char LOGNAME[] = "pick_place_task";
 PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh)
   : nh_(nh), task_name_(task_name), execute_("execute_task_solution", true) {
-	ROS_INFO("waiting for task execution");
 }
 
 void PickPlaceTask::loadParameters() {
@@ -48,60 +49,42 @@ void PickPlaceTask::loadParameters() {
 	 *               Load Parameters                    *
 	 *                                                  *
 	 ***************************************************/
-	ros::NodeHandle pnh("~");
+  ROS_INFO_NAMED(LOGNAME, "Loading task parameters");
+  ros::NodeHandle pnh("~");
 
-	// Planning group properties
-	arm_group_name_ = pnh.param<std::string>("arm_group_name", "arm_group_name");
-	hand_name_ = pnh.param<std::string>("hand_name", "hand_group_name");
-	eef_name_ = pnh.param<std::string>("eef_name", "eef_name");
-	hand_frame_ = pnh.param<std::string>("hand_frame", "hand_frame_name");
-	world_frame_ = pnh.param<std::string>("world_frame", "world_frame_name");
+  // Planning group properties
+  size_t error = 0;
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_group_name", arm_group_name_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_group_name", hand_group_name_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "eef_name", eef_name_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_frame", hand_frame_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "world_frame", world_frame_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "grasp_frame_transform", grasp_frame_transform_);
 
-	// poses
-	open_gripper_pose_ = pnh.param<std::string>("open_gripper_pose", "open_pose");
-	close_gripper_pose_ = pnh.param<std::string>("close_gripper_pose", "close_pose");
-	home_pose_ = pnh.param<std::string>("home_pose", "home_pose");
+  // Predefined pose targets
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_open_pose", hand_open_pose_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_close_pose", hand_close_pose_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_home_pose", arm_home_pose_);
 
-	// Object + surface
-	table_name_ = pnh.param<std::string>("table_name", "table_name");
-	table_height_ = pnh.param<double>("table_height", 0.0);
-	table_length_ = pnh.param<double>("table_length", 0.0);
-	table_width_ = pnh.param<double>("table_width", 0.0);
+  // Target object
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "surface_link", surface_link_);
+  support_surfaces_ = { surface_link_ };
 
-	object_name_ = pnh.param<std::string>("object_name", "name_of_moved_object");
-	object_height_ = pnh.param<double>("object_height", 0.0);
-	object_radius_ = pnh.param<double>("object_radius", 0.0);
-
-	table_refrence_frame_ = pnh.param<std::string>("table_refrence_frame", "frame_table_is_in");
-	object_refrence_frame_ = pnh.param<std::string>("object_refrence_frame", "frame_object_lays_upon");
-	surface_link_ = pnh.param<std::string>("surface_link", "name_of_table");
-	support_surfaces_ = { surface_link_ };
-
-	// Pick
-	approach_object_min_dist_ = pnh.param<double>("approach_object_min_dist", 0.0);
-	approach_object_max_dist_ = pnh.param<double>("approach_object_max_dist", 0.0);
-
-	// Lift
-	lift_object_min_dist_ = pnh.param<double>("lift_object_min_dist", 0.0);
-	lift_object_max_dist_ = pnh.param<double>("lift_object_max_dist", 0.0);
-
-	// Place
-	place_surface_offset_ = pnh.param<double>("place_surface_offset", 0.0);
-	place_pos_x_ = pnh.param<double>("place_pos_x", 0.0);
-	place_pos_y_ = pnh.param<double>("place_pos_y", 0.0);
-
-	// compute hand grasp frame
-	double rotationy = pnh.param<double>("grasp_rotation_y", 0.0);
-	double rotationx = pnh.param<double>("grasp_rotation_x", 0.0);
-	double grasp_offset_x = pnh.param<double>("grasp_offset_x", 0.0);
-	double grasp_offset_y = pnh.param<double>("grasp_offset_y", 0.0);
-	double grasp_offset_z = pnh.param<double>("prasp_offset_z", 0.0);
-	grasp_frame_transform_ = Eigen::AngleAxisd(M_PI * rotationy, Eigen::Vector3d::UnitY()) *
-	                         Eigen::AngleAxisd(M_PI * rotationx, Eigen::Vector3d::UnitX()) *
-	                         Eigen::Translation3d(grasp_offset_x, grasp_offset_y, grasp_offset_z);
+  // Pick/Place metrics
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_min_dist", approach_object_min_dist_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_max_dist", approach_object_max_dist_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_min_dist", lift_object_min_dist_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_max_dist", lift_object_max_dist_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "place_surface_offset", place_surface_offset_);
+  error += !rosparam_shortcuts::get(LOGNAME, pnh, "place_pose", place_pose_);
+  rosparam_shortcuts::shutdownIfError(LOGNAME, error);
 }
 
 void PickPlaceTask::init() {
+  ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
 	const std::string object = "object";
 
 	// Reset ROS introspection before constructing the new object
@@ -124,7 +107,7 @@ void PickPlaceTask::init() {
 	// Set task properties
 	t.setProperty("group", arm_group_name_);
 	t.setProperty("eef", eef_name_);
-	t.setProperty("hand", hand_name_);
+	t.setProperty("hand", hand_group_name_);
 	t.setProperty("hand_grasping_frame", hand_frame_);
 	t.setProperty("ik_frame", hand_frame_);
 
@@ -159,8 +142,8 @@ void PickPlaceTask::init() {
 	 ***************************************************/
 	{  // Open Hand
 		auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
-		stage->setGroup(hand_name_);
-		stage->setGoal(open_gripper_pose_);
+		stage->setGroup(hand_group_name_);
+		stage->setGoal(hand_open_pose_);
 		t.add(std::move(stage));
 	}
 
@@ -214,7 +197,7 @@ void PickPlaceTask::init() {
 			auto stage = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 			stage->properties().configureInitFrom(Stage::PARENT);
 			stage->properties().set("marker_ns", "grasp_pose");
-			stage->setPreGraspPose(open_gripper_pose_);
+			stage->setPreGraspPose(hand_open_pose_);
 			stage->setObject(object);
 			stage->setAngleDelta(M_PI / 12);
 			stage->setMonitoredStage(current_state);  // Hook into current state
@@ -224,7 +207,7 @@ void PickPlaceTask::init() {
 			wrapper->setMaxIKSolutions(8);
 			wrapper->setMinSolutionDistance(1.0);
 			wrapper->setIKFrame(grasp_frame_transform_, hand_frame_);
-			wrapper->properties().configureInitFrom(Stage::PARENT, { "eef" });
+			wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group" });
 			wrapper->properties().configureInitFrom(Stage::INTERFACE, { "target_pose" });
 			grasp->insert(std::move(wrapper));
 		}
@@ -235,7 +218,7 @@ void PickPlaceTask::init() {
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow collision (hand,object)");
 			stage->allowCollisions(
-			    object, t.getRobotModel()->getJointModelGroup(hand_name_)->getLinkModelNamesWithCollisionGeometry(), true);
+			    object, t.getRobotModel()->getJointModelGroup(hand_group_name_)->getLinkModelNamesWithCollisionGeometry(), true);
 			grasp->insert(std::move(stage));
 		}
 
@@ -244,8 +227,8 @@ void PickPlaceTask::init() {
 		 ***************************************************/
 		{
 			auto stage = std::make_unique<stages::MoveTo>("close hand", sampling_planner);
-			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_name_);
-			stage->setGoal(close_gripper_pose_);
+			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
+			stage->setGoal(hand_close_pose_);
 			grasp->insert(std::move(stage));
 		}
 
@@ -352,11 +335,9 @@ void PickPlaceTask::init() {
 
 			// Set target pose
 			geometry_msgs::PoseStamped p;
-			p.header.frame_id = object_refrence_frame_;
-			p.pose.orientation.w = 1;
-			p.pose.position.x = place_pos_x_;
-			p.pose.position.y = place_pos_y_;
-			p.pose.position.z = 0.5 * (object_height_ + table_height_) + place_surface_offset_;
+			p.header.frame_id = object_reference_frame_;
+      p.pose = place_pose_;
+      p.pose.position.z += 0.5 * object_dimensions_[0] + place_surface_offset_;
 			stage->setPose(p);
 			stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
 
@@ -374,8 +355,8 @@ void PickPlaceTask::init() {
 		 *****************************************************/
 		{
 			auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
-			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_name_);
-			stage->setGoal(open_gripper_pose_);
+			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
+			stage->setGoal(hand_open_pose_);
 			place->insert(std::move(stage));
 		}
 
@@ -385,7 +366,7 @@ void PickPlaceTask::init() {
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid collision (hand,object)");
 			stage->allowCollisions(
-			    object_name_, t.getRobotModel()->getJointModelGroup(hand_name_)->getLinkModelNamesWithCollisionGeometry(),
+			    object_name_, t.getRobotModel()->getJointModelGroup(hand_group_name_)->getLinkModelNamesWithCollisionGeometry(),
 			    false);
 			place->insert(std::move(stage));
 		}
@@ -427,43 +408,40 @@ void PickPlaceTask::init() {
 	{
 		auto stage = std::make_unique<stages::MoveTo>("move home", sampling_planner);
 		stage->properties().configureInitFrom(Stage::PARENT, { "group" });
-		stage->setGoal(home_pose_);
+		stage->setGoal(arm_home_pose_);
 		stage->restrictDirection(stages::MoveTo::FORWARD);
 		t.add(std::move(stage));
 	}
 }
 
 bool PickPlaceTask::plan() {
+  ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	ros::NodeHandle pnh("~");
-	int number_of_plans = pnh.param<int>("number_of_plans", 10);
+	int planning_attempts = pnh.param<int>("planning_attempts", 10);
 
 	try {
-		task_->plan(number_of_plans);
+		task_->plan(planning_attempts);
 	} catch (InitStageException& e) {
-		ROS_ERROR_STREAM("Initialization failed: " << e);
+		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;
 	}
 	if (task_->numSolutions() == 0) {
-		ROS_ERROR("Planning failed");
+		ROS_ERROR_NAMED(LOGNAME, "Planning failed");
 		return false;
 	}
 	return true;
 }
 
 bool PickPlaceTask::execute() {
-	moveit_task_constructor_msgs::Solution solution;
-	task_->solutions().front()->fillMessage(solution);
-
-	ROS_INFO_STREAM("last trajectory in solution:\n" << solution.sub_trajectory.back().trajectory);
-
+  ROS_INFO_NAMED(LOGNAME, "Executing solution trajectory");
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
-	execute_goal.solution = solution;
+	task_->solutions().front()->fillMessage(execute_goal.solution);
 	execute_.sendGoal(execute_goal);
 	execute_.waitForResult();
 	moveit_msgs::MoveItErrorCodes execute_result = execute_.getResult()->error_code;
 
 	if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
-		ROS_ERROR_STREAM("task execution failed and returned: " << execute_.getState().toString());
+		ROS_ERROR_STREAM_NAMED(LOGNAME, "Task execution failed and returned: " << execute_.getState().toString());
 		return false;
 	}
 

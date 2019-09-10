@@ -4,8 +4,9 @@
   <version>0.0.1</version>
   <description>The moveit_task_constructor_demo package</description>
 
-  <author email="pimongold@picknik.ai">simon Goldstein</author>
-  <maintainer email="simongold@picknik.ai">Simon Goldstein</maintainer>
+  <author email="simongold@picknik.ai">simon Goldstein</author>
+  <author email="henningkayser@picknik.ai">Henning Kayser</author>
+  <maintainer email="henningkayser@picknik.ai">Henning Kayser</maintainer>
 
   <!-- One license tag required, multiple allowed, one license per tag -->
   <!-- Commonly used license strings: -->
@@ -17,10 +18,5 @@
   <depend>moveit_visual_tools</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>moveit_core</depend>
-
-  <!-- The export tag contains other, unspecified, tags -->
-  <export>
-    <!-- Other tools can request additional information be placed here -->
-
-  </export>
+  <depend>rosparam_shortcuts</depend>
 </package>

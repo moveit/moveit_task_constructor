@@ -5,7 +5,6 @@
     <arg name="load_robot_description" value="true"/>
   </include>
 
-  <!-- If needed, broadcast static tf for robot root -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="virtual_joint_broadcaster_1" args="0 0 0 0 0 0 world panda_link0" />
 
   <!-- We do not have a robot connected, so publish fake joint states -->
@@ -25,7 +24,6 @@
     <arg name="fake_execution" value="true"/>
     <arg name="info" value="true"/>
     <arg name="debug" value="false"/>
-    <arg name="pipeline" value="ompl"  />
   </include>
 
   <!-- Run Rviz -->

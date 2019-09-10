@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_task_constructor_core
 	moveit_visual_tools
 	moveit_ros_planning_interface
+	rosparam_shortcuts
 )
 
 catkin_package(

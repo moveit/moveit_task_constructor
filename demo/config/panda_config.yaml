@@ -1,52 +1,46 @@
-# planning group names
+# Total planning attempts
+planning_attempts: 10
+
+# Planning group and link names
 arm_group_name: "panda_arm"
 eef_name: "hand"
-hand_name: "hand"
+hand_group_name: "hand"
 hand_frame: "panda_link8"
-number_of_plans: 10
 
 # Poses
-open_gripper_pose: "open"
-close_gripper_pose: "close"
-home_pose: "ready"
+hand_open_pose: "open"
+hand_close_pose: "close"
+arm_home_pose: "ready"
 
-# surface
-table_refrence_frame: "world"
-object_refrence_frame: "table"
-surface_link: "table"
+# Scene frames
 world_frame: "world"
+table_reference_frame: "world"
+object_reference_frame: "world"
+surface_link: "table"
 
-# collision object
+# Collision object for picking
 # CYLINDER object specifications
 object_name: "object"
-object_height: 0.25
-object_radius: 0.02
-object_pos_x: 0.0
-object_pos_y: 0.0
+object_dimensions: [0.25, 0.02] # [height, radius]
+object_pose: [0.5, -0.25, 0.0, 0, 0, 0]
 
+# Table model
+spawn_table: true
 table_name: "table"
-table_height: 0.1
-table_width: 0.5
-table_length: 0.4
-table_pos_x: 0.5
-table_pos_y: -0.25
+table_dimensions: [0.4, 0.5, 0.1]  # [length, width, height]
+table_pose: [0.5, -0.25, 0, 0, 0, 0]
 
-# gripper grasp frame transform
-grasp_offset_x: 0.1 # X
-grasp_offset_y: 0.0 # Y
-grasp_offset_z: 0.0 # Z
-grasp_rotation_x: 0.75 # rotation X axis
-grasp_rotation_y: 1.5 # rotation Y axis
+# Gripper grasp frame transform [x,y,z,r,p,y]
+grasp_frame_transform: [0, 0, 0.1, 1.571, 0.785, 1.571]
 
-# place pose metrics (x/y position on table_top)
-place_pos_x: 0.1
-place_pos_y: 0.1
+# Place pose [x,y,z,r,p,y]
+place_pose: [0.6, -0.15, 0, 0, 0, 0]
 place_surface_offset: 0.0001 # place offset from table
 
-# valid distance range when approaching an object for picking
+# Valid distance range when approaching an object for picking
 approach_object_min_dist: 0.1
 approach_object_max_dist: 0.15
 
-# valid height range when lifting an object after pick
+# Valid height range when lifting an object after pick
 lift_object_min_dist: 0.01
 lift_object_max_dist: 0.1
