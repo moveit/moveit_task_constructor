@@ -14,6 +14,11 @@ namespace {
 template <typename T>
 struct SetConverter
 {
+	SetConverter() {
+		bp::converter::registry::push_back(&convertible, &construct, bp::type_id<std::set<T>>());
+		bp::to_python_converter<std::set<T>, SetConverter<T>>();
+	}
+
 	// Determine if obj can be converted into std::set
 	static void* convertible(PyObject* obj) { return PyList_Check(obj) ? obj : nullptr; }
 
@@ -34,6 +39,45 @@ struct SetConverter
 		for (const T& value : v)
 			l.append(value);
 		return bp::incref(l.ptr());
+	}
+};
+
+// Converter for std::map<K,V> to/from Python list
+template <typename K, typename V>
+struct MapConverter
+{
+	MapConverter() {
+		bp::converter::registry::push_back(&convertible, &construct, bp::type_id<std::map<K, V>>());
+		bp::to_python_converter<std::map<K, V>, MapConverter<K, V>>();
+	}
+
+	// Determine if obj can be converted into std::map
+	static void* convertible(PyObject* obj) { return PyMapping_Check(obj) ? obj : nullptr; }
+
+	/// Conversion from Python to C++
+	static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data) {
+		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
+		typedef bp::converter::rvalue_from_python_storage<std::map<K, V>> storage_t;
+		void* storage = reinterpret_cast<storage_t*>(data)->storage.bytes;
+		std::map<K, V>* m = new (storage) std::map<K, V>;
+		// populate the map
+		bp::object items(bp::borrowed(PyMapping_Items(obj)));
+		for (bp::stl_input_iterator<bp::tuple> it(items), end; it != end; ++it) {
+			const K& key = bp::extract<K>((*it)[0]);
+			const V& value = bp::extract<V>((*it)[1]);
+			m->insert(std::make_pair(key, value));
+		}
+		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's
+		// convertible variable.
+		data->convertible = storage;
+	}
+
+	/// Conversion from C++ object to Python object
+	static PyObject* convert(const std::map<K, V>& v) {
+		bp::dict d;
+		for (const auto& pair : v)
+			d[pair.first] = pair.second;
+		return bp::incref(d.ptr());
 	}
 };
 
@@ -65,12 +109,11 @@ public:
 static PropertyConverterRegistry registry_singleton_;
 
 PropertyConverterRegistry::PropertyConverterRegistry() {
-	// register primitive type converters
-	bp::converter::registry::push_back(&SetConverter<std::string>::convertible, &SetConverter<std::string>::construct,
-	                                   bp::type_id<std::set<std::string>>());
-	bp::to_python_converter<std::set<std::string>, SetConverter<std::string>>();
+	// register custom type converters
+	SetConverter<std::string>();
+	MapConverter<std::string, double>();
 
-	// register primitive property converters
+	// register property converters
 	PropertyConverter<bool>();
 	PropertyConverter<int>();
 	PropertyConverter<unsigned int>();
@@ -79,6 +122,7 @@ PropertyConverterRegistry::PropertyConverterRegistry() {
 	PropertyConverter<double>();
 	PropertyConverter<std::string>();
 	PropertyConverter<std::set<std::string>>();
+	PropertyConverter<std::map<std::string, double>>();
 }
 
 bool PropertyConverterRegistry::insert(const bp::type_info& type_info, const std::string& ros_msg_name,

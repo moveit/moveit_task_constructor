@@ -189,6 +189,7 @@ class TestStages(unittest.TestCase):
         self._check(stage, "path_constraints", Constraints())
         stage.setDirection(TwistStamped())
         stage.setDirection(Vector3Stamped())
+        stage.setDirection({'joint': 0.1})
 
     def test_Connect(self):
         planner = core.PipelinePlanner()

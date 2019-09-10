@@ -73,7 +73,7 @@ public:
 	const Entry& entry(const std::type_index& type_index) const {
 		auto it = types_.find(type_index);
 		if (it == types_.end()) {
-			ROS_ERROR_STREAM_NAMED(LOGNAME, "Unregistered type: " << type_index.name());
+			ROS_WARN_STREAM_THROTTLE_NAMED(10.0, LOGNAME, "Unregistered property type: " << type_index.name());
 			return dummy_;
 		}
 		return it->second;
