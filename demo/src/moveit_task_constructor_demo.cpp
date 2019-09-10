@@ -54,15 +54,15 @@ void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const 
 
 moveit_msgs::CollisionObject createTable() {
 	ros::NodeHandle pnh("~");
-  std::string table_name, table_reference_frame;
-  std::vector<double> table_dimensions;
-  geometry_msgs::Pose pose;
-  std::size_t error = 0;
-  error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
+	std::string table_name, table_reference_frame;
+	std::vector<double> table_dimensions;
+	geometry_msgs::Pose pose;
+	std::size_t error = 0;
+	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
 	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
-  error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
-  error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
-  rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
+	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
+	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
 
 	moveit_msgs::CollisionObject object;
 	object.id = table_name;
@@ -70,22 +70,22 @@ moveit_msgs::CollisionObject createTable() {
 	object.primitives.resize(1);
 	object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
 	object.primitives[0].dimensions = table_dimensions;
-  pose.position.z -= 0.5 * table_dimensions[2];  // align surface with world
-  object.primitive_poses.push_back(pose);
-  return object;
+	pose.position.z -= 0.5 * table_dimensions[2];  // align surface with world
+	object.primitive_poses.push_back(pose);
+	return object;
 }
 
 moveit_msgs::CollisionObject createObject() {
 	ros::NodeHandle pnh("~");
-  std::string object_name, object_reference_frame;
-  std::vector<double> object_dimensions;
-  geometry_msgs::Pose pose;
-  std::size_t error = 0;
+	std::string object_name, object_reference_frame;
+	std::vector<double> object_dimensions;
+	geometry_msgs::Pose pose;
+	std::size_t error = 0;
 	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name);
 	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame);
 	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions);
-  error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
-  rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
+	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
 
 	moveit_msgs::CollisionObject object;
 	object.id = object_name;
@@ -93,8 +93,8 @@ moveit_msgs::CollisionObject createObject() {
 	object.primitives.resize(1);
 	object.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
 	object.primitives[0].dimensions = object_dimensions;
-  pose.position.z += 0.5 * object_dimensions[0];
-  object.primitive_poses.push_back(pose);
+	pose.position.z += 0.5 * object_dimensions[0];
+	object.primitive_poses.push_back(pose);
 	return object;
 }
 
@@ -106,23 +106,23 @@ int main(int argc, char** argv) {
 	spinner.start();
 
 	// Add table and object to planning scene
-  ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
+	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
 	moveit::planning_interface::PlanningSceneInterface psi;
-  ros::NodeHandle pnh("~");
-  if (pnh.param("spawn_table", true))
-    spawnObject(psi, createTable());
-  spawnObject(psi, createObject());
+	ros::NodeHandle pnh("~");
+	if (pnh.param("spawn_table", true))
+		spawnObject(psi, createTable());
+	spawnObject(psi, createObject());
 
 	// Construct and run pick/place task
 	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
 	pick_place_task.loadParameters();
 	pick_place_task.init();
-  if (pick_place_task.plan()) {
-    ROS_INFO_NAMED(LOGNAME, "Planning succeded");
-    pick_place_task.execute();
-  } else {
-    ROS_INFO_NAMED(LOGNAME, "Planning failed");
-  }
+	if (pick_place_task.plan()) {
+		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
+		pick_place_task.execute();
+	} else {
+		ROS_INFO_NAMED(LOGNAME, "Planning failed");
+	}
 
 	// Keep introspection alive
 	ros::waitForShutdown();
