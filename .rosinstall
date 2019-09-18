@@ -1,4 +1,4 @@
-# This file is intended for users who want to build MoveIt! from source.
+# This file is intended for users who want to build MoveIt from source.
 # Used with wstool, users can download source of all packages of MoveIt!.
 - git:
     local-name: moveit_task_constructor
@@ -12,3 +12,7 @@
     local-name: mtc_pour
     uri: https://github.com/TAMS-Group/mtc_pour.git
     version: master
+- git:
+    local-name: rosparam-shortcuts
+    uri: https://github.com/PickNikRobotics/rosparam_shortcuts.git
+    version: melodic-devel
