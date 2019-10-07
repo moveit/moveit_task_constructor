@@ -57,12 +57,12 @@ moveit_msgs::CollisionObject createTable() {
 	std::string table_name, table_reference_frame;
 	std::vector<double> table_dimensions;
 	geometry_msgs::Pose pose;
-	std::size_t error = 0;
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+	std::size_t errors = 0;
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
+	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
 
 	moveit_msgs::CollisionObject object;
 	object.id = table_name;

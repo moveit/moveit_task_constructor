@@ -52,34 +52,34 @@ void PickPlaceTask::loadParameters() {
 	ros::NodeHandle pnh("~");
 
 	// Planning group properties
-	size_t error = 0;
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_group_name", arm_group_name_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_group_name", hand_group_name_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "eef_name", eef_name_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_frame", hand_frame_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "world_frame", world_frame_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "grasp_frame_transform", grasp_frame_transform_);
+	size_t errors = 0;
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_group_name", arm_group_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_group_name", hand_group_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "eef_name", eef_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_frame", hand_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "world_frame", world_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "grasp_frame_transform", grasp_frame_transform_);
 
 	// Predefined pose targets
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_open_pose", hand_open_pose_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_close_pose", hand_close_pose_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_home_pose", arm_home_pose_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_open_pose", hand_open_pose_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "hand_close_pose", hand_close_pose_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "arm_home_pose", arm_home_pose_);
 
 	// Target object
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "surface_link", surface_link_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "surface_link", surface_link_);
 	support_surfaces_ = { surface_link_ };
 
 	// Pick/Place metrics
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_min_dist", approach_object_min_dist_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_max_dist", approach_object_max_dist_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_min_dist", lift_object_min_dist_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_max_dist", lift_object_max_dist_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "place_surface_offset", place_surface_offset_);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "place_pose", place_pose_);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_min_dist", approach_object_min_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "approach_object_max_dist", approach_object_max_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_min_dist", lift_object_min_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "lift_object_max_dist", lift_object_max_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "place_surface_offset", place_surface_offset_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "place_pose", place_pose_);
+	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
 }
 
 void PickPlaceTask::init() {
