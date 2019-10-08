@@ -119,10 +119,16 @@ int main(int argc, char** argv) {
 	pick_place_task.init();
 	if (pick_place_task.plan()) {
 		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
-		pick_place_task.execute();
+		if (pnh.param("execute", false)) {
+			pick_place_task.execute();
+		} else {
+			ROS_INFO_NAMED(LOGNAME, "Execution disabled");
+		}
 	} else {
 		ROS_INFO_NAMED(LOGNAME, "Planning failed");
 	}
+
+	ROS_INFO_NAMED(LOGNAME, "Execution complete");
 
 	// Keep introspection alive
 	ros::waitForShutdown();
