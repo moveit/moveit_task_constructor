@@ -110,8 +110,8 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	bool failure = false;
 	while (!failure) {
 		res.clear();
-		scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(),
-		                                               scene.getCurrentState(), scene.getAllowedCollisionMatrix());
+		scene.getCollisionEnv()->checkRobotCollision(req, res, scene.getCurrentState(),
+		                                             scene.getAllowedCollisionMatrix());
 		if (!res.collision)
 			return result;
 
