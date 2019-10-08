@@ -41,6 +41,7 @@
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit/move_group/capability_names.h>
 #include <moveit/robot_state/conversions.h>
+#include <moveit/utils/message_checks.h>
 
 namespace {
 
@@ -167,14 +168,14 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 
 		/* TODO add action feedback and markers */
 		exec_traj.effect_on_success_ = [this, sub_traj, description](const plan_execution::ExecutableMotionPlan*) {
-			if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)) {
+			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
 				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
 			}
 			return true;
 		};
 
-		if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff.robot_state) &&
+		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
 			ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution",
 			                       "invalid intermediate robot state in scene diff of SubTrajectory " << description);
