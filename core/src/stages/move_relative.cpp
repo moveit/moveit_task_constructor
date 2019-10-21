@@ -288,6 +288,14 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (dir == BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
+
+		// set cost
+		double cost = 0;
+		for (const double& distance : robot_trajectory->getWayPointDurations()) {
+			cost += distance;
+		}
+		solution.setCost(cost);
+
 		if (!success)
 			solution.markAsFailure();
 		return true;
