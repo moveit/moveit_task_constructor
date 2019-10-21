@@ -290,8 +290,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		solution.setTrajectory(robot_trajectory);
 		if (!success)
 			solution.markAsFailure();
+		return true;
 	}
-	return true;
+	return false;
 }
 
 void MoveRelative::computeForward(const InterfaceState& from) {

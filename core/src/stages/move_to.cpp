@@ -246,12 +246,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 		if (!success)
 			solution.markAsFailure();
+
+		return true;
 	}
-	return true;
+	return false;
 }
 
-// -1 TODO: move these as default implementation to PropagateEitherWay?
-// Essentially, here compute() is a class-specific worker function
 void MoveTo::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
