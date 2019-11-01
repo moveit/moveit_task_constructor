@@ -180,7 +180,7 @@ uint32_t Introspection::stageId(const Stage* const s) {
 uint32_t Introspection::stageId(const Stage* const s) const {
 	auto it = impl->stage_to_id_map_.find(s->pimpl());
 	if (it == impl->stage_to_id_map_.end())
-		throw std::runtime_error("unknown stage");
+		throw std::runtime_error("unregistered stage: " + s->name());
 	return it->second;
 }
 
