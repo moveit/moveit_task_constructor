@@ -19,6 +19,12 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+add_executable(cartesian src/cartesian.cpp)
+target_link_libraries(cartesian ${catkin_LIBRARIES})
+
+add_executable(modular src/modular.cpp)
+target_link_libraries(modular ${catkin_LIBRARIES})
+
 add_library(${PROJECT_NAME}_lib src/pick_place_task.cpp)
 set_target_properties(${PROJECT_NAME}_lib PROPERTIES OUTPUT_NAME moveit_task_constructor_demo_pick_place)
 add_dependencies(${PROJECT_NAME}_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

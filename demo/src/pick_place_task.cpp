@@ -89,8 +89,10 @@ void PickPlaceTask::init() {
 	// Reset ROS introspection before constructing the new object
 	// TODO(henningkayser): verify this is a bug, fix if possible
 	task_.reset();
-	task_.reset(new moveit::task_constructor::Task(task_name_));
+	task_.reset(new moveit::task_constructor::Task());
+
 	Task& t = *task_;
+	t.stages()->setName(task_name_);
 	t.loadRobotModel();
 
 	// Sampling planner
