@@ -3,7 +3,7 @@
 - git:
     local-name: moveit_task_constructor
     uri: https://github.com/ros-planning/moveit_task_constructor.git
-    version: master
+    version: moveit-master
 - git:
     local-name: mtc_demos
     uri: https://github.com/ubi-agni/mtc_demos.git
@@ -12,3 +12,7 @@
     local-name: mtc_pour
     uri: https://github.com/TAMS-Group/mtc_pour.git
     version: master
+- git:
+    local-name: panda_moveit_config
+    uri: https://github.com/ros-planning/panda_moveit_config
+    version: melodic-devel
