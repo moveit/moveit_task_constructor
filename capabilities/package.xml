@@ -18,6 +18,7 @@
 	<depend>pluginlib</depend>
 	<depend>std_msgs</depend>
 	<depend>moveit_task_constructor_msgs</depend>
+	<depend>moveit_task_constructor_core</depend>
 
 	<export>
 		<moveit_ros_move_group plugin="${prefix}/capabilities_plugin_description.xml"/>
