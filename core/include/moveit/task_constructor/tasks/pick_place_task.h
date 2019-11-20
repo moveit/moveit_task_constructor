@@ -73,55 +73,54 @@ using namespace moveit::task_constructor;
 class PickPlaceTask
 {
 public:
-	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
+  struct Parameters
+  {
+    // planning group properties
+    std::string arm_group_name_;
+    std::string eef_name_;
+    std::string hand_group_name_;
+    std::string hand_frame_;
+
+    // object + surface
+    std::vector<std::string> support_surfaces_;
+    std::string object_reference_frame_;
+    std::string surface_link_;
+    std::string object_name_;
+    std::string world_frame_;
+    std::string grasp_frame_;
+    std::vector<double> object_dimensions_;
+
+    // Predefined pose targets
+    std::string hand_open_pose_;
+    std::string hand_close_pose_;
+    std::string arm_home_pose_;
+
+    // Pick metrics
+    Eigen::Isometry3d grasp_frame_transform_;
+    double approach_object_min_dist_;
+    double approach_object_max_dist_;
+    double lift_object_min_dist_;
+    double lift_object_max_dist_;
+    double place_object_min_dist_;
+    double place_object_max_dist_;
+    double retreat_object_min_dist_;
+    double retreat_object_max_dist_;
+
+    // Place metrics
+    geometry_msgs::PoseStamped place_pose_;
+    double place_surface_offset_;
+  };
+
+	PickPlaceTask(const std::string& task_name);
 	~PickPlaceTask() = default;
 
-	void loadParameters();
-
-	void init();
+  void init(const Parameters& parameters);
 
 	bool plan();
 
-	bool execute();
-
 private:
-	ros::NodeHandle nh_;
-
-	std::string task_name_;
 	moveit::task_constructor::TaskPtr task_;
-
-	// planning group properties
-	std::string arm_group_name_;
-	std::string eef_name_;
-	std::string hand_group_name_;
-	std::string hand_frame_;
-
-	// object + surface
-	std::vector<std::string> support_surfaces_;
-	std::string object_reference_frame_;
-	std::string surface_link_;
-	std::string object_name_;
-	std::string world_frame_;
-	std::vector<double> object_dimensions_;
-
-	// Predefined pose targets
-	std::string hand_open_pose_;
-	std::string hand_close_pose_;
-	std::string arm_home_pose_;
-
-	// Execution
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
-
-	// Pick metrics
-	Eigen::Isometry3d grasp_frame_transform_;
-	double approach_object_min_dist_;
-	double approach_object_max_dist_;
-	double lift_object_min_dist_;
-	double lift_object_max_dist_;
-
-	// Place metrics
-	geometry_msgs::Pose place_pose_;
-	double place_surface_offset_;
+  const std::string task_name_;
 };
 
 }  // namespace tasks
