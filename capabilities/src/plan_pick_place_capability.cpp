@@ -51,17 +51,21 @@ void PlanPickPlaceCapability::initialize() {
 	    std::bind(&PlanPickPlaceCapability::goalCallback, this, std::placeholders::_1), false));
 	as_->registerPreemptCallback(std::bind(&PlanPickPlaceCapability::preemptCallback, this));
   as_->start();
-  ros::NodeHandle nh("~");
-  pick_place_task_ = std::make_unique<PickPlaceTask>("", nh);
+  pick_place_task_ = std::make_unique<PickPlaceTask>("pick_place_task");
 }
 
 void PlanPickPlaceCapability::goalCallback(
     const moveit_task_constructor_msgs::PlanPickPlaceGoalConstPtr& goal) {
 	moveit_task_constructor_msgs::PlanPickPlaceResult result;
 
+  // TODO: fill parameters
+  PickPlaceTask::Parameters parameters;
+
   // initialize task
+  pick_place_task_->init(parameters);
   // run plan
-  // return result
+  pick_place_task_->plan();
+  // retrieve and return result
 }
 
 void PlanPickPlaceCapability::preemptCallback() {
