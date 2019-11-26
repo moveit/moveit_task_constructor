@@ -587,9 +587,9 @@ void RemoteSolutionModel::sortInternal() {
 			          int comp = 0;
 			          switch (sort_column_) {
 				          case 1:  // cost order
-					          if (left->cost_rank < right->cost_rank)
+					          if (left->cost_rank > right->cost_rank)
 						          comp = -1;
-					          else if (left->cost_rank > right->cost_rank)
+					          else if (left->cost_rank < right->cost_rank)
 						          comp = 1;
 					          break;
 				          case 2:  // comment
