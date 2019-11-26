@@ -53,6 +53,8 @@ std::unique_ptr<SerialContainer> createModule(const std::string& group) {
 
 	// create Cartesian interpolation "planner" to be used in stages
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
+	// create joint interpolation "planner"
+	auto joint_interpolation = std::make_shared<solvers::JointInterpolationPlanner>();
 
 	{
 		auto stage = std::make_unique<stages::MoveRelative>("x +0.2", cartesian);
@@ -85,7 +87,7 @@ std::unique_ptr<SerialContainer> createModule(const std::string& group) {
 	}
 
 	{  // move back to ready pose
-		auto stage = std::make_unique<stages::MoveTo>("moveTo ready", cartesian);
+		auto stage = std::make_unique<stages::MoveTo>("moveTo ready", joint_interpolation);
 		stage->properties().configureInitFrom(Stage::PARENT);
 		stage->setGoal("ready");
 		c->insert(std::move(stage));
@@ -99,6 +101,9 @@ Task createTask() {
 	t.add(std::make_unique<stages::CurrentState>("current"));
 
 	const std::string group = "panda_arm";
+	t.add(createModule(group));
+	t.add(createModule(group));
+	t.add(createModule(group));
 	t.add(createModule(group));
 	t.add(createModule(group));
 
