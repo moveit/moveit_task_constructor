@@ -78,15 +78,16 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model) {
 static bool getJointStateFromOffset(const boost::any& direction, const moveit::core::JointModelGroup* jmg,
                                     moveit::core::RobotState& robot_state) {
 	try {
-		const auto& accepted = jmg->getJointModelNames();
+		const auto& accepted = jmg->getActiveJointModels();
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
 		for (const auto& j : joints) {
-			int index = robot_state.getRobotModel()->getVariableIndex(j.first);
-			auto jm = robot_state.getRobotModel()->getJointModel(index);
-			if (std::find(accepted.begin(), accepted.end(), j.first) == accepted.end())
+			auto jm = robot_state.getRobotModel()->getJointModel(j.first);
+			if (!jm || std::find(accepted.begin(), accepted.end(), jm) == accepted.end())
 				throw std::runtime_error("Cannot plan for joint '" + j.first + "' that is not part of group '" +
 				                         jmg->getName() + "'");
-
+			if (jm->getVariableCount() != 1)
+				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
+			auto index = jm->getFirstVariableIndex();
 			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
 			robot_state.enforceBounds(jm);
 		}
