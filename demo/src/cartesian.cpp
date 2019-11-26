@@ -97,6 +97,14 @@ Task createTask() {
 		t.add(std::move(stage));
 	}
 
+	{  // perform a Cartesian motion, defined as a relative offset in joint space
+		auto stage = std::make_unique<stages::MoveRelative>("joint offset", cartesian);
+		stage->setGroup(group);
+		std::map<std::string, double> offsets = { { "panda_joint1", M_PI / 6. }, { "panda_joint3", -M_PI / 6 } };
+		stage->setDirection(offsets);
+		t.add(std::move(stage));
+	}
+
 	{  // move from reached state back to the original state, using joint interpolation
 		auto joint_interpolation = std::make_shared<solvers::JointInterpolationPlanner>();
 		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation } };
