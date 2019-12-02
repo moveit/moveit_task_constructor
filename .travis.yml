@@ -18,6 +18,7 @@ env:
     - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
     - TEST=clang-format
+    - TEST=code-coverage
     - ROS_REPO=ros-shadow-fixed
 #    - DOCKER_IMAGE=moveit/moveit:master-source
 
