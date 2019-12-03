@@ -18,8 +18,8 @@ env:
     - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
     - TEST=clang-format
-    - ROS_REPO=ros-shadow-fixed
-#    - DOCKER_IMAGE=moveit/moveit:master-source
+    - TEST=code-coverage ROS_REPO=ros-shadow-fixed
+    - DOCKER_IMAGE=moveit/moveit:master-source
 
 before_script:
   - git clone -q --depth=1 https://github.com/ros-planning/moveit_ci.git .moveit_ci
