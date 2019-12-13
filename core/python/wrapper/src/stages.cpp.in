@@ -1,13 +1,14 @@
-#include <boost/python.hpp>
+#include <pybind11/pybind11.h>
 
 namespace moveit {
 namespace python {
 
-void export_stages();
+void export_stages(pybind11::module& m);
 
 } }
 
-BOOST_PYTHON_MODULE(@STAGES_LIB_NAME@)
-{
-	moveit::python::export_stages();
+PYBIND11_MODULE(@STAGES_LIB_NAME@, m) {
+	m.doc() = "MoveIt Task Constructor Stages";
+
+	moveit::python::export_stages(m);
 }

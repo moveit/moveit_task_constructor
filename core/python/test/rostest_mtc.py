@@ -51,7 +51,7 @@ class Test(unittest.TestCase):
                 vector = Vector3(*displacement)
             )
             move.setDirection(dir)
-            move.restrictDirection(core.PropagationDirection.FORWARD)
+            move.restrictDirection(stages.MoveRelative.Direction.FORWARD)
             return move
 
         task = core.Task()

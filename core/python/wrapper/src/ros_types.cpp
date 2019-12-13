@@ -1,66 +1,27 @@
-#include <boost/python/to_python_converter.hpp>
-#include <boost/python/object.hpp>
-#include <boost/python/handle.hpp>
-#include <boost/python/extract.hpp>
-#include <ros/duration.h>
+#include <moveit/python/python_tools/ros_types.h>
 
-namespace bp = boost::python;
-
+namespace py = pybind11;
 namespace moveit {
 namespace python {
 
-// Converter for python Time/Duration/double into ros::Duration / ros::WallDuration
-template <typename T>
-struct DurationConverter
-{
-	// Determine if obj can be converted into duration
-	static void* convertible(PyObject* obj) {
-		bp::object bpo(bp::borrowed(obj));
-		// either expect a double or an object providing a "to_sec" function
-		if (PyFloat_Check(obj) || (PyObject_HasAttrString(obj, "to_sec") && PyFloat_Check(bpo.attr("to_sec")().ptr())))
-			return obj;
-		else
-			return 0;
+py::object createMessage(const std::string& ros_msg_name) {
+	// find delimiting '/' in ros msg name
+	std::size_t pos = ros_msg_name.find('/');
+	// import module
+	py::module m = py::module::import((ros_msg_name.substr(0, pos) + ".msg").c_str());
+	// retrieve type instance
+	py::object cls = m.attr(ros_msg_name.substr(pos + 1).c_str());
+	// create message instance
+	return cls();
+}
+
+bool convertible(const pybind11::handle& h, const char* ros_msg_name) {
+	try {
+		PyObject* o = h.attr("_type").ptr();
+		return PyString_Check(o) && strcmp(PyString_AS_STRING(o), ros_msg_name) == 0;
+	} catch (const std::exception& e) {
+		return false;
 	}
-
-	// Convert obj into a duration
-	static void construct(PyObject* obj, bp::converter::rvalue_from_python_stage1_data* data) {
-		double value = 0.0;
-		if (PyObject_HasAttrString(obj, "to_sec")) {
-			bp::object bpo(bp::borrowed(obj));
-			value = bp::extract<double>(bpo.attr("to_sec")());
-		} else if (PyFloat_Check(obj)) {
-			value = PyFloat_AS_DOUBLE(obj);
-		} else {  // should not happen
-			PyErr_SetString(PyExc_TypeError, "unexpected type");
-			bp::throw_error_already_set();
-		}
-
-		// Obtain a pointer to the memory block that the converter has allocated for the C++ type.
-		void* storage = reinterpret_cast<bp::converter::rvalue_from_python_storage<T>*>(data)->storage.bytes;
-		// Allocate the C++ type into the pre-allocated memory block, and assign its pointer to the converter's
-		// convertible variable.
-		data->convertible = new (storage) T(value);
-	}
-
-	// Convert duration to python
-	static PyObject* convert(const T& x) { return PyFloat_FromDouble(x.toSec()); }
-
-	DurationConverter() {  // constructor registers type converter with boost::python
-		bp::converter::registry::push_back(&DurationConverter<T>::convertible, &DurationConverter::construct,
-		                                   bp::type_id<T>());
-		bp::to_python_converter<T, DurationConverter<T>>();
-	}
-};
-
-class ConverterInit
-{
-public:
-	ConverterInit() {
-		DurationConverter<ros::Duration>();
-		DurationConverter<ros::WallDuration>();
-	}
-};
-static ConverterInit init;
+}
 }  // namespace python
 }  // namespace moveit

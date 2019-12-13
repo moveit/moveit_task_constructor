@@ -1,0 +1,4 @@
+[submodule "core/python/pybind11"]
+	path = core/python/pybind11
+	url = https://github.com/rhaschke/pybind11
+	shallow = true

@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import unittest, sys
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
 from moveit_msgs.msg import RobotState, Constraints, MotionPlanRequest
@@ -23,9 +24,9 @@ class TestPropertyMap(unittest.TestCase):
         self._check("bool", True)
         self._check("bool", False)
         self._check("string", "anything")
-        self._check("pose", Pose())
+        self._check("pose", PoseStamped())
         # MotionPlanRequest is not registered as property type and should raise
-        self.assertRaises(TypeError,self._check, "request", MotionPlanRequest())
+        self.assertRaises(TypeError, self._check, "request", MotionPlanRequest())
 
     def test_assign_in_reference(self):
         planner = core.PipelinePlanner()
@@ -52,7 +53,7 @@ class TestPropertyMap(unittest.TestCase):
         self.assertEqual(planner.planner, "other")
 
         del planner
-        # TODO: Why can we still access props? planner should be destroyed
+        # We can still access props, because actual destruction of planner is delayed
         self.assertEqual(props["goal_joint_tolerance"], 2.71)
         self.assertEqual(props["planner"], "other")
 
@@ -60,10 +61,10 @@ class TestPropertyMap(unittest.TestCase):
         # assign values so we can iterate over them
         self.props["double"] = 3.14
         self.props["bool"] = True
-        first = [p for p in self.props]
-        self.assertEqual(len(first), 2)
-        second = [(name, value) for (name, value) in self.props]
-        self.assertEqual(first, second)
+        keys = [v for v in self.props]
+        self.assertEqual(len(keys), 2)
+        items = [(k, v) for (k, v) in self.props.items()]
+        self.assertEqual(keys, [k for (k, v) in items])
 
     def test_update(self):
         self.props["double"] = 3.14
@@ -161,18 +162,21 @@ class TestStages(unittest.TestCase):
         self._check(stage, "group", "group")
         self._check(stage, "default_pose", "default_pose")
         self._check(stage, "max_ik_solutions", 1)
-        self.assertRaises(OverflowError, self._check_assign, stage, "max_ik_solutions", -1)
-        self._check(stage, "ignore_collisisons", False)
-        self._check(stage, "ignore_collisisons", True)
+        self.assertRaises(TypeError, self._check_assign, stage, "max_ik_solutions", -1)
+        self._check(stage, "ignore_collisions", False)
+        self._check(stage, "ignore_collisions", True)
         self._check(stage, "ik_frame", PoseStamped())
         self._check(stage, "target_pose", PoseStamped())
         self._check(stage, "forwarded_properties", ["name1", "name2", "name3"])
+        stage.forwarded_properties = "name"
+        self.assertRaises(TypeError, self._check_assign, stage, "forwarded_properties", [1, 2])
 
     def test_MoveTo(self):
         stage = stages.MoveTo("move", self.planner)
 
         self._check(stage, "group", "group")
         self._check(stage, "ik_frame", PoseStamped())
+        self._check(stage, "path_constraints", Constraints())
         stage.setGoal(PoseStamped())
         stage.setGoal(PointStamped())
         stage.setGoal(RobotState())
@@ -194,8 +198,7 @@ class TestStages(unittest.TestCase):
 
     def test_Connect(self):
         planner = core.PipelinePlanner()
-        planner2 = core.PipelinePlanner()
-        stage = stages.Connect("connect", [("planner", planner), ("planner2", planner2)])
+        stage = stages.Connect("connect", [("group1", planner), ("group2", planner)])
 
     def test_FixCollisionObjects(self):
         stage = stages.FixCollisionObjects("collision")

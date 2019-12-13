@@ -28,6 +28,7 @@ catkin_package(
 		moveit_core
 		moveit_task_constructor_msgs
 		visualization_msgs
+	CFG_EXTRAS pybind11.cmake
 )
 
 if ("${CMAKE_VERSION}" VERSION_LESS "3.1")

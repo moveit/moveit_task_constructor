@@ -1,17 +1,19 @@
-#include <boost/python.hpp>
+#include <pybind11/pybind11.h>
 
 namespace moveit {
 namespace python {
 
-void export_properties();
-void export_solvers();
-void export_core();
+void export_properties(pybind11::module& m);
+void export_solvers(pybind11::module& m);
+void export_core(pybind11::module& m);
 
-} }
+}
+}
 
-BOOST_PYTHON_MODULE(@CORE_LIB_NAME@)
-{
-	moveit::python::export_properties();
-	moveit::python::export_solvers();
-	moveit::python::export_core();
+PYBIND11_MODULE(@CORE_LIB_NAME@, m) {
+	m.doc() = "MoveIt Task Constructor";
+
+	moveit::python::export_properties(m);
+	moveit::python::export_solvers(m);
+	moveit::python::export_core(m);
 }
