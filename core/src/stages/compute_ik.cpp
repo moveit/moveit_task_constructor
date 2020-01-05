@@ -96,6 +96,7 @@ bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen:
 
 	// consider all rigidly connected parent links as well
 	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
+	const auto& target_links = parent->getParentJointModel()->getDescendantLinkModels();
 	if (parent != link)  // transform pose into pose suitable to place parent
 		pose = pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
 
@@ -103,8 +104,8 @@ bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen:
 	robot_state.updateStateWithLinkAt(parent, pose);
 	robot_state.updateCollisionBodyTransforms();
 
-	// disable collision checking for parent links (except links fixed to root)
-	auto& acm = scene->getAllowedCollisionMatrixNonConst();
+	// disable collision checking for parent links in the kinematic chain (except links fixed to root)
+	collision_detection::AllowedCollisionMatrix acm(scene->getAllowedCollisionMatrix());
 	std::vector<const std::string*> pending_links;  // parent link names that might be rigidly connected to root
 	while (parent) {
 		pending_links.push_back(&parent->getName());
@@ -116,6 +117,16 @@ bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen:
 			for (const std::string* name : pending_links)
 				acm.setDefaultEntry(*name, true);
 			pending_links.clear();
+		}
+	}
+
+	// disable collision checking between collision objects and links not part of the rigid target group
+	const auto& world_object_ids = scene->getWorld()->getObjectIds();
+	for (const auto& robot_link : scene->getRobotModel()->getLinkModelsWithCollisionGeometry()) {
+		if (std::find(target_links.begin(), target_links.end(), robot_link) == target_links.end()) {
+			for (const auto& object_id : world_object_ids) {
+				acm.setEntry(object_id, robot_link->getName(), true);
+			}
 		}
 	}
 
