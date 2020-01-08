@@ -18,6 +18,9 @@
   <!-- Given the published joint states, publish tf for the robot links -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen" />
 
+  <!-- Load  ExecuteTaskSolutionCapability so we can execute found solutions in simulation -->
+  <param name="move_group/capabilities" value="move_group/ExecuteTaskSolutionCapability" />
+  
   <!-- Run the main MoveIt executable (the move_group node) -->
   <include file="$(find panda_moveit_config)/launch/move_group.launch">
     <arg name="allow_trajectory_execution" value="true"/>
