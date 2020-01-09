@@ -143,6 +143,7 @@ void SolutionBase::setCost(double cost) {
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
 	info.id = introspection ? introspection->solutionId(*this) : 0;
 	info.cost = this->cost();
+	info.compute_time = this->compute_time();
 	info.comment = this->comment();
 	const Introspection* ci = introspection;
 	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;

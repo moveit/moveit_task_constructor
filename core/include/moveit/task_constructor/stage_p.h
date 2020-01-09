@@ -42,6 +42,7 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_queue.h>
 #include <ostream>
+#include <chrono>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
 #define PIMPL_FUNCTIONS(Class)                                                                       \
@@ -131,6 +132,12 @@ public:
 	bool storeSolution(const SolutionBasePtr& solution);
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
+	void runCompute() {
+		compute_start_time_ = std::chrono::system_clock::now();
+		compute();
+		compute_stop_time_ = std::chrono::system_clock::now();
+		total_compute_time_ += compute_stop_time_ - compute_start_time_;
+	}
 
 protected:
 	Stage* me_;  // associated/owning Stage instance
@@ -139,6 +146,13 @@ protected:
 
 	InterfacePtr starts_;
 	InterfacePtr ends_;
+
+	// start and stop time for compute in seconds
+	using duration_t = std::chrono::duration<double>;
+	using time_point = std::chrono::time_point<std::chrono::system_clock, duration_t>;
+	time_point compute_start_time_;
+	time_point compute_stop_time_;
+	duration_t total_compute_time_;
 
 	// functions called for each new solution
 	std::list<Stage::SolutionCallback> solution_cbs_;
@@ -281,5 +295,5 @@ private:
 	ordered<StatePair, StatePairLess> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

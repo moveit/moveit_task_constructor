@@ -198,6 +198,7 @@ void Introspection::fillStageStatistics(const Stage& stage, moveit_task_construc
 	for (const auto& solution : stage.failures())
 		s.failed.push_back(solutionId(*solution));
 
+	s.total_compute_time = stage.getTotalComputeTime();
 	s.num_failed = stage.numFailures();
 }
 

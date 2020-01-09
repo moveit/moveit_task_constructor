@@ -4,6 +4,9 @@ uint32 id
 # associated cost
 float32 cost
 
+# time it tooks to find the solution in seconds
+float64 compute_time
+
 # associated comment, usually providing failure hint
 string comment
 

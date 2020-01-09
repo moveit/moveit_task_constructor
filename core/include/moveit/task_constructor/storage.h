@@ -50,6 +50,7 @@
 #include <deque>
 #include <cassert>
 #include <functional>
+#include <chrono>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -222,9 +223,11 @@ public:
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
+	inline double compute_time() const { return compute_time_; }
 	void markAsFailure() { setCost(std::numeric_limits<double>::infinity()); }
 	inline bool isFailure() const { return !std::isfinite(cost_); }
 
+	void setComputeTime(const std::chrono::duration<double>& duration) { compute_time_ = duration.count(); }
 	const std::string& comment() const { return comment_; }
 	void setComment(const std::string& comment) { comment_ = comment; }
 
@@ -241,13 +244,15 @@ public:
 
 protected:
 	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0, std::string comment = "")
-	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
+	  : creator_(creator), cost_(cost), compute_time_(0), comment_(std::move(comment)) {}
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
 	StagePrivate* creator_;
 	// associated cost
 	double cost_;
+	// time it tooks to find the solution in seconds
+	double compute_time_;
 	// comment for this solution, e.g. explanation of failure
 	std::string comment_;
 	// markers for this solution, e.g. target frame or collision indicators

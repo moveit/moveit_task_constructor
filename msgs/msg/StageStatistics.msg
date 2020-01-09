@@ -10,3 +10,5 @@ uint32[] solved
 uint32[] failed
 # number of failed solutions (if failed is empty)
 uint32   num_failed
+# time it tooks to call compute in seconds
+float64 total_compute_time

@@ -112,6 +112,7 @@ public:
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
 	bool plan(size_t max_solutions = 0);
+	bool runPlan(size_t max_solutions = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
 	/// execute solution
@@ -142,6 +143,7 @@ public:
 protected:
 	bool canCompute() const override;
 	void compute() override;
+	void runCompute();
 	void onNewSolution(const SolutionBase& s) override;
 
 private:
