@@ -37,7 +37,7 @@
 #include "local_task_model.h"
 #include "factory_model.h"
 #include "properties/property_factory.h"
-#include <moveit/task_constructor/task_p.h>
+#include "../../core/include/moveit/task_constructor/task_p.h"
 #include <rviz/properties/property_tree_model.h>
 
 #include <ros/console.h>
