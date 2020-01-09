@@ -47,7 +47,8 @@ set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 add_subdirectory(src)
 add_subdirectory(test)
 
-install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
+install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+	PATTERN "*_p.h" EXCLUDE)
 install(FILES
 	motion_planning_stages_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
