@@ -167,23 +167,17 @@ void export_stages() {
 	    .def("__init__", bp::make_constructor(&ComputeIK_init_0));
 	bp::implicitly_convertible<std::auto_ptr<ComputeIK>, std::auto_ptr<Stage>>();
 
-	void (MoveTo::*setGoalPose)(const geometry_msgs::PoseStamped&) = &MoveTo::setGoal;
-	void (MoveTo::*setGoalPoint)(const geometry_msgs::PointStamped&) = &MoveTo::setGoal;
-	void (MoveTo::*setGoalState)(const moveit_msgs::RobotState&) = &MoveTo::setGoal;
-	void (MoveTo::*setGoalNamed)(const std::string&) = &MoveTo::setGoal;
 	properties::class_<MoveTo, std::auto_ptr<MoveTo>, bp::bases<PropagatingEitherWay>, boost::noncopyable>(
 	    "MoveTo", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	    .property<std::string>("group")
 	    .property<geometry_msgs::PoseStamped>("ik_frame")
 	    .property<moveit_msgs::Constraints>("path_constraints")
-	    .def("setGoal", setGoalPose)
-	    .def("setGoal", setGoalPoint)
-	    .def("setGoal", setGoalState)
-	    .def("setGoal", setGoalNamed);
+	    .def<void (MoveTo::*)(const geometry_msgs::PoseStamped&)>("setGoal", &MoveTo::setGoal)
+	    .def<void (MoveTo::*)(const geometry_msgs::PointStamped&)>("setGoal", &MoveTo::setGoal)
+	    .def<void (MoveTo::*)(const moveit_msgs::RobotState&)>("setGoal", &MoveTo::setGoal)
+	    .def<void (MoveTo::*)(const std::string&)>("setGoal", &MoveTo::setGoal);
 	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<PropagatingEitherWay>>();
 
-	void (MoveRelative::*setTwist)(const geometry_msgs::TwistStamped&) = &MoveRelative::setDirection;
-	void (MoveRelative::*setDirection)(const geometry_msgs::Vector3Stamped&) = &MoveRelative::setDirection;
 	properties::class_<MoveRelative, std::auto_ptr<MoveRelative>, bp::bases<PropagatingEitherWay>, boost::noncopyable>(
 	    "MoveRelative", bp::init<bp::optional<const std::string&, const solvers::PlannerInterfacePtr&>>())
 	    .property<std::string>("group")
@@ -191,8 +185,8 @@ void export_stages() {
 	    .property<double>("min_distance")
 	    .property<double>("max_distance")
 	    .property<moveit_msgs::Constraints>("path_constraints")
-	    .def("setDirection", setTwist)
-	    .def("setDirection", setDirection)
+	    .def<void (MoveRelative::*)(const geometry_msgs::TwistStamped&)>("setDirection", &MoveRelative::setDirection)
+	    .def<void (MoveRelative::*)(const geometry_msgs::Vector3Stamped&)>("setDirection", &MoveRelative::setDirection)
 	    .def("setDirection", &MoveRelative_setJoints);
 	bp::implicitly_convertible<std::auto_ptr<MoveRelative>, std::auto_ptr<PropagatingEitherWay>>();
 
