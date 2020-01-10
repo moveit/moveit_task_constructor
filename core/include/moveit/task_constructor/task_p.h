@@ -69,6 +69,7 @@ private:
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;
 	std::list<Task::TaskCallback> task_cbs_;  // functions to monitor task's planning progress
+	std::list<Task::SolutionCallback> solution_cbs_;  // functions to monitor new solutions
 };
 PIMPL_FUNCTIONS(Task)
 }

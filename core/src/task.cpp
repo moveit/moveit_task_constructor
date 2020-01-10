@@ -233,6 +233,16 @@ void Task::erase(TaskCallbackList::const_iterator which) {
 	pimpl()->task_cbs_.erase(which);
 }
 
+Task::SolutionCallbackList::const_iterator Task::addSolutionCallback(SolutionCallback&& cb) {
+	auto impl = pimpl();
+	impl->solution_cbs_.emplace_back(std::move(cb));
+	return --(impl->solution_cbs_.cend());
+}
+
+void Task::erase(SolutionCallbackList::const_iterator which) {
+	pimpl()->solution_cbs_.erase(which);
+}
+
 void Task::reset() {
 	auto impl = pimpl();
 	// signal introspection, that this task was reset
@@ -320,6 +330,8 @@ void Task::publishAllSolutions(bool wait) {
 
 void Task::onNewSolution(const SolutionBase& s) {
 	auto impl = pimpl();
+	for (const auto& cb : impl->solution_cbs_)
+		cb(s);
 	// no need to call WrapperBase::onNewSolution!
 	if (impl->introspection_)
 		impl->introspection_->publishSolution(s);
