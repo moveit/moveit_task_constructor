@@ -34,7 +34,7 @@ public:
 	inline bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name);
 
 	/// check whether object can be converted to C++ type
-	inline void* convertible(PyObject* object);
+	inline void* convertible(PyObject* object, const boost::python::type_info& type_info);
 
 	/// instantiate a new python object for given ROS msg type
 	inline boost::python::object createMessage(const boost::python::type_info& type_info);
@@ -52,14 +52,18 @@ bool RosMsgConverterRegistry::insert(const boost::python::type_info& type_info, 
 	return true;
 }
 
-inline void* RosMsgConverterRegistry::convertible(PyObject* object) {
+inline void* RosMsgConverterRegistry::convertible(PyObject* object, const boost::python::type_info& type_info) {
 	try {
-		const std::string& ros_msg_name = rosMsgName(object);
-		if (signatures_.find(ros_msg_name) != signatures_.end())
-			return object;
+		auto it_types = types_.find(type_info);
+		if (it_types == types_.end())
+			return nullptr;  // type not registered
+		auto it_signature = signatures_.find(rosMsgName(object));
+		if (it_signature == signatures_.end() || it_types->second != it_signature)
+			return nullptr;  // C++ and python types do not match
+		return object;
 	} catch (const std::invalid_argument&) {
 	}
-	return 0;
+	return nullptr;
 }
 
 boost::python::object RosMsgConverterRegistry::createMessage(const boost::python::type_info& type_info) {
@@ -88,9 +92,9 @@ bool RosMsgConverterBase::insert(const boost::python::type_info& type_info, cons
 	return registry_singleton_.insert(type_info, ros_msg_name);
 }
 
-void* RosMsgConverterBase::convertible(PyObject* object) {
+void* RosMsgConverterBase::convertible(PyObject* object, const boost::python::type_info& type_info) {
 	/// object is convertible if the type of registered
-	return registry_singleton_.convertible(object);
+	return registry_singleton_.convertible(object, type_info);
 }
 
 std::string RosMsgConverterBase::fromPython(const boost::python::object& msg) {

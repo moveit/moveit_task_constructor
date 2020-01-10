@@ -76,7 +76,7 @@ protected:
 	static bool insert(const boost::python::type_info& type_info, const std::string& ros_msg_name);
 
 	/// Determine if python object can be converted into C++ msg type
-	static void* convertible(PyObject* object);
+	static void* convertible(PyObject* object, const boost::python::type_info& type_info);
 
 	/// Convert a ROS message (from python) to a string
 	static std::string fromPython(const boost::python::object& msg);
@@ -103,6 +103,10 @@ struct RosMsgConverter : RosMsgConverterBase
 				boost::python::to_python_converter<T, RosMsgConverter<T>>();
 			}
 		}
+	}
+
+	static void* convertible(PyObject* object) {
+		return RosMsgConverterBase::convertible(object, boost::python::type_id<T>());
 	}
 
 	/// Conversion from Python object to C++ object, using pre-allocated memory block
