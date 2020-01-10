@@ -118,7 +118,7 @@ bool ContainerBasePrivate::canCompute() const {
 
 void ContainerBasePrivate::compute() {
 	// call the method of the public interface
-	static_cast<ContainerBase*>(me_)->compute();
+	static_cast<ContainerBase*>(me_)->runCompute();
 }
 
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
@@ -660,7 +660,7 @@ bool SerialContainer::canCompute() const {
 	return false;
 }
 
-void SerialContainer::compute() {
+void SerialContainer::runCompute() {
 	for (const auto& stage : pimpl()->children()) {
 		try {
 			if (!stage->pimpl()->canCompute())
@@ -859,7 +859,7 @@ bool WrapperBase::canCompute() const {
 	return wrapped()->pimpl()->canCompute();
 }
 
-void WrapperBase::compute() {
+void WrapperBase::runCompute() {
 	try {
 		wrapped()->pimpl()->runCompute();
 	} catch (const Property::error& e) {
@@ -874,7 +874,7 @@ bool Alternatives::canCompute() const {
 	return false;
 }
 
-void Alternatives::compute() {
+void Alternatives::runCompute() {
 	for (const auto& stage : pimpl()->children()) {
 		try {
 			stage->pimpl()->runCompute();
@@ -912,7 +912,7 @@ bool Fallbacks::canCompute() const {
 	return false;
 }
 
-void Fallbacks::compute() {
+void Fallbacks::runCompute() {
 	if (!active_child_)
 		return;
 
@@ -979,7 +979,7 @@ bool Merger::canCompute() const {
 	return false;
 }
 
-void Merger::compute() {
+void Merger::runCompute() {
 	for (const auto& stage : pimpl()->children()) {
 		try {
 			stage->pimpl()->runCompute();

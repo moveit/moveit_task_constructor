@@ -277,7 +277,7 @@ bool Task::canCompute() const {
 	return stages()->canCompute();
 }
 
-void Task::compute() {
+void Task::runCompute() {
 	stages()->pimpl()->runCompute();
 }
 
@@ -289,7 +289,7 @@ bool Task::plan(size_t max_solutions) {
 	impl->preempt_requested_ = false;
 	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
 	       (max_solutions == 0 || numSolutions() < max_solutions)) {
-		compute();
+		runCompute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
