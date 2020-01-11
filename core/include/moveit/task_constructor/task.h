@@ -105,12 +105,10 @@ public:
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
-	typedef std::function<void(const SolutionBase& t)> SolutionCallback;
-	typedef std::list<SolutionCallback> SolutionCallbackList;
-	/// add function to be called every time a new solution is available
-	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback&& cb);
-	/// remove function callback
-	void erase(SolutionCallbackList::const_iterator which);
+	/// expose SolutionCallback API
+	using WrapperBase::SolutionCallback;
+	using WrapperBase::addSolutionCallback;
+	using WrapperBase::removeSolutionCallback;
 
 	/// reset all stages
 	void reset() final;
