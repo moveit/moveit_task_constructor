@@ -105,6 +105,11 @@ public:
 	/// remove function callback
 	void erase(TaskCallbackList::const_iterator which);
 
+	/// expose SolutionCallback API
+	using WrapperBase::SolutionCallback;
+	using WrapperBase::addSolutionCallback;
+	using WrapperBase::removeSolutionCallback;
+
 	/// reset all stages
 	void reset() final;
 	/// initialize all stages with given scene
