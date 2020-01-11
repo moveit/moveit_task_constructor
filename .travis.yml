@@ -1,6 +1,6 @@
 # This config file for Travis CI utilizes https://github.com/ros-planning/moveit_ci package.
 sudo: required
-dist: xenial
+dist: bionic
 services:
   - docker
 language: cpp
@@ -18,7 +18,7 @@ env:
     - UPSTREAM_WORKSPACE=.rosinstall
   matrix:
     - TEST=clang-format
-    - ROS_REPO=ros-shadow-fixed
+    - TEST=code-coverage ROS_REPO=ros-shadow-fixed
     - DOCKER_IMAGE=moveit/moveit:master-source
 
 before_script:

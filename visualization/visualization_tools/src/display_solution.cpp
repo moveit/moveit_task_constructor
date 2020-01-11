@@ -123,4 +123,15 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	}
 }
 
+void DisplaySolution::fillMessage(moveit_task_constructor_msgs::Solution& msg) const {
+	start_scene_->getPlanningSceneMsg(msg.start_scene);
+	msg.sub_trajectory.resize(data_.size());
+	auto traj_it = msg.sub_trajectory.begin();
+	for (const auto& sub : data_) {
+		sub.scene_->getPlanningSceneDiffMsg(traj_it->scene_diff);
+		sub.trajectory_->getRobotTrajectoryMsg(traj_it->trajectory);
+		++traj_it;
+	}
+}
+
 }  // namespace moveit_rviz_plugin

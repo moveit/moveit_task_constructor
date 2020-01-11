@@ -124,5 +124,6 @@ public:
 
 	void setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
 	                    const moveit_task_constructor_msgs::Solution& msg);
+	void fillMessage(moveit_task_constructor_msgs::Solution& msg) const;
 };
 }

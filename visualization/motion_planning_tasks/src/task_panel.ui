@@ -42,7 +42,23 @@
       </spacer>
      </item>
      <item>
+      <widget class="QToolButton" name="button_exec_solution">
+       <property name="toolTip">
+        <string>Execute solution</string>
+       </property>
+       <property name="text">
+        <string>Exec</string>
+       </property>
+       <property name="icon">
+        <iconset theme="system-run"/>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QToolButton" name="button_show_stage_dock_widget">
+       <property name="toolTip">
+        <string>Show available stages</string>
+       </property>
        <property name="text">
         <string>...</string>
        </property>

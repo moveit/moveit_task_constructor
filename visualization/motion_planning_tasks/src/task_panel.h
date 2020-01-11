@@ -140,6 +140,7 @@ protected Q_SLOTS:
 	void onCurrentStageChanged(const QModelIndex& current, const QModelIndex& previous);
 	void onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous);
 	void onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
+	void onExecCurrentSolution() const;
 };
 
 class GlobalSettingsWidgetPrivate;

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Run MTC pick and place -->
+  <node name="mtc_tutorial" pkg="moveit_task_constructor_demo" type="moveit_task_constructor_demo" output="screen">
+    <param name="execute" value="true" />
+    <rosparam command="load" file="$(find moveit_task_constructor_demo)/config/panda_config.yaml" />
+  </node>
+</launch>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>moveit_task_constructor_demo</name>
+  <version>0.0.1</version>
+  <description>The moveit_task_constructor_demo package</description>
+
+  <author email="simongold@picknik.ai">simon Goldstein</author>
+  <author email="henningkayser@picknik.ai">Henning Kayser</author>
+  <maintainer email="henningkayser@picknik.ai">Henning Kayser</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>moveit_task_constructor_core</depend>
+  <depend>moveit_ros_planning_interface</depend>
+  <depend>moveit_core</depend>
+  <depend>rosparam_shortcuts</depend>
+  <exec_depend version_gte="0.7.4">panda_moveit_config</exec_depend>
+</package>

@@ -95,6 +95,7 @@ bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::Joint
 		const std::string& named_joint_pose = boost::any_cast<std::string>(goal);
 		if (!state.setToDefaultValues(jmg, named_joint_pose))
 			throw InitStageException(*this, "Unknown joint pose: " + named_joint_pose);
+		state.update();
 		return true;
 	} catch (const boost::bad_any_cast&) {
 	}
@@ -246,12 +247,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 		if (!success)
 			solution.markAsFailure();
+
+		return true;
 	}
-	return true;
+	return false;
 }
 
-// -1 TODO: move these as default implementation to PropagateEitherWay?
-// Essentially, here compute() is a class-specific worker function
 void MoveTo::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
