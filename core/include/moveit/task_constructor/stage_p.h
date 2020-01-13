@@ -133,10 +133,10 @@ public:
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
-		compute_start_time_ = std::chrono::system_clock::now();
+		auto compute_start_time = std::chrono::system_clock::now();
 		compute();
-		compute_stop_time_ = std::chrono::system_clock::now();
-		total_compute_time_ += compute_stop_time_ - compute_start_time_;
+		auto compute_stop_time = std::chrono::system_clock::now();
+		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
 
 protected:
@@ -147,12 +147,8 @@ protected:
 	InterfacePtr starts_;
 	InterfacePtr ends_;
 
-	// start and stop time for compute in seconds
-	using duration_t = std::chrono::duration<double>;
-	using time_point = std::chrono::time_point<std::chrono::system_clock, duration_t>;
-	time_point compute_start_time_;
-	time_point compute_stop_time_;
-	duration_t total_compute_time_;
+	// The total compute time
+	std::chrono::duration<double> total_compute_time_;
 
 	// functions called for each new solution
 	std::list<Stage::SolutionCallback> solution_cbs_;

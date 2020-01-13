@@ -103,7 +103,6 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 			return false;  // drop solution
 		failures_.push_back(solution);
 	} else {
-		solution->setComputeTime(compute_stop_time_ - compute_start_time_);
 		solutions_.insert(solution);
 	}
 	return true;
