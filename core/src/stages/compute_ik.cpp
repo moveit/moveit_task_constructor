@@ -216,9 +216,9 @@ bool ComputeIK::canCompute() const {
 	return !upstream_solutions_.empty() || WrapperBase::canCompute();
 }
 
-void ComputeIK::runCompute() {
+void ComputeIK::compute() {
 	if (WrapperBase::canCompute())
-		WrapperBase::runCompute();
+		WrapperBase::compute();
 
 	if (upstream_solutions_.empty())
 		return;

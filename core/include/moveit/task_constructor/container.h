@@ -69,7 +69,7 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	virtual bool canCompute() const = 0;
-	virtual void runCompute() = 0;
+	virtual void compute() = 0;
 
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;
@@ -90,7 +90,7 @@ public:
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	bool canCompute() const override;
-	void runCompute() override;
+	void compute() override;
 
 protected:
 	/// called by a (direct) child when a new solution becomes available
@@ -157,7 +157,7 @@ public:
 	Alternatives(const std::string& name = "alternatives") : ParallelContainerBase(name) {}
 
 	bool canCompute() const override;
-	void runCompute() override;
+	void compute() override;
 
 	void onNewSolution(const SolutionBase& s) override;
 };
@@ -178,7 +178,7 @@ public:
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
-	void runCompute() override;
+	void compute() override;
 
 	void onNewSolution(const SolutionBase& s) override;
 };
@@ -194,7 +194,7 @@ public:
 	void reset() override;
 	void init(const core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
-	void runCompute() override;
+	void compute() override;
 
 protected:
 	Merger(MergerPrivate* impl);
@@ -223,7 +223,7 @@ public:
 	inline const Stage* wrapped() const { return const_cast<WrapperBase*>(this)->wrapped(); }
 
 	bool canCompute() const override;
-	void runCompute() override;
+	void compute() override;
 
 protected:
 	WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child = Stage::pointer());
