@@ -168,6 +168,12 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
+		if (!sub_traj.controller_names.empty()) {
+			for (auto cn : sub_traj.controller_names) {
+				exec_traj.controller_names_.push_back(cn.data.data());
+			}
+		}
+
 		/* TODO add action feedback and markers */
 		exec_traj.effect_on_success_ = [this, sub_traj, description](const plan_execution::ExecutableMotionPlan*) {
 #if MOVEIT_MASTER
