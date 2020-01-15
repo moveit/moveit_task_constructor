@@ -185,6 +185,7 @@ Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
 	p.declare<std::string>("marker_ns", name(), "marker namespace");
+	p.declare<std::vector<std::string>>("controllers", {}, "list of controllers to use for execution");
 
 	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
 	                                 "set of interface properties to forward");
