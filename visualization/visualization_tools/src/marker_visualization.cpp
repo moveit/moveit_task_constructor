@@ -6,6 +6,7 @@
 #include <rviz/display_context.h>
 #include <rviz/frame_manager.h>
 #include <OgreSceneManager.h>
+#include <OgreSceneNode.h>
 #include <tf2_msgs/TF2Error.h>
 #include <ros/console.h>
 #include <eigen_conversions/eigen_msg.h>
