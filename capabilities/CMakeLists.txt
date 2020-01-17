@@ -19,6 +19,15 @@ catkin_package(
     std_msgs
 )
 
+# check for MOVEIT_MASTER
+include(CheckIncludeFileCXX)
+set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
+CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
+if(NOT MOVEIT_MASTER)
+  set(MOVEIT_MASTER 0)
+endif()
+add_definitions(-DMOVEIT_MASTER=${MOVEIT_MASTER})
+
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
