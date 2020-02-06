@@ -65,6 +65,8 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 					return tr(u8"✓");
 				case 2:
 					return tr(u8"✗");
+				case 3:
+					return tr("time");
 			}
 			break;
 
@@ -87,6 +89,8 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 				case 2:
 					return tr("failed solution attempts");
 				case 3:
+					return tr("total computation time [s]");
+				case 4:
 					return tr("pending");
 			}
 			break;

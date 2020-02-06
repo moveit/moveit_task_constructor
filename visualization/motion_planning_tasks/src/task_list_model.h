@@ -89,7 +89,7 @@ public:
 	              QObject* parent = nullptr)
 	  : QAbstractItemModel(parent), scene_(scene), display_context_(display_context) {}
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;
 
@@ -150,7 +150,7 @@ public:
 	void setSolutionClient(ros::ServiceClient* client);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
 	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;

@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), parent_(nullptr), introspection_(nullptr) {}
+  : me_(me), name_(name), parent_(nullptr), total_compute_time_{}, introspection_(nullptr) {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -296,6 +296,10 @@ PropertyMap& Stage::properties() {
 
 void Stage::setProperty(const std::string& name, const boost::any& value) {
 	pimpl()->properties_.set(name, value);
+}
+
+double Stage::getTotalComputeTime() const {
+	return pimpl()->total_compute_time_.count();
 }
 
 void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std::ostream& os) {

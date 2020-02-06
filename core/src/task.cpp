@@ -278,7 +278,7 @@ bool Task::canCompute() const {
 }
 
 void Task::compute() {
-	stages()->compute();
+	stages()->pimpl()->runCompute();
 }
 
 bool Task::plan(size_t max_solutions) {

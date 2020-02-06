@@ -210,6 +210,7 @@ public:
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 	/// analyze source of error and report accordingly
 	void reportPropertyError(const Property::error& e);
+	double getTotalComputeTime() const;
 
 protected:
 	/// Stage can only be instantiated through derived classes

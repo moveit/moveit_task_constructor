@@ -118,6 +118,7 @@ class RemoteSolutionModel : public QAbstractTableModel
 	DataList data_;
 	size_t num_failed_data_ = 0;  // number of failed solutions in data_
 	size_t num_failed_ = 0;  // number of reported failures
+	double total_compute_time_ = 0.0;
 
 	// solutions ordered (by default according to cost)
 	int sort_column_ = -1;
@@ -134,6 +135,7 @@ public:
 
 	uint numSuccessful() const { return data_.size() - num_failed_data_; }
 	uint numFailed() const { return num_failed_; }
+	double totalComputeTime() const { return total_compute_time_; }
 
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -143,6 +145,6 @@ public:
 
 	void setSolutionData(uint32_t id, float cost, const QString& comment);
 	void processSolutionIDs(const std::vector<uint32_t>& successful, const std::vector<uint32_t>& failed,
-	                        size_t num_failed);
+	                        size_t num_failed, double total_compute_time);
 };
 }
