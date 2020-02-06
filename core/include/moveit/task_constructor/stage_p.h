@@ -133,9 +133,9 @@ public:
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
-		auto compute_start_time = std::chrono::system_clock::now();
+		auto compute_start_time = std::chrono::steady_clock::now();
 		compute();
-		auto compute_stop_time = std::chrono::system_clock::now();
+		auto compute_stop_time = std::chrono::steady_clock::now();
 		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
 
