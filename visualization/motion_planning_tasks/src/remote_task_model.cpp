@@ -254,6 +254,8 @@ QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 					return n->solutions_->numSuccessful();
 				case 2:
 					return n->solutions_->numFailed();
+				case 3:
+					return n->solutions_->totalComputeTime();
 			}
 			break;
 		case Qt::ForegroundRole:
@@ -353,7 +355,7 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 			continue;
 		}
 		Node* n = it->second;
-		n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed);
+		n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed, s.total_compute_time);
 
 		// emit notify about model changes when node was already visited
 		if (n->node_flags_ & WAS_VISITED) {
@@ -622,7 +624,8 @@ void RemoteSolutionModel::sortInternal() {
 
 // process solution ids received in stage statistics
 void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& successful,
-                                             const std::vector<uint32_t>& failed, size_t num_failed) {
+                                             const std::vector<uint32_t>& failed, size_t num_failed,
+                                             double total_compute_time) {
 	// append new items to the end of data_
 	processSolutionIDs(successful, true);
 	processSolutionIDs(failed, false);
@@ -636,6 +639,7 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& succes
 	// but it may report the overall number of failures
 	num_failed_data_ = failed.size();  // needed to compute number of successes
 	num_failed_ = std::max(num_failed, num_failed_data_);
+	total_compute_time_ = total_compute_time;
 
 	sortInternal();
 }
