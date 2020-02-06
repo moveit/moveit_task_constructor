@@ -78,7 +78,7 @@ protected:
 	void validate(QAbstractItemModel& model, const std::initializer_list<const char*>& expected) {
 		// validate root index
 		ASSERT_EQ(model.rowCount(), static_cast<int>(expected.size()));
-		EXPECT_EQ(model.columnCount(), 3);
+		EXPECT_EQ(model.columnCount(), 4);
 		EXPECT_EQ(model.parent(QModelIndex()), QModelIndex());
 
 		// validate first-level items
@@ -97,7 +97,7 @@ protected:
 
 			// validate children
 			ASSERT_EQ(model.rowCount(idx), children);
-			EXPECT_EQ(model.columnCount(idx), 3);
+			EXPECT_EQ(model.columnCount(idx), 4);
 			EXPECT_EQ(model.rowCount(model.index(row, 1)), 0);
 
 			// validate second-level items
@@ -110,7 +110,7 @@ protected:
 
 				EXPECT_EQ(model.data(childIdx).toString().toStdString(), std::to_string(child));
 				EXPECT_EQ(model.rowCount(childIdx), 0);
-				EXPECT_EQ(model.columnCount(childIdx), 3);
+				EXPECT_EQ(model.columnCount(childIdx), 4);
 			}
 		}
 	}
