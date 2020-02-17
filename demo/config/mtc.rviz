@@ -62,6 +62,31 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
+    - Class: moveit_rviz_plugin/PlanningScene
+      Enabled: true
+      Move Group Namespace: ""
+      Name: PlanningScene
+      Planning Scene Topic: move_group/monitored_planning_scene
+      Robot Description: robot_description
+      Scene Geometry:
+        Scene Alpha: 0.8999999761581421
+        Scene Color: 50; 230; 50
+        Scene Display Time: 0.20000000298023224
+        Show Scene Geometry: true
+        Voxel Coloring: Z-Axis
+        Voxel Rendering: Occupied Voxels
+      Scene Robot:
+        Attached Body Color: 150; 50; 150
+        Links:
+          All Links Enabled: true
+          Expand Joint Details: false
+          Expand Link Details: false
+          Expand Tree: false
+          Link Tree Style: Links in Alphabetic Order
+        Robot Alpha: 1
+        Show Robot Collision: false
+        Show Robot Visual: true
+      Value: true
     - Class: moveit_task_constructor/Motion Planning Tasks
       Enabled: true
       Interrupt Display: false
@@ -69,8 +94,6 @@ Visualization Manager:
       Markers:
         All at once?: false
         Value: true
-        x +0.2: true
-        y -0.3: true
       Name: Motion Planning Tasks
       Robot:
         Fixed Robot Color: 150; 50; 150
@@ -80,65 +103,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          panda_hand:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_leftfinger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link2:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link3:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link4:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link5:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link6:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link7:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          panda_link8:
-            Alpha: 1
-            Show Axes: true
-            Show Trail: false
-          panda_rightfinger:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
