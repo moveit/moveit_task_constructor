@@ -30,7 +30,7 @@ template <typename T>
 std::map<std::string, T> fromDict(const boost::python::dict& values) {
 	std::map<std::string, T> m;
 	for (boost::python::stl_input_iterator<boost::python::tuple> it(values.iteritems()), end; it != end; ++it) {
-		const std::string& key = boost::python::extract<std::string>((*it)[0]);
+		std::string key = boost::python::extract<std::string>((*it)[0]);
 		const T& value = boost::python::extract<T>((*it)[1]);
 		m.insert(std::make_pair(key, value));
 	}
