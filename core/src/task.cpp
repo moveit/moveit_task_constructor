@@ -303,7 +303,7 @@ void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-void Task::execute(const SolutionBase& s) {
+moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
 	ac.waitForServer();
 
@@ -311,6 +311,7 @@ void Task::execute(const SolutionBase& s) {
 	s.fillMessage(goal.solution, pimpl()->introspection_.get());
 	ac.sendGoal(goal);
 	ac.waitForResult();
+	return ac.getResult()->error_code;
 }
 
 void Task::publishAllSolutions(bool wait) {
