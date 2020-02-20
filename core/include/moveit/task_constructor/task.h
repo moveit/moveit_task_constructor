@@ -46,6 +46,8 @@
 
 #include <moveit/macros/class_forward.h>
 
+#include <moveit_msgs/MoveItErrorCodes.h>
+
 namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
@@ -119,8 +121,8 @@ public:
 	bool plan(size_t max_solutions = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
-	/// execute solution
-	void execute(const SolutionBase& s);
+	/// execute solution, return the result
+	moveit_msgs::MoveItErrorCodes execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;
