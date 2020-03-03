@@ -81,7 +81,7 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback& pr
 
 	for (auto& stage : children_) {
 		if (!processor(*stage, cur_depth))
-			continue;
+			return false;
 		const ContainerBasePrivate* container = dynamic_cast<const ContainerBasePrivate*>(stage->pimpl());
 		if (container)
 			container->traverseStages(processor, cur_depth + 1, max_depth);

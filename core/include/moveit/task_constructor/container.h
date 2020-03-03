@@ -54,6 +54,8 @@ public:
 	size_t numChildren() const;
 	Stage* findChild(const std::string& name) const;
 
+	/** Callback function type used by traverse functions
+	 *  The callback should return false if traversal should be stopped. */
 	typedef std::function<bool(const Stage&, int depth)> StageCallback;
 	/// traverse direct children of this container, calling the callback for each of them
 	bool traverseChildren(const StageCallback& processor) const;
