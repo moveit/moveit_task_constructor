@@ -37,7 +37,6 @@
 #include "local_task_model.h"
 #include "factory_model.h"
 #include "properties/property_factory.h"
-#include <moveit/task_constructor/task_p.h>
 #include <rviz/properties/property_tree_model.h>
 
 #include <ros/console.h>
@@ -63,23 +62,25 @@ QModelIndex LocalTaskModel::index(Node* n) const {
 	if (n == root_)
 		return QModelIndex();
 
-	const ContainerBasePrivate* parent = n->parent()->pimpl();
+	const ContainerBase* parent = n->parent();
 
 	// the internal pointer refers to n
 	int row = 0;
-	for (const auto& child : parent->children()) {
-		if (child->pimpl() == n)
-			return createIndex(row, 0, n);
+	auto findRow = [n, &row](const Stage& child, int /* depth */) -> bool {
+		if (&child == n)
+			return false;  // found, don't continue traversal
 		++row;
-	}
-	Q_ASSERT(false);
-	return QModelIndex();
+		return true;
+	};
+	parent->traverseChildren(findRow);
+	Q_ASSERT(row < parent->numChildren());
+	return createIndex(row, 0, n);
 }
 
 LocalTaskModel::LocalTaskModel(ContainerBase::pointer&& container, const planning_scene::PlanningSceneConstPtr& scene,
                                rviz::DisplayContext* display_context, QObject* parent)
   : BaseTaskModel(scene, display_context, parent), Task("", std::move(container)) {
-	root_ = pimpl();
+	root_ = this;
 	flags_ |= LOCAL_MODEL;
 }
 
@@ -87,32 +88,41 @@ int LocalTaskModel::rowCount(const QModelIndex& parent) const {
 	if (parent.column() > 0)
 		return 0;
 
-	ContainerBasePrivate* c = dynamic_cast<ContainerBasePrivate*>(node(parent));
+	ContainerBase* c = dynamic_cast<ContainerBase*>(node(parent));
 	if (!c)
 		return 0;
 
-	return c->children().size();
+	return c->numChildren();
 }
 
 QModelIndex LocalTaskModel::index(int row, int column, const QModelIndex& parent) const {
 	if (column < 0 || column >= columnCount())
 		return QModelIndex();
 
-	Q_ASSERT(dynamic_cast<ContainerBasePrivate*>(node(parent)));
-	ContainerBasePrivate* p = static_cast<ContainerBasePrivate*>(node(parent));
-	if (!p || row < 0 || (size_t)row >= p->children().size())
+	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)));
+	ContainerBase* p = static_cast<ContainerBase*>(node(parent));
+	if (!p || row < 0 || (size_t)row >= p->numChildren())
 		return QModelIndex();
 
-	auto it = p->children().begin();
-	std::advance(it, row);
-	return createIndex(row, column, it->get()->pimpl());
+	Node* child = nullptr;
+	int idx = 0;
+	p->traverseChildren([&idx, row, &child](const Stage& ch, int /* depth */) -> bool {
+		if (idx == row) {
+			child = const_cast<Node*>(&ch);
+			return false;
+		} else {
+			++idx;
+			return true;
+		}
+	});
+	return createIndex(row, column, child);
 }
 
 QModelIndex LocalTaskModel::parent(const QModelIndex& index) const {
 	if (index.model() != this)
 		return QModelIndex();
 
-	ContainerBasePrivate* parent = node(index)->parent()->pimpl();
+	ContainerBase* parent = const_cast<ContainerBase*>(node(index)->parent());
 	Q_ASSERT(parent);
 
 	return this->index(parent);
@@ -120,7 +130,7 @@ QModelIndex LocalTaskModel::parent(const QModelIndex& index) const {
 
 Qt::ItemFlags LocalTaskModel::flags(const QModelIndex& index) const {
 	Qt::ItemFlags flags = BaseTaskModel::flags(index);
-	ContainerBasePrivate* c = dynamic_cast<ContainerBasePrivate*>(node(index));
+	ContainerBase* c = dynamic_cast<ContainerBase*>(node(index));
 	// dropping into containers is enabled
 	if (c && stage_factory_)
 		flags |= Qt::ItemIsDropEnabled;
@@ -139,7 +149,7 @@ QVariant LocalTaskModel::data(const QModelIndex& index, int role) const {
 				case 0:
 					return QString::fromStdString(n->name());
 				case 1:
-					return (uint)n->me()->solutions().size();
+					return (uint)n->solutions().size();
 				case 2:
 					return 0;
 			}
@@ -157,7 +167,7 @@ bool LocalTaskModel::setData(const QModelIndex& index, const QVariant& value, in
 	const QString& name = value.toString();
 	if (name == n->name().c_str())
 		return false;
-	n->me()->setName(name.toStdString());
+	n->setName(name.toStdString());
 	dataChanged(index, index);
 	return true;
 }
@@ -168,10 +178,9 @@ bool LocalTaskModel::removeRows(int row, int count, const QModelIndex& parent) {
 	if (flags_ & IS_RUNNING)
 		return false;  // cannot modify running task
 
-	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)->me()));
-	ContainerBasePrivate* cp = static_cast<ContainerBasePrivate*>(node(parent));
-	ContainerBase* c = static_cast<ContainerBase*>(cp->me());
-	if (row < 0 || (size_t)row + count > cp->children().size())
+	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)));
+	ContainerBase* c = static_cast<ContainerBase*>(node(parent));
+	if (row < 0 || (size_t)row + count > c->numChildren())
 		return false;
 
 	beginRemoveRows(parent, row, row + count - 1);
@@ -195,7 +204,7 @@ bool LocalTaskModel::dropMimeData(const QMimeData* mime, Qt::DropAction action, 
 	if (!mime->hasFormat(mime_type))
 		return false;
 
-	ContainerBasePrivate* c = dynamic_cast<ContainerBasePrivate*>(node(parent));
+	ContainerBase* c = dynamic_cast<ContainerBase*>(node(parent));
 	Q_ASSERT(c);
 
 	QString error;
@@ -204,7 +213,7 @@ bool LocalTaskModel::dropMimeData(const QMimeData* mime, Qt::DropAction action, 
 		return false;
 
 	beginInsertRows(parent, row, row);
-	static_cast<ContainerBase*>(c->me())->insert(moveit::task_constructor::Stage::pointer(stage), row);
+	c->insert(moveit::task_constructor::Stage::pointer(stage), row);
 	endInsertRows();
 	return true;
 }
@@ -231,7 +240,7 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex& ind
 	auto it_inserted = properties_.insert(std::make_pair(n, nullptr));
 	if (it_inserted.second) {  // newly inserted, create new model
 		it_inserted.first->second =
-		    PropertyFactory::instance().createPropertyTreeModel(*n->me(), scene_.get(), display_context_);
+		    PropertyFactory::instance().createPropertyTreeModel(*n, scene_.get(), display_context_);
 		it_inserted.first->second->setParent(this);
 	}
 	return it_inserted.first->second;

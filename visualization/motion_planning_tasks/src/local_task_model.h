@@ -44,7 +44,7 @@ namespace moveit_rviz_plugin {
 class LocalTaskModel : public BaseTaskModel, public moveit::task_constructor::Task
 {
 	Q_OBJECT
-	typedef moveit::task_constructor::StagePrivate Node;
+	using Node = moveit::task_constructor::Stage;
 	Node* root_;
 	StageFactoryPtr stage_factory_;
 	std::map<Node*, rviz::PropertyTreeModel*> properties_;
