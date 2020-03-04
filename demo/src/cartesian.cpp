@@ -51,9 +51,12 @@ Task createTask() {
 	t.stages()->setName("Cartesian Path");
 
 	const std::string group = "panda_arm";
+	const std::string eef = "hand";
 
-	// create Cartesian interpolation "planner" to be used in stages
-	auto cartesian = std::make_shared<solvers::CartesianPath>();
+	// create Cartesian interpolation "planner" to be used in various stages
+	auto cartesian_interpolation = std::make_shared<solvers::CartesianPath>();
+	// create a joint-space interpolation "planner" to be used in various stages
+	auto joint_interpolation = std::make_shared<solvers::JointInterpolationPlanner>();
 
 	// start from a fixed robot state
 	t.loadRobotModel();
@@ -68,7 +71,7 @@ Task createTask() {
 	}
 
 	{
-		auto stage = std::make_unique<stages::MoveRelative>("x +0.2", cartesian);
+		auto stage = std::make_unique<stages::MoveRelative>("x +0.2", cartesian_interpolation);
 		stage->setGroup(group);
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
@@ -78,7 +81,7 @@ Task createTask() {
 	}
 
 	{
-		auto stage = std::make_unique<stages::MoveRelative>("y -0.3", cartesian);
+		auto stage = std::make_unique<stages::MoveRelative>("y -0.3", cartesian_interpolation);
 		stage->setGroup(group);
 		geometry_msgs::Vector3Stamped direction;
 		direction.header.frame_id = "world";
@@ -88,7 +91,7 @@ Task createTask() {
 	}
 
 	{  // rotate about TCP
-		auto stage = std::make_unique<stages::MoveRelative>("rz +45°", cartesian);
+		auto stage = std::make_unique<stages::MoveRelative>("rz +45°", cartesian_interpolation);
 		stage->setGroup(group);
 		geometry_msgs::TwistStamped twist;
 		twist.header.frame_id = "world";
@@ -98,16 +101,23 @@ Task createTask() {
 	}
 
 	{  // perform a Cartesian motion, defined as a relative offset in joint space
-		auto stage = std::make_unique<stages::MoveRelative>("joint offset", cartesian);
+		auto stage = std::make_unique<stages::MoveRelative>("joint offset", cartesian_interpolation);
 		stage->setGroup(group);
 		std::map<std::string, double> offsets = { { "panda_joint1", M_PI / 6. }, { "panda_joint3", -M_PI / 6 } };
 		stage->setDirection(offsets);
 		t.add(std::move(stage));
 	}
 
+	{  // move gripper into predefined open state
+		auto stage = std::make_unique<stages::MoveTo>("open gripper", joint_interpolation);
+		stage->setGroup(eef);
+		stage->setGoal("open");
+		t.add(std::move(stage));
+	}
+
 	{  // move from reached state back to the original state, using joint interpolation
-		auto joint_interpolation = std::make_shared<solvers::JointInterpolationPlanner>();
-		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation } };
+		// specifying two groups (arm and hand) will try to merge both trajectories
+		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation }, { eef, joint_interpolation } };
 		auto connect = std::make_unique<stages::Connect>("connect", planners);
 		t.add(std::move(connect));
 	}
