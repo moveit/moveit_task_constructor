@@ -9,6 +9,7 @@
 
 	<buildtool_depend>catkin</buildtool_depend>
 
+	<build_depend>qtbase5-dev</build_depend>
 	<depend>moveit_core</depend>
 	<depend>moveit_task_constructor_msgs</depend>
 	<depend>moveit_task_constructor_core</depend>
