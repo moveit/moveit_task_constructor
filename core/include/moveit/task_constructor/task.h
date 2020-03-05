@@ -84,7 +84,7 @@ public:
 	Task& operator=(Task&& other);
 	~Task();
 
-	std::string id() const;
+	const std::string& id() const;
 
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task

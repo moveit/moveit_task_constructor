@@ -344,7 +344,7 @@ void Task::setProperty(const std::string& name, const boost::any& value) {
 	wrapped()->setProperty(name, value);
 }
 
-std::string Task::id() const {
+const std::string& Task::id() const {
 	return pimpl()->id();
 }
 
