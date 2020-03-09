@@ -173,12 +173,7 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!planning_scene::PlanningScene::isEmpty(sub_traj.scene_diff)) {
 #endif
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
-				bool result = context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
-#if MOVEIT_MASTER
-				// HACK: workaround for https://github.com/ros-planning/moveit/issues/1835
-				ros::Duration(0.1).sleep();
-#endif
-				return result;
+				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
 			}
 			return true;
 		};
