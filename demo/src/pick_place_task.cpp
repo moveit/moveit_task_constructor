@@ -419,10 +419,10 @@ void PickPlaceTask::init() {
 bool PickPlaceTask::plan() {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	ros::NodeHandle pnh("~");
-	int planning_attempts = pnh.param<int>("planning_attempts", 10);
+	int max_solutions = pnh.param<int>("max_solutions", 10);
 
 	try {
-		task_->plan(planning_attempts);
+		task_->plan(max_solutions);
 	} catch (InitStageException& e) {
 		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;
