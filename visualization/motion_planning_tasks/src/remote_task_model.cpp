@@ -255,7 +255,7 @@ QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 				case 2:
 					return n->solutions_->numFailed();
 				case 3:
-					return n->solutions_->totalComputeTime();
+					return QLocale().toString(n->solutions_->totalComputeTime(), 'f', 4);
 			}
 			break;
 		case Qt::ForegroundRole:
@@ -521,7 +521,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 						return tr(u8"∞");
 					if (std::isnan(item.cost))
 						return QVariant();
-					return item.cost;
+					return QLocale().toString(item.cost, 'f', 4);
 				case 2:
 					return item.comment;
 			}
