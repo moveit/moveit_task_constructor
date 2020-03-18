@@ -43,6 +43,8 @@ if(NOT MOVEIT_MASTER)
 endif()
 add_definitions(-DMOVEIT_MASTER=${MOVEIT_MASTER})
 
+add_compile_options(-fvisibility-inlines-hidden)
+
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
 add_subdirectory(src)
