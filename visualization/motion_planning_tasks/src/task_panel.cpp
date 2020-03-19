@@ -234,9 +234,6 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	tasks_view->setDropIndicatorShown(true);
 	tasks_view->setDragEnabled(true);
 
-	solutions_view->setAutoHideSections({ 1, 2 });
-	solutions_view->setStretchSection(2);
-
 	// init actions
 	tasks_view->addActions({ actionAddLocalTask, actionRemoveTaskTreeRows });
 }
@@ -304,15 +301,15 @@ void TaskView::save(rviz::Config config) {
 	write_splitter_sizes(d_ptr->tasks_property_splitter, "property_splitter");
 	write_splitter_sizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
 
-	auto write_column_sizes = [&config](QTreeView* view, const QString& key) {
+	auto write_column_sizes = [&config](QHeaderView* view, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
-		for (int c = 0, end = view->header()->count(); c != end; ++c) {
+		for (int c = 0, end = view->count(); c != end; ++c) {
 			rviz::Config item = group.listAppendNew();
-			item.setValue(view->columnWidth(c));
+			item.setValue(view->sectionSize(c));
 		}
 	};
-	write_column_sizes(d_ptr->tasks_view, "tasks_view_columns");
-	write_column_sizes(d_ptr->solutions_view, "solutions_view_columns");
+	write_column_sizes(d_ptr->tasks_view->header(), "tasks_view_columns");
+	write_column_sizes(d_ptr->solutions_view->header(), "solutions_view_columns");
 
 	const QHeaderView* view = d_ptr->solutions_view->header();
 	rviz::Config group = config.mapMakeChild("solution_sorting");
@@ -413,10 +410,10 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 
 	// update the PropertyModel
-	view = d_ptr->property_view;
-	sm = view->selectionModel();
+	QTreeView* pview = d_ptr->property_view;
+	sm = pview->selectionModel();
 	m = task ? task->getPropertyModel(task_index) : nullptr;
-	view->setModel(m);
+	pview->setModel(m);
 	delete sm;  // we don't store the selection model
 }
 
