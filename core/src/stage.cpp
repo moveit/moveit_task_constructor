@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), parent_(nullptr), total_compute_time_{}, introspection_(nullptr) {}
+  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -318,7 +318,7 @@ void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std
 			os << ", inherits from parent";
 		if (p.initsFrom(Stage::INTERFACE))
 			os << ", initializes from interface";
-	} catch (const Property::undeclared& e) {
+	} catch (const Property::undeclared&) {
 		os << "undeclared";
 	}
 	if (parent()->parent())

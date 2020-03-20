@@ -76,16 +76,16 @@ class TaskDisplay : public rviz::Display
 
 public:
 	TaskDisplay();
-	~TaskDisplay();
+	~TaskDisplay() override;
 
 	void loadRobotModel();
 
 	void update(float wall_dt, float ros_dt) override;
 	void reset() override;
-	void save(rviz::Config config) const;
-	void load(const rviz::Config& config);
+	void save(rviz::Config config) const override;
+	void load(const rviz::Config& config) override;
 
-	void setName(const QString& name);
+	void setName(const QString& name) override;
 	void setSolutionStatus(bool ok);
 
 	TaskListModel& getTaskListModel() { return *task_list_model_; }

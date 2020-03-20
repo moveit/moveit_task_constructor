@@ -192,7 +192,7 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	// recursively expand all children
 	if (depth != 0) {
 		for (int row = 0, rows = index.model()->rowCount(index); row < rows; ++row)
-			setExpanded(view, index.child(row, 0), expand, depth - 1);
+			setExpanded(view, index.model()->index(row, 0, index), expand, depth - 1);
 	}
 
 	view->setExpanded(index, expand);
@@ -212,7 +212,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 		                 if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
 			                 int expand = this->q_ptr->initial_task_expand->getOptionInt();
 			                 for (int row = first; row <= last; ++row) {
-				                 QModelIndex child = parent.child(row, 0);
+				                 QModelIndex child = parent.model()->index(row, 0, parent);
 				                 if (expand != TaskView::EXPAND_NONE) {
 					                 // recursively expand all inserted items
 					                 setExpanded(tasks_view, child, true);
@@ -352,7 +352,7 @@ void TaskView::load(const rviz::Config& config) {
 
 	QTreeView* view = d_ptr->solutions_view;
 	rviz::Config group = config.mapGetChild("solution_sorting");
-	int order;
+	int order = 0;
 	if (group.mapGetInt("column", &column) && group.mapGetInt("order", &order))
 		view->sortByColumn(column, static_cast<Qt::SortOrder>(order));
 }

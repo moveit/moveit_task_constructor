@@ -366,7 +366,8 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			InterfaceState::Priority prio(in.first.size() + 1 + out.first.size(), in.second + current.cost() + out.second);
+			InterfaceState::Priority prio(static_cast<unsigned int>(in.first.size() + 1 + out.first.size()),
+			                              in.second + current.cost() + out.second);
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
 				if (std::isinf(prio.cost()))

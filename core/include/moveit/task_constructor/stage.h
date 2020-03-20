@@ -209,7 +209,7 @@ public:
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 	/// analyze source of error and report accordingly
-	void reportPropertyError(const Property::error& e);
+	[[noreturn]] void reportPropertyError(const Property::error& e);
 	double getTotalComputeTime() const;
 
 protected:
