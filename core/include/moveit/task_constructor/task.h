@@ -105,7 +105,7 @@ public:
 	/// add function to be called after each top-level iteration
 	TaskCallbackList::const_iterator addTaskCallback(TaskCallback&& cb);
 	/// remove function callback
-	void erase(TaskCallbackList::const_iterator which);
+	void eraseTaskCallback(TaskCallbackList::const_iterator which);
 
 	/// expose SolutionCallback API
 	using WrapperBase::SolutionCallback;

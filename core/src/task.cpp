@@ -235,7 +235,7 @@ Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback&& cb) 
 	return --(impl->task_cbs_.cend());
 }
 
-void Task::erase(TaskCallbackList::const_iterator which) {
+void Task::eraseTaskCallback(TaskCallbackList::const_iterator which) {
 	pimpl()->task_cbs_.erase(which);
 }
 
