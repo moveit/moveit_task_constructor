@@ -194,7 +194,18 @@ bool ContainerBase::traverseRecursively(const ContainerBase::StageCallback& proc
 	return pimpl()->traverseStages(processor, 1, UINT_MAX);
 }
 
+void ContainerBase::add(Stage::pointer&& stage) {
+	if (!insert(std::move(stage))) {
+		throw std::runtime_error(name() + ": Could not insert stage");
+	}
+}
+
 bool ContainerBase::insert(Stage::pointer&& stage, int before) {
+	if (!stage) {
+		ROS_ERROR_STREAM(name() << ": reveived invalid stage pointer");
+		return false;
+	}
+
 	StagePrivate* impl = stage->pimpl();
 	if (!impl->setParent(this))
 		return false;

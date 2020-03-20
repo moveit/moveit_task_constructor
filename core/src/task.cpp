@@ -194,11 +194,11 @@ void Task::loadRobotModel(const std::string& robot_description) {
 }
 
 void Task::add(Stage::pointer&& stage) {
-	if (!stage)
-		throw std::runtime_error("stage insertion failed: invalid stage pointer");
+	stages()->add(std::move(stage));
+}
 
-	if (!stages()->insert(std::move(stage)))
-		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
+bool Task::insert(Stage::pointer&& stage, int before) {
+	return stages()->insert(std::move(stage), before);
 }
 
 void Task::clear() {

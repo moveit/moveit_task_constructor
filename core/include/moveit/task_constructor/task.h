@@ -92,8 +92,8 @@ public:
 	/// load robot model from given parameter
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
-	// TODO: use Stage::insert as well?
 	void add(Stage::pointer&& stage);
+	bool insert(Stage::pointer&& stage, int before = -1);
 	void clear() final;
 
 	/// enable introspection publishing for use with rviz

@@ -62,6 +62,8 @@ public:
 	/// traverse all children of this container recursively
 	bool traverseRecursively(const StageCallback& processor) const;
 
+	void add(Stage::pointer&& stage);
+
 	virtual bool insert(Stage::pointer&& stage, int before = -1);
 	virtual bool remove(int pos);
 	virtual bool remove(Stage* child);
