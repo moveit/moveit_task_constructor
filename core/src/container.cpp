@@ -196,14 +196,11 @@ bool ContainerBase::traverseRecursively(const ContainerBase::StageCallback& proc
 
 bool ContainerBase::insert(Stage::pointer&& stage, int before) {
 	StagePrivate* impl = stage->pimpl();
-	if (impl->parent() != nullptr || !stage->solutions().empty() || !stage->failures().empty()) {
-		ROS_ERROR("cannot re-parent stage");
+	if (!impl->setParent(this))
 		return false;
-	}
-
 	ContainerBasePrivate::const_iterator where = pimpl()->childByIndex(before, true);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
-	impl->setHierarchy(this, it);
+	impl->setParentPosition(it);
 	return true;
 }
 
@@ -211,7 +208,7 @@ bool ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
 	if (pos == children_.end())
 		return false;
 
-	(*pos)->pimpl()->setHierarchy(nullptr, ContainerBasePrivate::iterator());
+	(*pos)->pimpl()->unparent();
 	children_.erase(pos);
 	return true;
 }

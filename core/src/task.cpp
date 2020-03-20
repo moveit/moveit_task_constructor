@@ -86,12 +86,18 @@ void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
 
 	// and redirect the parent pointers of children to new parents
 	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
-	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it)
-		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(lhs->me_), it);
+	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it) {
+		(*it)->pimpl()->unparent();
+		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(lhs->me_));
+		(*it)->pimpl()->setParentPosition(it);
+	}
 
 	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
-	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it)
-		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(rhs->me_), it);
+	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it) {
+		(*it)->pimpl()->unparent();
+		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(rhs->me_));
+		(*it)->pimpl()->setParentPosition(it);
+	}
 }
 
 const ContainerBase* TaskPrivate::stages() const {

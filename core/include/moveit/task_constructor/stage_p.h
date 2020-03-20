@@ -41,6 +41,9 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_queue.h>
+
+#include <ros/ros.h>
+
 #include <ostream>
 #include <chrono>
 
@@ -112,15 +115,31 @@ public:
 		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
 	}
 
-	/// the following methods should be called only by a container
-	/// to setup the connection structure of their children
-	inline void setHierarchy(ContainerBase* parent, container_type::iterator it) {
+	/// set parent of stage
+	/// enforce only one parent exists
+	inline bool setParent(ContainerBase* parent) {
+		if (parent_) {
+			ROS_ERROR_STREAM("Tried to add stage '" << name() << "' to two parents");
+			return false;  // it's not allowed to add a stage to a parent if it already has one
+		}
 		parent_ = parent;
-		it_ = it;
+		return true;
 	}
+
+	/// explicitly orphan stage
+	inline void unparent() {
+		parent_ = nullptr;
+		it_ = container_type::iterator();
+	}
+
+	/// the following methods should be called only by the current parent
+	/// to setup the connection structure of their children
+	inline void setParentPosition(container_type::iterator it) { it_ = it; }
+	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
+
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
-	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
+
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
 	// methods to spawn new solutions
