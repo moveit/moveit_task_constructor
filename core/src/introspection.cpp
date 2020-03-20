@@ -204,7 +204,7 @@ void Introspection::fillStageStatistics(const Stage& stage, moveit_task_construc
 
 moveit_task_constructor_msgs::TaskDescription&
 Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription& msg) {
-	ContainerBase::StageCallback stageProcessor = [this, &msg](const Stage& stage, int) -> bool {
+	ContainerBase::StageCallback stageProcessor = [this, &msg](const Stage& stage, unsigned int) -> bool {
 		// this method is called for each child stage of a given parent
 		moveit_task_constructor_msgs::StageDescription desc;
 		desc.id = stageId(&stage);
@@ -240,7 +240,7 @@ Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription
 
 moveit_task_constructor_msgs::TaskStatistics&
 Introspection::fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& msg) {
-	ContainerBase::StageCallback stageProcessor = [this, &msg](const Stage& stage, int) -> bool {
+	ContainerBase::StageCallback stageProcessor = [this, &msg](const Stage& stage, unsigned int) -> bool {
 		// this method is called for each child stage of a given parent
 		moveit_task_constructor_msgs::StageStatistics stat;  // create new Stage msg
 		stat.id = stageId(&stage);

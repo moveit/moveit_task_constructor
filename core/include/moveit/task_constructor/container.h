@@ -56,7 +56,7 @@ public:
 
 	/** Callback function type used by traverse functions
 	 *  The callback should return false if traversal should be stopped. */
-	typedef std::function<bool(const Stage&, int depth)> StageCallback;
+	typedef std::function<bool(const Stage&, unsigned int depth)> StageCallback;
 	/// traverse direct children of this container, calling the callback for each of them
 	bool traverseChildren(const StageCallback& processor) const;
 	/// traverse all children of this container recursively

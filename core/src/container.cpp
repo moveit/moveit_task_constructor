@@ -285,7 +285,7 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
-	ContainerBase::StageCallback processor = [&os](const Stage& stage, int depth) -> bool {
+	ContainerBase::StageCallback processor = [&os](const Stage& stage, unsigned int depth) -> bool {
 		os << std::string(2 * depth, ' ') << *stage.pimpl() << std::endl;
 		return true;
 	};
