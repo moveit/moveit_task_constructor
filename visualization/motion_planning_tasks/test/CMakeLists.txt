@@ -10,7 +10,7 @@ if (CATKIN_ENABLE_TESTING)
 	target_link_libraries(${PROJECT_NAME}-test-merge-models
 		motion_planning_tasks_utils gtest_main)
 
-	catkin_add_gtest(${PROJECT_NAME}-test-solution-models test_solution_models.cpp)
+	catkin_add_gmock(${PROJECT_NAME}-test-solution-models test_solution_models.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-solution-models
 		motion_planning_tasks_rviz_plugin gtest_main)
 
