@@ -82,7 +82,7 @@ public:
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);
 	Task& operator=(Task&& other);
-	~Task();
+	~Task() override;
 
 	const std::string& id() const;
 
@@ -93,7 +93,7 @@ public:
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
 	void add(Stage::pointer&& stage);
-	bool insert(Stage::pointer&& stage, int before = -1);
+	bool insert(Stage::pointer&& stage, int before = -1) override;
 	void clear() final;
 
 	/// enable introspection publishing for use with rviz
