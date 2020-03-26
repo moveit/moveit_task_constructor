@@ -105,6 +105,10 @@ public:
 
 	void validateConnectivity() const override;
 
+	// containers derive their required interface from their children
+	// UNKNOWN until pruneInterface was called
+	InterfaceFlags requiredInterface() const override { return required_interface_; }
+
 	// forward these methods to the public interface for containers
 	bool canCompute() const override;
 	void compute() override;
@@ -139,6 +143,9 @@ protected:
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }
 
+	// set by containers in pruneInterface()
+	InterfaceFlags required_interface_;
+
 private:
 	container_type children_;
 
@@ -166,28 +173,16 @@ class SerialContainerPrivate : public ContainerBasePrivate
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string& name);
 
-	// containers derive their required interface from their children
-	InterfaceFlags requiredInterface() const override;
-
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;
 	// validate connectivity of chain
 	void validateConnectivity() const override;
 
-private:
-	// connect cur stage to its predecessor and successor
-	bool connect(container_type::const_iterator cur);
+	void reset();
 
-	// called by init() to prune interfaces for children in range [first, last)
-	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end);
-	// prune interface for children in range [first, last) to given direction
-	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end,
-	                     InterfaceFlags accepted);
-	// store first/last child's interface as required for this container
-	void storeRequiredInterface(container_type::const_iterator first, container_type::const_iterator end);
-
-private:
-	InterfaceFlags required_interface_;
+protected:
+	// connect two neighbors
+	void connect(StagePrivate& stage1, StagePrivate& stage2);
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
@@ -218,9 +213,6 @@ class ParallelContainerBasePrivate : public ContainerBasePrivate
 
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name);
-
-	// containers derive their required interface from their children
-	InterfaceFlags requiredInterface() const override;
 
 	// called by parent asking for pruning of this' interface
 	void pruneInterface(InterfaceFlags accepted) override;

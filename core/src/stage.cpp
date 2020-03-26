@@ -39,10 +39,14 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/planning_scene/planning_scene.h>
+
+#include <ros/console.h>
+
+#include <boost/format.hpp>
+
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
-#include <ros/console.h>
 #include <utility>
 
 namespace moveit {
@@ -84,12 +88,38 @@ InterfaceFlags StagePrivate::interfaceFlags() const {
 	return f;
 }
 
+void StagePrivate::pruneInterface(InterfaceFlags accepted) {
+	const InterfaceFlags accepted_start{ accepted & START_IF_MASK };
+	const InterfaceFlags accepted_end{ accepted & END_IF_MASK };
+
+	const InterfaceFlags required{ requiredInterface() };
+	const InterfaceFlags required_start{ required & START_IF_MASK };
+	const InterfaceFlags required_end{ required & END_IF_MASK };
+
+	if (required == UNKNOWN)
+		throw std::logic_error("stage type does not specify interface, but also does not override pruneInterface. "
+		                       "Who sets up its interfaces?");
+
+	// only one side needs to be specified but the value has to be compatible with this stage
+	if (((accepted_start != UNKNOWN) && (accepted_start & required_start) != required_start) ||
+	    ((accepted_end != UNKNOWN) && (accepted_end & required_end) != required_end)) {
+		boost::format desc("this' interface %1%/%2% cannot match inferred interface %3%/%4%");
+		desc % flowSymbol(required_start) % flowSymbol(required_end);
+		desc % flowSymbol(accepted_start) % flowSymbol(accepted_end);
+		throw InitStageException(*me(), desc.str());
+	}
+}
+
 void StagePrivate::validateConnectivity() const {
 	// check that the required interface is provided
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
-	if ((required & actual) != required)
-		throw InitStageException(*me(), "required interface is not satisfied");
+	if ((required & actual) != required) {
+		boost::format desc("interface %1%/%2% does not satisfy required interface %3%/%4%");
+		desc % flowSymbol(actual & START_IF_MASK) % flowSymbol(actual & END_IF_MASK);
+		desc % flowSymbol(required & START_IF_MASK) % flowSymbol(required & END_IF_MASK);
+		throw InitStageException(*me(), desc.str());
+	}
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
@@ -398,40 +428,50 @@ ComputeBase::ComputeBase(ComputeBasePrivate* impl) : Stage(impl) {}
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction dir,
                                                          const std::string& name)
-  : ComputeBasePrivate(me, name), required_interface_dirs_(dir) {
-	initInterface(required_interface_dirs_);
-}
+  : ComputeBasePrivate(me, name), required_interface_dirs_(dir) {}
 
 // initialize pull interfaces to match requested propagation directions
 void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction dir) {
-	if (dir & PropagatingEitherWay::FORWARD) {
-		if (!starts_)  // keep existing interface if possible
-			starts_.reset(
-			    new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, this, std::placeholders::_1)));
-	} else {
-		starts_.reset();
+	if (required_interface_dirs_ != PropagatingEitherWay::AUTO && dir != required_interface_dirs_) {
+		auto flow = [](PropagatingEitherWay::Direction dir) -> const char* {
+			switch (dir) {
+				case PropagatingEitherWay::AUTO:
+					return flowSymbol(InterfaceFlags{ READS_START, WRITES_PREV_END });
+				case PropagatingEitherWay::FORWARD:
+					return flowSymbol(InterfaceFlags{ READS_START });
+				case PropagatingEitherWay::BACKWARD:
+					return flowSymbol(InterfaceFlags{ WRITES_PREV_END });
+			}
+		};
+
+		boost::format desc("propagation direction %1% incompatible with inferred direction %2%");
+		desc % flow(required_interface_dirs_) % flow(dir);
+		throw InitStageException(*me(), desc.str());
 	}
 
-	if (dir & PropagatingEitherWay::BACKWARD) {
-		if (!ends_)  // keep existing interface if possible
-			ends_.reset(
-			    new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, this, std::placeholders::_1)));
-	} else {
-		ends_.reset();
-	}
+	if (dir == PropagatingEitherWay::FORWARD)
+		starts_.reset(new Interface([this](Interface::iterator it, bool /* updated */) { this->dropFailedStarts(it); }));
+	else if (dir == PropagatingEitherWay::BACKWARD)
+		ends_.reset(new Interface([this](Interface::iterator it, bool /* updated */) { this->dropFailedEnds(it); }));
+
+	required_interface_dirs_ = dir;
 }
 
 void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
-	int dir = 0;
-	if ((accepted & PROPAGATE_FORWARDS) == PROPAGATE_FORWARDS)
-		dir |= PropagatingEitherWay::FORWARD;
-	if ((accepted & PROPAGATE_BACKWARDS) == PROPAGATE_BACKWARDS)
-		dir |= PropagatingEitherWay::BACKWARD;
-	initInterface(PropagatingEitherWay::Direction(dir));
+	if (accepted == UNKNOWN)
+		throw InitStageException(*me(), std::string("cannot prune to ") + flowSymbol(UNKNOWN));
+	if ((accepted & START_IF_MASK) == READS_START || (accepted & END_IF_MASK) == WRITES_NEXT_START)
+		initInterface(PropagatingEitherWay::FORWARD);
+	else if ((accepted & START_IF_MASK) == WRITES_PREV_END || (accepted & END_IF_MASK) == READS_END)
+		initInterface(PropagatingEitherWay::BACKWARD);
+	else {
+		boost::format desc("propagator cannot act with interfaces start(%1%), end(%2%)");
+		desc % flowSymbol(accepted & START_IF_MASK) % flowSymbol(accepted & END_IF_MASK);
+		throw InitStageException(*me(), desc.str());
+	}
 }
 
 void PropagatingEitherWayPrivate::validateConnectivity() const {
-	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
 	if (actual == UNKNOWN)
 		throw InitStageException(*me(), "not connected in any direction");
@@ -442,23 +482,19 @@ void PropagatingEitherWayPrivate::validateConnectivity() const {
 	if ((actual & READS_END) && !(actual & WRITES_PREV_END))
 		errors.push_back(*me(), "Cannot push backwards");
 
-	if (required_interface_dirs_ == PropagatingEitherWay::BOTHWAY && (required & actual) != required)
-		ROS_WARN_STREAM_NAMED("PropagatingEitherWay", "Cannot propagate "
-		                                                  << (actual & PROPAGATE_FORWARDS ? "backwards" : "forwards"));
-
 	if (errors)
 		throw errors;
 }
 
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
-	InterfaceFlags f;
-	if (required_interface_dirs_ & PropagatingEitherWay::FORWARD)
-		f |= PROPAGATE_FORWARDS;
-	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
-		f |= PROPAGATE_BACKWARDS;
-	// if required_interface_dirs_ == AUTO, we don't require an interface
-	// but the parent container auto-derives the propagation direction
-	return f;
+	switch (required_interface_dirs_) {
+		case PropagatingEitherWay::FORWARD:
+			return PROPAGATE_FORWARDS;
+		case PropagatingEitherWay::BACKWARD:
+			return PROPAGATE_BACKWARDS;
+		case PropagatingEitherWay::AUTO:
+			return UNKNOWN;
+	}
 }
 
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
@@ -516,26 +552,10 @@ PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate* impl) : 
 
 void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir) {
 	auto impl = pimpl();
-	if (impl->required_interface_dirs_ == dir)
-		return;
-	if (impl->prevEnds() || impl->nextStarts())
+	if (impl->required_interface_dirs_ != AUTO)
 		throw std::runtime_error("Cannot change direction after being connected");
-	impl->required_interface_dirs_ = dir;
-	impl->initInterface(impl->required_interface_dirs_);
-}
 
-void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_model) {
-	Stage::init(robot_model);
-	auto impl = pimpl();
-
-	// In AUTO-mode, i.e. when auto-detecting direction of propagation from context,
-	// pretend that we offer both interface directions during init().
-	// This is needed due to a chicken-egg-problem: interface auto-detection requires
-	// the context (external pushing interfaces prevEnds, nextStarts) to be set,
-	// while they are ony set if we detected the correct interface...
-	if (impl->required_interface_dirs_ == AUTO)
-		impl->initInterface(BOTHWAY);
-	// otherwise the interface is already fixed and well-defined
+	impl->initInterface(dir);
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {

@@ -53,10 +53,11 @@ using namespace std::placeholders;
 namespace moveit {
 namespace task_constructor {
 
-ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name) : StagePrivate(me, name) {
-	pending_backward_.reset(new Interface);
-	pending_forward_.reset(new Interface);
-}
+ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
+  : StagePrivate(me, name)
+  , required_interface_(UNKNOWN)
+  , pending_backward_(new Interface)
+  , pending_forward_(new Interface) {}
 
 ContainerBasePrivate::const_iterator ContainerBasePrivate::childByIndex(int index, bool for_insert) const {
 	if (!for_insert && index < 0)
@@ -252,6 +253,11 @@ void ContainerBase::reset() {
 	// ... and state mapping
 	impl->internal_to_external_.clear();
 
+	// interfaces depend on children which might change
+	impl->required_interface_ = UNKNOWN;
+	impl->starts_.reset();
+	impl->ends_.reset();
+
 	Stage::reset();
 }
 
@@ -401,112 +407,20 @@ SerialContainer::SerialContainer(const std::string& name) : SerialContainer(new 
 SerialContainerPrivate::SerialContainerPrivate(SerialContainer* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
-// a serial container's required interface is derived from the required input interfaces
-// of the first and last children. After resolving, it is remembered in required_interface_.
-InterfaceFlags SerialContainerPrivate::requiredInterface() const {
-	if ((required_interface_ & START_IF_MASK) && (required_interface_ & END_IF_MASK))
-		return required_interface_;
+void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2) {
+	InterfaceFlags flags1 = stage1.requiredInterface();
+	InterfaceFlags flags2 = stage2.requiredInterface();
 
-	if (children().empty())
-		return UNKNOWN;
-	return (children().front()->pimpl()->requiredInterface() & START_IF_MASK) |
-	       (children().back()->pimpl()->requiredInterface() & END_IF_MASK);
-}
-
-// connect cur stage to its predecessor and successor by setting the push interface pointers
-// return true if cur stage should be scheduled for a second sweep
-bool SerialContainerPrivate::connect(container_type::const_iterator cur) {
-	StagePrivate* const cur_impl = **cur;
-	InterfaceFlags required = cur_impl->requiredInterface();
-
-	// get iterators to prev / next stage in sequence
-	auto prev = cur;
-	--prev;
-	auto next = cur;
-	++next;
-
-	// set push forward connection using next's starts
-	if ((required == UNKNOWN || required & WRITES_NEXT_START) &&
-	    next != children().end())  // last child has not a next one
-		cur_impl->setNextStarts((*next)->pimpl()->starts());
-
-	// set push backward connection using prev's ends
-	if ((required == UNKNOWN || required & WRITES_PREV_END) &&
-	    cur != children().begin())  // first child has not a previous one
-		cur_impl->setPrevEnds((*prev)->pimpl()->ends());
-
-	// schedule stage with unknown interface for 2nd sweep
-	return required == UNKNOWN || required == PROPAGATE_BOTHWAYS;
-}
-
-/* Establishing the interface connections, we face a chicken-egg-problem:
- * To establish a connection, a predecessors/successors pull interface is
- * assigned to the current's stage push interface.
- * However, propagating stages (in auto-detection mode) can only create
- * their pull interfaces if the corresponding, opposite-side push interface
- * is present already (because that's the mechanism to determine the supported
- * propagation directions).
- *
- * Hence, we need to resolve this by performing two sweeps:
- * - initialization, assuming both propagation directions should be supported,
- *   thus generating both pull interfaces, i.e. providing the egg
- * - stripping down the interfaces to the actual context
- *   This context is provided by two stages pushing from both ends
- *   into a (potentially long) sequence of propagating stages (tbd).
- */
-void SerialContainer::init(const moveit::core::RobotModelConstPtr& robot_model) {
-	// reset pull interfaces
-	auto impl = pimpl();
-	impl->starts_.reset();
-	impl->ends_.reset();
-	impl->required_interface_ = UNKNOWN;
-
-	// recursively init all children, throws if there are no children
-	ContainerBase::init(robot_model);
-
-	auto start = impl->children().begin();
-	auto last = --impl->children().end();
-
-	// connect first / last child's push interfaces to our pending_* buffers
-	// if they require pushing
-	impl->setChildsPushBackwardInterface(**start);
-	impl->setChildsPushForwardInterface(**last);
-
-	// initialize and connect remaining children in two sweeps
-	// to allow interface auto-detection for propagating stages
-	auto first_unknown = start;  // pointer to first stage with unknown interface
-	for (auto cur = start, end = impl->children().end(); cur != end; ++cur) {
-		// 1st sweep: connect everything potentially possible,
-		// remembering start of unknown sub sequence
-		if (impl->connect(cur))
-			;
-		else {  // reached a stage with known interface
-			// 2nd sweep: prune interfaces from [first_unknown, cur)
-			impl->pruneInterfaces(first_unknown, cur);
-			// restart with first_unknown = ++cur
-			first_unknown = cur;
-			++first_unknown;
-		}
+	if ((flags1 & WRITES_NEXT_START) && (flags2 & READS_START))
+		stage1.setNextStarts(stage2.starts());
+	else if ((flags1 & READS_END) && (flags2 & WRITES_PREV_END))
+		stage2.setPrevEnds(stage1.ends());
+	else {
+		boost::format desc("end interface of '%1%' (%2%) does not match start interface of '%3%' (%4%)");
+		desc % stage1.name() % flowSymbol(flags1 & END_IF_MASK);
+		desc % stage2.name() % flowSymbol(flags2 & START_IF_MASK);
+		throw InitStageException(*me(), desc.str());
 	}
-	// prune stages [first_unknown, end())
-	impl->pruneInterfaces(first_unknown, impl->children().end());
-
-	// initialize this' pull interfaces if first/last child pulls
-	if (const InterfacePtr& target = (*start)->pimpl()->starts())
-		impl->starts_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, std::placeholders::_1,
-		                                            std::cref(target), std::placeholders::_2)));
-	if (const InterfacePtr& target = (*last)->pimpl()->ends())
-		impl->ends_.reset(new Interface(std::bind(&SerialContainerPrivate::copyState, impl, std::placeholders::_1,
-		                                          std::cref(target), std::placeholders::_2)));
-}
-
-// prune interface for children in range [first, last) to given direction
-void SerialContainerPrivate::storeRequiredInterface(container_type::const_iterator first,
-                                                    container_type::const_iterator end) {
-	if (first == children().begin())
-		required_interface_ |= children().front()->pimpl()->interfaceFlags() & START_IF_MASK;
-	if (end == children().end() && !children().empty())
-		required_interface_ |= children().back()->pimpl()->interfaceFlags() & END_IF_MASK;
 }
 
 // called by parent asking for pruning of this' interface
@@ -514,98 +428,50 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty())
 		throw InitStageException(*me(), "container is empty");
 
-	// reading is always allowed if current interface flags do so
-	accepted |= (interfaceFlags() & InterfaceFlags({ READS_START, READS_END }));
+	// TODO(v4hn): if ever there is a use case to start pruning
+	// with a specified end interface, this would need to be extended
+	if (!(accepted & (READS_START | WRITES_PREV_END)))
+		return;  // The start interface direction is not decided
 
-	if (accepted == PROPAGATE_BOTHWAYS)
-		return;  // There is nothing to prune
+	Stage& first = *children().front();
+	Stage& last = *children().back();
 
-	// If whole chain is still undecided, prune all children
-	if (children().front()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS &&
-	    children().back()->pimpl()->interfaceFlags() == PROPAGATE_BOTHWAYS) {
-		pruneInterfaces(children().begin(), children().end(), accepted);
-	} else {  // otherwise only prune the first / last child's input / output interface
-		StagePrivate* child_impl;
-		child_impl = children().front()->pimpl();
-		child_impl->pruneInterface((accepted & START_IF_MASK) | (child_impl->interfaceFlags() & END_IF_MASK));
-		child_impl = children().back()->pimpl();
-		child_impl->pruneInterface((accepted & END_IF_MASK) | (child_impl->interfaceFlags() & START_IF_MASK));
+	// sweep through children once: infer and connect interfaces
+	first.pimpl()->pruneStartInterface(accepted);
+	setChildsPushBackwardInterface(first);
+
+	for (auto it = ++children().begin(), previous_it = children().begin(); it != children().end(); ++it, ++previous_it) {
+		StagePrivate* child_impl = (**it).pimpl();
+		StagePrivate* previous_impl = (**previous_it).pimpl();
+		child_impl->pruneStartInterface(invert(previous_impl->requiredInterface()));
+		connect(*previous_impl, *child_impl);
 	}
 
-	// reset my pull interfaces, if first/last child don't pull anymore
-	if (!children().front()->pimpl()->starts())
+	// potentially connect outmost push interface to pending_ buffer
+	setChildsPushForwardInterface(last);
+
+	if ((accepted & END_IF_MASK) != UNKNOWN &&
+	    (last.pimpl()->requiredInterface() & END_IF_MASK) != (accepted & END_IF_MASK)) {
+		boost::format desc(
+		    "requested end interface for container (%1%) does not agree with inferred end interface of last child (%2%)");
+		desc % flowSymbol(accepted & END_IF_MASK) % flowSymbol(last.pimpl()->requiredInterface() & END_IF_MASK);
+		throw InitStageException(*me(), desc.str());
+	}
+
+	// if first/last pull, this needs to pull to and forward to the children
+	if (const InterfacePtr& target = first.pimpl()->starts())
+		starts_.reset(new Interface(
+		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	else
 		starts_.reset();
-	if (!children().back()->pimpl()->ends())
+
+	if (const InterfacePtr& target = last.pimpl()->ends())
+		ends_.reset(new Interface(
+		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	else
 		ends_.reset();
 
-	if (interfaceFlags() == UNKNOWN)
-		throw InitStageException(*me(), "failed to derive propagation direction");
-}
-
-// called by init() to prune interfaces for children in range [first, last)
-// this function determines the feasible propagation directions
-void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end) {
-	if (first == end) {
-		storeRequiredInterface(first, end);
-		return;  // nothing to do in this case
-	}
-
-	// determine accepted interface from available push interfaces
-	InterfaceFlags accepted;
-
-	// if first stage ...
-	if (first != children().begin()) {
-		auto prev = first;
-		--prev;  // pointer to previous stage
-		// ... pushes forward, we accept forward propagation
-		if ((*prev)->pimpl()->requiredInterface() & WRITES_NEXT_START)
-			accepted |= PROPAGATE_FORWARDS;
-		// ... pulls backward, we accept backward propagation
-		if ((*prev)->pimpl()->requiredInterface() & READS_END)
-			accepted |= PROPAGATE_BACKWARDS;
-	}  // else: for first child we cannot determine the interface yet
-
-	// if end stage ...
-	if (end != children().end()) {
-		// ... pushes backward, we accept backward propagation
-		if ((*end)->pimpl()->requiredInterface() & WRITES_PREV_END)
-			accepted |= PROPAGATE_BACKWARDS;
-		// ... pulls forward, we accept forward propagation
-		if ((*end)->pimpl()->requiredInterface() & READS_START)
-			accepted |= PROPAGATE_FORWARDS;
-	}  // else: for last child we cannot determine the interface yet
-
-	// nothing to do if:
-	// - accepted == UNKNOWN: interface still unknown
-	// - accepted == PROPAGATE_BOTHWAYS: no change
-	if (accepted != UNKNOWN && accepted != PROPAGATE_BOTHWAYS)
-		pruneInterfaces(first, end, accepted);
-}
-
-// prune interface for children in range [first, last) to given direction
-void SerialContainerPrivate::pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end,
-                                             InterfaceFlags accepted) {
-	// 1st sweep: remove push interfaces
-	for (auto it = first; it != end; ++it) {
-		StagePrivate* impl = (*it)->pimpl();
-		// the required interface should be a subset of the accepted one
-		if ((impl->requiredInterface() & accepted) != impl->requiredInterface())
-			throw InitStageException(*impl->me(), "Required interface not satisfied after pruning");
-
-		// remove push interfaces if not accepted
-		if (!(accepted & WRITES_PREV_END))
-			impl->setPrevEnds(InterfacePtr());
-
-		if (!(accepted & WRITES_NEXT_START))
-			impl->setNextStarts(InterfacePtr());
-	}
-	// 2nd sweep: recursively prune children
-	for (auto it = first; it != end; ++it) {
-		StagePrivate* impl = (*it)->pimpl();
-		impl->pruneInterface(accepted);
-	}
-
-	storeRequiredInterface(first, end);
+	required_interface_ = first.pimpl()->interfaceFlags() & START_IF_MASK | last.pimpl()->interfaceFlags() & END_IF_MASK;
 }
 
 void SerialContainerPrivate::validateConnectivity() const {
@@ -715,64 +581,78 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& soluti
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
-// A parallel container's required interface is derived from the required interfaces of all of its children.
-// They must not conflict to each other. Otherwise an InitStageException is thrown.
-InterfaceFlags ParallelContainerBasePrivate::requiredInterface() const {
-	if (children().empty())
-		return UNKNOWN;
-	/* The interfaces of all children need to be consistent with each other. Allowed combinations are:
-	 * ❘ ❘ = ❘  (connecting stages)
-	 * ↑ ↑ = ↑  (backward propagating)
-	 * ↓ ↓ = ↓  (forward propagating)
-	 * ↑ ↓ = ⇅ = ⇅ ↑ = ⇅ ↓  (propagating in both directions)
-	 * ↕ ↕ = ↕  (generating)
-	 */
-
-	InterfaceFlags accumulated = children().front()->pimpl()->requiredInterface();
-	for (const Stage::pointer& stage : children()) {
-		InterfaceFlags current = stage->pimpl()->requiredInterface();
-		if (accumulated != PROPAGATE_BOTHWAYS &&
-		    (accumulated & current) == current)  // all flags of current are already available in accumulated
-			continue;
-
-		bool current_is_propagating =
-		    (current == PROPAGATE_BOTHWAYS || current == PROPAGATE_FORWARDS || current == PROPAGATE_BACKWARDS);
-
-		if (current_is_propagating && accumulated != CONNECT && accumulated != GENERATE)
-			accumulated |= current;  // propagating is compatible to all except CONNECT and GENERATE
-		else
-			throw InitStageException(*me(),
-			                         "child '" + stage->name() + "' has conflicting interface to previous children");
-	}
-	return accumulated;
-}
-
 void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
-	// forward pruning to all children with UNKNOWN required interface
-	for (const Stage::pointer& stage : children()) {
-		if (stage->pimpl()->requiredInterface() == UNKNOWN)
-			stage->pimpl()->pruneInterface(accepted);
+	if (children().empty())
+		throw InitStageException(*me(), "trying to prune empty container");
+
+	if (accepted == UNKNOWN)
+		return;  // nothing to prune
+
+	InitStageException exceptions;
+	InterfaceFlags interface;
+
+	for (const Stage::pointer& child : children()) {
+		try {
+			child->pimpl()->pruneInterface(accepted);
+		} catch (InitStageException& e) {
+			exceptions.append(e);
+			continue;
+		}
+
+		InterfaceFlags child_interface = child->pimpl()->requiredInterface();
+		if (interface == UNKNOWN)
+			interface = child_interface;
+		else if ((interface & child_interface) != child_interface) {
+			boost::format desc("inferred interface of stage '%1%' (%2%/%3%) does not agree with the inferred interface of "
+			                   "its siblings (%4%/%5%).");
+			desc % child->name();
+			desc % flowSymbol(child_interface & START_IF_MASK) % flowSymbol(child_interface & END_IF_MASK);
+			desc % flowSymbol(interface & START_IF_MASK) % flowSymbol(interface & END_IF_MASK);
+			exceptions.push_back(*me(), desc.str());
+		}
 	}
+
+	if ((interface & accepted) != accepted) {
+		boost::format desc("required interface (%1%/%2%) does not match children (%3%/%4%).");
+		desc % flowSymbol(accepted & START_IF_MASK) % flowSymbol(accepted & END_IF_MASK);
+		desc % flowSymbol(interface & START_IF_MASK) % flowSymbol(interface & END_IF_MASK);
+		exceptions.push_back(*me(), desc.str());
+	}
+
+	if (exceptions)
+		throw exceptions;
+
+	// States received by the container need to be copied to all children's pull interfaces.
+	if (interface & READS_START)
+		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+			this->onNewExternalState(Interface::FORWARD, external, updated);
+		}));
+	if (interface & READS_END)
+		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+			this->onNewExternalState(Interface::BACKWARD, external, updated);
+		}));
+
+	// initialize push connections of children according to their demands
+	for (const Stage::pointer& stage : children()) {
+		setChildsPushForwardInterface(*stage);
+		setChildsPushBackwardInterface(*stage);
+	}
+
+	required_interface_ = interface;
 }
 
 void ParallelContainerBasePrivate::validateConnectivity() const {
 	InitStageException errors;
 	InterfaceFlags my_interface = interfaceFlags();
-	InterfaceFlags children_interfaces;
 
 	// check that input / output interfaces of all children are handled by my interface
 	for (const auto& child : children()) {
 		InterfaceFlags current = child->pimpl()->interfaceFlags();
-		children_interfaces |= current;  // compute union of all children interfaces
-
 		if ((current & my_interface & START_IF_MASK) != (current & START_IF_MASK))
 			mismatchingInterface(errors, *child->pimpl(), START_IF_MASK);
 		if ((current & my_interface & END_IF_MASK) != (current & END_IF_MASK))
 			mismatchingInterface(errors, *child->pimpl(), END_IF_MASK);
 	}
-	// check that there is a child matching the expected push interfaces
-	if ((my_interface & GENERATE) != (children_interfaces & GENERATE))
-		errors.push_back(*me(), "no child provides expected push interface");
 
 	// recursively validate children
 	try {
@@ -794,35 +674,6 @@ void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
 ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
-
-/* States received by the container need to be copied to all children's pull interfaces.
- * States generated by children can be directly forwarded into the container's push interfaces.
- */
-void ParallelContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
-	// recursively init children
-	ContainerBase::init(robot_model);
-	auto impl = pimpl();
-
-	// determine the union of interfaces required by children
-	// TODO: should we better use the least common interface?
-	InterfaceFlags required = impl->requiredInterface();
-
-	// initialize this' pull connections
-	impl->starts().reset(required & READS_START ?
-	                         new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState, impl,
-	                                                 Interface::FORWARD, std::placeholders::_1, std::placeholders::_2)) :
-	                         nullptr);
-	impl->ends().reset(required & READS_END ?
-	                       new Interface(std::bind(&ParallelContainerBasePrivate::onNewExternalState, impl,
-	                                               Interface::BACKWARD, std::placeholders::_1, std::placeholders::_2)) :
-	                       nullptr);
-
-	// initialize push connections of children according to their demands
-	for (const Stage::pointer& stage : impl->children()) {
-		impl->setChildsPushForwardInterface(*stage);
-		impl->setChildsPushBackwardInterface(*stage);
-	}
-}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
 	auto impl = pimpl();
