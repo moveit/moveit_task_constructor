@@ -512,7 +512,7 @@ void SerialContainerPrivate::storeRequiredInterface(container_type::const_iterat
 // called by parent asking for pruning of this' interface
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (children().empty())
-		return;
+		throw InitStageException(*me(), "container is empty");
 
 	// reading is always allowed if current interface flags do so
 	accepted |= (interfaceFlags() & InterfaceFlags({ READS_START, READS_END }));
