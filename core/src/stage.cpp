@@ -57,7 +57,7 @@ void InitStageException::append(InitStageException& other) {
 }
 
 const char* InitStageException::what() const noexcept {
-	static const char* msg = "Error initializing stage(s)";
+	static const char* msg = "Error initializing stage(s). ROS_ERROR_STREAM(e) for details.";
 	return msg;
 }
 
@@ -575,7 +575,7 @@ void PropagatingBackward::computeForward(const InterfaceState& from) {
 GeneratorPrivate::GeneratorPrivate(Generator* me, const std::string& name) : ComputeBasePrivate(me, name) {}
 
 InterfaceFlags GeneratorPrivate::requiredInterface() const {
-	return InterfaceFlags({ WRITES_NEXT_START, WRITES_PREV_END });
+	return InterfaceFlags(GENERATE);
 }
 
 bool GeneratorPrivate::canCompute() const {

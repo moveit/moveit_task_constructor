@@ -105,7 +105,7 @@ void ContainerBasePrivate::validateConnectivity() const {
 
 void ContainerBasePrivate::mismatchingInterface(InitStageException& errors, const StagePrivate& child,
                                                 const InterfaceFlags mask) const {
-	boost::format desc("%1% interface of '%2%' (%3%) doesn't match mine (%4%)");
+	boost::format desc("%1% interface of '%2%' (%3%) does not match mine (%4%)");
 	errors.push_back(*me(), (desc % (mask == START_IF_MASK ? "start" : "end") % child.name() %
 	                         flowSymbol(child.interfaceFlags() & mask) % flowSymbol(interfaceFlags() & mask))
 	                            .str());
@@ -948,7 +948,7 @@ InterfaceFlags MergerPrivate::requiredInterface() const {
 	for (const Stage::pointer& stage : children()) {
 		InterfaceFlags current = stage->pimpl()->requiredInterface();
 		if (current != required)
-			throw InitStageException(*stage, "Interface doesn't match the common one.");
+			throw InitStageException(*stage, "Interface does not match the common one.");
 	}
 
 	switch (required) {

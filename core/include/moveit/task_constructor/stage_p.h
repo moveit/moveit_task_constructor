@@ -73,7 +73,7 @@ public:
 
 	/** Interface required by this stage
 	 *
-	 * If the interface is unknown (because it is auto-detected from context), return 0 */
+	 * If the interface is unknown (because it is auto-detected from context), return UNKNOWN */
 	virtual InterfaceFlags requiredInterface() const = 0;
 
 	/** Prune interface to comply with the given propagation direction
@@ -163,6 +163,7 @@ protected:
 	std::string name_;
 	PropertyMap properties_;
 
+	// the stage's pull interfaces, created as required
 	InterfacePtr starts_;
 	InterfacePtr ends_;
 
