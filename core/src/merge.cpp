@@ -38,6 +38,9 @@
 #include <moveit/task_constructor/merge.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/algorithm/string/join.hpp>
+
 namespace {
 std::vector<const moveit::core::JointModel*>
 findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
@@ -88,11 +91,10 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 	if (joints.size() != sum_joints) {  // overlapping joint groups: analyse in more detail
 		auto duplicates = findDuplicates(groups, joints);
 		if (!duplicates.empty()) {
-			std::string message("overlapping joints: " + duplicates.front()->getName());
-			for (const auto* jm : duplicates) {
-				message.append(jm->getName());
-				message.append(", ");
-			}
+			std::string message(
+			    "overlapping joints: " +
+			    boost::algorithm::join(duplicates | boost::adaptors::transformed([](auto&& j) { return j->getName(); }),
+			                           ", "));
 			throw std::runtime_error(message);
 		}
 	}
