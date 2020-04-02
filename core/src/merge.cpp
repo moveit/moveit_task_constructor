@@ -155,11 +155,11 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 			const robot_state::RobotState& sub_state = sub->getWayPoint(index);
 			sub_state.copyJointGroupPositions(sub->getGroup(), values);
 			merged_state->setJointGroupPositions(sub->getGroup(), values);
-			merged_state->update();
 		}
 		if (finished)
 			break;
 
+		merged_state->update();
 		// add waypoint without timing
 		merged_traj->addSuffixWayPoint(merged_state, 0.0);
 		// create new RobotState for next waypoint
