@@ -51,6 +51,7 @@ Task createTask() {
 	t.stages()->setName("Cartesian Path");
 
 	const std::string group = "panda_arm";
+	const std::string eef = "hand";
 
 	// create Cartesian interpolation "planner" to be used in various stages
 	auto cartesian_interpolation = std::make_shared<solvers::CartesianPath>();
@@ -109,15 +110,14 @@ Task createTask() {
 
 	{  // move gripper into predefined open state
 		auto stage = std::make_unique<stages::MoveTo>("open gripper", joint_interpolation);
-		stage->setGroup("hand");
+		stage->setGroup(eef);
 		stage->setGoal("open");
 		t.add(std::move(stage));
 	}
 
 	{  // move from reached state back to the original state, using joint interpolation
 		// specifying two groups (arm and hand) will try to merge both trajectories
-		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation },
-			                                              { "hand", joint_interpolation } };
+		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation }, { eef, joint_interpolation } };
 		auto connect = std::make_unique<stages::Connect>("connect", planners);
 		t.add(std::move(connect));
 	}
