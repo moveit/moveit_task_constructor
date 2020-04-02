@@ -72,7 +72,7 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 	const moveit::core::RobotModel* const robot_model = &groups[0]->getParentModel();
 
 	std::set<const moveit::core::JointModel*> jset;
-	std::string group_name;
+	std::string merged_group_name;
 	size_t sum_joints = 0;
 	for (const moveit::core::JointModelGroup* jmg : groups) {
 		// sanity check: all groups must share the same robot model
@@ -82,9 +82,9 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 		const auto& joints = jmg->getJointModels();
 		jset.insert(joints.cbegin(), joints.cend());
 		sum_joints += joints.size();
-		if (!group_name.empty())
-			group_name.append({ '+' });
-		group_name.append(jmg->getName());
+		if (!merged_group_name.empty())
+			merged_group_name.append({ '+' });
+		merged_group_name.append(jmg->getName());
 	}
 
 	std::vector<const moveit::core::JointModel*> joints(jset.cbegin(), jset.cend());
@@ -99,8 +99,10 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 		}
 	}
 
+	// JointModelGroup expects a srdf group,
+	// but this model is not constructed from an srdf, so we have to provide a dummy
 	static srdf::Model::Group dummy_srdf;
-	return new moveit::core::JointModelGroup(group_name, dummy_srdf, joints, robot_model);
+	return new moveit::core::JointModelGroup(merged_group_name, dummy_srdf, joints, robot_model);
 }
 
 robot_trajectory::RobotTrajectoryPtr
