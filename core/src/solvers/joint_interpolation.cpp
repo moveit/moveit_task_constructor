@@ -69,6 +69,8 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
+	if (from->isStateColliding(from_state, jmg->getName()))
+		return false;
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
