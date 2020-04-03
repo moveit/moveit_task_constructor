@@ -1121,8 +1121,13 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	}
 
 	moveit::core::JointModelGroup* jmg = jmg_merged_.get();
-	robot_trajectory::RobotTrajectoryPtr merged =
-	    task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
+	robot_trajectory::RobotTrajectoryPtr merged;
+	try {
+		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
+	} catch (const std::runtime_error& e) {
+		ROS_INFO_STREAM_NAMED("Merger", this->name() << "Merging failed: " << e.what());
+		return;
+	}
 	if (jmg_merged_.get() != jmg)
 		jmg_merged_.reset(jmg);
 	if (!merged)
