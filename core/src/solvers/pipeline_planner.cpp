@@ -67,11 +67,17 @@ PipelinePlanner::PipelinePlanner() {
 	                    planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
-void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
-	planner_ = Task::createPlanner(robot_model);
+PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline) : PipelinePlanner() {
+	planner_ = planning_pipeline;
+}
 
-	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
-	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
+void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
+	if (!planner_) {
+		planner_ = Task::createPlanner(robot_model);
+
+		planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
+		planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
+	}
 }
 
 void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMap& p,
