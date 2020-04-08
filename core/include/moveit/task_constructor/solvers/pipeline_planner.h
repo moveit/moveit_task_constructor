@@ -57,6 +57,8 @@ class PipelinePlanner : public PlannerInterface
 public:
 	PipelinePlanner();
 
+	PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline);
+
 	void setPlannerId(const std::string& planner) { setProperty("planner", planner); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
