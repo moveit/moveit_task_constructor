@@ -76,6 +76,8 @@ class DisplaySolution
 		planning_scene::PlanningSceneConstPtr scene_;
 		/// sub trajectories, might be empty
 		robot_trajectory::RobotTrajectoryPtr trajectory_;
+		/// joints involved in the trajectory
+		std::vector<std::string> joints_;
 		/// comment of the trajectory
 		std::string comment_;
 		/// id of creating stage

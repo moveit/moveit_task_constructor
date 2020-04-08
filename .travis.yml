@@ -8,18 +8,16 @@ compiler: gcc
 cache: ccache
 
 notifications:
-  email:
-    recipients:
-      - rhaschke@techfak.uni-bielefeld.de
-      - me@v4hn.de
+  email: true
+
 env:
   global:
-    - ROS_DISTRO=melodic
+    - DOCKER_IMAGE=moveit/moveit:melodic-source
     - UPSTREAM_WORKSPACE=.rosinstall
 
 jobs:
   - env: TEST=clang-format
-  - env: TEST=code-coverage ROS_REPO=ros-shadow-fixed
+  - env: TEST=code-coverage
   - compiler: clang
     env: DOCKER_IMAGE=moveit/moveit:master-source
 
