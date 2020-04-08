@@ -11,14 +11,14 @@
 
 using namespace moveit::task_constructor;
 
-static int mock_id = 0;
+static unsigned int mock_id = 0;
 
 class GeneratorMockup : public Generator
 {
 	int runs = 0;
 
 public:
-	GeneratorMockup(int runs = 0) : Generator("generator " + std::to_string(mock_id++)), runs(runs) {}
+	GeneratorMockup(int runs = 0) : Generator("generator " + std::to_string(++mock_id)), runs(runs) {}
 	bool canCompute() const override { return runs > 0; }
 	void compute() override {
 		if (runs > 0)
@@ -30,10 +30,10 @@ class MonitoringGeneratorMockup : public MonitoringGenerator
 {
 public:
 	MonitoringGeneratorMockup(Stage* monitored)
-	  : MonitoringGenerator("monitoring generator " + std::to_string(mock_id++), monitored) {}
+	  : MonitoringGenerator("monitoring generator " + std::to_string(++mock_id), monitored) {}
 	bool canCompute() const override { return false; }
 	void compute() override {}
-	void onNewSolution(const SolutionBase& s) override {}
+	void onNewSolution(const SolutionBase&) override {}
 };
 
 class PropagatorMockup : public PropagatingEitherWay
@@ -43,12 +43,12 @@ class PropagatorMockup : public PropagatingEitherWay
 
 public:
 	PropagatorMockup(int fw = 0, int bw = 0)
-	  : PropagatingEitherWay("propagate " + std::to_string(mock_id++)), fw_runs(fw), bw_runs(bw) {}
-	void computeForward(const InterfaceState& from) override {
+	  : PropagatingEitherWay("propagate " + std::to_string(++mock_id)), fw_runs(fw), bw_runs(bw) {}
+	void computeForward(const InterfaceState& /* from */) override {
 		if (fw_runs > 0)
 			--fw_runs;
 	}
-	void computeBackward(const InterfaceState& from) override {
+	void computeBackward(const InterfaceState& /* from */) override {
 		if (bw_runs > 0)
 			--bw_runs;
 	}
@@ -58,7 +58,7 @@ class ForwardMockup : public PropagatorMockup
 public:
 	ForwardMockup(int runs = 0) : PropagatorMockup(runs, 0) {
 		restrictDirection(FORWARD);
-		setName("forward " + std::to_string(mock_id++));
+		setName("forward " + std::to_string(mock_id));
 	}
 };
 class BackwardMockup : public PropagatorMockup
@@ -66,7 +66,7 @@ class BackwardMockup : public PropagatorMockup
 public:
 	BackwardMockup(int runs = 0) : PropagatorMockup(0, runs) {
 		restrictDirection(BACKWARD);
-		setName("backward " + std::to_string(mock_id++));
+		setName("backward " + std::to_string(mock_id));
 	}
 };
 
@@ -75,8 +75,8 @@ class ConnectMockup : public Connecting
 	int runs = 0;
 
 public:
-	ConnectMockup(int runs = 0) : Connecting("connect " + std::to_string(mock_id++)), runs(runs) {}
-	void compute(const InterfaceState& from, const InterfaceState& to) override {
+	ConnectMockup(int runs = 0) : Connecting("connect " + std::to_string(++mock_id)), runs(runs) {}
+	void compute(const InterfaceState& /* from */, const InterfaceState& /* to */) override {
 		if (runs > 0)
 			--runs;
 	}
@@ -187,6 +187,11 @@ protected:
 		impl->setPrevEnds(InterfacePtr());
 		pushInterface(start, end);
 	}
+	void initContainer(const std::initializer_list<StageType>& types = {}) {
+		container.clear();
+		mock_id = 0;
+		append(container, types);
+	}
 
 	void validateInit(bool start, bool end, bool expect_failure) { validateInit(start, end, {}, expect_failure); }
 
@@ -213,9 +218,11 @@ protected:
 				return;  // as expected
 			ADD_FAILURE() << "init() didn't recognize a failure condition as expected\n" << container;
 		} catch (const InitStageException& e) {
-			if (expect_failure)
+			if (expect_failure) {
+				std::cout << "Expected " << e << "\n" << container;
 				return;  // as expected
-			ADD_FAILURE() << "unexpected init failure: \n" << e << "\n" << container;
+			}
+			ADD_FAILURE() << "Unexpected " << e << "\n" << container;
 		} catch (const std::exception& e) {
 			ADD_FAILURE() << "unexpected exception thrown:\n" << e.what();
 		} catch (...) {
@@ -293,14 +300,14 @@ TEST_F(SerialTest, insertion_order) {
 #define EXPECT_INIT_FAILURE(start, end, ...)            \
 	{                                                    \
 		SCOPED_TRACE("validateInit({" #__VA_ARGS__ "})"); \
-		container.clear();                                \
+		initContainer();                                  \
 		validateInit(start, end, { __VA_ARGS__ }, true);  \
 	}
 
 #define EXPECT_INIT_SUCCESS(start, end, ...)            \
 	{                                                    \
 		SCOPED_TRACE("validateInit({" #__VA_ARGS__ "})"); \
-		container.clear();                                \
+		initContainer();                                  \
 		validateInit(start, end, { __VA_ARGS__ }, false); \
 	}
 
@@ -316,7 +323,10 @@ TEST_F(SerialTest, init_connecting) {
 	EXPECT_INIT_SUCCESS(false, false, CONN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
 
-	EXPECT_INIT_FAILURE(true, true, CONN);  // external interface says GENERATOR, stage is CONNECTOR
+	// external interface does not match CONNECT
+	EXPECT_INIT_FAILURE(false, true, CONN);
+	EXPECT_INIT_FAILURE(true, false, CONN);
+	EXPECT_INIT_FAILURE(true, true, CONN);
 
 	EXPECT_INIT_FAILURE(false, false, CONN, CONN);  // two connecting stages cannot be connected
 }
@@ -325,7 +335,10 @@ TEST_F(SerialTest, init_generator) {
 	EXPECT_INIT_SUCCESS(true, true, GEN);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(GENERATE));
 
-	EXPECT_INIT_FAILURE(false, false, GEN);  // generator wants to push, but container cannot propagate pushes
+	// external interface does not match GENERATE
+	EXPECT_INIT_FAILURE(false, false, GEN);
+	EXPECT_INIT_FAILURE(false, true, GEN);
+	EXPECT_INIT_FAILURE(true, false, GEN);
 
 	EXPECT_INIT_FAILURE(true, true, GEN, GEN);  // two generator stages cannot be connected
 }
@@ -441,17 +454,17 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_INIT_FAILURE(false, false, ANY, ANY);  // no connect
 }
 
+template <typename T>
+Stage::pointer make(const std::string& name, const std::initializer_list<StageType>& children, int runs = 0) {
+	auto container = new T(name);
+	append(*container, children);
+	return Stage::pointer(container);
+}
+
 TEST_F(SerialTest, nested_interface_detection) {
-	SerialContainer* inner;
-
 	// direction imposed from outer generator
-	container.clear();
-
-	inner = new SerialContainer("inner serial");
-	append(*inner, { ANY, ANY });
-
-	append(container, { GEN, ANY });
-	container.add(Stage::pointer(inner));
+	initContainer({ GEN, ANY });
+	container.add(make<SerialContainer>("inner serial", { ANY, ANY }));
 	append(container, { ANY });
 	{
 		SCOPED_TRACE("GEN - ANY - Serial( ANY - ANY ) - ANY");
@@ -459,24 +472,16 @@ TEST_F(SerialTest, nested_interface_detection) {
 	}
 
 	// direction imposed from inner generator
-	container.clear();
-
-	inner = new SerialContainer("inner serial");
-	append(*inner, { ANY, GEN, ANY });
-
-	append(container, { ANY });
-	container.add(Stage::pointer(inner));
+	initContainer({ ANY });
+	container.add(make<SerialContainer>("inner serial", { ANY, GEN, ANY }));
 	append(container, { ANY });
 	{
 		SCOPED_TRACE("ANY - Serial( ANY - GEN - ANY ) - ANY");
 		validateInit(true, true, false);
 	}
 
-	container.clear();
-	inner = new SerialContainer("inner serial");
-	append(*inner, { GEN, ANY });
-
-	container.insert(Stage::pointer(inner));
+	initContainer();
+	container.add(make<SerialContainer>("inner serial", { GEN, ANY }));
 	append(container, { ANY });
 	{
 		SCOPED_TRACE("Serial( GEN - ANY ) - ANY");
@@ -484,37 +489,25 @@ TEST_F(SerialTest, nested_interface_detection) {
 	}
 
 	// outer and inner generators conflict with each other
-	container.clear();
-
-	inner = new SerialContainer("inner serial");
-	append(*inner, { ANY, GEN, ANY });
-
-	append(container, { GEN, ANY });
-	container.add(Stage::pointer(inner));
+	initContainer({ GEN, ANY });
+	container.add(make<SerialContainer>("inner serial", { ANY, GEN, ANY }));
 	append(container, { ANY });
 	{
 		SCOPED_TRACE("GEN - ANY - Serial( ANY - GEN - ANY ) - ANY");
-		validateInit(true, true, {}, true);  // expected to fail
+		validateInit(true, true, true);  // expected to fail
 	}
 }
 
 TEST_F(SerialTest, nested_parallel) {
-	container.clear();
-
-	append(container, { GEN });
-	auto inner_alt = new Alternatives("inner alternatives");
-	append(*inner_alt, { ANY, ANY });
-	container.add(Stage::pointer(inner_alt));
+	initContainer({ GEN });
+	container.add(make<Alternatives>("inner alternatives", { ANY, ANY }));
 	{
 		SCOPED_TRACE("GEN - Alternatives( ANY - ANY )");
 		validateInit(true, true, false);
 	}
 
-	container.clear();
-	append(container, { GEN });
-	auto inner_fb = new Fallbacks("inner alternatives");
-	append(*inner_fb, { ANY, FW });
-	container.add(Stage::pointer(inner_fb));
+	initContainer({ GEN });
+	container.add(make<Fallbacks>("inner alternatives", { ANY, FW }));
 	{
 		SCOPED_TRACE("GEN - Fallback( ANY - FW )");
 		validateInit(true, true, false);
@@ -576,32 +569,25 @@ TEST_F(ParallelTest, init_mismatching) {
 	EXPECT_INIT_FAILURE(true, false, CONN, GEN);
 	EXPECT_INIT_FAILURE(false, true, CONN, GEN);
 	EXPECT_INIT_FAILURE(true, true, CONN, GEN);
+
+	EXPECT_INIT_FAILURE(false, false, BW, FW);
+	EXPECT_INIT_FAILURE(true, false, BW, FW);
+	EXPECT_INIT_FAILURE(false, true, BW, FW);
+	EXPECT_INIT_FAILURE(true, true, BW, FW);
 }
 
 TEST_F(ParallelTest, init_propagating) {
 	EXPECT_INIT_SUCCESS(false, true, FW, FW);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), PROPAGATE_FORWARDS);
-
-	EXPECT_INIT_SUCCESS(true, false, BW, BW);
-	EXPECT_EQ(container.pimpl()->interfaceFlags(), PROPAGATE_BACKWARDS);
-
-	EXPECT_INIT_FAILURE(false, false, BW, BW);
-	EXPECT_INIT_FAILURE(false, true, BW, BW);
-	EXPECT_INIT_FAILURE(true, true, BW, BW);
-
 	EXPECT_INIT_FAILURE(false, false, FW, FW);
 	EXPECT_INIT_FAILURE(true, false, FW, FW);
 	EXPECT_INIT_FAILURE(true, true, FW, FW);
 
-	// conflicting definitions
-	EXPECT_INIT_FAILURE(true, true, BW, FW);  // no generator
-	EXPECT_INIT_FAILURE(false, false, BW, FW);  // no connect
-
-	// The following two cases could in principle be allowed,
-	// assuming the non-matching children are plain disabled,
-	// but that behavior leads to very frustrating troubleshooting
-	EXPECT_INIT_FAILURE(false, true, BW, FW);
-	EXPECT_INIT_FAILURE(true, false, BW, FW);
+	EXPECT_INIT_SUCCESS(true, false, BW, BW);
+	EXPECT_EQ(container.pimpl()->interfaceFlags(), PROPAGATE_BACKWARDS);
+	EXPECT_INIT_FAILURE(false, false, BW, BW);
+	EXPECT_INIT_FAILURE(false, true, BW, BW);
+	EXPECT_INIT_FAILURE(true, true, BW, BW);
 }
 
 TEST_F(ParallelTest, init_any) {
@@ -611,22 +597,25 @@ TEST_F(ParallelTest, init_any) {
 	// infer container (and children) direction from outside
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
-	auto it = container.pimpl()->children().cbegin();
-	EXPECT_EQ((*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
-	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
+	for (const auto& child : container.pimpl()->children())
+		EXPECT_EQ(child->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS)) << child->name();
 
 	EXPECT_INIT_SUCCESS(true, false, ANY, ANY);
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
-	it = container.pimpl()->children().cbegin();
-	EXPECT_EQ((*it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
-	EXPECT_EQ((*++it)->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
+	for (const auto& child : container.pimpl()->children())
+		EXPECT_EQ(child->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS)) << child->name();
 
 	EXPECT_INIT_SUCCESS(true, false, BW, ANY);  // infer ANY as BACKWARDS
-	EXPECT_EQ((*container.pimpl()->childByIndex(1))->pimpl()->interfaceFlags(), PROPAGATE_BACKWARDS);
+	for (const auto& child : container.pimpl()->children())
+		EXPECT_EQ(child->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS)) << child->name();
+
 	EXPECT_INIT_SUCCESS(false, true, ANY, FW);  // infer ANY as FORWARDS
-	EXPECT_EQ((*container.pimpl()->childByIndex(0))->pimpl()->interfaceFlags(), PROPAGATE_FORWARDS);
+	for (const auto& child : container.pimpl()->children())
+		EXPECT_EQ(child->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS)) << child->name();
+
 	EXPECT_INIT_SUCCESS(false, true, FW, ANY, FW);  // infer ANY as FORWARDS
-	EXPECT_EQ((*container.pimpl()->childByIndex(1))->pimpl()->interfaceFlags(), PROPAGATE_FORWARDS);
+	for (const auto& child : container.pimpl()->children())
+		EXPECT_EQ(child->pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS)) << child->name();
 }
 
 TEST(Task, move) {
