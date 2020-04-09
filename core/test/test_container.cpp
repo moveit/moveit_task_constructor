@@ -343,6 +343,30 @@ TEST_F(SerialTest, init_generator) {
 	EXPECT_INIT_FAILURE(true, true, GEN, GEN);  // two generator stages cannot be connected
 }
 
+TEST_F(SerialTest, keep_configured_propagator_interface) {
+	// configuring an ANY propagator should work
+	EXPECT_INIT_SUCCESS(false, true, ANY);
+	EXPECT_EQ(container.pimpl()->children().front()->pimpl()->requiredInterface(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	// multiple times
+	validateInit(false, true, false);
+	EXPECT_EQ(container.pimpl()->children().front()->pimpl()->requiredInterface(), InterfaceFlags(PROPAGATE_FORWARDS));
+	// and with another interface direction as well
+	validateInit(true, false, false);
+	EXPECT_EQ(container.pimpl()->children().front()->pimpl()->requiredInterface(), InterfaceFlags(PROPAGATE_BACKWARDS));
+
+	// configuring a FORWARD propagator should work in forward direction
+	EXPECT_INIT_SUCCESS(false, true, FW);
+	// but fail when initialized in backward direction
+	validateInit(true, false, true);
+	EXPECT_EQ(container.pimpl()->children().front()->pimpl()->requiredInterface(), InterfaceFlags(PROPAGATE_FORWARDS));
+
+	// same with BACKWARD propagator
+	EXPECT_INIT_SUCCESS(true, false, BW);
+	validateInit(false, true, true);
+	EXPECT_EQ(container.pimpl()->children().front()->pimpl()->requiredInterface(), InterfaceFlags(PROPAGATE_BACKWARDS));
+}
+
 TEST_F(SerialTest, init_forward) {
 	// container interface doesn't match children
 	EXPECT_INIT_FAILURE(false, false, FW);
