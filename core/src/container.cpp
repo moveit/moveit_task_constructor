@@ -91,25 +91,9 @@ bool ContainerBasePrivate::traverseStages(const ContainerBase::StageCallback& pr
 }
 
 void ContainerBasePrivate::validateConnectivity() const {
-	InitStageException errors;
 	// recursively validate all children and accumulate errors
-	for (const auto& child : children()) {
-		try {
-			child->pimpl()->validateConnectivity();
-		} catch (InitStageException& e) {
-			errors.append(e);
-		}
-	}
-	if (errors)
-		throw errors;
-}
-
-template <unsigned int mask>
-void ContainerBasePrivate::mismatchingInterface(InitStageException& errors, const StagePrivate& child) const {
-	boost::format desc("%1% interface of '%2%' (%3%) does not match mine (%4%)");
-	errors.push_back(*me(), (desc % (mask == START_IF_MASK ? "start" : "end") % child.name() %
-	                         flowSymbol<mask>(child.interfaceFlags()) % flowSymbol<mask>(interfaceFlags()))
-	                            .str());
+	for (const auto& child : children())
+		child->pimpl()->validateConnectivity();
 }
 
 bool ContainerBasePrivate::canCompute() const {
@@ -416,10 +400,24 @@ void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2)
 	else if ((flags1 & READS_END) && (flags2 & WRITES_PREV_END))
 		stage2.setPrevEnds(stage1.ends());
 	else {
-		boost::format desc("end interface of '%1%' (%2%) does not match start interface of '%3%' (%4%)");
+		boost::format desc("cannot connect end interface of '%1%' (%2%) to start interface of '%3%' (%4%)");
 		desc % stage1.name() % flowSymbol<END_IF_MASK>(flags1);
 		desc % stage2.name() % flowSymbol<START_IF_MASK>(flags2);
 		throw InitStageException(*me(), desc.str());
+	}
+}
+
+template <unsigned int mask>
+void SerialContainerPrivate::validateInterface(const StagePrivate& child, InterfaceFlags required) const {
+	required = required & mask;
+	if (required == UNKNOWN)
+		return;  // cannot yet validate
+	InterfaceFlags child_interface = child.interfaceFlags() & mask;
+	if (required != child_interface) {
+		boost::format desc("%1% interface (%3%) of '%2%' does not match mine (%4%)");
+		desc % (mask == START_IF_MASK ? "start" : "end") % child.name();
+		desc % flowSymbol<mask>(child_interface) % flowSymbol<mask>(required);
+		throw InitStageException(*me_, desc.str());
 	}
 }
 
@@ -439,6 +437,8 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	first.pimpl()->pruneInterface(accepted & START_IF_MASK);
 	// connect first child's (start) push interface
 	setChildsPushBackwardInterface(first);
+	// validate that first child's and this container's start interfaces match
+	validateInterface<START_IF_MASK>(*first.pimpl(), accepted);
 	// connect first child's (start) pull interface
 	if (const InterfacePtr& target = first.pimpl()->starts())
 		starts_.reset(new Interface(
@@ -454,6 +454,8 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 
 	// connect last child's (end) push interface
 	setChildsPushForwardInterface(last);
+	// validate that last child's and this container's end interfaces match
+	validateInterface<END_IF_MASK>(*last.pimpl(), accepted);
 	// connect last child's (end) pull interface
 	if (const InterfacePtr& target = last.pimpl()->ends())
 		ends_.reset(new Interface(
@@ -463,30 +465,14 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 }
 
 void SerialContainerPrivate::validateConnectivity() const {
-	InitStageException errors;
+	ContainerBasePrivate::validateConnectivity();
 
-	// recursively validate children
-	try {
-		ContainerBasePrivate::validateConnectivity();
-	} catch (InitStageException& e) {
-		errors.append(e);
-	}
-
+	InterfaceFlags mine = interfaceFlags();
 	// check that input / output interface of first / last child matches this' resp. interface
-	if (!children().empty()) {
-		const StagePrivate* start = children().front()->pimpl();
-		const auto my_flags = this->interfaceFlags();
-		auto child_flags = start->interfaceFlags() & START_IF_MASK;
-		if (child_flags != (my_flags & START_IF_MASK))
-			mismatchingInterface<START_IF_MASK>(errors, *start);
+	validateInterface<START_IF_MASK>(*children().front()->pimpl(), mine);
+	validateInterface<END_IF_MASK>(*children().back()->pimpl(), mine);
 
-		const StagePrivate* last = children().back()->pimpl();
-		child_flags = last->interfaceFlags() & END_IF_MASK;
-		if (child_flags != (my_flags & END_IF_MASK))
-			mismatchingInterface<END_IF_MASK>(errors, *last);
-	}
-
-	// validate connectivity of children amongst each other
+	// validate connectivity of children between each other
 	// ContainerBasePrivate::validateConnectivity() ensures that required push interfaces are present,
 	// that is, neighbouring stages have a corresponding pull interface.
 	// Here, it remains to check that - if a child has a pull interface - it's indeed feeded.
@@ -503,16 +489,13 @@ void SerialContainerPrivate::validateConnectivity() const {
 		// start pull interface fed?
 		if (cur != children().begin() &&  // first child has not a previous one
 		    (required & READS_START) && !(*prev)->pimpl()->nextStarts())
-			errors.push_back(**cur, "start interface is not fed");
+			throw InitStageException(**cur, "start interface is not fed");
 
 		// end pull interface fed?
 		if (next != end &&  // last child has not a next one
 		    (required & READS_END) && !(*next)->pimpl()->prevEnds())
-			errors.push_back(**cur, "end interface is not fed");
+			throw InitStageException(**cur, "end interface is not fed");
 	}
-
-	if (errors)
-		throw errors;
 }
 
 bool SerialContainer::canCompute() const {
@@ -575,80 +558,68 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
 		throw InitStageException(*me(), "no children");
 
 	InitStageException exceptions;
-	InterfaceFlags interface;
 
+	bool first = true;
 	for (const Stage::pointer& child : children()) {
 		try {
-			child->pimpl()->pruneInterface(accepted);
+			auto child_impl = child->pimpl();
+			child_impl->pruneInterface(accepted);
+			validateInterfaces(*child_impl, accepted, first);
+			// initialize push connections of children according to their demands
+			setChildsPushForwardInterface(*child);
+			setChildsPushBackwardInterface(*child);
+			first = false;
 		} catch (InitStageException& e) {
 			exceptions.append(e);
 			continue;
 		}
-
-		InterfaceFlags child_interface = child->pimpl()->requiredInterface();
-		if (interface == UNKNOWN)
-			interface = child_interface;
-		else if ((interface & child_interface) != child_interface) {
-			boost::format desc("inferred interface of stage '%1%' (%2%/%3%) does not agree with the inferred interface of "
-			                   "its siblings (%4%/%5%).");
-			desc % child->name();
-			desc % flowSymbol<START_IF_MASK>(child_interface) % flowSymbol<END_IF_MASK>(child_interface);
-			desc % flowSymbol<START_IF_MASK>(interface) % flowSymbol<END_IF_MASK>(interface);
-			exceptions.push_back(*me(), desc.str());
-		}
-	}
-
-	if ((interface & accepted) != accepted) {
-		boost::format desc("required interface (%1%/%2%) does not match children (%3%/%4%).");
-		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
-		desc % flowSymbol<START_IF_MASK>(interface) % flowSymbol<END_IF_MASK>(interface);
-		exceptions.push_back(*me(), desc.str());
 	}
 
 	if (exceptions)
 		throw exceptions;
 
 	// States received by the container need to be copied to all children's pull interfaces.
-	if (interface & READS_START)
+	if (accepted & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
 			this->onNewExternalState(Interface::FORWARD, external, updated);
 		}));
-	if (interface & READS_END)
+	if (accepted & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
 			this->onNewExternalState(Interface::BACKWARD, external, updated);
 		}));
 
-	// initialize push connections of children according to their demands
-	for (const Stage::pointer& stage : children()) {
-		setChildsPushForwardInterface(*stage);
-		setChildsPushBackwardInterface(*stage);
+	required_interface_ = accepted;
+}
+
+void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child, InterfaceFlags& external,
+                                                      bool first) const {
+	const InterfaceFlags child_interface = child.requiredInterface();
+	bool valid = true;
+	for (InterfaceFlags mask : { START_IF_MASK, END_IF_MASK }) {
+		if ((external & mask) == UNKNOWN)
+			external |= child_interface & mask;
+
+		valid = valid & ((external & mask) == (child_interface & mask));
 	}
 
-	required_interface_ = interface;
+	if (!valid) {
+		boost::format desc("interface of '%1%' (%3% %4%) does not match %2% (%5% %6%).");
+		desc % child.name();
+		desc % (first ? "external one" : "other children's");
+		desc % flowSymbol<START_IF_MASK>(child_interface) % flowSymbol<END_IF_MASK>(child_interface);
+		desc % flowSymbol<START_IF_MASK>(external) % flowSymbol<END_IF_MASK>(external);
+		throw InitStageException(*me_, desc.str());
+	}
 }
 
 void ParallelContainerBasePrivate::validateConnectivity() const {
-	InitStageException errors;
 	InterfaceFlags my_interface = interfaceFlags();
 
 	// check that input / output interfaces of all children are handled by my interface
-	for (const auto& child : children()) {
-		InterfaceFlags current = child->pimpl()->interfaceFlags();
-		if ((current & my_interface & START_IF_MASK) != (current & START_IF_MASK))
-			mismatchingInterface<START_IF_MASK>(errors, *child->pimpl());
-		if ((current & my_interface & END_IF_MASK) != (current & END_IF_MASK))
-			mismatchingInterface<END_IF_MASK>(errors, *child->pimpl());
-	}
+	for (const auto& child : children())
+		validateInterfaces(*child->pimpl(), my_interface);
 
-	// recursively validate children
-	try {
-		ContainerBasePrivate::validateConnectivity();
-	} catch (InitStageException& e) {
-		errors.append(e);
-	}
-
-	if (errors)
-		throw errors;
+	ContainerBasePrivate::validateConnectivity();
 }
 
 void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external,

@@ -443,21 +443,6 @@ void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	initInterface(dir);
 }
 
-void PropagatingEitherWayPrivate::validateConnectivity() const {
-	InterfaceFlags actual = interfaceFlags();
-	if (actual == UNKNOWN)
-		throw InitStageException(*me(), "not connected in any direction");
-
-	InitStageException errors;
-	if ((actual & READS_START) && !(actual & WRITES_NEXT_START))
-		errors.push_back(*me(), "Cannot push forwards");
-	if ((actual & READS_END) && !(actual & WRITES_PREV_END))
-		errors.push_back(*me(), "Cannot push backwards");
-
-	if (errors)
-		throw errors;
-}
-
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
 	return required_interface_;
 }

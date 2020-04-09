@@ -222,8 +222,6 @@ public:
 	void initInterface(PropagatingEitherWay::Direction dir);
 	// prune interface to the given propagation direction
 	void pruneInterface(InterfaceFlags accepted) override;
-	// validate that we can propagate in one direction at least
-	void validateConnectivity() const override;
 
 	bool canCompute() const override;
 	void compute() override;

@@ -132,9 +132,6 @@ protected:
 		bool allowed = (required & WRITES_NEXT_START);
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
-	// report error about mismatching interface (start or end as determined by mask)
-	template <unsigned int mask>
-	void mismatchingInterface(InitStageException& errors, const StagePrivate& child) const;
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
@@ -184,6 +181,10 @@ public:
 protected:
 	// connect two neighbors
 	void connect(StagePrivate& stage1, StagePrivate& stage2);
+
+	// validate that child's interface matches mine (considering start or end only as determined by mask)
+	template <unsigned int mask>
+	void validateInterface(const StagePrivate& child, InterfaceFlags required) const;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
@@ -219,6 +220,9 @@ public:
 	void pruneInterface(InterfaceFlags accepted) override;
 
 	void validateConnectivity() const override;
+
+protected:
+	void validateInterfaces(const StagePrivate& child, InterfaceFlags& external, bool first = false) const;
 
 private:
 	/// callback for new externally received states
