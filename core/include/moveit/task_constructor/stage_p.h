@@ -76,11 +76,10 @@ public:
 	 * If the interface is unknown (because it is auto-detected from context), return UNKNOWN */
 	virtual InterfaceFlags requiredInterface() const = 0;
 
-	/** validate correct interface usage and resolve ambiguous interfaces */
-	virtual void pruneInterface(InterfaceFlags accepted);
-
-	void pruneStartInterface(InterfaceFlags start_flags) { pruneInterface(start_flags & START_IF_MASK); }
-	void pruneEndInterface(InterfaceFlags end_flags) { pruneInterface(end_flags & END_IF_MASK); }
+	/** Prune interface to comply with the given propagation direction
+	 *
+	 * PropagatingEitherWay uses this in restrictDirection() */
+	virtual void pruneInterface(InterfaceFlags /* accepted */) {}
 
 	/// validate connectivity of children (after init() was done)
 	virtual void validateConnectivity() const;
@@ -212,10 +211,10 @@ class PropagatingEitherWayPrivate : public ComputeBasePrivate
 	friend class PropagatingEitherWay;
 
 public:
-	PropagatingEitherWay::Direction required_interface_dirs_;
+	PropagatingEitherWay::Direction configured_dir_;
+	InterfaceFlags required_interface_;
 
-	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me,
-	                                   PropagatingEitherWay::Direction required_interface_dirs_,
+	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction configured_dir_,
 	                                   const std::string& name);
 
 	InterfaceFlags requiredInterface() const override;

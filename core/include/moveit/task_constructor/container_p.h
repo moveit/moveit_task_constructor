@@ -105,7 +105,7 @@ public:
 
 	void validateConnectivity() const override;
 
-	// containers derive their required interface from their children
+	// Containers derive their required interface from their children
 	// UNKNOWN until pruneInterface was called
 	InterfaceFlags requiredInterface() const override { return required_interface_; }
 
@@ -124,12 +124,12 @@ protected:
 	// If, during pruneInterface() later, we notice that it's not needed, prune there.
 	inline void setChildsPushBackwardInterface(Stage& child) {
 		InterfaceFlags required = child.pimpl()->requiredInterface();
-		bool allowed = (required & WRITES_PREV_END) || (required == UNKNOWN);
+		bool allowed = (required & WRITES_PREV_END);
 		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
 	inline void setChildsPushForwardInterface(Stage& child) {
 		InterfaceFlags required = child.pimpl()->requiredInterface();
-		bool allowed = (required & WRITES_NEXT_START) || (required == UNKNOWN);
+		bool allowed = (required & WRITES_NEXT_START);
 		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 	// report error about mismatching interface (start or end as determined by mask)
@@ -144,7 +144,7 @@ protected:
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }
 
-	// set by containers in pruneInterface()
+	// set in pruneInterface()
 	InterfaceFlags required_interface_;
 
 private:
@@ -249,7 +249,7 @@ public:
 	typedef std::function<void(SubTrajectory&&)> Spawner;
 	MergerPrivate(Merger* me, const std::string& name);
 
-	InterfaceFlags requiredInterface() const override;
+	void pruneInterface(InterfaceFlags accepted) override;
 
 	void onNewPropagateSolution(const SolutionBase& s);
 	void onNewGeneratorSolution(const SolutionBase& s);

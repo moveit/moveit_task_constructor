@@ -425,51 +425,39 @@ void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2)
 
 // called by parent asking for pruning of this' interface
 void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
+	// we need to have some children to do the actual work
 	if (children().empty())
-		throw InitStageException(*me(), "container is empty");
+		throw InitStageException(*me(), "no children");
 
-	// TODO(v4hn): if ever there is a use case to start pruning
-	// with a specified end interface, this would need to be extended
-	if (!(accepted & (READS_START | WRITES_PREV_END)))
-		return;  // The start interface direction is not decided
+	if (!(accepted & START_IF_MASK))
+		throw InitStageException(*me(), "unknown start interface");
 
 	Stage& first = *children().front();
 	Stage& last = *children().back();
 
-	// sweep through children once: infer and connect interfaces
-	first.pimpl()->pruneStartInterface(accepted);
+	// FIRST child
+	first.pimpl()->pruneInterface(accepted & START_IF_MASK);
+	// connect first child's (start) push interface
 	setChildsPushBackwardInterface(first);
-
-	for (auto it = ++children().begin(), previous_it = children().begin(); it != children().end(); ++it, ++previous_it) {
-		StagePrivate* child_impl = (**it).pimpl();
-		StagePrivate* previous_impl = (**previous_it).pimpl();
-		child_impl->pruneStartInterface(invert(previous_impl->requiredInterface()));
-		connect(*previous_impl, *child_impl);
-	}
-
-	// potentially connect outmost push interface to pending_ buffer
-	setChildsPushForwardInterface(last);
-
-	if ((accepted & END_IF_MASK) != UNKNOWN &&
-	    (last.pimpl()->requiredInterface() & END_IF_MASK) != (accepted & END_IF_MASK)) {
-		boost::format desc(
-		    "requested end interface for container (%1%) does not agree with inferred end interface of last child (%2%)");
-		desc % flowSymbol<END_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(last.pimpl()->requiredInterface());
-		throw InitStageException(*me(), desc.str());
-	}
-
-	// if first/last pull, this needs to pull to and forward to the children
+	// connect first child's (start) pull interface
 	if (const InterfacePtr& target = first.pimpl()->starts())
 		starts_.reset(new Interface(
 		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
-	else
-		starts_.reset();
 
+	// process all children and connect them
+	for (auto it = ++children().begin(), previous_it = children().begin(); it != children().end(); ++it, ++previous_it) {
+		StagePrivate* child_impl = (**it).pimpl();
+		StagePrivate* previous_impl = (**previous_it).pimpl();
+		child_impl->pruneInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
+		connect(*previous_impl, *child_impl);
+	}
+
+	// connect last child's (end) push interface
+	setChildsPushForwardInterface(last);
+	// connect last child's (end) pull interface
 	if (const InterfacePtr& target = last.pimpl()->ends())
 		ends_.reset(new Interface(
 		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
-	else
-		ends_.reset();
 
 	required_interface_ = first.pimpl()->interfaceFlags() & START_IF_MASK | last.pimpl()->interfaceFlags() & END_IF_MASK;
 }
@@ -582,11 +570,9 @@ ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase
   : ContainerBasePrivate(me, name) {}
 
 void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
+	// we need to have some children to do the actual work
 	if (children().empty())
-		throw InitStageException(*me(), "trying to prune empty container");
-
-	if (accepted == UNKNOWN)
-		return;  // nothing to prune
+		throw InitStageException(*me(), "no children");
 
 	InitStageException exceptions;
 	InterfaceFlags interface;
@@ -789,24 +775,14 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
-InterfaceFlags MergerPrivate::requiredInterface() const {
-	if (children().size() < 2)
-		throw InitStageException(*me_, "Need 2 children at least.");
-
-	InterfaceFlags required = ParallelContainerBasePrivate::requiredInterface();
-
-	// all children need to share a common interface
-	for (const Stage::pointer& stage : children()) {
-		InterfaceFlags current = stage->pimpl()->requiredInterface();
-		if (current != required)
-			throw InitStageException(*stage, "Interface does not match the common one.");
-	}
-
-	switch (required) {
+void MergerPrivate::pruneInterface(InterfaceFlags accepted) {
+	ContainerBasePrivate::pruneInterface(accepted);
+	switch (interfaceFlags()) {
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:
 		case UNKNOWN:
 			break;  // these are supported
+
 		case GENERATE:
 			throw InitStageException(*me_, "Generator stages not yet supported.");
 		case CONNECT:
@@ -814,7 +790,6 @@ InterfaceFlags MergerPrivate::requiredInterface() const {
 		default:
 			throw InitStageException(*me_, "Children's interface not supported.");
 	}
-	return required;
 }
 
 Merger::Merger(const std::string& name) : Merger(new MergerPrivate(this, name)) {}

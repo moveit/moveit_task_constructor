@@ -112,28 +112,6 @@ InterfaceFlags StagePrivate::interfaceFlags() const {
 	return f;
 }
 
-void StagePrivate::pruneInterface(InterfaceFlags accepted) {
-	const InterfaceFlags accepted_start{ accepted & START_IF_MASK };
-	const InterfaceFlags accepted_end{ accepted & END_IF_MASK };
-
-	const InterfaceFlags required{ requiredInterface() };
-	const InterfaceFlags required_start{ required & START_IF_MASK };
-	const InterfaceFlags required_end{ required & END_IF_MASK };
-
-	if (required == UNKNOWN)
-		throw std::logic_error("stage type does not specify interface, but also does not override pruneInterface. "
-		                       "Who sets up its interfaces?");
-
-	// only one side needs to be specified but the value has to be compatible with this stage
-	if (((accepted_start != UNKNOWN) && (accepted_start & required_start) != required_start) ||
-	    ((accepted_end != UNKNOWN) && (accepted_end & required_end) != required_end)) {
-		boost::format desc("interface %1% %2% does not match inferred interface %3% %4%");
-		desc % flowSymbol<START_IF_MASK>(required_start) % flowSymbol<END_IF_MASK>(required_end);
-		desc % flowSymbol<START_IF_MASK>(accepted_start) % flowSymbol<END_IF_MASK>(accepted_end);
-		throw InitStageException(*me(), desc.str());
-	}
-}
-
 void StagePrivate::validateConnectivity() const {
 	// check that the required interface is provided
 	InterfaceFlags required = requiredInterface();
@@ -416,47 +394,53 @@ ComputeBase::ComputeBase(ComputeBasePrivate* impl) : Stage(impl) {}
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction dir,
                                                          const std::string& name)
-  : ComputeBasePrivate(me, name), required_interface_dirs_(dir) {}
+  : ComputeBasePrivate(me, name), configured_dir_(dir) {
+	initInterface(dir);
+}
 
 // initialize pull interfaces to match requested propagation directions
 void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction dir) {
-	if (required_interface_dirs_ != PropagatingEitherWay::AUTO && dir != required_interface_dirs_) {
-		auto flow = [](PropagatingEitherWay::Direction dir) -> const char* {
-			switch (dir) {
-				case PropagatingEitherWay::AUTO:
-					return flowSymbol<START_IF_MASK>(InterfaceFlags{ READS_START, WRITES_PREV_END });
-				case PropagatingEitherWay::FORWARD:
-					return flowSymbol<START_IF_MASK>(InterfaceFlags{ READS_START });
-				case PropagatingEitherWay::BACKWARD:
-					return flowSymbol<START_IF_MASK>(InterfaceFlags{ WRITES_PREV_END });
-			}
-		};
-
-		boost::format desc("propagation direction %1% incompatible with inferred direction %2%");
-		desc % flow(required_interface_dirs_) % flow(dir);
-		throw InitStageException(*me(), desc.str());
+	switch (dir) {
+		case PropagatingEitherWay::FORWARD:
+			required_interface_ = PROPAGATE_FORWARDS;
+			if (!starts_)  // keep existing interface if possible
+				starts_.reset(
+				    new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedStarts(it); }));
+			ends_.reset();
+			return;
+		case PropagatingEitherWay::BACKWARD:
+			required_interface_ = PROPAGATE_BACKWARDS;
+			starts_.reset();
+			if (!ends_)  // keep existing interface if possible
+				ends_.reset(new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedEnds(it); }));
+			return;
+		case PropagatingEitherWay::AUTO:
+			required_interface_ = UNKNOWN;
+			return;
 	}
-
-	if (dir == PropagatingEitherWay::FORWARD)
-		starts_.reset(new Interface([this](Interface::iterator it, bool /* updated */) { this->dropFailedStarts(it); }));
-	else if (dir == PropagatingEitherWay::BACKWARD)
-		ends_.reset(new Interface([this](Interface::iterator it, bool /* updated */) { this->dropFailedEnds(it); }));
-
-	required_interface_dirs_ = dir;
 }
 
 void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (accepted == UNKNOWN)
-		throw InitStageException(*me(), "cannot prune to unknown interface");
+		throw InitStageException(*me(), "cannot initialize to unknown interface");
+
+	auto dir = PropagatingEitherWay::AUTO;
 	if ((accepted & START_IF_MASK) == READS_START || (accepted & END_IF_MASK) == WRITES_NEXT_START)
-		initInterface(PropagatingEitherWay::FORWARD);
+		dir = PropagatingEitherWay::FORWARD;
 	else if ((accepted & START_IF_MASK) == WRITES_PREV_END || (accepted & END_IF_MASK) == READS_END)
-		initInterface(PropagatingEitherWay::BACKWARD);
+		dir = PropagatingEitherWay::BACKWARD;
 	else {
-		boost::format desc("propagator cannot act with interfaces start(%1%), end(%2%)");
+		boost::format desc("propagator cannot handle external interface %1% %2%");
 		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
 		throw InitStageException(*me(), desc.str());
 	}
+	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_) {
+		boost::format desc("configured interface (%1% %2%) does not match external one (%3% %4%)");
+		desc % flowSymbol<START_IF_MASK>(required_interface_) % flowSymbol<END_IF_MASK>(required_interface_);
+		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
+		throw InitStageException(*me(), desc.str());
+	}
+	initInterface(dir);
 }
 
 void PropagatingEitherWayPrivate::validateConnectivity() const {
@@ -475,14 +459,7 @@ void PropagatingEitherWayPrivate::validateConnectivity() const {
 }
 
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
-	switch (required_interface_dirs_) {
-		case PropagatingEitherWay::FORWARD:
-			return PROPAGATE_FORWARDS;
-		case PropagatingEitherWay::BACKWARD:
-			return PROPAGATE_BACKWARDS;
-		case PropagatingEitherWay::AUTO:
-			return UNKNOWN;
-	}
+	return required_interface_;
 }
 
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
@@ -540,9 +517,11 @@ PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate* impl) : 
 
 void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir) {
 	auto impl = pimpl();
-	if (impl->required_interface_dirs_ != AUTO)
+	if (impl->configured_dir_ == dir)
+		return;
+	if (impl->configured_dir_ != AUTO)
 		throw std::runtime_error("Cannot change direction after being connected");
-
+	impl->configured_dir_ = dir;
 	impl->initInterface(dir);
 }
 
