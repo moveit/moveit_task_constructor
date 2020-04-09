@@ -52,6 +52,30 @@
 namespace moveit {
 namespace task_constructor {
 
+template <>
+const char* flowSymbol<START_IF_MASK>(InterfaceFlags f) {
+	f = f & START_IF_MASK;
+	if (f == READS_START)
+		return "→";
+	if (f == WRITES_PREV_END)
+		return "←";
+	if (f == UNKNOWN)
+		return "?";
+	return "↔";
+}
+
+template <>
+const char* flowSymbol<END_IF_MASK>(InterfaceFlags f) {
+	f = f & END_IF_MASK;
+	if (f == READS_END)
+		return "←";
+	if (f == WRITES_NEXT_START)
+		return "→";
+	if (f == UNKNOWN)
+		return "?";
+	return "↔";
+}
+
 void InitStageException::push_back(const Stage& stage, const std::string& msg) {
 	errors_.emplace_back(std::make_pair(&stage, msg));
 }
@@ -103,9 +127,9 @@ void StagePrivate::pruneInterface(InterfaceFlags accepted) {
 	// only one side needs to be specified but the value has to be compatible with this stage
 	if (((accepted_start != UNKNOWN) && (accepted_start & required_start) != required_start) ||
 	    ((accepted_end != UNKNOWN) && (accepted_end & required_end) != required_end)) {
-		boost::format desc("this' interface %1%/%2% cannot match inferred interface %3%/%4%");
-		desc % flowSymbol(required_start) % flowSymbol(required_end);
-		desc % flowSymbol(accepted_start) % flowSymbol(accepted_end);
+		boost::format desc("interface %1% %2% does not match inferred interface %3% %4%");
+		desc % flowSymbol<START_IF_MASK>(required_start) % flowSymbol<END_IF_MASK>(required_end);
+		desc % flowSymbol<START_IF_MASK>(accepted_start) % flowSymbol<END_IF_MASK>(accepted_end);
 		throw InitStageException(*me(), desc.str());
 	}
 }
@@ -115,9 +139,9 @@ void StagePrivate::validateConnectivity() const {
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
 	if ((required & actual) != required) {
-		boost::format desc("interface %1%/%2% does not satisfy required interface %3%/%4%");
-		desc % flowSymbol(actual & START_IF_MASK) % flowSymbol(actual & END_IF_MASK);
-		desc % flowSymbol(required & START_IF_MASK) % flowSymbol(required & END_IF_MASK);
+		boost::format desc("interface %1% %2% does not satisfy required interface %3% %4%");
+		desc % flowSymbol<START_IF_MASK>(actual) % flowSymbol<END_IF_MASK>(actual);
+		desc % flowSymbol<START_IF_MASK>(required) % flowSymbol<END_IF_MASK>(required);
 		throw InitStageException(*me(), desc.str());
 	}
 }
@@ -362,43 +386,6 @@ void Stage::reportPropertyError(const Property::error& e) {
 	throw std::runtime_error(oss.str());
 }
 
-template <InterfaceFlag own, InterfaceFlag other>
-const char* direction(const StagePrivate& stage) {
-	InterfaceFlags f = stage.interfaceFlags();
-
-	bool own_if = f & own;
-	bool other_if = f & other;
-	bool reverse = own & START_IF_MASK;
-	if (own_if && other_if)
-		return "<>";
-	if (!own_if && !other_if)
-		return "--";
-	if (other_if ^ reverse)
-		return "->";
-	return "<-";
-}
-
-const char* flowSymbol(InterfaceFlags f) {
-	if (f == UNKNOWN)
-		return "?";  // unknown interface
-
-	// f should have either INPUT or OUTPUT flags set (not both)
-	assert(static_cast<bool>(f & START_IF_MASK) ^ static_cast<bool>(f & END_IF_MASK));
-
-	if (f & START_IF_MASK) {
-		if (f == READS_START)
-			return "↓";
-		if (f == WRITES_PREV_END)
-			return "↑";
-	} else if (f & END_IF_MASK) {
-		if (f == READS_END)
-			return "↑";
-		if (f == WRITES_NEXT_START)
-			return "↓";
-	}
-	return "⇅";
-}
-
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	// starts
 	for (const InterfaceConstPtr& i : { impl.prevEnds(), impl.starts() }) {
@@ -409,8 +396,9 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 			os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(impl) << std::setw(3) << impl.solutions_.size()
-	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(impl);
+	os << " " << flowSymbol<START_IF_MASK>(impl.interfaceFlags() | impl.requiredInterface()) << " ";
+	os << std::setw(3) << impl.solutions_.size();
+	os << " " << flowSymbol<END_IF_MASK>(impl.interfaceFlags() | impl.requiredInterface()) << " ";
 	// ends
 	for (const InterfaceConstPtr& i : { impl.ends(), impl.nextStarts() }) {
 		os << std::setw(3);
@@ -436,11 +424,11 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		auto flow = [](PropagatingEitherWay::Direction dir) -> const char* {
 			switch (dir) {
 				case PropagatingEitherWay::AUTO:
-					return flowSymbol(InterfaceFlags{ READS_START, WRITES_PREV_END });
+					return flowSymbol<START_IF_MASK>(InterfaceFlags{ READS_START, WRITES_PREV_END });
 				case PropagatingEitherWay::FORWARD:
-					return flowSymbol(InterfaceFlags{ READS_START });
+					return flowSymbol<START_IF_MASK>(InterfaceFlags{ READS_START });
 				case PropagatingEitherWay::BACKWARD:
-					return flowSymbol(InterfaceFlags{ WRITES_PREV_END });
+					return flowSymbol<START_IF_MASK>(InterfaceFlags{ WRITES_PREV_END });
 			}
 		};
 
@@ -459,14 +447,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 
 void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
 	if (accepted == UNKNOWN)
-		throw InitStageException(*me(), std::string("cannot prune to ") + flowSymbol(UNKNOWN));
+		throw InitStageException(*me(), "cannot prune to unknown interface");
 	if ((accepted & START_IF_MASK) == READS_START || (accepted & END_IF_MASK) == WRITES_NEXT_START)
 		initInterface(PropagatingEitherWay::FORWARD);
 	else if ((accepted & START_IF_MASK) == WRITES_PREV_END || (accepted & END_IF_MASK) == READS_END)
 		initInterface(PropagatingEitherWay::BACKWARD);
 	else {
 		boost::format desc("propagator cannot act with interfaces start(%1%), end(%2%)");
-		desc % flowSymbol(accepted & START_IF_MASK) % flowSymbol(accepted & END_IF_MASK);
+		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
 		throw InitStageException(*me(), desc.str());
 	}
 }

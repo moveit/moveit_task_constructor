@@ -382,6 +382,8 @@ protected:
 	}
 };
 
-const char* flowSymbol(moveit::task_constructor::InterfaceFlags f);
+/** Return (horizontal) flow symbol for start or end interface (specified by mask) */
+template <unsigned int mask>
+const char* flowSymbol(InterfaceFlags f);
 }
 }

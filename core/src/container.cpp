@@ -104,11 +104,11 @@ void ContainerBasePrivate::validateConnectivity() const {
 		throw errors;
 }
 
-void ContainerBasePrivate::mismatchingInterface(InitStageException& errors, const StagePrivate& child,
-                                                const InterfaceFlags mask) const {
+template <unsigned int mask>
+void ContainerBasePrivate::mismatchingInterface(InitStageException& errors, const StagePrivate& child) const {
 	boost::format desc("%1% interface of '%2%' (%3%) does not match mine (%4%)");
 	errors.push_back(*me(), (desc % (mask == START_IF_MASK ? "start" : "end") % child.name() %
-	                         flowSymbol(child.interfaceFlags() & mask) % flowSymbol(interfaceFlags() & mask))
+	                         flowSymbol<mask>(child.interfaceFlags()) % flowSymbol<mask>(interfaceFlags()))
 	                            .str());
 }
 
@@ -417,8 +417,8 @@ void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2)
 		stage2.setPrevEnds(stage1.ends());
 	else {
 		boost::format desc("end interface of '%1%' (%2%) does not match start interface of '%3%' (%4%)");
-		desc % stage1.name() % flowSymbol(flags1 & END_IF_MASK);
-		desc % stage2.name() % flowSymbol(flags2 & START_IF_MASK);
+		desc % stage1.name() % flowSymbol<END_IF_MASK>(flags1);
+		desc % stage2.name() % flowSymbol<START_IF_MASK>(flags2);
 		throw InitStageException(*me(), desc.str());
 	}
 }
@@ -454,7 +454,7 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	    (last.pimpl()->requiredInterface() & END_IF_MASK) != (accepted & END_IF_MASK)) {
 		boost::format desc(
 		    "requested end interface for container (%1%) does not agree with inferred end interface of last child (%2%)");
-		desc % flowSymbol(accepted & END_IF_MASK) % flowSymbol(last.pimpl()->requiredInterface() & END_IF_MASK);
+		desc % flowSymbol<END_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(last.pimpl()->requiredInterface());
 		throw InitStageException(*me(), desc.str());
 	}
 
@@ -490,12 +490,12 @@ void SerialContainerPrivate::validateConnectivity() const {
 		const auto my_flags = this->interfaceFlags();
 		auto child_flags = start->interfaceFlags() & START_IF_MASK;
 		if (child_flags != (my_flags & START_IF_MASK))
-			mismatchingInterface(errors, *start, START_IF_MASK);
+			mismatchingInterface<START_IF_MASK>(errors, *start);
 
 		const StagePrivate* last = children().back()->pimpl();
 		child_flags = last->interfaceFlags() & END_IF_MASK;
 		if (child_flags != (my_flags & END_IF_MASK))
-			mismatchingInterface(errors, *last, END_IF_MASK);
+			mismatchingInterface<END_IF_MASK>(errors, *last);
 	}
 
 	// validate connectivity of children amongst each other
@@ -606,16 +606,16 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
 			boost::format desc("inferred interface of stage '%1%' (%2%/%3%) does not agree with the inferred interface of "
 			                   "its siblings (%4%/%5%).");
 			desc % child->name();
-			desc % flowSymbol(child_interface & START_IF_MASK) % flowSymbol(child_interface & END_IF_MASK);
-			desc % flowSymbol(interface & START_IF_MASK) % flowSymbol(interface & END_IF_MASK);
+			desc % flowSymbol<START_IF_MASK>(child_interface) % flowSymbol<END_IF_MASK>(child_interface);
+			desc % flowSymbol<START_IF_MASK>(interface) % flowSymbol<END_IF_MASK>(interface);
 			exceptions.push_back(*me(), desc.str());
 		}
 	}
 
 	if ((interface & accepted) != accepted) {
 		boost::format desc("required interface (%1%/%2%) does not match children (%3%/%4%).");
-		desc % flowSymbol(accepted & START_IF_MASK) % flowSymbol(accepted & END_IF_MASK);
-		desc % flowSymbol(interface & START_IF_MASK) % flowSymbol(interface & END_IF_MASK);
+		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
+		desc % flowSymbol<START_IF_MASK>(interface) % flowSymbol<END_IF_MASK>(interface);
 		exceptions.push_back(*me(), desc.str());
 	}
 
@@ -649,9 +649,9 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 	for (const auto& child : children()) {
 		InterfaceFlags current = child->pimpl()->interfaceFlags();
 		if ((current & my_interface & START_IF_MASK) != (current & START_IF_MASK))
-			mismatchingInterface(errors, *child->pimpl(), START_IF_MASK);
+			mismatchingInterface<START_IF_MASK>(errors, *child->pimpl());
 		if ((current & my_interface & END_IF_MASK) != (current & END_IF_MASK))
-			mismatchingInterface(errors, *child->pimpl(), END_IF_MASK);
+			mismatchingInterface<END_IF_MASK>(errors, *child->pimpl());
 	}
 
 	// recursively validate children
