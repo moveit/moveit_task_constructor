@@ -164,7 +164,7 @@ protected:
 	std::string name_;
 	PropertyMap properties_;
 
-	// the stage's pull interfaces, created as required
+	// pull interfaces, created by the stage as required
 	InterfacePtr starts_;
 	InterfacePtr ends_;
 
@@ -184,6 +184,8 @@ private:
 	ContainerBase* parent_;  // owning parent
 	container_type::iterator it_;  // iterator into parent's children_ list referring to this
 
+	// push interfaces, assigned by the parent container
+	// linking to previous/next sibling's pull interfaces
 	InterfaceWeakPtr prev_ends_;  // interface to be used for sendBackward()
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 

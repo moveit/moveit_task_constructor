@@ -125,8 +125,6 @@ QVariant BaseTaskModel::flowIcon(moveit::task_constructor::InterfaceFlags f) {
 	static const QIcon FORWARD_ICON = icons::FORWARD.icon();
 	static const QIcon BACKWARD_ICON = icons::BACKWARD.icon();
 	static const QIcon GENERATE_ICON = icons::GENERATE.icon();
-	// might be needed for graphical setup of tasks
-	//	static const QIcon BOTHWAY_ICON = icons::BOTHWAY.icon();
 
 	if (f == InterfaceFlags(CONNECT))
 		return CONNECT_ICON;

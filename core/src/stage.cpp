@@ -563,7 +563,7 @@ PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward* me, con
 PropagatingForward::PropagatingForward(const std::string& name)
   : PropagatingEitherWay(new PropagatingForwardPrivate(this, name)) {}
 
-void PropagatingForward::computeBackward(const InterfaceState& to) {
+void PropagatingForward::computeBackward(const InterfaceState& /* to */) {
 	assert(false);  // This should never be called
 }
 
@@ -576,7 +576,7 @@ PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward* me, 
 PropagatingBackward::PropagatingBackward(const std::string& name)
   : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name)) {}
 
-void PropagatingBackward::computeForward(const InterfaceState& from) {
+void PropagatingBackward::computeForward(const InterfaceState& /* from */) {
 	assert(false);  // This should never be called
 }
 
