@@ -433,35 +433,50 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 	Stage& first = *children().front();
 	Stage& last = *children().back();
 
-	// FIRST child
-	first.pimpl()->resolveInterface(expected & START_IF_MASK);
-	// connect first child's (start) push interface
-	setChildsPushBackwardInterface(first.pimpl());
-	// validate that first child's and this container's start interfaces match
-	validateInterface<START_IF_MASK>(*first.pimpl(), expected);
-	// connect first child's (start) pull interface
-	if (const InterfacePtr& target = first.pimpl()->starts())
-		starts_.reset(new Interface(
-		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	InitStageException exceptions;
+
+	try {  // FIRST child
+		first.pimpl()->resolveInterface(expected & START_IF_MASK);
+		// connect first child's (start) push interface
+		setChildsPushBackwardInterface(first.pimpl());
+		// validate that first child's and this container's start interfaces match
+		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
+		// connect first child's (start) pull interface
+		if (const InterfacePtr& target = first.pimpl()->starts())
+			starts_.reset(new Interface(
+			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	} catch (InitStageException& e) {
+		exceptions.append(e);
+	}
 
 	// process all children and connect them
 	for (auto it = ++children().begin(), previous_it = children().begin(); it != children().end(); ++it, ++previous_it) {
-		StagePrivate* child_impl = (**it).pimpl();
-		StagePrivate* previous_impl = (**previous_it).pimpl();
-		child_impl->resolveInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
-		connect(*previous_impl, *child_impl);
+		try {
+			StagePrivate* child_impl = (**it).pimpl();
+			StagePrivate* previous_impl = (**previous_it).pimpl();
+			child_impl->resolveInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
+			connect(*previous_impl, *child_impl);
+		} catch (InitStageException& e) {
+			exceptions.append(e);
+		}
 	}
 
-	// connect last child's (end) push interface
-	setChildsPushForwardInterface(last.pimpl());
-	// validate that last child's and this container's end interfaces match
-	validateInterface<END_IF_MASK>(*last.pimpl(), expected);
-	// connect last child's (end) pull interface
-	if (const InterfacePtr& target = last.pimpl()->ends())
-		ends_.reset(new Interface(
-		    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	try {  // connect last child's (end) push interface
+		setChildsPushForwardInterface(last.pimpl());
+		// validate that last child's and this container's end interfaces match
+		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
+		// connect last child's (end) pull interface
+		if (const InterfacePtr& target = last.pimpl()->ends())
+			ends_.reset(new Interface(
+			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+	} catch (InitStageException& e) {
+		exceptions.append(e);
+	}
 
 	required_interface_ = first.pimpl()->interfaceFlags() & START_IF_MASK | last.pimpl()->interfaceFlags() & END_IF_MASK;
+
+	if (exceptions)
+		throw exceptions;
 }
 
 void SerialContainerPrivate::validateConnectivity() const {
