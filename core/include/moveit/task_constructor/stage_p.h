@@ -71,15 +71,11 @@ public:
 	/// actually configured interface of this stage (only valid after init())
 	InterfaceFlags interfaceFlags() const;
 
-	/** Interface required by this stage
-	 *
-	 * If the interface is unknown (because it is auto-detected from context), return 0 */
+	/// Retrieve interface required by this stage, UNKNOWN if auto-detected from context
 	virtual InterfaceFlags requiredInterface() const = 0;
 
-	/** Prune interface to comply with the given propagation direction
-	 *
-	 * PropagatingEitherWay uses this in restrictDirection() */
-	virtual void pruneInterface(InterfaceFlags accepted) {}
+	/// Resolve interface/propagation direction to comply with the given external interface
+	virtual void resolveInterface(InterfaceFlags /* expected */) {}
 
 	/// validate connectivity of children (after init() was done)
 	virtual void validateConnectivity() const;
@@ -163,6 +159,7 @@ protected:
 	std::string name_;
 	PropertyMap properties_;
 
+	// pull interfaces, created by the stage as required
 	InterfacePtr starts_;
 	InterfacePtr ends_;
 
@@ -182,6 +179,8 @@ private:
 	ContainerBase* parent_;  // owning parent
 	container_type::iterator it_;  // iterator into parent's children_ list referring to this
 
+	// push interfaces, assigned by the parent container
+	// linking to previous/next sibling's pull interfaces
 	InterfaceWeakPtr prev_ends_;  // interface to be used for sendBackward()
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 
@@ -208,19 +207,17 @@ class PropagatingEitherWayPrivate : public ComputeBasePrivate
 	friend class PropagatingEitherWay;
 
 public:
-	PropagatingEitherWay::Direction required_interface_dirs_;
+	PropagatingEitherWay::Direction configured_dir_;
+	InterfaceFlags required_interface_;
 
-	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me,
-	                                   PropagatingEitherWay::Direction required_interface_dirs_,
+	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction configured_dir_,
 	                                   const std::string& name);
 
 	InterfaceFlags requiredInterface() const override;
 	// initialize pull interfaces for given propagation directions
 	void initInterface(PropagatingEitherWay::Direction dir);
-	// prune interface to the given propagation direction
-	void pruneInterface(InterfaceFlags accepted) override;
-	// validate that we can propagate in one direction at least
-	void validateConnectivity() const override;
+	// resolve interface to the given propagation direction
+	void resolveInterface(InterfaceFlags expected) override;
 
 	bool canCompute() const override;
 	void compute() override;

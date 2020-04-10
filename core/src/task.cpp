@@ -261,9 +261,7 @@ void Task::init() {
 	// and *afterwards* initialize all children recursively
 	stages()->init(impl->robot_model_);
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
-	stages()->pimpl()->pruneInterface(InterfaceFlags({ GENERATE }));
-	// and *finally* validate connectivity
-	stages()->pimpl()->validateConnectivity();
+	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
 	// provide introspection instance to all stages
 	impl->setIntrospection(impl->introspection_.get());

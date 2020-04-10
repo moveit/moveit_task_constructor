@@ -105,6 +105,10 @@ public:
 
 	void validateConnectivity() const override;
 
+	// Containers derive their required interface from their children
+	// UNKNOWN until resolveInterface was called
+	InterfaceFlags requiredInterface() const override { return required_interface_; }
+
 	// forward these methods to the public interface for containers
 	bool canCompute() const override;
 	void compute() override;
@@ -115,21 +119,17 @@ public:
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
 
-	// Set child's push interfaces: allow pushing if child requires it or
-	// if the interface is unknown: in this case greedily assume a push interface.
-	// If, during pruneInterface() later, we notice that it's not needed, prune there.
-	inline void setChildsPushBackwardInterface(Stage& child) {
-		InterfaceFlags required = child.pimpl()->requiredInterface();
-		bool allowed = (required & WRITES_PREV_END) || (required == UNKNOWN);
-		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
+	// Set child's push interfaces: allow pushing if child requires it.
+	inline void setChildsPushBackwardInterface(StagePrivate* child) {
+		InterfaceFlags required = child->requiredInterface();
+		bool allowed = (required & WRITES_PREV_END);
+		child->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
-	inline void setChildsPushForwardInterface(Stage& child) {
-		InterfaceFlags required = child.pimpl()->requiredInterface();
-		bool allowed = (required & WRITES_NEXT_START) || (required == UNKNOWN);
-		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
+	inline void setChildsPushForwardInterface(StagePrivate* child) {
+		InterfaceFlags required = child->requiredInterface();
+		bool allowed = (required & WRITES_NEXT_START);
+		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
-	// report error about mismatching interface (start or end as determined by mask)
-	void mismatchingInterface(InitStageException& errors, const StagePrivate& child, const InterfaceFlags mask) const;
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
@@ -138,6 +138,9 @@ protected:
 
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }
+
+	// set in resolveInterface()
+	InterfaceFlags required_interface_;
 
 private:
 	container_type children_;
@@ -166,28 +169,20 @@ class SerialContainerPrivate : public ContainerBasePrivate
 public:
 	SerialContainerPrivate(SerialContainer* me, const std::string& name);
 
-	// containers derive their required interface from their children
-	InterfaceFlags requiredInterface() const override;
-
 	// called by parent asking for pruning of this' interface
-	void pruneInterface(InterfaceFlags accepted) override;
+	void resolveInterface(InterfaceFlags expected) override;
 	// validate connectivity of chain
 	void validateConnectivity() const override;
 
-private:
-	// connect cur stage to its predecessor and successor
-	bool connect(container_type::const_iterator cur);
+	void reset();
 
-	// called by init() to prune interfaces for children in range [first, last)
-	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end);
-	// prune interface for children in range [first, last) to given direction
-	void pruneInterfaces(container_type::const_iterator first, container_type::const_iterator end,
-	                     InterfaceFlags accepted);
-	// store first/last child's interface as required for this container
-	void storeRequiredInterface(container_type::const_iterator first, container_type::const_iterator end);
+protected:
+	// connect two neighbors
+	void connect(StagePrivate& stage1, StagePrivate& stage2);
 
-private:
-	InterfaceFlags required_interface_;
+	// validate that child's interface matches mine (considering start or end only as determined by mask)
+	template <unsigned int mask>
+	void validateInterface(const StagePrivate& child, InterfaceFlags required) const;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 
@@ -219,13 +214,13 @@ class ParallelContainerBasePrivate : public ContainerBasePrivate
 public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name);
 
-	// containers derive their required interface from their children
-	InterfaceFlags requiredInterface() const override;
-
 	// called by parent asking for pruning of this' interface
-	void pruneInterface(InterfaceFlags accepted) override;
+	void resolveInterface(InterfaceFlags expected) override;
 
 	void validateConnectivity() const override;
+
+protected:
+	void validateInterfaces(const StagePrivate& child, InterfaceFlags& external, bool first = false) const;
 
 private:
 	/// callback for new externally received states
@@ -256,7 +251,7 @@ public:
 	typedef std::function<void(SubTrajectory&&)> Spawner;
 	MergerPrivate(Merger* me, const std::string& name);
 
-	InterfaceFlags requiredInterface() const override;
+	void resolveInterface(InterfaceFlags expected) override;
 
 	void onNewPropagateSolution(const SolutionBase& s);
 	void onNewGeneratorSolution(const SolutionBase& s);

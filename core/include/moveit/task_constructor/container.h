@@ -91,8 +91,6 @@ public:
 	PRIVATE_CLASS(SerialContainer)
 	SerialContainer(const std::string& name = "serial container");
 
-	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
 	bool canCompute() const override;
 	void compute() override;
 
@@ -129,8 +127,6 @@ class ParallelContainerBase : public ContainerBase
 public:
 	PRIVATE_CLASS(ParallelContainerBase)
 	ParallelContainerBase(const std::string& name = "parallel container");
-
-	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);
