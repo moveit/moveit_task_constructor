@@ -436,7 +436,7 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	// FIRST child
 	first.pimpl()->pruneInterface(accepted & START_IF_MASK);
 	// connect first child's (start) push interface
-	setChildsPushBackwardInterface(first);
+	setChildsPushBackwardInterface(first.pimpl());
 	// validate that first child's and this container's start interfaces match
 	validateInterface<START_IF_MASK>(*first.pimpl(), accepted);
 	// connect first child's (start) pull interface
@@ -453,7 +453,7 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	}
 
 	// connect last child's (end) push interface
-	setChildsPushForwardInterface(last);
+	setChildsPushForwardInterface(last.pimpl());
 	// validate that last child's and this container's end interfaces match
 	validateInterface<END_IF_MASK>(*last.pimpl(), accepted);
 	// connect last child's (end) pull interface
@@ -566,8 +566,8 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
 			child_impl->pruneInterface(accepted);
 			validateInterfaces(*child_impl, accepted, first);
 			// initialize push connections of children according to their demands
-			setChildsPushForwardInterface(*child);
-			setChildsPushBackwardInterface(*child);
+			setChildsPushForwardInterface(child_impl);
+			setChildsPushBackwardInterface(child_impl);
 			first = false;
 		} catch (InitStageException& e) {
 			exceptions.append(e);

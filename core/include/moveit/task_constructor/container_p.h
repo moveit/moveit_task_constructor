@@ -119,18 +119,16 @@ public:
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
 
-	// Set child's push interfaces: allow pushing if child requires it or
-	// if the interface is unknown: in this case greedily assume a push interface.
-	// If, during pruneInterface() later, we notice that it's not needed, prune there.
-	inline void setChildsPushBackwardInterface(Stage& child) {
-		InterfaceFlags required = child.pimpl()->requiredInterface();
+	// Set child's push interfaces: allow pushing if child requires it.
+	inline void setChildsPushBackwardInterface(StagePrivate* child) {
+		InterfaceFlags required = child->requiredInterface();
 		bool allowed = (required & WRITES_PREV_END);
-		child.pimpl()->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
+		child->setPrevEnds(allowed ? pending_backward_ : InterfacePtr());
 	}
-	inline void setChildsPushForwardInterface(Stage& child) {
-		InterfaceFlags required = child.pimpl()->requiredInterface();
+	inline void setChildsPushForwardInterface(StagePrivate* child) {
+		InterfaceFlags required = child->requiredInterface();
 		bool allowed = (required & WRITES_NEXT_START);
-		child.pimpl()->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
+		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
 	/// copy external_state to a child's interface and remember the link in internal_to map
