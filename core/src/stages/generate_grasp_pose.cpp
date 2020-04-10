@@ -54,7 +54,7 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(nam
 	p.declare<std::string>("object");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
 
-	p.declare<boost::any>("pregrasp", "pregrasp posture");
+	p.declare<boost::any>("pregrasp", std::string(""), "pregrasp posture");
 	p.declare<boost::any>("grasp", "grasp posture");
 }
 
@@ -79,12 +79,15 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+		// if pregrasp pose is defined, check if it's valid
+		const std::string& pregrasp_name = props.get<std::string>("pregrasp");
+		if (!pregrasp_name.empty()) {
+			// check availability of eef pose
+			std::map<std::string, double> m;
+			const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+			if (!jmg->getVariableDefaultPositions(pregrasp_name, m))
+				errors.push_back(*this, "unknown end effector pose: " + pregrasp_name);
+		}
 	}
 
 	if (errors)
@@ -122,8 +125,11 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	// Apply pregrasp pose if defined
+	if (!props.get<std::string>("pregrasp").empty()) {
+		robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+		robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	}
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
