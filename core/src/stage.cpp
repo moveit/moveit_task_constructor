@@ -117,7 +117,7 @@ void StagePrivate::validateConnectivity() const {
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
 	if ((required & actual) != required) {
-		boost::format desc("interface %1% %2% does not satisfy required interface %3% %4%");
+		boost::format desc("actual interface %1% %2% does not match required interface %3% %4%");
 		desc % flowSymbol<START_IF_MASK>(actual) % flowSymbol<END_IF_MASK>(actual);
 		desc % flowSymbol<START_IF_MASK>(required) % flowSymbol<END_IF_MASK>(required);
 		throw InitStageException(*me(), desc.str());
@@ -420,24 +420,24 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 	}
 }
 
-void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
-	if (accepted == UNKNOWN)
+void PropagatingEitherWayPrivate::resolveInterface(InterfaceFlags expected) {
+	if (expected == UNKNOWN)
 		throw InitStageException(*me(), "cannot initialize to unknown interface");
 
 	auto dir = PropagatingEitherWay::AUTO;
-	if ((accepted & START_IF_MASK) == READS_START || (accepted & END_IF_MASK) == WRITES_NEXT_START)
+	if ((expected & START_IF_MASK) == READS_START || (expected & END_IF_MASK) == WRITES_NEXT_START)
 		dir = PropagatingEitherWay::FORWARD;
-	else if ((accepted & START_IF_MASK) == WRITES_PREV_END || (accepted & END_IF_MASK) == READS_END)
+	else if ((expected & START_IF_MASK) == WRITES_PREV_END || (expected & END_IF_MASK) == READS_END)
 		dir = PropagatingEitherWay::BACKWARD;
 	else {
-		boost::format desc("propagator cannot handle external interface %1% %2%");
-		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
+		boost::format desc("propagator cannot satisfy expected interface %1% %2%");
+		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
 		throw InitStageException(*me(), desc.str());
 	}
 	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_) {
-		boost::format desc("configured interface (%1% %2%) does not match external one (%3% %4%)");
+		boost::format desc("configured interface (%1% %2%) does not match expected one (%3% %4%)");
 		desc % flowSymbol<START_IF_MASK>(required_interface_) % flowSymbol<END_IF_MASK>(required_interface_);
-		desc % flowSymbol<START_IF_MASK>(accepted) % flowSymbol<END_IF_MASK>(accepted);
+		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
 		throw InitStageException(*me(), desc.str());
 	}
 	initInterface(dir);

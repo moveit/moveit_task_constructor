@@ -71,15 +71,11 @@ public:
 	/// actually configured interface of this stage (only valid after init())
 	InterfaceFlags interfaceFlags() const;
 
-	/** Interface required by this stage
-	 *
-	 * If the interface is unknown (because it is auto-detected from context), return UNKNOWN */
+	/// Retrieve interface required by this stage, UNKNOWN if auto-detected from context
 	virtual InterfaceFlags requiredInterface() const = 0;
 
-	/** Prune interface to comply with the given propagation direction
-	 *
-	 * PropagatingEitherWay uses this in restrictDirection() */
-	virtual void pruneInterface(InterfaceFlags /* accepted */) {}
+	/// Resolve interface/propagation direction to comply with the given external interface
+	virtual void resolveInterface(InterfaceFlags /* expected */) {}
 
 	/// validate connectivity of children (after init() was done)
 	virtual void validateConnectivity() const;
@@ -220,8 +216,8 @@ public:
 	InterfaceFlags requiredInterface() const override;
 	// initialize pull interfaces for given propagation directions
 	void initInterface(PropagatingEitherWay::Direction dir);
-	// prune interface to the given propagation direction
-	void pruneInterface(InterfaceFlags accepted) override;
+	// resolve interface to the given propagation direction
+	void resolveInterface(InterfaceFlags expected) override;
 
 	bool canCompute() const override;
 	void compute() override;

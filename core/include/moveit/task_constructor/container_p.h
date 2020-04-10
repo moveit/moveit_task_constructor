@@ -106,7 +106,7 @@ public:
 	void validateConnectivity() const override;
 
 	// Containers derive their required interface from their children
-	// UNKNOWN until pruneInterface was called
+	// UNKNOWN until resolveInterface was called
 	InterfaceFlags requiredInterface() const override { return required_interface_; }
 
 	// forward these methods to the public interface for containers
@@ -139,7 +139,7 @@ protected:
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }
 
-	// set in pruneInterface()
+	// set in resolveInterface()
 	InterfaceFlags required_interface_;
 
 private:
@@ -170,7 +170,7 @@ public:
 	SerialContainerPrivate(SerialContainer* me, const std::string& name);
 
 	// called by parent asking for pruning of this' interface
-	void pruneInterface(InterfaceFlags accepted) override;
+	void resolveInterface(InterfaceFlags expected) override;
 	// validate connectivity of chain
 	void validateConnectivity() const override;
 
@@ -215,7 +215,7 @@ public:
 	ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name);
 
 	// called by parent asking for pruning of this' interface
-	void pruneInterface(InterfaceFlags accepted) override;
+	void resolveInterface(InterfaceFlags expected) override;
 
 	void validateConnectivity() const override;
 
@@ -251,7 +251,7 @@ public:
 	typedef std::function<void(SubTrajectory&&)> Spawner;
 	MergerPrivate(Merger* me, const std::string& name);
 
-	void pruneInterface(InterfaceFlags accepted) override;
+	void resolveInterface(InterfaceFlags expected) override;
 
 	void onNewPropagateSolution(const SolutionBase& s);
 	void onNewGeneratorSolution(const SolutionBase& s);

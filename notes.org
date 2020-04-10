@@ -1,0 +1,53 @@
+* scheduling
+There are 2 levels of scheduling:
+- choosing which state or state pair should be scheduled for execution
+- choosing which stage should be scheduled for execution
+
+Main goal is to find small-cost solutions fast.
+To this end, we need to find a solution at all, i.e. connect start to end.
+Second, we prefer small-cost solutions.
+   
+First sort by length of trajectory, second by sum of trajectory costs.
+
+** approach
+- scheduling priority for stage (default / assigned by user)
+- fallback: sort stages by priority
+- evaluate success rate
+- expected costs of solutions
+- expected computing time
+- Container::schedule() -> return ordered list of stages to execute
+
+* containers / interfaces
+Basic stages have unique solutions connecting start-end.
+Containers allow for several solutions connecting start-end:
+- serial: several pathes might exist
+- parallel: inherent
+
+* notation
+push vs pull connections
+
+* TODO
+** modify-ps
+- std::function API
+- replace templates with sfniae
+
+** eef collision
+- requires modification in MoveIt
+- disable warnings vs. only consider relevant links (separate function?)
+
+** MoveTo / MoveRelative
+- interface: pass goal constraints
+- fill goal constraints during setup?
+  requires transforms to be specified relative to current robot pose
+
+** properties
+- fix plan_pick_pa10: forward grasp property
+- global type registry for serialization/deserialization functions
+- use bits as enums to allow for configureInitFrom(PARENT | INTERFACE)
+** incremental GraspPoseGenerator
+in pending_ list, store the current angular value
+** TaskModels
+- move scene_, display_context_ to BaseTaskModel
+- use registered property creators for RemoteTaskModel too
+  - deserialize property
+  - call creator function

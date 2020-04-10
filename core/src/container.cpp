@@ -422,23 +422,23 @@ void SerialContainerPrivate::validateInterface(const StagePrivate& child, Interf
 }
 
 // called by parent asking for pruning of this' interface
-void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
+void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 	// we need to have some children to do the actual work
 	if (children().empty())
 		throw InitStageException(*me(), "no children");
 
-	if (!(accepted & START_IF_MASK))
+	if (!(expected & START_IF_MASK))
 		throw InitStageException(*me(), "unknown start interface");
 
 	Stage& first = *children().front();
 	Stage& last = *children().back();
 
 	// FIRST child
-	first.pimpl()->pruneInterface(accepted & START_IF_MASK);
+	first.pimpl()->resolveInterface(expected & START_IF_MASK);
 	// connect first child's (start) push interface
 	setChildsPushBackwardInterface(first.pimpl());
 	// validate that first child's and this container's start interfaces match
-	validateInterface<START_IF_MASK>(*first.pimpl(), accepted);
+	validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 	// connect first child's (start) pull interface
 	if (const InterfacePtr& target = first.pimpl()->starts())
 		starts_.reset(new Interface(
@@ -448,14 +448,14 @@ void SerialContainerPrivate::pruneInterface(InterfaceFlags accepted) {
 	for (auto it = ++children().begin(), previous_it = children().begin(); it != children().end(); ++it, ++previous_it) {
 		StagePrivate* child_impl = (**it).pimpl();
 		StagePrivate* previous_impl = (**previous_it).pimpl();
-		child_impl->pruneInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
+		child_impl->resolveInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
 		connect(*previous_impl, *child_impl);
 	}
 
 	// connect last child's (end) push interface
 	setChildsPushForwardInterface(last.pimpl());
 	// validate that last child's and this container's end interfaces match
-	validateInterface<END_IF_MASK>(*last.pimpl(), accepted);
+	validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 	// connect last child's (end) pull interface
 	if (const InterfacePtr& target = last.pimpl()->ends())
 		ends_.reset(new Interface(
@@ -552,7 +552,7 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& soluti
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
-void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
+void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	// we need to have some children to do the actual work
 	if (children().empty())
 		throw InitStageException(*me(), "no children");
@@ -563,8 +563,8 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
 	for (const Stage::pointer& child : children()) {
 		try {
 			auto child_impl = child->pimpl();
-			child_impl->pruneInterface(accepted);
-			validateInterfaces(*child_impl, accepted, first);
+			child_impl->resolveInterface(expected);
+			validateInterfaces(*child_impl, expected, first);
 			// initialize push connections of children according to their demands
 			setChildsPushForwardInterface(child_impl);
 			setChildsPushBackwardInterface(child_impl);
@@ -579,16 +579,16 @@ void ParallelContainerBasePrivate::pruneInterface(InterfaceFlags accepted) {
 		throw exceptions;
 
 	// States received by the container need to be copied to all children's pull interfaces.
-	if (accepted & READS_START)
+	if (expected & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
 			this->onNewExternalState(Interface::FORWARD, external, updated);
 		}));
-	if (accepted & READS_END)
+	if (expected & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
 			this->onNewExternalState(Interface::BACKWARD, external, updated);
 		}));
 
-	required_interface_ = accepted;
+	required_interface_ = expected;
 }
 
 void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child, InterfaceFlags& external,
@@ -746,8 +746,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
-void MergerPrivate::pruneInterface(InterfaceFlags accepted) {
-	ContainerBasePrivate::pruneInterface(accepted);
+void MergerPrivate::resolveInterface(InterfaceFlags expected) {
+	ContainerBasePrivate::resolveInterface(expected);
 	switch (interfaceFlags()) {
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:

@@ -200,19 +200,19 @@ protected:
 		append(container, types);
 		try {
 			container.init(robot_model);
-			// prune interfaces based on provided external interface (start, end)
-			InterfaceFlags accepted;
+			// resolve interfaces based on provided external interface (start, end)
+			InterfaceFlags expected;
 			if (start)
-				accepted |= WRITES_PREV_END;
+				expected |= WRITES_PREV_END;
 			else
-				accepted |= READS_START;
+				expected |= READS_START;
 
 			if (end)
-				accepted |= WRITES_NEXT_START;
+				expected |= WRITES_NEXT_START;
 			else
-				accepted |= READS_END;
+				expected |= READS_END;
 
-			container.pimpl()->pruneInterface(accepted);
+			container.pimpl()->resolveInterface(expected);
 			container.pimpl()->validateConnectivity();
 			if (!expect_failure)
 				return;  // as expected
@@ -456,9 +456,9 @@ TEST_F(SerialTest, interface_detection) {
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(CONNECT));
 
 	// derive propagation direction from outer interface
-	EXPECT_INIT_SUCCESS(false, true, ANY);  // should be pruned to FW
+	EXPECT_INIT_SUCCESS(false, true, ANY);  // should be resolved to FW
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_FORWARDS));
-	EXPECT_INIT_SUCCESS(true, false, ANY);  // should be pruned to BW
+	EXPECT_INIT_SUCCESS(true, false, ANY);  // should be resolved to BW
 	EXPECT_EQ(container.pimpl()->interfaceFlags(), InterfaceFlags(PROPAGATE_BACKWARDS));
 
 	EXPECT_INIT_SUCCESS(false, true, ANY, ANY);  // -> ->
