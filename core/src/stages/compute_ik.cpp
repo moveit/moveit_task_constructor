@@ -61,7 +61,8 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	p.declare<uint32_t>("max_ik_solutions", 1);
 	p.declare<bool>("ignore_collisions", false);
 	p.declare<double>("min_solution_distance", 0.1,
-	                  "minimum distance between seperate IK solutions for the same target");
+	                  "minimum distance between separate IK solutions for the same target");
+	p.declare<bool>("maximize_clearance", false);
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -82,8 +83,8 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 	setTargetPose(pose_msg);
 }
 
-// found IK solutions with a flag indicating validity
-typedef std::vector<std::vector<double>> IKSolutions;
+// found IK solutions along with clearance (clearance is not set if clearance is not needed)
+typedef std::vector<std::pair<std::vector<double>, double>> IKSolutions;
 
 namespace {
 
@@ -352,22 +353,36 @@ void ComputeIK::compute() {
 		sandbox_scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
 	double min_solution_distance = props.get<double>("min_solution_distance");
+	bool maximize_clearance = props.get<bool>("maximize_clearance");
 
 	IKSolutions ik_solutions;
-	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance, &ik_solutions](
+	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, &ik_solutions](
 	    robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
-		for (const auto& sol : ik_solutions) {
-			if (jmg->distance(joint_positions, sol.data()) < min_solution_distance)
-				return false;  // too close to already found solution
-		}
+		if (!maximize_clearance)
+			for (const auto& sol : ik_solutions) {
+				if (jmg->distance(joint_positions, sol.first.data()) < min_solution_distance)
+					return false;  // too close to already found solution
+			}
 		state->setJointGroupPositions(jmg, joint_positions);
 		ik_solutions.emplace_back();
-		state->copyJointGroupPositions(jmg, ik_solutions.back());
+		state->copyJointGroupPositions(jmg, ik_solutions.back().first);
+		if (maximize_clearance)
+		{
+			auto& acm = sandbox_scene->getAllowedCollisionMatrix();
+			collision_detection::CollisionRequest req;
+			collision_detection::CollisionResult result;
+			req.distance = true;
+			sandbox_scene->getCollisionEnv()->checkRobotCollision(req, result, *state, acm);
+			ik_solutions.back().second = result.distance;
+			ROS_DEBUG_STREAM_NAMED("ComputeIK", "clearance = " << result.distance << ", number of objects = " <<
+				sandbox_scene->getCollisionEnv()->getWorld()->size());
+			return false;
+		}
 
 		return ignore_collisions || !sandbox_scene->isStateColliding(*state, jmg->getName());
 	};
 
-	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
+	uint32_t max_ik_solutions = maximize_clearance ? 1 : props.get<uint32_t>("max_ik_solutions");
 	bool tried_current_state_as_seed = false;
 
 	double remaining_time = timeout();
@@ -395,15 +410,24 @@ void ComputeIK::compute() {
 			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
 			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
-			if (succeeded && i + 1 == ik_solutions.size())
-				// compute cost as distance to compare_pose
-				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
-			else  // found an IK solution, but this was not valid
-				solution.markAsFailure();
+			if (maximize_clearance)
+			{
+				// compute cost as negative clearance (larger clearance is better)
+				double cost = -ik_solutions.back().second;
+				solution.setCost(cost);
+				if (cost >= 0.)
+					solution.markAsFailure();
+			}
+			else
+				if (succeeded && i + 1 == ik_solutions.size())
+					// compute cost as distance to compare_pose
+					solution.setCost(s.cost() + jmg->distance(ik_solutions.back().first.data(), compare_pose.data()));
+				else  // found an IK solution, but this was not valid
+					solution.markAsFailure();
 
 			// set scene's robot state
 			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+			robot_state.setJointGroupPositions(jmg, ik_solutions.back().first.data());
 			robot_state.update();
 
 			InterfaceState state(scene);

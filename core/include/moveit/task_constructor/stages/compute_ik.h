@@ -109,6 +109,7 @@ public:
 	void setMaxIKSolutions(uint32_t n) { setProperty("max_ik_solutions", n); }
 	void setIgnoreCollisions(bool flag) { setProperty("ignore_collisions", flag); }
 	void setMinSolutionDistance(double distance) { setProperty("min_solution_distance", distance); }
+	void setMaximizeClearance(bool flag) { setProperty("maximize_clearance", flag); }
 
 protected:
 	ordered<const SolutionBase*> upstream_solutions_;
