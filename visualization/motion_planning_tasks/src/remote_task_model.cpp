@@ -509,8 +509,10 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 
 	switch (role) {
 		case Qt::UserRole:
-		case Qt::ToolTipRole:
 			return item.id;
+
+		case Qt::ToolTipRole:
+			return item.comment;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {
