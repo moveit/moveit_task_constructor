@@ -260,6 +260,9 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new TaskViewPrivate(this)) {
 	Q_D(TaskView);
 
+	d_ptr->tasks_property_splitter->setStretchFactor(0, 3);
+	d_ptr->tasks_property_splitter->setStretchFactor(1, 1);
+
 	// connect signals
 	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
 	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
