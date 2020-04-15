@@ -81,7 +81,7 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 			break;
 
 		case Qt::TextAlignmentRole:
-			return column == 0 ? Qt::AlignLeft : Qt::AlignRight;
+			return Qt::AlignLeft;
 
 		case Qt::ToolTipRole:
 			switch (column) {

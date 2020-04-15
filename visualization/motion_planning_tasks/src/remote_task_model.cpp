@@ -495,7 +495,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 						return tr("comment");
 				}
 			case Qt::TextAlignmentRole:
-				return section == 2 ? Qt::AlignLeft : Qt::AlignRight;
+				return Qt::AlignLeft;
 		}
 	}
 	return QAbstractItemModel::headerData(section, orientation, role);
