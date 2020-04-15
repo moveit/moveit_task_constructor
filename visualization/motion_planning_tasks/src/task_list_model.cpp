@@ -61,7 +61,7 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 		case Qt::DisplayRole:
 			switch (column) {
 				case 0:
-					return tr("Name");
+					return tr("name");
 				case 1:
 					return tr(u8"✓");
 				case 2:
