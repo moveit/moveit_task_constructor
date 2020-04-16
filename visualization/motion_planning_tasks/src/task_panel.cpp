@@ -288,6 +288,9 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
+
+	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
+	connect(show_time_column, SIGNAL(changed()), this, SLOT(onShowTimeChanged()));
 }
 
 TaskView::~TaskView() {
@@ -473,6 +476,12 @@ void TaskView::onExecCurrentSolution() const {
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
 	solution->fillMessage(goal.solution);
 	d_ptr->exec_action_client_.sendGoal(goal);
+}
+
+void TaskView::onShowTimeChanged() {
+	auto* header = d_ptr->tasks_view->header();
+	if (header->count() > 3)
+		d_ptr->tasks_view->header()->setSectionHidden(3, !show_time_column->getBool());
 }
 
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
