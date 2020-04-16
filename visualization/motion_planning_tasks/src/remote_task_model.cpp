@@ -232,13 +232,6 @@ QModelIndex RemoteTaskModel::parent(const QModelIndex& child) const {
 	return this->index(p);
 }
 
-Qt::ItemFlags RemoteTaskModel::flags(const QModelIndex& index) const {
-	Qt::ItemFlags flags = BaseTaskModel::flags(index);
-	if (index.column() == 0)
-		flags |= Qt::ItemIsEditable;  // name is editable
-	return flags;
-}
-
 QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 	Node* n = node(index);
 	if (!n)

@@ -114,13 +114,6 @@ QVariant BaseTaskModel::data(const QModelIndex& index, int role) const {
 	return QVariant();
 }
 
-Qt::ItemFlags BaseTaskModel::flags(const QModelIndex& index) const {
-	Qt::ItemFlags flags = QAbstractItemModel::flags(index);
-	if (index.column() == 0)
-		flags |= Qt::ItemIsEditable;  // name is editable
-	return flags;
-}
-
 QVariant BaseTaskModel::flowIcon(moveit::task_constructor::InterfaceFlags f) {
 	static const QIcon CONNECT_ICON = icons::CONNECT.icon();
 	static const QIcon FORWARD_ICON = icons::FORWARD.icon();

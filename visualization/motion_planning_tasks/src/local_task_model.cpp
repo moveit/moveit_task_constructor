@@ -134,6 +134,8 @@ Qt::ItemFlags LocalTaskModel::flags(const QModelIndex& index) const {
 	// dropping into containers is enabled
 	if (c && stage_factory_)
 		flags |= Qt::ItemIsDropEnabled;
+	if (index.column() == 0)
+		flags |= Qt::ItemIsEditable;  // name is editable
 	return flags;
 }
 
