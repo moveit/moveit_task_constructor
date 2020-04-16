@@ -155,6 +155,17 @@
     <string>Add task</string>
    </property>
   </action>
+  <action name="actionShowTimeColumn">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>ShowTimeColumn</string>
+   </property>
+   <property name="toolTip">
+    <string>show time column</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

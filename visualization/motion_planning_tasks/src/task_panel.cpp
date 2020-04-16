@@ -234,9 +234,11 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	tasks_view->setDropIndicatorShown(true);
 	tasks_view->setDragEnabled(true);
 
+	actionShowTimeColumn->setChecked(true);
+
 	// init actions
 	// TODO(v4hn): add actionAddLocalTask once there is something meaningful to add
-	tasks_view->addActions({ /*actionAddLocalTask,*/ actionRemoveTaskTreeRows });
+	tasks_view->addActions({ /*actionAddLocalTask,*/ actionRemoveTaskTreeRows, actionShowTimeColumn });
 }
 
 std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const QModelIndex& index) const {
@@ -267,6 +269,7 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	// connect signals
 	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
 	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
+	connect(d->actionShowTimeColumn, &QAction::triggered, [this](bool checked) { show_time_column->setValue(checked); });
 
 	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)), this,
 	        SLOT(onCurrentStageChanged(QModelIndex, QModelIndex)));
@@ -480,8 +483,10 @@ void TaskView::onExecCurrentSolution() const {
 
 void TaskView::onShowTimeChanged() {
 	auto* header = d_ptr->tasks_view->header();
+	bool show = show_time_column->getBool();
 	if (header->count() > 3)
-		d_ptr->tasks_view->header()->setSectionHidden(3, !show_time_column->getBool());
+		d_ptr->tasks_view->header()->setSectionHidden(3, !show);
+	d_ptr->actionShowTimeColumn->setChecked(show);
 }
 
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
