@@ -499,6 +499,8 @@ GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q
 GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new GlobalSettingsWidgetPrivate(this, root)) {
 	Q_D(GlobalSettingsWidget);
+
+	d->view->expandAll();
 	connect(d->properties, &rviz::PropertyTreeModel::configChanged, this, &GlobalSettingsWidget::configChanged);
 }
 
