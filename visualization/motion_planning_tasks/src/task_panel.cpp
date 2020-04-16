@@ -235,7 +235,8 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	tasks_view->setDragEnabled(true);
 
 	// init actions
-	tasks_view->addActions({ actionAddLocalTask, actionRemoveTaskTreeRows });
+	// TODO(v4hn): add actionAddLocalTask once there is something meaningful to add
+	tasks_view->addActions({ /*actionAddLocalTask,*/ actionRemoveTaskTreeRows });
 }
 
 std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const QModelIndex& index) const {
