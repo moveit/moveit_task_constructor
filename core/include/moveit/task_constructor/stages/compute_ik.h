@@ -79,6 +79,7 @@ public:
 	void compute() override;
 
 	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
+	void setGroup(const std::string& group) { setProperty("group", group); }
 
 	/// setters for IK frame
 	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
