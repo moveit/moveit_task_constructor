@@ -93,13 +93,13 @@ typedef Flags<InterfaceFlag> InterfaceFlags;
 constexpr InterfaceFlags invert(InterfaceFlags f) {
 	InterfaceFlags inv;
 	if (f & READS_START)
-		inv |= WRITES_NEXT_START;
+		inv = inv | WRITES_NEXT_START;
 	if (f & WRITES_PREV_END)
-		inv |= READS_END;
+		inv = inv | READS_END;
 	if (f & READS_END)
-		inv |= WRITES_PREV_END;
+		inv = inv | WRITES_PREV_END;
 	if (f & WRITES_NEXT_START)
-		inv |= READS_START;
+		inv = inv | READS_START;
 	return inv;
 };
 
