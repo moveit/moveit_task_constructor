@@ -187,7 +187,7 @@ void ContainerBase::add(Stage::pointer&& stage) {
 
 bool ContainerBase::insert(Stage::pointer&& stage, int before) {
 	if (!stage) {
-		ROS_ERROR_STREAM(name() << ": reveived invalid stage pointer");
+		ROS_ERROR_STREAM(name() << ": received invalid stage pointer");
 		return false;
 	}
 
