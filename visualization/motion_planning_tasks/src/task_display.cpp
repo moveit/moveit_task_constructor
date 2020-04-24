@@ -189,7 +189,12 @@ void TaskDisplay::changedRobotDescription() {
 }
 
 inline std::string getUniqueId(const std::string& process_id, const std::string& task_id) {
-	return process_id + "/" + task_id;
+	std::string id{ process_id };
+	if (!task_id.empty()) {
+		id += "/";
+		id += task_id;
+	}
+	return id;
 }
 
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
