@@ -92,7 +92,11 @@ public:
 	}
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
-	/// setters for target pose
+	/** setters for target pose property
+	 *
+	 * This property should almost always be set in the InterfaceState sent by the child.
+	 * If possible, avoid setting it manually.
+	 */
 	void setTargetPose(const geometry_msgs::PoseStamped& pose) { setProperty("target_pose", pose); }
 	void setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame = "");
 	template <typename T>
