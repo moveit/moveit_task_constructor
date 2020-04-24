@@ -251,7 +251,8 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 	// retrieve existing or insert new remote task for given id
 	auto it_inserted = remote_tasks_.insert(std::make_pair(id, nullptr));
 	bool created = it_inserted.second;
-	RemoteTaskModel*& remote_task = it_inserted.first->second;
+	const auto& task_it = it_inserted.first;
+	RemoteTaskModel*& remote_task = task_it->second;
 
 	if (!msg.stages.empty() && remote_task && (remote_task->taskFlags() & BaseTaskModel::IS_DESTROYED)) {
 		removeModel(remote_task);
@@ -262,7 +263,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 	if (msg.stages.empty()) {
 		if (!remote_task) {  // task was already deleted locally
 			// we can now remove it from remote_tasks_
-			remote_tasks_.erase(it_inserted.first);
+			remote_tasks_.erase(task_it);
 			return;
 		}
 	} else if (created) {  // create new task model, if ID was not known before
