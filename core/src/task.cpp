@@ -292,7 +292,6 @@ void Task::compute() {
 
 bool Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
-	reset();
 	init();
 
 	impl->preempt_requested_ = false;
