@@ -180,8 +180,13 @@ Task::~Task() {
 }
 
 void Task::setRobotModel(const core::RobotModelConstPtr& robot_model) {
+	if (!robot_model) {
+		ROS_ERROR_STREAM(name() << ": received invalid robot model");
+		return;
+	}
 	auto impl = pimpl();
-	reset();  // solutions, scenes, etc become invalid
+	if (impl->robot_model_ && impl->robot_model_ != robot_model)
+		reset();  // solutions, scenes, etc become invalid
 	impl->robot_model_ = robot_model;
 }
 
