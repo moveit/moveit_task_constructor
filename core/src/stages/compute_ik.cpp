@@ -354,9 +354,23 @@ void ComputeIK::compute() {
 
 	double min_solution_distance = props.get<double>("min_solution_distance");
 	bool maximize_clearance = props.get<bool>("maximize_clearance");
+	// disable collision checking between links not in current group in order to compute
+	// clearance between links in current group and rest of the links 
+	auto acm = sandbox_scene->getAllowedCollisionMatrix();
+	if (maximize_clearance)
+	{
+		auto& all_link_names = sandbox_state.getRobotModel()->getLinkModelNames();
+		auto& group_link_names = jmg->getLinkModelNames();
+		std::vector<std::string> non_group_links;
+
+		for (const auto& link : all_link_names)
+			if (std::find(group_link_names.begin(), group_link_names.end(), link) == group_link_names.end())
+				non_group_links.push_back(link);
+		acm.setEntry(non_group_links, non_group_links, true);
+	}
 
 	IKSolutions ik_solutions;
-	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, &ik_solutions](
+	auto isValid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, acm, &ik_solutions](
 	    robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
 			if (jmg->distance(joint_positions, sol.first.data()) < min_solution_distance)
@@ -370,7 +384,7 @@ void ComputeIK::compute() {
 			collision_detection::CollisionRequest req;
 			collision_detection::CollisionResult result;
 			req.distance = true;
-			sandbox_scene->checkSelfCollision(req, result, *state);
+			sandbox_scene->checkSelfCollision(req, result, *state, acm);
 			ik_solutions.back().second = result.distance;
 			return false;
 		}
