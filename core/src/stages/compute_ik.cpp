@@ -358,31 +358,27 @@ void ComputeIK::compute() {
 	IKSolutions ik_solutions;
 	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, &ik_solutions](
 	    robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
-		if (!maximize_clearance)
-			for (const auto& sol : ik_solutions) {
-				if (jmg->distance(joint_positions, sol.first.data()) < min_solution_distance)
-					return false;  // too close to already found solution
-			}
+		for (const auto& sol : ik_solutions) {
+			if (jmg->distance(joint_positions, sol.first.data()) < min_solution_distance)
+				return false;  // too close to already found solution
+		}
 		state->setJointGroupPositions(jmg, joint_positions);
 		ik_solutions.emplace_back();
 		state->copyJointGroupPositions(jmg, ik_solutions.back().first);
 		if (maximize_clearance)
 		{
-			auto& acm = sandbox_scene->getAllowedCollisionMatrix();
 			collision_detection::CollisionRequest req;
 			collision_detection::CollisionResult result;
 			req.distance = true;
-			sandbox_scene->getCollisionEnv()->checkRobotCollision(req, result, *state, acm);
+			sandbox_scene->checkSelfCollision(req, result, *state);
 			ik_solutions.back().second = result.distance;
-			ROS_DEBUG_STREAM_NAMED("ComputeIK", "clearance = " << result.distance << ", number of objects = " <<
-				sandbox_scene->getCollisionEnv()->getWorld()->size());
 			return false;
 		}
 
 		return ignore_collisions || !sandbox_scene->isStateColliding(*state, jmg->getName());
 	};
 
-	uint32_t max_ik_solutions = maximize_clearance ? 1 : props.get<uint32_t>("max_ik_solutions");
+	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
 	bool tried_current_state_as_seed = false;
 
 	double remaining_time = timeout();
@@ -412,10 +408,11 @@ void ComputeIK::compute() {
 
 			if (maximize_clearance)
 			{
-				// compute cost as negative clearance (larger clearance is better)
-				double cost = -ik_solutions.back().second;
-				solution.setCost(cost);
-				if (cost >= 0.)
+				// compute cost as 1. / clearance (larger clearance is better)
+				double clearance = ik_solutions.back().second;
+				if (clearance > 0.)
+					solution.setCost(1./(clearance + 1e-4));
+				else
 					solution.markAsFailure();
 			}
 			else
