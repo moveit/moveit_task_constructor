@@ -355,10 +355,9 @@ void ComputeIK::compute() {
 	double min_solution_distance = props.get<double>("min_solution_distance");
 	bool maximize_clearance = props.get<bool>("maximize_clearance");
 	// disable collision checking between links not in current group in order to compute
-	// clearance between links in current group and rest of the links 
+	// clearance between links in current group and rest of the links
 	auto acm = sandbox_scene->getAllowedCollisionMatrix();
-	if (maximize_clearance)
-	{
+	if (maximize_clearance) {
 		auto& all_link_names = sandbox_state.getRobotModel()->getLinkModelNames();
 		auto& group_link_names = jmg->getLinkModelNames();
 		std::vector<std::string> non_group_links;
@@ -379,8 +378,7 @@ void ComputeIK::compute() {
 		state->setJointGroupPositions(jmg, joint_positions);
 		ik_solutions.emplace_back();
 		state->copyJointGroupPositions(jmg, ik_solutions.back().first);
-		if (maximize_clearance)
-		{
+		if (maximize_clearance) {
 			collision_detection::CollisionRequest req;
 			collision_detection::CollisionResult result;
 			req.distance = true;
@@ -420,21 +418,18 @@ void ComputeIK::compute() {
 			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
 			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
-			if (maximize_clearance)
-			{
+			if (maximize_clearance) {
 				// compute cost as 1. / clearance (larger clearance is better)
 				double clearance = ik_solutions.back().second;
 				if (clearance > 0.)
-					solution.setCost(1./(clearance + 1e-4));
+					solution.setCost(1. / (clearance + 1e-4));
 				else
 					solution.markAsFailure();
-			}
-			else
-				if (succeeded && i + 1 == ik_solutions.size())
-					// compute cost as distance to compare_pose
-					solution.setCost(s.cost() + jmg->distance(ik_solutions.back().first.data(), compare_pose.data()));
-				else  // found an IK solution, but this was not valid
-					solution.markAsFailure();
+			} else if (succeeded && i + 1 == ik_solutions.size())
+				// compute cost as distance to compare_pose
+				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().first.data(), compare_pose.data()));
+			else  // found an IK solution, but this was not valid
+				solution.markAsFailure();
 
 			// set scene's robot state
 			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
