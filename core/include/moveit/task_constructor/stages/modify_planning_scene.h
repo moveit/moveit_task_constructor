@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/type_traits.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <moveit_msgs/CollisionObject.h>
 #include <map>
 
 namespace moveit {
