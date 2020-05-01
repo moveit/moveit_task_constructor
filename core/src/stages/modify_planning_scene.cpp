@@ -52,15 +52,13 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 	o.insert(o.end(), objects.begin(), objects.end());
 }
 
-void ModifyPlanningScene::addObject(const std::string& object_name, const geometry_msgs::PoseStamped& object_pose,
-                                    const shape_msgs::SolidPrimitive& primitive) {
-	moveit_msgs::CollisionObject obj;
-	obj.id = object_name;
-	obj.header.frame_id = object_pose.header.frame_id;
-	obj.primitives.push_back(primitive);
-	obj.primitive_poses.push_back(object_pose.pose);
-	obj.operation = moveit_msgs::CollisionObject::ADD;
-	collision_objects_.push_back(obj);
+void ModifyPlanningScene::addObject(const moveit_msgs::CollisionObject& collision_object) {
+	if (collision_object.operation != moveit_msgs::CollisionObject::ADD) {
+		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
+		                                                        "to ADD -- ignoring the object");
+		return;
+	}
+	collision_objects_.push_back(collision_object);
 }
 
 void ModifyPlanningScene::removeObject(const std::string& object_name) {

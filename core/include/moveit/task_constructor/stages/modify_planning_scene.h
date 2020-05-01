@@ -79,8 +79,7 @@ public:
 	/// attach or detach a list of objects to the given link
 	void attachObjects(const Names& objects, const std::string& attach_link, bool attach);
 	/// Add an object to the planning scene
-	void addObject(const std::string& object_name, const geometry_msgs::PoseStamped& object_pose,
-	               const shape_msgs::SolidPrimitive& primitive);
+	void addObject(const moveit_msgs::CollisionObject& collision_object);
 	/// Remove an object from the planning scene
 	void removeObject(const std::string& object_name);
 
