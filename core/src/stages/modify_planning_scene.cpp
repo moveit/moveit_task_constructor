@@ -52,6 +52,24 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 	o.insert(o.end(), objects.begin(), objects.end());
 }
 
+void ModifyPlanningScene::addObject(const std::string& object_name, const geometry_msgs::PoseStamped& object_pose,
+                                    const shape_msgs::SolidPrimitive& primitive) {
+	moveit_msgs::CollisionObject obj;
+	obj.id = object_name;
+	obj.header.frame_id = object_pose.header.frame_id;
+	obj.primitives.push_back(primitive);
+	obj.primitive_poses.push_back(object_pose.pose);
+	obj.operation = moveit_msgs::CollisionObject::ADD;
+	collision_objects_.push_back(obj);
+}
+
+void ModifyPlanningScene::removeObject(const std::string& object_name) {
+	moveit_msgs::CollisionObject obj;
+	obj.id = object_name;
+	obj.operation = moveit_msgs::CollisionObject::REMOVE;
+	collision_objects_.push_back(obj);
+}
+
 void ModifyPlanningScene::allowCollisions(const Names& first, const Names& second, bool allow) {
 	collision_matrix_edits_.push_back(CollisionMatrixPairs({ first, second, allow }));
 }
@@ -102,6 +120,9 @@ void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene& scene, 
 InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool invert) {
 	planning_scene::PlanningScenePtr scene = from.scene()->diff();
 	InterfaceState result(scene);
+	// add/remove objects
+	for (const auto& collision_object : collision_objects_)
+		processCollisionObject(*scene, collision_object);
 
 	// attach/detach objects
 	for (const auto& pair : attach_objects_)
@@ -115,6 +136,11 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 		callback_(scene, properties());
 
 	return result;
+}
+
+void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& scene,
+                                                 const moveit_msgs::CollisionObject& object) {
+	scene.processCollisionObjectMsg(object);
 }
 }
 }
