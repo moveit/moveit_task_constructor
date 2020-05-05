@@ -41,6 +41,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/type_traits.h>
+#include <moveit_msgs/CollisionObject.h>
 #include <map>
 
 namespace moveit {
@@ -77,6 +78,10 @@ public:
 
 	/// attach or detach a list of objects to the given link
 	void attachObjects(const Names& objects, const std::string& attach_link, bool attach);
+	/// Add an object to the planning scene
+	void addObject(const moveit_msgs::CollisionObject& collision_object);
+	/// Remove an object from the planning scene
+	void removeObject(const std::string& object_name);
 
 	/// conviency methods accepting a single object name
 	inline void attachObject(const std::string& object, const std::string& link);
@@ -130,6 +135,8 @@ public:
 protected:
 	// list of objects to attach (true) / detach (false) to a given link
 	std::map<std::string, std::pair<Names, bool>> attach_objects_;
+	// list of objects to add / remove to the planning scene
+	std::vector<moveit_msgs::CollisionObject> collision_objects_;
 
 	// list of objects to mutually
 	struct CollisionMatrixPairs
@@ -144,6 +151,7 @@ protected:
 protected:
 	// apply stored modifications to scene
 	InterfaceState apply(const InterfaceState& from, bool invert);
+	void processCollisionObject(planning_scene::PlanningScene& scene, const moveit_msgs::CollisionObject& object);
 	void attachObjects(planning_scene::PlanningScene& scene, const std::pair<std::string, std::pair<Names, bool>>& pair,
 	                   bool invert);
 	void allowCollisions(planning_scene::PlanningScene& scene, const CollisionMatrixPairs& pairs, bool invert);
