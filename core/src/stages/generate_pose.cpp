@@ -62,8 +62,9 @@ GeneratePose::GeneratePose(const std::string& name) : MonitoringGenerator(name) 
 
 	auto& p = properties();
 	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
-	p.declare<size_t>("max_solutions", 1,
+	p.declare<size_t>("max_solutions", 20,
 	                  "limit of the number of spawned solution in case randomized sampling is enabled");
+	p.property("timeout").setDefaultValue(10.0 /* seconds */);
 }
 
 template <>
@@ -137,7 +138,6 @@ void GeneratePose::compute() {
 	double elapsed_time = 0.0;
 	const auto start_time = std::chrono::steady_clock::now();
 	size_t spawned_solutions = 0;
-	properties().property("timeout").setDefaultValue(10.0);
 	while (elapsed_time < timeout() && spawned_solutions++ < properties().get<size_t>("max_solutions") - 1) {
 		// Randomize pose using specified dimension samplers.
 		// RPY dimensions are using 0.0 as seed, the randomized rotation is multiplied to the target orientation.
