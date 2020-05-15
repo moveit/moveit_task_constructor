@@ -111,6 +111,7 @@ private:
 	template <template <class Realtype = double> class RandomNumberDistribution>
 	PoseDimensionSampler getPoseDimensionSampler(double distribution_param) {
 		static_assert(sizeof(RandomNumberDistribution<double>) == -1, "This distribution type is not supported!");
+		throw 0;  // suppress -Wreturn-type
 	}
 
 	std::map<PoseDimension, PoseDimensionSampler> pose_dimension_samplers_;
