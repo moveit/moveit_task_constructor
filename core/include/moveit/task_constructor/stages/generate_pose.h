@@ -109,7 +109,7 @@ protected:
 private:
 	/* \brief Allocate the sampler function for the specified random distribution */
 	template <template <class Realtype = double> class RandomNumberDistribution>
-	PoseDimensionSampler getPoseDimensionSampler(double distribution_param) {
+	PoseDimensionSampler getPoseDimensionSampler(double /* distribution_param */) {
 		static_assert(sizeof(RandomNumberDistribution<double>) == -1, "This distribution type is not supported!");
 		throw 0;  // suppress -Wreturn-type
 	}
