@@ -96,7 +96,7 @@ public:
 	 * \return true on success
 	 */
 	TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display);
-	virtual ~TaskSolutionVisualization();
+	~TaskSolutionVisualization() override;
 
 	virtual void update(float wall_dt, float ros_dt);
 	virtual void reset();

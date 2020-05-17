@@ -153,11 +153,11 @@ protected:
 		}
 	}
 
-	void SetUp() {
+	void SetUp() override {
 		QObject::connect(&model, &QAbstractItemModel::rowsAboutToBeInserted, [this]() { ++num_inserts; });
 		QObject::connect(&model, &QAbstractItemModel::dataChanged, [this]() { ++num_updates; });
 	}
-	void TearDown() {}
+	void TearDown() override {}
 };
 
 TEST_F(TaskListModelTest, remoteTaskModel) {

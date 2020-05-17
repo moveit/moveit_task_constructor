@@ -72,7 +72,7 @@ class RemoteTaskModel : public BaseTaskModel
 public:
 	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
 	                QObject* parent = nullptr);
-	~RemoteTaskModel();
+	~RemoteTaskModel() override;
 
 	void setSolutionClient(ros::ServiceClient* client);
 

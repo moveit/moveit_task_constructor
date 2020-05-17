@@ -60,7 +60,7 @@ protected:
 
 public:
 	TreeMergeProxyModel(QObject* parent = nullptr);
-	~TreeMergeProxyModel();
+	~TreeMergeProxyModel() override;
 
 	/// number of embedded models
 	size_t modelCount() const;

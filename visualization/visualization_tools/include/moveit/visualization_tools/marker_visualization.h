@@ -101,7 +101,7 @@ class MarkerVisualizationProperty : public rviz::BoolProperty
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
-	~MarkerVisualizationProperty();
+	~MarkerVisualizationProperty() override;
 
 	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
 

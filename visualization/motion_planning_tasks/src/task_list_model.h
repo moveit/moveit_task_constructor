@@ -143,7 +143,7 @@ class TaskListModel : public utils::FlatMergeProxyModel
 
 public:
 	TaskListModel(QObject* parent = nullptr);
-	~TaskListModel();
+	~TaskListModel() override;
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 	void setDisplayContext(rviz::DisplayContext* display_context);

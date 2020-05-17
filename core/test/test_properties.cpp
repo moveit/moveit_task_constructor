@@ -110,7 +110,7 @@ TEST(Property, serialize) {
 class InitFromTest : public ::testing::Test
 {
 protected:
-	void SetUp() {
+	void SetUp() override {
 		master.declare<double>("double1", 1);
 		master.declare<double>("double2", 2);
 		master.declare<double>("double4", 4);

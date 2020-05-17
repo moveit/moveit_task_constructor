@@ -131,7 +131,7 @@ public:
 	/// check of existing errors
 	operator bool() const { return !errors_.empty(); }
 
-	virtual const char* what() const noexcept override;
+	const char* what() const noexcept override;
 
 private:
 	std::list<std::pair<const Stage*, const std::string>> errors_;

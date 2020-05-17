@@ -145,8 +145,8 @@ protected:
 
 	cost_ordered<ValueType, CostType> queue;
 
-	void SetUp() {}
-	void TearDown() {}
+	void SetUp() override {}
+	void TearDown() override {}
 };
 using CostOrderedTestInt = CostOrderedTest<int, int>;
 

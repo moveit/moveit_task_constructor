@@ -61,7 +61,7 @@ protected:
 
 public:
 	FlatMergeProxyModel(QObject* parent = nullptr);
-	~FlatMergeProxyModel();
+	~FlatMergeProxyModel() override;
 
 	/// number of embedded models
 	size_t modelCount() const;

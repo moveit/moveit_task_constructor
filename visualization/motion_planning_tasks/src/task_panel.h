@@ -80,7 +80,7 @@ class TaskPanel : public rviz::Panel
 
 public:
 	TaskPanel(QWidget* parent = 0);
-	~TaskPanel();
+	~TaskPanel() override;
 
 	/// add a new sub panel widget
 	void addSubPanel(SubPanel* w, const QString& title, const QIcon& icon);
@@ -127,7 +127,7 @@ protected:
 
 public:
 	TaskView(TaskPanel* parent, rviz::Property* root);
-	~TaskView();
+	~TaskView() override;
 
 	void save(rviz::Config config) override;
 	void load(const rviz::Config& config) override;
@@ -152,7 +152,7 @@ class GlobalSettingsWidget : public SubPanel
 
 public:
 	GlobalSettingsWidget(TaskPanel* parent, rviz::Property* root);
-	~GlobalSettingsWidget();
+	~GlobalSettingsWidget() override;
 
 	void save(rviz::Config config) override;
 	void load(const rviz::Config& config) override;

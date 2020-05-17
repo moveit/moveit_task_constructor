@@ -55,7 +55,7 @@ class ExecuteTaskSolutionCapability : public MoveGroupCapability
 public:
 	ExecuteTaskSolutionCapability();
 
-	virtual void initialize();
+	void initialize() override;
 
 private:
 	bool constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,

@@ -75,12 +75,12 @@ public:
 	  : mime_type_(QString("application/%1/%2").arg(package, base_class_type)) {
 		class_loader_ = new pluginlib::ClassLoader<Type>(package.toStdString(), base_class_type.toStdString());
 	}
-	virtual ~PluginlibFactory() { delete class_loader_; }
+	~PluginlibFactory() override { delete class_loader_; }
 
 	/// retrieve mime type used for given factory
 	QString mimeType() const { return mime_type_; }
 
-	virtual QStringList getDeclaredClassIds() {
+	QStringList getDeclaredClassIds() override {
 		QStringList ids;
 		for (const auto& record : built_ins_)
 			ids.push_back(record.class_id_);
@@ -93,7 +93,7 @@ public:
 		return ids;
 	}
 
-	virtual QString getClassDescription(const QString& class_id) const {
+	QString getClassDescription(const QString& class_id) const override {
 		auto it = built_ins_.find(class_id);
 		if (it != built_ins_.end()) {
 			return it->description_;
@@ -101,7 +101,7 @@ public:
 		return QString::fromStdString(class_loader_->getClassDescription(class_id.toStdString()));
 	}
 
-	virtual QString getClassName(const QString& class_id) const {
+	QString getClassName(const QString& class_id) const override {
 		auto it = built_ins_.find(class_id);
 		if (it != built_ins_.end()) {
 			return it->name_;
@@ -109,7 +109,7 @@ public:
 		return QString::fromStdString(class_loader_->getName(class_id.toStdString()));
 	}
 
-	virtual QString getClassPackage(const QString& class_id) const {
+	QString getClassPackage(const QString& class_id) const override {
 		auto it = built_ins_.find(class_id);
 		if (it != built_ins_.end()) {
 			return it->package_;
@@ -125,7 +125,7 @@ public:
 		return QString::fromStdString(class_loader_->getPluginManifestPath(class_id.toStdString()));
 	}
 
-	virtual QIcon getIcon(const QString& class_id) const {
+	QIcon getIcon(const QString& class_id) const override {
 		QString package = getClassPackage(class_id);
 		QString class_name = getClassName(class_id);
 		QIcon icon = rviz::loadPixmap("package://" + package + "/icons/classes/" + class_name + ".svg");

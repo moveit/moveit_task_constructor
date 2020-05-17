@@ -1,5 +1,6 @@
 ---
 Checks:          '-*,
+                  modernize-use-override,
                   modernize-use-using,
                   '
 HeaderFilterRegex: '.*/moveit/task_constructor/.*\.h'

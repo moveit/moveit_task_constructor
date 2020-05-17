@@ -195,7 +195,7 @@ class FlatMergeModelRemove : public ::testing::Test
 {
 protected:
 	FlatMergeProxyModel flat;
-	void SetUp() {
+	void SetUp() override {
 		flat.insertModel(createStandardModel(&flat, 1, 3, 2));
 		flat.insertModel(createStandardModel(&flat, 2, 3, 2));
 		flat.insertModel(createStandardModel(&flat, 3, 3, 2));
