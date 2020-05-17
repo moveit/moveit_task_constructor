@@ -48,8 +48,8 @@ class Flags
 	static_assert((sizeof(Enum) <= sizeof(int)), "Flags uses an int as storage, this enum will overflow!");
 
 public:
-	typedef typename std::conditional<std::is_unsigned<Enum>::value, unsigned int, signed int>::type Int;
-	typedef Enum enum_type;
+	using Int = typename std::conditional<std::is_unsigned<Enum>::value, unsigned int, int>::type;
+	using enum_type = Enum;
 	// compiler-generated copy/move ctor/assignment operators are fine!
 
 	// zero flags

@@ -36,7 +36,7 @@ class QString;
 namespace moveit_rviz_plugin {
 namespace utils {
 
-typedef QPair<QString, QColor> IconMaskAndColor;
+using IconMaskAndColor = QPair<QString, QColor>;
 
 // Returns a recolored icon with shadow and custom disabled state for a
 // series of grayscalemask|Theme::Color mask pairs

@@ -280,7 +280,7 @@ class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 
-	typedef std::pair<Interface::const_iterator, Interface::const_iterator> StatePair;
+	using StatePair = std::pair<Interface::const_iterator, Interface::const_iterator>;
 	struct StatePairLess
 	{
 		bool operator()(const StatePair& x, const StatePair& y) const {

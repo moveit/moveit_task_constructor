@@ -101,7 +101,7 @@ public:
 	Introspection& introspection();
 
 	typedef std::function<void(const Task& t)> TaskCallback;
-	typedef std::list<TaskCallback> TaskCallbackList;
+	using TaskCallbackList = std::list<TaskCallback>;
 	/// add function to be called after each top-level iteration
 	TaskCallbackList::const_iterator addTaskCallback(TaskCallback&& cb);
 	/// remove function callback

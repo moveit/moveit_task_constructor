@@ -30,21 +30,21 @@ class ordered
 {
 public:
 	typedef std::list<T> container_type;
-	typedef typename container_type::value_type value_type;
-	typedef typename container_type::size_type size_type;
-	typedef typename container_type::difference_type difference_type;
+	using value_type = typename container_type::value_type;
+	using size_type = typename container_type::size_type;
+	using difference_type = typename container_type::difference_type;
 
-	typedef typename container_type::reference reference;
-	typedef typename container_type::const_reference const_reference;
+	using reference = typename container_type::reference;
+	using const_reference = typename container_type::const_reference;
 
-	typedef typename container_type::pointer pointer;
-	typedef typename container_type::const_pointer const_pointer;
+	using pointer = typename container_type::pointer;
+	using const_pointer = typename container_type::const_pointer;
 
-	typedef typename container_type::iterator iterator;
-	typedef typename container_type::const_iterator const_iterator;
+	using iterator = typename container_type::iterator;
+	using const_iterator = typename container_type::const_iterator;
 
-	typedef typename container_type::reverse_iterator reverse_iterator;
-	typedef typename container_type::const_reverse_iterator const_reverse_iterator;
+	using reverse_iterator = typename container_type::reverse_iterator;
+	using const_reverse_iterator = typename container_type::const_reverse_iterator;
 
 protected:
 	container_type c;
@@ -133,7 +133,7 @@ namespace detail {
 template <typename ValueType, typename CostType>
 struct ItemCostPair : std::pair<ValueType, CostType>
 {
-	typedef CostType cost_type;
+	using cost_type = CostType;
 
 	ItemCostPair(const std::pair<ValueType, CostType>& other) : std::pair<ValueType, CostType>(other) {}
 	ItemCostPair(std::pair<ValueType, CostType>&& other) : std::pair<ValueType, CostType>(std::move(other)) {}
@@ -153,7 +153,7 @@ template <typename ValueType, typename CostType = double,
           typename Compare = std::less<detail::ItemCostPair<ValueType, CostType>>>
 class cost_ordered : public ordered<detail::ItemCostPair<ValueType, CostType>, Compare>
 {
-	typedef ordered<detail::ItemCostPair<ValueType, CostType>, Compare> base_type;
+	using base_type = ordered<detail::ItemCostPair<ValueType, CostType>, Compare>;
 
 public:
 	auto insert(const ValueType& value, const CostType cost) { return base_type::insert(std::make_pair(value, cost)); }

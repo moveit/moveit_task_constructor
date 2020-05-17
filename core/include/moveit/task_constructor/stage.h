@@ -84,7 +84,7 @@ enum InterfaceFlag
 	GENERATE = WRITES_PREV_END | WRITES_NEXT_START,
 };
 
-typedef Flags<InterfaceFlag> InterfaceFlags;
+using InterfaceFlags = Flags<InterfaceFlag>;
 
 /** invert interface such that
  * - new end can connect to old start
@@ -111,7 +111,7 @@ constexpr InterfaceFlags END_IF_MASK({ READS_END, WRITES_NEXT_START });
 MOVEIT_CLASS_FORWARD(Interface)
 MOVEIT_CLASS_FORWARD(Stage)
 class InterfaceState;
-typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
+using InterfaceStatePair = std::pair<const InterfaceState&, const InterfaceState&>;
 
 /// exception thrown by Stage::init()
 /// It collects individual errors in stages throughout the pipeline to allow overall error reporting
@@ -144,7 +144,7 @@ class Stage
 {
 public:
 	PRIVATE_CLASS(Stage)
-	typedef std::unique_ptr<Stage> pointer;
+	using pointer = std::unique_ptr<Stage>;
 	/** Names for property initialization sources
 	 *
 	 * - INTERFACE allows to pass properties from one stage to the next (in a SerialContainer).
@@ -203,8 +203,8 @@ public:
 	}
 	void setForwardedProperties(const std::set<std::string>& names) { setProperty("forwarded_properties", names); }
 
-	typedef std::function<void(const SolutionBase& s)> SolutionCallback;
-	typedef std::list<SolutionCallback> SolutionCallbackList;
+	using SolutionCallback = std::function<void(const SolutionBase&)>;
+	using SolutionCallbackList = std::list<SolutionCallback>;
 	/// add function to be called for every newly found solution or failure
 	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback&& cb);
 	/// remove function callback

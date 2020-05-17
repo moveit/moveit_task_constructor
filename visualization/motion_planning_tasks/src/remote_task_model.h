@@ -114,7 +114,7 @@ class RemoteSolutionModel : public QAbstractTableModel
 		inline bool operator<(const Data& other) const { return this->id < other.id; }
 	};
 	// successful and failed solutions ordered by id / creation
-	typedef std::list<Data> DataList;
+	using DataList = std::list<Data>;
 	DataList data_;
 	size_t num_failed_data_ = 0;  // number of failed solutions in data_
 	size_t num_failed_ = 0;  // number of reported failures

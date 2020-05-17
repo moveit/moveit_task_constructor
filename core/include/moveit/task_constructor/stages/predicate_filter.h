@@ -56,7 +56,7 @@ namespace stages {
 class PredicateFilter : public WrapperBase
 {
 public:
-	typedef std::function<bool(const SolutionBase&, std::string&)> Predicate;
+	using Predicate = std::function<bool(const SolutionBase&, std::string&)>;
 
 	PredicateFilter(const std::string& name, Stage::pointer&& child = Stage::pointer());
 

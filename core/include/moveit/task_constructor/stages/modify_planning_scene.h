@@ -65,9 +65,8 @@ namespace stages {
 class ModifyPlanningScene : public PropagatingEitherWay
 {
 public:
-	typedef std::vector<std::string> Names;
-	typedef std::function<void(const planning_scene::PlanningScenePtr& scene, const PropertyMap& properties)>
-	    ApplyCallback;
+	using Names = std::vector<std::string>;
+	using ApplyCallback = std::function<void(const planning_scene::PlanningScenePtr&, const PropertyMap&)>;
 	ModifyPlanningScene(const std::string& name = "modify planning scene");
 
 	void computeForward(const InterfaceState& from) override;

@@ -73,7 +73,7 @@ public:
 		WAYPOINTS = 1
 	};
 
-	typedef std::vector<std::pair<std::string, solvers::PlannerInterfacePtr>> GroupPlannerVector;
+	using GroupPlannerVector = std::vector<std::pair<std::string, solvers::PlannerInterfacePtr> >;
 	Connect(const std::string& name = "connect", const GroupPlannerVector& planners = {});
 
 	void setPathConstraints(moveit_msgs::Constraints path_constraints) {

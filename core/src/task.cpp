@@ -129,8 +129,8 @@ Task& Task::operator=(Task&& other) {
 struct PlannerCache
 {
 	typedef std::tuple<std::string, std::string, std::string> PlannerID;
-	typedef std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline>> PlannerMap;
-	typedef std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap>> ModelList;
+	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
 	ModelList cache_;
 
 	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, PlannerID id) {

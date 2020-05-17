@@ -95,7 +95,7 @@ public:
 		}
 		bool operator<(const Priority& other) const;
 	};
-	typedef std::deque<SolutionBase*> Solutions;
+	using Solutions = std::deque<SolutionBase*>;
 
 	/// create an InterfaceState from a planning scene
 	InterfaceState(const planning_scene::PlanningScenePtr& ps);
@@ -135,7 +135,7 @@ private:
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
 class Interface : public ordered<InterfaceState*>
 {
-	typedef ordered<InterfaceState*> base_type;
+	using base_type = ordered<InterfaceState*>;
 
 public:
 	// iterators providing convinient access to stored InterfaceState
@@ -166,7 +166,7 @@ public:
 		START = FORWARD,
 		END = BACKWARD
 	};
-	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
+	using NotifyFunction = std::function<void(iterator, bool)>;
 	Interface(const NotifyFunction& notify = NotifyFunction());
 
 	/// add a new InterfaceState
@@ -288,7 +288,7 @@ MOVEIT_CLASS_FORWARD(SubTrajectory)
 class SolutionSequence : public SolutionBase
 {
 public:
-	typedef std::vector<const SolutionBase*> container_type;
+	using container_type = std::vector<const SolutionBase*>;
 
 	explicit SolutionSequence() : SolutionBase() {}
 	SolutionSequence(container_type&& subsolutions, double cost = 0.0, StagePrivate* creator = nullptr)

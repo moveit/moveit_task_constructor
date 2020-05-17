@@ -54,7 +54,7 @@ static QPixmap maskToColorAndAlpha(const QPixmap& mask, const QColor& color) {
 }
 
 typedef QPair<QPixmap, QColor> MaskAndColor;
-typedef QList<MaskAndColor> MasksAndColors;
+using MasksAndColors = QList<MaskAndColor>;
 static MasksAndColors masksAndColors(const Icon& icon, int dpr) {
 	MasksAndColors result;
 	for (const IconMaskAndColor& i : icon) {

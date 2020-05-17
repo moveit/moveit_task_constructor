@@ -49,14 +49,14 @@ class ContainerBase : public Stage
 {
 public:
 	PRIVATE_CLASS(ContainerBase)
-	typedef std::unique_ptr<ContainerBase> pointer;
+	using pointer = std::unique_ptr<ContainerBase>;
 
 	size_t numChildren() const;
 	Stage* findChild(const std::string& name) const;
 
 	/** Callback function type used by traverse functions
 	 *  The callback should return false if traversal should be stopped. */
-	typedef std::function<bool(const Stage&, unsigned int depth)> StageCallback;
+	using StageCallback = std::function<bool(const Stage&, unsigned int)>;
 	/// traverse direct children of this container, calling the callback for each of them
 	bool traverseChildren(const StageCallback& processor) const;
 	/// traverse all children of this container recursively
@@ -98,8 +98,7 @@ protected:
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase& s) override;
 
-	typedef std::function<void(const SolutionSequence::container_type& trace, double trace_accumulated_cost)>
-	    SolutionProcessor;
+	using SolutionProcessor = std::function<void(const SolutionSequence::container_type&, double)>;
 
 	/// Traverse all solution pathes starting at start and going in given direction dir
 	/// until the end, i.e. until there are no more subsolutions in the given direction

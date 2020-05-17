@@ -60,7 +60,7 @@ class PropertyTypeRegistry
 	typedef std::map<std::type_index, Entry> RegistryMap;
 	RegistryMap types_;
 	// map from type names (type.name or ROS msg name) to entry in types_
-	typedef std::map<std::string, RegistryMap::iterator> TypeNameMap;
+	using TypeNameMap = std::map<std::string, RegistryMap::iterator>;
 	TypeNameMap names_;
 
 public:

@@ -98,7 +98,7 @@ public:
 	bool empty() const { return steps_ == 0; }
 
 	/// pair of trajectory part and way point index within part
-	typedef std::pair<size_t, size_t> IndexPair;
+	using IndexPair = std::pair<size_t, size_t>;
 	IndexPair indexPair(size_t index) const;
 
 	float getWayPointDurationFromPrevious(const IndexPair& idx_pair) const;

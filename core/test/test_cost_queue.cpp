@@ -131,8 +131,8 @@ template <typename ValueType, typename CostType = int>
 class CostOrderedTest : public ::testing::Test
 {
 protected:
-	typedef std::deque<ValueType> container_type;
-	typedef cost_ordered<ValueType, std::deque<ValueType>, CostType> queue_type;
+	using container_type = std::deque<ValueType>;
+	using queue_type = cost_ordered<ValueType, std::deque<ValueType>, CostType>;
 
 	CostOrderedTest() {}
 
@@ -148,7 +148,7 @@ protected:
 	void SetUp() {}
 	void TearDown() {}
 };
-typedef CostOrderedTest<int, int> CostOrderedTestInt;
+using CostOrderedTestInt = CostOrderedTest<int, int>;
 
 TEST_F(CostOrderedTestInt, ordered_push) {
 	auto top = *insert(2, 2);

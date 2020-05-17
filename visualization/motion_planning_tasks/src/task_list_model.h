@@ -63,7 +63,7 @@ namespace moveit_rviz_plugin {
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 MOVEIT_CLASS_FORWARD(RemoteTaskModel)
 typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
-typedef std::shared_ptr<StageFactory> StageFactoryPtr;
+using StageFactoryPtr = std::shared_ptr<StageFactory>;
 
 StageFactoryPtr getStageFactory();
 

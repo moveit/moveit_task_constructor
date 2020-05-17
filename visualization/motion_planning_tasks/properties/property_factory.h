@@ -75,14 +75,11 @@ class PropertyFactory
 public:
 	static PropertyFactory& instance();
 
-	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&,
-	                                      const planning_scene::PlanningScene* scene,
-	                                      rviz::DisplayContext* display_context)>
-	    PropertyFactoryFunction;
-	typedef std::function<rviz::PropertyTreeModel*(moveit::task_constructor::PropertyMap&,
-	                                               const planning_scene::PlanningScene* scene,
-	                                               rviz::DisplayContext* display_context)>
-	    TreeFactoryFunction;
+	using PropertyFactoryFunction =
+	    std::function<rviz::Property*(const QString&, moveit::task_constructor::Property&,
+	                                  const planning_scene::PlanningScene*, rviz::DisplayContext*)>;
+	using TreeFactoryFunction = std::function<rviz::PropertyTreeModel*(
+	    moveit::task_constructor::PropertyMap&, const planning_scene::PlanningScene*, rviz::DisplayContext*)>;
 
 	/// register a factory function for type T
 	template <typename T>

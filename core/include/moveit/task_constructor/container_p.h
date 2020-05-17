@@ -75,10 +75,10 @@ class ContainerBasePrivate : public StagePrivate
 	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
-	typedef StagePrivate::container_type container_type;
-	typedef container_type::iterator iterator;
-	typedef container_type::const_iterator const_iterator;
-	typedef std::function<bool(Stage&, int depth)> NonConstStageCallback;
+	using container_type = StagePrivate::container_type;
+	using iterator = container_type::iterator;
+	using const_iterator = container_type::const_iterator;
+	using NonConstStageCallback = std::function<bool(Stage&, int)>;
 
 	inline const container_type& children() const { return children_; }
 
@@ -242,13 +242,13 @@ class MergerPrivate : public ParallelContainerBasePrivate
 	friend class Merger;
 
 	moveit::core::JointModelGroupPtr jmg_merged_;
-	typedef std::vector<const SubTrajectory*> ChildSolutionList;
-	typedef std::map<const StagePrivate*, ChildSolutionList> ChildSolutionMap;
+	using ChildSolutionList = std::vector<const SubTrajectory*>;
+	using ChildSolutionMap = std::map<const StagePrivate*, ChildSolutionList>;
 	// map from external source state (iterator) to all corresponding children's solutions
 	std::map<InterfaceState*, ChildSolutionMap> source_state_to_solutions_;
 
 public:
-	typedef std::function<void(SubTrajectory&&)> Spawner;
+	using Spawner = std::function<void(SubTrajectory&&)>;
 	MergerPrivate(Merger* me, const std::string& name);
 
 	void resolveInterface(InterfaceFlags expected) override;

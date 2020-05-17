@@ -19,7 +19,7 @@ namespace moveit {
 namespace task_constructor {
 
 /** signature of callback function, passing the generated marker and the name of the robot link / scene object */
-typedef std::function<void(visualization_msgs::Marker&, const std::string&)> MarkerCallback;
+using MarkerCallback = std::function<void(visualization_msgs::Marker&, const std::string&)>;
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  object_names: set of links to include (or all if empty) */
