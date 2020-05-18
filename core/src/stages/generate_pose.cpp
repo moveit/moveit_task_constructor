@@ -64,24 +64,21 @@ GeneratePose::GeneratePose(const std::string& name) : MonitoringGenerator(name) 
 	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
 	p.declare<size_t>("max_solutions", 20,
 	                  "limit of the number of spawned solution in case randomized sampling is enabled");
-	p.property("timeout").setDefaultValue(10.0 /* seconds */);
+	p.property("timeout").setDefaultValue(1.0 /* seconds */);
 }
 
 template <>
-GeneratePose::PoseDimensionSampler
-GeneratePose::getPoseDimensionSampler<std::normal_distribution>(double distribution_param) {
-	return [ distribution_param, &gen = gen_ ](double pose_dimension_value) {
-		static std::normal_distribution<double> dist(pose_dimension_value, distribution_param);
+GeneratePose::PoseDimensionSampler GeneratePose::getPoseDimensionSampler<std::normal_distribution>(double stddev) {
+	return [ stddev, &gen = gen_ ](double mean) {
+		static std::normal_distribution<double> dist(mean, stddev);
 		return dist(gen);
 	};
 }
 
 template <>
-GeneratePose::PoseDimensionSampler
-GeneratePose::getPoseDimensionSampler<std::uniform_real_distribution>(double distribution_param) {
-	return [ distribution_param, &gen = gen_ ](double pose_dimension_value) {
-		static std::uniform_real_distribution<double> dist(pose_dimension_value - distribution_param,
-		                                                   pose_dimension_value + distribution_param);
+GeneratePose::PoseDimensionSampler GeneratePose::getPoseDimensionSampler<std::uniform_real_distribution>(double range) {
+	return [ range, &gen = gen_ ](double mean) {
+		static std::uniform_real_distribution<double> dist(mean - 0.5 * range, mean + 0.5 * range);
 		return dist(gen);
 	};
 }
@@ -143,18 +140,25 @@ void GeneratePose::compute() {
 		// RPY dimensions are using 0.0 as seed, the randomized rotation is multiplied to the target orientation.
 		double rand_roll = 0.0, rand_pitch = 0.0, rand_yaw = 0.0;
 		for (const auto& pose_dim_sampler : pose_dimension_samplers_) {
-			if (pose_dim_sampler.first == PoseDimension::X)
-				target_pose.pose.position.x = pose_dim_sampler.second(seed_pose.pose.position.x);
-			else if (pose_dim_sampler.first == PoseDimension::Y)
-				target_pose.pose.position.y = pose_dim_sampler.second(seed_pose.pose.position.y);
-			else if (pose_dim_sampler.first == PoseDimension::Z)
-				target_pose.pose.position.z = pose_dim_sampler.second(seed_pose.pose.position.z);
-			else if (pose_dim_sampler.first == PoseDimension::ROLL)
-				rand_roll = pose_dim_sampler.second(rand_roll);
-			else if (pose_dim_sampler.first == PoseDimension::PITCH)
-				rand_pitch = pose_dim_sampler.second(rand_pitch);
-			else if (pose_dim_sampler.first == PoseDimension::YAW)
-				rand_yaw = pose_dim_sampler.second(rand_yaw);
+			switch (pose_dim_sampler.first) {
+				case X:
+					target_pose.pose.position.x = pose_dim_sampler.second(seed_pose.pose.position.x);
+					break;
+				case Y:
+					target_pose.pose.position.y = pose_dim_sampler.second(seed_pose.pose.position.y);
+					break;
+				case Z:
+					target_pose.pose.position.z = pose_dim_sampler.second(seed_pose.pose.position.z);
+					break;
+				case ROLL:
+					rand_roll = pose_dim_sampler.second(rand_roll);
+					break;
+				case PITCH:
+					rand_pitch = pose_dim_sampler.second(rand_pitch);
+					break;
+				case YAW:
+					rand_yaw = pose_dim_sampler.second(rand_yaw);
+			}
 		}
 		rand_q.setRPY(rand_roll, rand_pitch, rand_yaw);
 		rand_q = seed_q * rand_q;

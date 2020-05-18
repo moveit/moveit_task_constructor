@@ -80,7 +80,7 @@ public:
 	 * The distribution_param is applied to the specified distribution method while the target pose value is used as
 	 * seed.
 	 * Currently supported distributions are:
-	 * * std::uniform_real_distrubtion: distribution_param specifies the +- value range around the target_pose value
+	 * * std::uniform_real_distrubtion: distribution_param specifies the full value range around the target_pose value
 	 * * std::normal_distribution: distribution_param is used as stddev, target_pose value is mean
 	 *
 	 * Other distributions can be used by setting the PoseDimensionSampler directly using the function overload.
@@ -117,11 +117,9 @@ private:
 	std::map<PoseDimension, PoseDimensionSampler> pose_dimension_samplers_;
 };
 template <>
-GeneratePose::PoseDimensionSampler
-GeneratePose::getPoseDimensionSampler<std::normal_distribution>(double distribution_param);
+GeneratePose::PoseDimensionSampler GeneratePose::getPoseDimensionSampler<std::normal_distribution>(double stddev);
 template <>
-GeneratePose::PoseDimensionSampler
-GeneratePose::getPoseDimensionSampler<std::uniform_real_distribution>(double distribution_param);
+GeneratePose::PoseDimensionSampler GeneratePose::getPoseDimensionSampler<std::uniform_real_distribution>(double range);
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
