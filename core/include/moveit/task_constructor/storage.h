@@ -200,6 +200,7 @@ public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 
+	/// Retrieve following (FORWARD) or preceding (BACKWARD) solution segments
 	template <Interface::Direction dir>
 	inline const InterfaceState::Solutions& trajectories() const;
 
