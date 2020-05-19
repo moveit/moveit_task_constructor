@@ -299,6 +299,8 @@ public:
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
+	const container_type& solutions() const { return subsolutions_; }
+
 	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
 	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
 
