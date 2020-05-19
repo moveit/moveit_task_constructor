@@ -151,8 +151,9 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	solution->setStartState(from);
 	solution->setEndState(*to_it);
 
-	if (!solution->isFailure())
+	if (!solution->isFailure() && addCost(*solution)) {
 		nextStarts()->add(*to_it);
+	}
 
 	newSolution(solution);
 }
@@ -168,7 +169,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	solution->setStartState(*from_it);
 	solution->setEndState(to);
 
-	if (!solution->isFailure())
+	if (!solution->isFailure() && addCost(*solution))
 		prevEnds()->add(*from_it);
 
 	newSolution(solution);
@@ -185,7 +186,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 	solution->setStartState(*from);
 	solution->setEndState(*to);
 
-	if (!solution->isFailure()) {
+	if (!solution->isFailure() && addCost(*solution)) {
 		prevEnds()->add(*from);
 		nextStarts()->add(*to);
 	}
@@ -200,6 +201,9 @@ void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to,
 	solution->setStartState(from);
 	solution->setEndState(to);
 
+	if (!solution->isFailure())
+		addCost(*solution);
+
 	newSolution(solution);
 }
 
@@ -210,6 +214,13 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 
 	if (parent() && !solution->isFailure())
 		parent()->onNewSolution(*solution);
+}
+
+bool StagePrivate::addCost(SolutionBase& solution) {
+	if (cost_term_)
+		solution.setCost(cost_term_(solution));
+
+	return !solution.isFailure();
 }
 
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
@@ -306,6 +317,10 @@ Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionC
 }
 void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 	pimpl()->solution_cbs_.erase(which);
+}
+
+void Stage::setCostTerm(const CostTerm& cost_term) {
+	pimpl()->cost_term_ = cost_term;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

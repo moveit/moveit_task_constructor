@@ -80,6 +80,9 @@ public:
 
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
+
+private:
+	using Stage::setCostTerm;
 };
 std::ostream& operator<<(std::ostream& os, const ContainerBase& stage);
 

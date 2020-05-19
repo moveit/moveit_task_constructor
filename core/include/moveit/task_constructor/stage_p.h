@@ -154,14 +154,25 @@ public:
 		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
 
+	/** compute cost for solution through configured CostTerm
+	 *
+	 * @return true if solution remains feasible (is no failure)
+	 */
+	bool addCost(SolutionBase& solution);
+
 protected:
-	Stage* me_;  // associated/owning Stage instance
+	// associated/owning Stage instance
+	Stage* me_;
+
 	std::string name_;
 	PropertyMap properties_;
 
 	// pull interfaces, created by the stage as required
 	InterfacePtr starts_;
 	InterfacePtr ends_;
+
+	// user-configurable cost estimator
+	Stage::CostTerm cost_term_;
 
 	// The total compute time
 	std::chrono::duration<double> total_compute_time_;

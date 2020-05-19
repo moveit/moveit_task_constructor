@@ -159,6 +159,7 @@ public:
 		PARENT = 2,
 		INTERFACE = 4,
 	};
+
 	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
@@ -212,6 +213,9 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
+	using CostTerm = std::function<double(const SolutionBase&)>;
+	void setCostTerm(const CostTerm&);
+
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
 	size_t numFailures() const;
@@ -227,8 +231,10 @@ public:
 	void setProperty(const std::string& name, const boost::any& value);
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
+
 	/// analyze source of error and report accordingly
 	[[noreturn]] void reportPropertyError(const Property::error& e);
+
 	double getTotalComputeTime() const;
 
 protected:
