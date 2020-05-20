@@ -41,20 +41,8 @@ namespace moveit {
 namespace task_constructor {
 namespace cost {
 
-double PathLengthCost(const SolutionBase& s) {
-	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&s) };
-
-	if (trajectory) {
-		return trajectory->trajectory() ? trajectory->trajectory()->getDuration() : 0.0;
-	} else {
-		// there is no other alternative implementation of SolutionBase so static_cast is safe
-		auto& seq{ *static_cast<const SolutionSequence*>(&s) };
-
-		double cost{ 0.0 };
-		for (auto& sub : seq.solutions())
-			cost += PathLengthCost(*sub);
-		return cost;
-	}
+double PathLengthCost(const SubTrajectory& s) {
+	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 }
 }

@@ -217,8 +217,9 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 }
 
 bool StagePrivate::addCost(SolutionBase& solution) {
-	if (cost_term_)
-		solution.setCost(cost_term_(solution));
+	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };
+	if (trajectory && cost_term_)
+		solution.setCost(cost_term_(*trajectory));
 
 	return !solution.isFailure();
 }
@@ -319,8 +320,8 @@ void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 	pimpl()->solution_cbs_.erase(which);
 }
 
-void Stage::setCostTerm(const CostTerm& cost_term) {
-	pimpl()->cost_term_ = cost_term;
+void Stage::setCostTerm(const CostTerm& term) {
+	pimpl()->cost_term_ = term;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

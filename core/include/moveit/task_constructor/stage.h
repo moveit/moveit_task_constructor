@@ -213,8 +213,7 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
-	using CostTerm = std::function<double(const SolutionBase&)>;
-	void setCostTerm(const CostTerm&);
+	using CostTerm = std::function<double(const SubTrajectory&)>;
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
