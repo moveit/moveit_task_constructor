@@ -97,7 +97,12 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
+  : me_(me)
+  , name_(name)
+  , cost_transform_([](auto x) { return x; })
+  , total_compute_time_{}
+  , parent_(nullptr)
+  , introspection_(nullptr) {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -217,9 +222,17 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 }
 
 bool StagePrivate::addCost(SolutionBase& solution) {
+	double cost{ 0.0 };
+
 	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };
 	if (trajectory && cost_term_)
-		solution.setCost(cost_term_(*trajectory));
+		// CostTerm only applies to SubTrajectory
+		cost = cost_term_(*trajectory);
+	else
+		// everything else is just transformed
+		cost = solution.cost();
+
+	solution.setCost(cost_transform_(cost));
 
 	return !solution.isFailure();
 }
@@ -322,6 +335,10 @@ void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 
 void Stage::setCostTerm(const CostTerm& term) {
 	pimpl()->cost_term_ = term;
+}
+
+void Stage::setCostTransform(const CostTransform& transform) {
+	pimpl()->cost_transform_ = transform;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

@@ -214,6 +214,27 @@ public:
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
 	using CostTerm = std::function<double(const SubTrajectory&)>;
+	using CostTransform = std::function<double(const double)>;
+
+	/* \brief set method to determine costs for solutions of this stage
+	 *
+	 * This interface supports only primitive solutions, no containers.
+	 *
+	 * In order to support containers, the associated CostTerms would need to be able
+	 * to decide costs for arbitrary partial solutions of the container.
+	 * These need to be determined for scheduling, but would make the terms too complex.
+	 *
+	 * See setCostTransform
+	 */
+	void setCostTerm(const CostTerm& term);
+
+	/* \brief set CostTransform to be applied to costs of this stage's solution costs
+	 *
+	 * This interface can be used to modify the cost associated with each solution of this stage/container.
+	 * The most common case would be linear weighting `[=a](double c){ return a*c; }`
+	 * but any non-linear transform is obviously possible as well.
+	 */
+	void setCostTransform(const CostTransform& transform);
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
