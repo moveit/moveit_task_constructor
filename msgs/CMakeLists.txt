@@ -1,38 +1,43 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.5)
 project(moveit_task_constructor_msgs)
 
-set(MSG_DEPS moveit_msgs visualization_msgs)
-
-find_package(catkin REQUIRED COMPONENTS
-	message_generation
-	${MSG_DEPS}
-)
+find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # ROS messages, services and actions
-add_message_files(DIRECTORY msg FILES
-	Property.msg
-	Solution.msg
-	SolutionInfo.msg
-	StageDescription.msg
-	StageStatistics.msg
-	SubSolution.msg
-	SubTrajectory.msg
-	TaskDescription.msg
-	TaskStatistics.msg
+set(msg_files
+	"msg/Property.msg"
+	"msg/Solution.msg"
+	"msg/SolutionInfo.msg"
+	"msg/StageDescription.msg"
+	"msg/StageStatistics.msg"
+	"msg/SubSolution.msg"
+	"msg/SubTrajectory.msg"
+	"msg/TaskDescription.msg"
+	"msg/TaskStatistics.msg"
 )
 
-add_service_files(DIRECTORY srv FILES
-	GetSolution.srv
+set(srv_files
+	"srv/GetSolution.srv"
 )
 
-add_action_files(DIRECTORY action FILES
-	ExecuteTaskSolution.action
+set(action_files
+	"action/ExecuteTaskSolution.action"
 )
 
-generate_messages(DEPENDENCIES ${MSG_DEPS})
-
-catkin_package(
-	CATKIN_DEPENDS
-		message_runtime
-		${MSG_DEPS}
+rosidl_generate_interfaces(${PROJECT_NAME}
+	${msg_files}
+	${srv_files}
+  	${action_files}
+	DEPENDENCIES
+		builtin_interfaces
+		moveit_msgs
+		visualization_msgs
 )
+
+ament_export_dependencies(rosidl_default_runtime)
+
+ament_package()
