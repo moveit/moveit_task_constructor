@@ -1,4 +1,4 @@
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
 	${PROJECT_INCLUDE}/container.h
 	${PROJECT_INCLUDE}/container_p.h
 	${PROJECT_INCLUDE}/cost_queue.h
@@ -33,16 +33,23 @@ add_library(${PROJECT_NAME}
 	solvers/pipeline_planner.cpp
 	solvers/joint_interpolation.cpp
 )
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+ament_target_dependencies(${PROJECT_NAME}
+    moveit_core
+    geometry_msgs
+    moveit_ros_planning
+    moveit_ros_planning_interface
+    moveit_task_constructor_msgs
+    rclcpp
+    visualization_msgs
+)
 target_include_directories(${PROJECT_NAME}
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-	PUBLIC ${catkin_INCLUDE_DIRS}
 )
-add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 add_subdirectory(stages)
 
 install(TARGETS ${PROJECT_NAME}
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)

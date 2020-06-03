@@ -7,11 +7,11 @@
 	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 
-	<buildtool_depend>catkin</buildtool_depend>
+	<buildtool_depend>ament_cmake</buildtool_depend>
 
 	<depend>eigen_conversions</depend>
 	<depend>geometry_msgs</depend>
-	<depend>roscpp</depend>
+	<depend>rclcpp</depend>
 	<depend>moveit_core</depend>
 	<depend>moveit_ros_planning</depend>
 	<depend>moveit_ros_planning_interface</depend>
@@ -19,9 +19,9 @@
 	<depend>visualization_msgs</depend>
 	<depend>rviz_marker_tools</depend>
 
-	<test_depend>rosunit</test_depend>
-	<test_depend>rostest</test_depend>
-	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
+	<!-- <test_depend>rosunit</test_depend> -->
+	<!-- <test_depend>rostest</test_depend> -->
+	<!-- <test_depend>moveit_resources_fanuc_moveit_config</test_depend> -->
 
 	<export>
 		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>
