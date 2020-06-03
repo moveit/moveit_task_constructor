@@ -13,7 +13,7 @@
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 #include <gtest/gtest.h>
 

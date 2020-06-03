@@ -41,7 +41,7 @@
 #include <moveit_msgs/msg/planning_scene_components.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 namespace moveit {
 namespace task_constructor {

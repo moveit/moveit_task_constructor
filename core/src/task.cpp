@@ -40,7 +40,7 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <actionlib/client/simple_action_client.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
