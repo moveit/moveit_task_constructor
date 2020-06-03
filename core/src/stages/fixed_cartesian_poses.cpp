@@ -46,7 +46,7 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-using PosesList = std::vector<geometry_msgs::PoseStamped>;
+using PosesList = std::vector<geometry_msgs::msg::PoseStamped>;
 
 FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGenerator(name) {
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
@@ -55,7 +55,7 @@ FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGe
 	p.declare<PosesList>("poses", PosesList(), "target poses to spawn");
 }
 
-void FixedCartesianPoses::addPose(const geometry_msgs::PoseStamped& pose) {
+void FixedCartesianPoses::addPose(const geometry_msgs::msg::PoseStamped& pose) {
 	moveit::task_constructor::Property& poses = properties().property("poses");
 	if (!poses.defined())
 		poses.setValue(PosesList({ pose }));
@@ -82,7 +82,7 @@ void FixedCartesianPoses::compute() {
 		return;
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
-	for (geometry_msgs::PoseStamped pose : properties().get<PosesList>("poses")) {
+	for (geometry_msgs::msg::PoseStamped pose : properties().get<PosesList>("poses")) {
 		if (pose.header.frame_id.empty())
 			pose.header.frame_id = scene->getPlanningFrame();
 		else if (!scene->knowsFrameTransform(pose.header.frame_id)) {

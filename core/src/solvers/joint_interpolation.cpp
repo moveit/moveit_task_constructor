@@ -55,7 +55,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const planning_scene::PlanningSceneConstPtr& to,
                                      const moveit::core::JointModelGroup* jmg, double timeout,
                                      robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& path_constraints) {
+                                     const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& props = properties();
 
 	// Get maximum joint distance
@@ -99,7 +99,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const moveit::core::LinkModel& link, const Eigen::Isometry3d& target_eigen,
                                      const moveit::core::JointModelGroup* jmg, double timeout,
                                      robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& path_constraints) {
+                                     const moveit_msgs::msg::Constraints& path_constraints) {
 	throw std::runtime_error("Not yet implemented");
 }
 }  // namespace solvers

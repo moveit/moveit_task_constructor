@@ -49,7 +49,7 @@ GeneratePose::GeneratePose(const std::string& name) : MonitoringGenerator(name) 
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 
 	auto& p = properties();
-	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
+	p.declare<geometry_msgs::msg::PoseStamped>("pose", "target pose to pass on in spawned states");
 }
 
 void GeneratePose::reset() {
@@ -71,7 +71,7 @@ void GeneratePose::compute() {
 		return;
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
-	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	geometry_msgs::msg::PoseStamped target_pose = properties().get<geometry_msgs::msg::PoseStamped>("pose");
 	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();
 	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {

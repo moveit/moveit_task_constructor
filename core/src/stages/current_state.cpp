@@ -37,8 +37,8 @@
 
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/storage.h>
-#include <moveit_msgs/GetPlanningScene.h>
-#include <moveit_msgs/PlanningSceneComponents.h>
+#include <moveit_msgs/srv/get_planning_scene.hpp>
+#include <moveit_msgs/msg/planning_scene_components.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <ros/ros.h>
@@ -68,22 +68,22 @@ void CurrentState::compute() {
 	scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
 	ros::NodeHandle h;
-	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+	ros::ServiceClient client = h.serviceClient<moveit_msgs::srv::GetPlanningScene>("get_planning_scene");
 
 	ros::Duration timeout(this->timeout());
 	if (client.waitForExistence(timeout)) {
-		moveit_msgs::GetPlanningScene::Request req;
-		moveit_msgs::GetPlanningScene::Response res;
+		moveit_msgs::srv::GetPlanningScene::Request req;
+		moveit_msgs::srv::GetPlanningScene::Response res;
 
 		req.components.components =
-		    moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS | moveit_msgs::PlanningSceneComponents::ROBOT_STATE |
-		    moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
-		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES |
-		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY | moveit_msgs::PlanningSceneComponents::OCTOMAP |
-		    moveit_msgs::PlanningSceneComponents::TRANSFORMS |
-		    moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
-		    moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
-		    moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+		    moveit_msgs::msg::PlanningSceneComponents::SCENE_SETTINGS | moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE |
+		    moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
+		    moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_NAMES |
+		    moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY | moveit_msgs::msg::PlanningSceneComponents::OCTOMAP |
+		    moveit_msgs::msg::PlanningSceneComponents::TRANSFORMS |
+		    moveit_msgs::msg::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
+		    moveit_msgs::msg::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
+		    moveit_msgs::msg::PlanningSceneComponents::OBJECT_COLORS;
 
 		if (client.call(req, res)) {
 			scene_->setPlanningSceneMsg(res.scene);

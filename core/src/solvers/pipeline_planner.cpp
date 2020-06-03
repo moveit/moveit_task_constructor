@@ -40,7 +40,7 @@
 #include <moveit/task_constructor/task.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
-#include <moveit_msgs/MotionPlanRequest.h>
+#include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <moveit/kinematic_constraints/utils.h>
 #include <eigen_conversions/eigen_msg.h>
 
@@ -53,7 +53,7 @@ PipelinePlanner::PipelinePlanner() {
 	p.declare<std::string>("planner", "", "planner id");
 
 	p.declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
-	p.declare<moveit_msgs::WorkspaceParameters>("workspace_parameters", moveit_msgs::WorkspaceParameters(),
+	p.declare<moveit_msgs::msg::WorkspaceParameters>("workspace_parameters", moveit_msgs::msg::WorkspaceParameters(),
 	                                            "allowed workspace of mobile base?");
 
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");
@@ -83,7 +83,7 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
 
-void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMap& p,
+void initMotionPlanRequest(moveit_msgs::msg::MotionPlanRequest& req, const PropertyMap& p,
                            const moveit::core::JointModelGroup* jmg, double timeout) {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
@@ -93,15 +93,15 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
 	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
 	req.max_acceleration_scaling_factor = p.get<double>("max_acceleration_scaling_factor");
-	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
+	req.workspace_parameters = p.get<moveit_msgs::msg::WorkspaceParameters>("workspace_parameters");
 }
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                            const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
                            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+                           const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& props = properties();
-	moveit_msgs::MotionPlanRequest req;
+	moveit_msgs::msg::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
 
 	req.goal_constraints.resize(1);
@@ -118,12 +118,12 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
                            const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
                            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+                           const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& props = properties();
-	moveit_msgs::MotionPlanRequest req;
+	moveit_msgs::msg::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
 
-	geometry_msgs::PoseStamped target;
+	geometry_msgs::msg::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
 	tf::poseEigenToMsg(target_eigen, target.pose);
 

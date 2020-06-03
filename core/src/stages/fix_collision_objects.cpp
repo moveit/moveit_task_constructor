@@ -60,7 +60,7 @@ FixCollisionObjects::FixCollisionObjects(const std::string& name) : PropagatingE
 
 	auto& p = properties();
 	p.declare<double>("max_penetration", "maximally corrected penetration depth");
-	p.declare<geometry_msgs::Vector3>("direction", "direction vector to use for corrections");
+	p.declare<geometry_msgs::msg::Vector3>("direction", "direction vector to use for corrections");
 }
 
 void FixCollisionObjects::computeForward(const InterfaceState& from) {
@@ -146,7 +146,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 
 			// fix collision by shifting object along correction direction
 			if (!dir.empty())  // if explicitly given, use this correction direction
-				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
+				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::msg::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
 			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));

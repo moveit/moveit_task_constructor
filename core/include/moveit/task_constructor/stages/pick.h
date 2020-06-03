@@ -38,7 +38,7 @@
 
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/container.h>
-#include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/msg/twist_stamped.hpp>
 
 namespace moveit {
 namespace task_constructor {
@@ -82,9 +82,9 @@ public:
 
 	solvers::CartesianPathPtr cartesianSolver() { return cartesian_solver_; }
 
-	void setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
+	void setApproachRetract(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance);
 
-	void setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
+	void setLiftPlace(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance);
 	void setLiftPlace(const std::map<std::string, double>& joints);
 };
 
@@ -95,11 +95,11 @@ public:
 	Pick(Stage::pointer&& grasp_stage = Stage::pointer(), const std::string& name = "pick")
 	  : PickPlaceBase(std::move(grasp_stage), name, true) {}
 
-	void setApproachMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+	void setApproachMotion(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance) {
 		setApproachRetract(motion, min_distance, max_distance);
 	}
 
-	void setLiftMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+	void setLiftMotion(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance) {
 		setLiftPlace(motion, min_distance, max_distance);
 	}
 	void setLiftMotion(const std::map<std::string, double>& joints) { setLiftPlace(joints); }
@@ -112,11 +112,11 @@ public:
 	Place(Stage::pointer&& ungrasp_stage = Stage::pointer(), const std::string& name = "place")
 	  : PickPlaceBase(std::move(ungrasp_stage), name, false) {}
 
-	void setRetractMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+	void setRetractMotion(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance) {
 		setApproachRetract(motion, min_distance, max_distance);
 	}
 
-	void setPlaceMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+	void setPlaceMotion(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance) {
 		setLiftPlace(motion, min_distance, max_distance);
 	}
 	void setPlaceMotion(const std::map<std::string, double>& joints) { setLiftPlace(joints); }

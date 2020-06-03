@@ -17,7 +17,7 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scen
 	   const std::vector<std::string>* names = object_names.empty() ? &scene->getCollisionObjectMsg()
 	                                                              : &link_names;
 	   for (const auto &name : *names) {
-	      visualization_msgs::MarkerArray markers;
+	      visualization_msgs::msg::MarkerArray markers;
 	      robot_state.getRobotMarkers(markers, {name}, false);
 	      for (auto &marker : markers.markers)
 	         callback(marker, name);
@@ -25,7 +25,7 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scen
 	*/
 }
 
-visualization_msgs::Marker& createGeometryMarker(visualization_msgs::Marker& marker, const urdf::Geometry& geom,
+visualization_msgs::msg::Marker& createGeometryMarker(visualization_msgs::msg::Marker& marker, const urdf::Geometry& geom,
                                                  const urdf::Pose& pose, const urdf::Color& color) {
 	rviz_marker_tools::makeFromGeometry(marker, geom);
 	marker.pose.position.x = pose.position.x;
@@ -110,7 +110,7 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 	if (!model)
 		return;
 
-	visualization_msgs::Marker m;
+	visualization_msgs::msg::Marker m;
 	m.header.frame_id = robot_state.getRobotModel()->getModelFrame();
 
 	// code adapted from rviz::RobotLink::createVisual() / createCollision()

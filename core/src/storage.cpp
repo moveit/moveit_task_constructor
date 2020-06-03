@@ -145,7 +145,7 @@ void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
 
-void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
+void SolutionBase::fillInfo(moveit_task_constructor_msgs::msg::SolutionInfo& info, Introspection* introspection) const {
 	info.id = introspection ? introspection->solutionId(*this) : 0;
 	info.cost = this->cost();
 	info.comment = this->comment();
@@ -157,9 +157,9 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	std::copy(markers.begin(), markers.end(), info.markers.begin());
 }
 
-void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
+void SubTrajectory::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection) const {
 	msg.sub_trajectory.emplace_back();
-	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
+	moveit_task_constructor_msgs::msg::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
 	if (trajectory())
@@ -176,8 +176,8 @@ void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
 }
 
-void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
-	moveit_task_constructor_msgs::SubSolution sub_msg;
+void SolutionSequence::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection) const {
+	moveit_task_constructor_msgs::msg::SubSolution sub_msg;
 	SolutionBase::fillInfo(sub_msg.info, introspection);
 
 	// Usually subsolutions originate from another stage than this solution.

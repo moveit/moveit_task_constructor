@@ -54,21 +54,21 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
+	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
 
 	p.declare<boost::any>("direction", "motion specification");
 	// register actual types
-	PropertySerializer<geometry_msgs::TwistStamped>();
-	PropertySerializer<geometry_msgs::Vector3Stamped>();
+	PropertySerializer<geometry_msgs::msg::TwistStamped>();
+	PropertySerializer<geometry_msgs::msg::Vector3Stamped>();
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
-	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
+	p.declare<moveit_msgs::msg::Constraints>("path_constraints", moveit_msgs::msg::Constraints(),
 	                                    "constraints to maintain during trajectory");
 }
 
 void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
-	geometry_msgs::PoseStamped pose_msg;
+	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setIKFrame(pose_msg);
@@ -126,7 +126,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	double max_distance = props.get<double>("max_distance");
 	double min_distance = props.get<double>("min_distance");
-	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
@@ -136,7 +136,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
 		// Cartesian targets require an IK reference frame
-		geometry_msgs::PoseStamped ik_pose_msg;
+		geometry_msgs::msg::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
 		const boost::any& value = props.get("ik_frame");
 		if (value.empty()) {  // property undefined
@@ -148,7 +148,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			ik_pose_msg.header.frame_id = link->getName();
 			ik_pose_msg.pose.orientation.w = 1.0;
 		} else {
-			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+			ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
 				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
 				return false;
@@ -165,7 +165,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try {  // try to extract Twist
-			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
+			const geometry_msgs::msg::TwistStamped& target = boost::any_cast<geometry_msgs::msg::TwistStamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.twist.linear, linear);
 			tf::vectorMsgToEigen(target.twist.angular, angular);
@@ -208,7 +208,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 		try {  // try to extract Vector
-			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
+			const geometry_msgs::msg::Vector3Stamped& target = boost::any_cast<geometry_msgs::msg::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf::vectorMsgToEigen(target.vector, linear);
 
@@ -265,7 +265,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			solution.setComment("failed to move full distance");
 
 		// add an arrow marker
-		visualization_msgs::Marker m;
+		visualization_msgs::msg::Marker m;
 		m.ns = props.get<std::string>("marker_ns");
 		if (!m.ns.empty()) {
 			m.header.frame_id = scene->getPlanningFrame();

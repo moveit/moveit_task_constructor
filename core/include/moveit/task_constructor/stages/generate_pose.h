@@ -40,7 +40,7 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/cost_queue.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 namespace moveit {
 namespace task_constructor {
@@ -55,7 +55,7 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
-	void setPose(const geometry_msgs::PoseStamped& pose) { setProperty("pose", pose); }
+	void setPose(const geometry_msgs::msg::PoseStamped& pose) { setProperty("pose", pose); }
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;

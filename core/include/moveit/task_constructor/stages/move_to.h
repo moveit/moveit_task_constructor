@@ -40,9 +40,9 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit_msgs/Constraints.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/PointStamped.h>
+#include <moveit_msgs/msg/constraints.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/point_stamped.hpp>
 
 namespace moveit {
 namespace core {
@@ -65,7 +65,7 @@ public:
 
 	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const geometry_msgs::msg::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
@@ -76,21 +76,21 @@ public:
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	/// move link to given pose
-	void setGoal(const geometry_msgs::PoseStamped& pose) { setProperty("goal", pose); }
+	void setGoal(const geometry_msgs::msg::PoseStamped& pose) { setProperty("goal", pose); }
 
 	/// move link to given point, keeping current orientation
-	void setGoal(const geometry_msgs::PointStamped& point) { setProperty("goal", point); }
+	void setGoal(const geometry_msgs::msg::PointStamped& point) { setProperty("goal", point); }
 
 	/// move joint model group to given named pose
 	void setGoal(const std::string& named_joint_pose) { setProperty("goal", named_joint_pose); }
 
 	/// move joints specified in msg to their target values
-	void setGoal(const moveit_msgs::RobotState& robot_state) { setProperty("goal", robot_state); }
+	void setGoal(const moveit_msgs::msg::RobotState& robot_state) { setProperty("goal", robot_state); }
 
 	/// move joints by name to their mapped target value
 	void setGoal(const std::map<std::string, double>& joints);
 
-	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
+	void setPathConstraints(moveit_msgs::msg::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}
 
@@ -99,7 +99,7 @@ protected:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
 	             Direction dir);
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
-	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
+	bool getPoseGoal(const boost::any& goal, const geometry_msgs::msg::PoseStamped& ik_pose_msg,
 	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
 	                 decltype(std::declval<SolutionBase>().markers())& markers);
 	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,

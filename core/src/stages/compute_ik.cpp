@@ -64,19 +64,19 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	                  "minimum distance between seperate IK solutions for the same target");
 
 	// ik_frame and target_pose are read from the interface
-	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
-	p.declare<geometry_msgs::PoseStamped>("target_pose", "goal pose for ik frame");
+	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
+	p.declare<geometry_msgs::msg::PoseStamped>("target_pose", "goal pose for ik frame");
 }
 
 void ComputeIK::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
-	geometry_msgs::PoseStamped pose_msg;
+	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setIKFrame(pose_msg);
 }
 
 void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame) {
-	geometry_msgs::PoseStamped pose_msg;
+	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = frame;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
 	setTargetPose(pose_msg);
@@ -254,7 +254,7 @@ void ComputeIK::compute() {
 	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
 
 	// extract target_pose
-	geometry_msgs::PoseStamped target_pose_msg = props.get<geometry_msgs::PoseStamped>("target_pose");
+	geometry_msgs::msg::PoseStamped target_pose_msg = props.get<geometry_msgs::msg::PoseStamped>("target_pose");
 	if (target_pose_msg.header.frame_id.empty())  // if not provided, assume planning frame
 		target_pose_msg.header.frame_id = sandbox_scene->getPlanningFrame();
 
@@ -272,7 +272,7 @@ void ComputeIK::compute() {
 
 	// determine IK link from ik_frame
 	const robot_model::LinkModel* link = nullptr;
-	geometry_msgs::PoseStamped ik_pose_msg;
+	geometry_msgs::msg::PoseStamped ik_pose_msg;
 	const boost::any& value = props.get("ik_frame");
 	if (value.empty()) {  // property undefined
 		//  determine IK link from eef/group
@@ -284,7 +284,7 @@ void ComputeIK::compute() {
 		ik_pose_msg.header.frame_id = link->getName();
 		ik_pose_msg.pose.orientation.w = 1.0;
 	} else {
-		ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
+		ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 		Eigen::Isometry3d ik_pose;
 		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
 		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
@@ -316,12 +316,12 @@ void ComputeIK::compute() {
 	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	// markers used for failures
-	std::deque<visualization_msgs::Marker> failure_markers;
+	std::deque<visualization_msgs::msg::Marker> failure_markers;
 	// frames at target pose and ik frame
 	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "ik frame");
 	rviz_marker_tools::appendFrame(failure_markers, ik_pose_msg, 0.1, "ik frame");
 	// visualize placed end-effector
-	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& name) {
+	auto appender = [&failure_markers](visualization_msgs::msg::Marker& marker, const std::string& name) {
 		marker.ns = "ik target";
 		marker.color.a *= 0.5;
 		failure_markers.push_back(marker);

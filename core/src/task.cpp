@@ -38,7 +38,7 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
@@ -314,11 +314,12 @@ void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
+moveit_msgs::msg::MoveItErrorCodes Task::execute(const SolutionBase& s) {
+	actionlib::SimpleActionClient<moveit_task_constructor_msgs::action::ExecuteTaskSolutionAction> ac(
+	    "execute_task_solution");
 	ac.waitForServer();
 
-	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
+	moveit_task_constructor_msgs::action::ExecuteTaskSolutionGoal goal;
 	s.fillMessage(goal.solution, pimpl()->introspection_.get());
 	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
 

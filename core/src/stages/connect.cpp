@@ -52,7 +52,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
-	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
+	p.declare<moveit_msgs::msg::Constraints>("path_constraints", moveit_msgs::msg::Constraints(),
 	                                    "constraints to maintain during trajectory");
 }
 
@@ -133,7 +133,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
 	MergeMode mode = props.get<MergeMode>("merge_mode");
-	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
@@ -227,7 +227,7 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	// check merged trajectory for collisions
 	if (!intermediate_scenes.front()->isPathValid(*trajectory,
-	                                              properties().get<moveit_msgs::Constraints>("path_constraints")))
+	                                              properties().get<moveit_msgs::msg::Constraints>("path_constraints")))
 		return SubTrajectoryPtr();
 
 	return std::make_shared<SubTrajectory>(trajectory);

@@ -125,7 +125,7 @@ void GenerateGraspPose::compute() {
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
 
-	geometry_msgs::PoseStamped target_pose_msg;
+	geometry_msgs::msg::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
 	double current_angle = 0.0;

@@ -20,7 +20,7 @@
 using namespace moveit::task_constructor;
 
 void spawnObject(const planning_scene::PlanningScenePtr& scene) {
-	moveit_msgs::CollisionObject o;
+	moveit_msgs::msg::CollisionObject o;
 	o.id = "object";
 	o.header.frame_id = "world";
 	o.primitive_poses.resize(1);
@@ -29,7 +29,7 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 	o.primitive_poses[0].position.z = 0.10;
 	o.primitive_poses[0].orientation.w = 1.0;
 	o.primitives.resize(1);
-	o.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].type = shape_msgs::msg::SolidPrimitive::CYLINDER;
 	o.primitives[0].dimensions.resize(2);
 	o.primitives[0].dimensions[0] = 0.23;
 	o.primitives[0].dimensions[1] = 0.03;
@@ -87,7 +87,7 @@ TEST(PA10, pick) {
 		move->setIKFrame("lh_tool_frame");
 		move->setMinMaxDistance(0.05, 0.1);
 
-		geometry_msgs::Vector3Stamped direction;
+		geometry_msgs::msg::Vector3Stamped direction;
 		direction.header.frame_id = "lh_tool_frame";
 		direction.vector.z = 1;
 		move->setDirection(direction);
@@ -154,7 +154,7 @@ TEST(PA10, pick) {
 		move->properties().set("marker_ns", std::string("lift"));
 		move->setIKFrame("lh_tool_frame");
 
-		geometry_msgs::Vector3Stamped direction;
+		geometry_msgs::msg::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.z = 1;
 		move->setDirection(direction);
@@ -168,7 +168,7 @@ TEST(PA10, pick) {
 		move->properties().set("marker_ns", std::string("lift"));
 		move->setIKFrame("lh_tool_frame");
 
-		geometry_msgs::TwistStamped twist;
+		geometry_msgs::msg::TwistStamped twist;
 		twist.header.frame_id = "object";
 		twist.twist.linear.y = 1;
 		twist.twist.angular.y = 2;
