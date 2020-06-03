@@ -48,6 +48,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("MoveTo");
+
 MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
 	setCostTerm(std::make_unique<cost::PathLength>());
@@ -197,12 +199,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		RCLCPP_WARN_STREAM("MoveTo", "Invalid joint model group: " << group);
+		RCLCPP_WARN_STREAM(LOGGER, "Invalid joint model group: " << group);
 		return false;
 	}
 	boost::any goal = props.get("goal");
 	if (goal.empty()) {
-		RCLCPP_WARN("MoveTo", "goal undefined");
+		RCLCPP_WARN(LOGGER, "goal undefined");
 		return false;
 	}
 
@@ -223,7 +225,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (value.empty()) {  // property undefined
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				RCLCPP_WARN_STREAM("MoveTo", "Failed to derive IK target link");
+				RCLCPP_WARN_STREAM(LOGGER, "Failed to derive IK target link");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
@@ -231,14 +233,14 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		} else {
 			ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				RCLCPP_WARN_STREAM("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
+				RCLCPP_WARN_STREAM(LOGGER, "Unknown link: " << ik_pose_msg.header.frame_id);
 				return false;
 			}
 		}
 
 		if (!getPoseGoal(goal, ik_pose_msg, scene, target_eigen, solution.markers()) &&
 		    !getPointGoal(goal, link, scene, target_eigen, solution.markers())) {
-			RCLCPP_ERROR_STREAM("MoveTo", "Invalid type for goal: " << goal.type().name());
+			RCLCPP_ERROR_STREAM(LOGGER, "Invalid type for goal: " << goal.type().name());
 			return false;
 		}
 

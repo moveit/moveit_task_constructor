@@ -47,6 +47,8 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("CartesianPath");
+
 CartesianPath::CartesianPath() {
 	auto& p = properties();
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
@@ -62,7 +64,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
                          const moveit_msgs::msg::Constraints& path_constraints) {
 	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
 	if (!link) {
-		RCLCPP_WARN_STREAM("no unique tip for joint model group: " << jmg->getName());
+		RCLCPP_WARN_STREAM(LOGGER, "no unique tip for joint model group: " << jmg->getName());
 		return false;
 	}
 

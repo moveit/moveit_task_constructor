@@ -189,7 +189,11 @@ void ContainerBase::add(Stage::pointer&& stage) {
 
 bool ContainerBase::insert(Stage::pointer&& stage, int before) {
 	if (!stage) {
+<<<<<<< HEAD
 		RCLCPP_ERROR_STREAM(name() << ": received invalid stage pointer");
+=======
+		RCLCPP_ERROR_STREAM(rclcpp::get_logger("ContainerBase"), name() << ": reveived invalid stage pointer");
+>>>>>>> Port loggers
 		return false;
 	}
 
@@ -517,7 +521,7 @@ void SerialContainer::compute() {
 			if (!stage->pimpl()->canCompute())
 				continue;
 
-			RCLCPP_DEBUG("Computing stage '%s'", stage->name().c_str());
+			RCLCPP_DEBUG(rclcpp::get_logger("SerialContainer"), "Computing stage '%s'", stage->name().c_str());
 			stage->pimpl()->runCompute();
 		} catch (const Property::error& e) {
 			stage->reportPropertyError(e);
@@ -790,8 +794,13 @@ void Merger::onNewSolution(const SolutionBase& s) {
 
 void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	const SubTrajectory* trajectory = dynamic_cast<const SubTrajectory*>(&s);
+<<<<<<< HEAD
 	if (!trajectory || !trajectory->trajectory()) {
       RCLCPP_ERROR("Merger", "Only simple, valid trajectories are supported");
+=======
+	if (!trajectory) {
+		RCLCPP_ERROR(rclcpp::get_logger("Merger"), "Only simple trajectories are supported");
+>>>>>>> Port loggers
 		return;
 	}
 
@@ -897,10 +906,14 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	try {
 		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
 	} catch (const std::runtime_error& e) {
+<<<<<<< HEAD
 		SubTrajectory t;
 		t.markAsFailure();
 		t.setComment(e.what());
 		spawner(std::move(t));
+=======
+		RCLCPP_INFO_STREAM(rclcpp::get_logger("Merger"), this->name() << "Merging failed: " << e.what());
+>>>>>>> Port loggers
 		return;
 	}
 	if (jmg_merged_.get() != jmg)

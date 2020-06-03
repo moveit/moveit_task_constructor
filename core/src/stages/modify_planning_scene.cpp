@@ -46,6 +46,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("ModifyPlanningScene");
+
 ModifyPlanningScene::ModifyPlanningScene(const std::string& name) : PropagatingEitherWay(name) {
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 }
@@ -58,8 +60,8 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 
 void ModifyPlanningScene::addObject(const moveit_msgs::msg::CollisionObject& collision_object) {
 	if (collision_object.operation != moveit_msgs::msg::CollisionObject::ADD) {
-		RCLCPP_ERROR_STREAM("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
-		                                                        "to ADD -- ignoring the object");
+		RCLCPP_ERROR_STREAM(LOGGER, name() << ": addObject is called with object's operation not set "
+		                                      "to ADD -- ignoring the object");
 		return;
 	}
 	collision_objects_.push_back(collision_object);

@@ -45,6 +45,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("GeneratePose");
+
 GeneratePose::GeneratePose(const std::string& name) : MonitoringGenerator(name) {
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 
@@ -75,7 +77,7 @@ void GeneratePose::compute() {
 	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();
 	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
-		RCLCPP_WARN("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+		RCLCPP_WARN(LOGGER, "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
 		return;
 	}
 

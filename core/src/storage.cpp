@@ -46,6 +46,8 @@
 namespace moveit {
 namespace task_constructor {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("InterfaceState");
+
 planning_scene::PlanningSceneConstPtr ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
 	// ensure scene's state is updated
 	if (scene->getCurrentState().dirty())
@@ -58,7 +60,7 @@ InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps) : Int
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
   : scene_(ps), priority_(Priority(0, 0.0)) {
 	if (scene_->getCurrentState().dirty())
-		RCLCPP_ERROR("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
+		RCLCPP_ERROR(LOGGER, "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p)
@@ -176,7 +178,8 @@ void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
 }
 
-void SolutionSequence::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection) const {
+void SolutionSequence::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg,
+                                   Introspection* introspection) const {
 	moveit_task_constructor_msgs::msg::SubSolution sub_msg;
 	SolutionBase::fillInfo(sub_msg.info, introspection);
 

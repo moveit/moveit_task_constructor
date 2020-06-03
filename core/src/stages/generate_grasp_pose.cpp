@@ -48,6 +48,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("GenerateGraspPose");
+
 GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<std::string>("eef", "name of end-effector");
@@ -105,7 +107,7 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s) {
 			solution.setComment(msg);
 			spawn(std::move(state), std::move(solution));
 		} else
-			RCLCPP_WARN_STREAM("GenerateGraspPose", msg);
+			RCLCPP_WARN_STREAM(LOGGER, msg);
 		return;
 	}
 

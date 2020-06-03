@@ -47,6 +47,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("CurrentState");
+
 CurrentState::CurrentState(const std::string& name) : Generator(name) {
 	auto& p = properties();
 	Property& timeout = p.property("timeout");
@@ -91,7 +93,7 @@ void CurrentState::compute() {
 			return;
 		}
 	}
-	RCLCPP_WARN("failed to acquire current PlanningScene");
+	RCLCPP_WARN(LOGGER, "failed to acquire current PlanningScene");
 }
 }  // namespace stages
 }  // namespace task_constructor

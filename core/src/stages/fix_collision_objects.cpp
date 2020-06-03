@@ -45,7 +45,7 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
 
 namespace vm = visualization_msgs;
 namespace cd = collision_detection;
@@ -53,6 +53,8 @@ namespace cd = collision_detection;
 namespace moveit {
 namespace task_constructor {
 namespace stages {
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("FixCollisionObjects");
 
 FixCollisionObjects::FixCollisionObjects(const std::string& name) : PropagatingEitherWay(name) {
 	// TODO: possibly weight solutions based on the required displacement?
@@ -77,8 +79,7 @@ bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d
 	correction.setZero();
 	for (const cd::Contact& c : contacts) {
 		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT && c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
-         RCLCPP_WARN_STREAM("FixCollisionObjects",
-			                      "Cannot fix collision between " << c.body_name_1 << " and " << c.body_name_2);
+			RCLCPP_WARN_STREAM(LOGGER, "Cannot fix collision between " << c.body_name_1 << " and " << c.body_name_2);
 			return false;
 		}
 		if (c.body_type_1 == cd::BodyTypes::WORLD_OBJECT)

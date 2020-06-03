@@ -46,6 +46,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("FixedCartesianPoses");
+
 using PosesList = std::vector<geometry_msgs::msg::PoseStamped>;
 
 FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGenerator(name) {
@@ -86,7 +88,7 @@ void FixedCartesianPoses::compute() {
 		if (pose.header.frame_id.empty())
 			pose.header.frame_id = scene->getPlanningFrame();
 		else if (!scene->knowsFrameTransform(pose.header.frame_id)) {
-			RCLCPP_WARN("FixedCartesianPoses", "Unknown frame: '%s'", pose.header.frame_id.c_str());
+			RCLCPP_WARN(LOGGER, "Unknown frame: '%s'", pose.header.frame_id.c_str());
 			continue;
 		}
 
