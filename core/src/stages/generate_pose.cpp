@@ -75,7 +75,7 @@ void GeneratePose::compute() {
 	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();
 	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
-		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+		RCLCPP_WARN("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
 		return;
 	}
 

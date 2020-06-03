@@ -58,7 +58,7 @@ InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps) : Int
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
   : scene_(ps), priority_(Priority(0, 0.0)) {
 	if (scene_->getCurrentState().dirty())
-		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
+		RCLCPP_ERROR("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
 InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p)

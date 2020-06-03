@@ -91,7 +91,7 @@ void CurrentState::compute() {
 			return;
 		}
 	}
-	ROS_WARN("failed to acquire current PlanningScene");
+	RCLCPP_WARN("failed to acquire current PlanningScene");
 }
 }  // namespace stages
 }  // namespace task_constructor

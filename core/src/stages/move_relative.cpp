@@ -115,12 +115,12 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
+		RCLCPP_WARN_STREAM("MoveRelative", "Invalid joint model group: " << group);
 		return false;
 	}
 	boost::any direction = props.get("direction");
 	if (direction.empty()) {
-		ROS_WARN_NAMED("MoveRelative", "direction undefined");
+		RCLCPP_WARN("MoveRelative", "direction undefined");
 		return false;
 	}
 
@@ -142,7 +142,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (value.empty()) {  // property undefined
 			//  determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
+				RCLCPP_WARN_STREAM("MoveRelative", "Failed to derive IK target link");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
@@ -150,7 +150,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		} else {
 			ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
+				RCLCPP_WARN_STREAM("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
 				return false;
 			}
 		}
@@ -228,7 +228,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			target_eigen = link_pose;
 			target_eigen.translation() += linear;
 		} catch (const boost::bad_any_cast&) {
-			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for direction: " << direction.type().name());
+			RCLCPP_ERROR_STREAM("MoveRelative", "Invalid type for direction: " << direction.type().name());
 			return false;
 		}
 

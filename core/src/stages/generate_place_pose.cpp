@@ -73,7 +73,7 @@ void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
 			solution.setComment(msg);
 			spawn(std::move(state), std::move(solution));
 		} else
-			ROS_WARN_STREAM_NAMED("GeneratePlacePose", msg);
+			RCLCPP_WARN_STREAM("GeneratePlacePose", msg);
 		return;
 	}
 

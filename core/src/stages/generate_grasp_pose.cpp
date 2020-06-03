@@ -105,7 +105,7 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s) {
 			solution.setComment(msg);
 			spawn(std::move(state), std::move(solution));
 		} else
-			ROS_WARN_STREAM_NAMED("GenerateGraspPose", msg);
+			RCLCPP_WARN_STREAM("GenerateGraspPose", msg);
 		return;
 	}
 

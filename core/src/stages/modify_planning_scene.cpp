@@ -58,7 +58,7 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 
 void ModifyPlanningScene::addObject(const moveit_msgs::msg::CollisionObject& collision_object) {
 	if (collision_object.operation != moveit_msgs::msg::CollisionObject::ADD) {
-		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
+		RCLCPP_ERROR_STREAM("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
 		                                                        "to ADD -- ignoring the object");
 		return;
 	}

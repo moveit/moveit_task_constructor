@@ -73,7 +73,7 @@ public:
 	const Entry& entry(const std::type_index& type_index) const {
 		auto it = types_.find(type_index);
 		if (it == types_.end()) {
-			ROS_ERROR_STREAM_NAMED(LOGNAME, "Unregistered type: " << type_index.name());
+			RCLCPP_ERROR_STREAM(LOGNAME, "Unregistered type: " << type_index.name());
 			return dummy_;
 		}
 		return it->second;
@@ -289,7 +289,7 @@ void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMa
 		} catch (const Property::undefined&) {
 		}
 
-		ROS_DEBUG_STREAM_NAMED(LOGNAME, pair.first << ": " << p.initialized_from_ << " -> " << source << ": "
+		RCLCPP_DEBUG_STREAM(LOGNAME, pair.first << ": " << p.initialized_from_ << " -> " << source << ": "
 		                                           << Property::serialize(value));
 		p.setCurrentValue(value);
 		p.initialized_from_ = source;

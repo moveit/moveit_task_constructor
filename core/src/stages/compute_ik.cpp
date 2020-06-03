@@ -240,15 +240,15 @@ void ComputeIK::compute() {
 	std::string msg;
 
 	if (!validateEEF(props, robot_model, eef_jmg, &msg)) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		RCLCPP_WARN_STREAM("ComputeIK", msg);
 		return;
 	}
 	if (!validateGroup(props, robot_model, eef_jmg, jmg, &msg)) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		RCLCPP_WARN_STREAM("ComputeIK", msg);
 		return;
 	}
 	if (!eef_jmg && !jmg) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", "Neither eef nor group are well defined");
+		RCLCPP_WARN_STREAM("ComputeIK", "Neither eef nor group are well defined");
 		return;
 	}
 	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
@@ -262,7 +262,7 @@ void ComputeIK::compute() {
 	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
 	if (target_pose_msg.header.frame_id != sandbox_scene->getPlanningFrame()) {
 		if (!sandbox_scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
-			ROS_WARN_STREAM_NAMED("ComputeIK",
+			RCLCPP_WARN_STREAM("ComputeIK",
 			                      "Unknown reference frame for target pose: " << target_pose_msg.header.frame_id);
 			return;
 		}
@@ -278,7 +278,7 @@ void ComputeIK::compute() {
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
 		                       jmg->getOnlyOneEndEffectorTip())) {
-			ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
+			RCLCPP_WARN_STREAM("ComputeIK", "Failed to derive IK target link");
 			return;
 		}
 		ik_pose_msg.header.frame_id = link->getName();
@@ -293,12 +293,12 @@ void ComputeIK::compute() {
 			const robot_state::AttachedBody* attached =
 			    sandbox_scene->getCurrentState().getAttachedBody(ik_pose_msg.header.frame_id);
 			if (!attached) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
+				RCLCPP_WARN_STREAM("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
 				return;
 			}
 			const EigenSTL::vector_Isometry3d& tf = attached->getFixedTransforms();
 			if (tf.empty()) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Attached body doesn't have shapes.");
+				RCLCPP_WARN_STREAM("ComputeIK", "Attached body doesn't have shapes.");
 				return;
 			}
 			// prepend link

@@ -197,12 +197,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM_NAMED("MoveTo", "Invalid joint model group: " << group);
+		RCLCPP_WARN_STREAM("MoveTo", "Invalid joint model group: " << group);
 		return false;
 	}
 	boost::any goal = props.get("goal");
 	if (goal.empty()) {
-		ROS_WARN_NAMED("MoveTo", "goal undefined");
+		RCLCPP_WARN("MoveTo", "goal undefined");
 		return false;
 	}
 
@@ -223,7 +223,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (value.empty()) {  // property undefined
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				ROS_WARN_STREAM_NAMED("MoveTo", "Failed to derive IK target link");
+				RCLCPP_WARN_STREAM("MoveTo", "Failed to derive IK target link");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
@@ -231,14 +231,14 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		} else {
 			ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				ROS_WARN_STREAM_NAMED("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
+				RCLCPP_WARN_STREAM("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
 				return false;
 			}
 		}
 
 		if (!getPoseGoal(goal, ik_pose_msg, scene, target_eigen, solution.markers()) &&
 		    !getPointGoal(goal, link, scene, target_eigen, solution.markers())) {
-			ROS_ERROR_STREAM_NAMED("MoveTo", "Invalid type for goal: " << goal.type().name());
+			RCLCPP_ERROR_STREAM("MoveTo", "Invalid type for goal: " << goal.type().name());
 			return false;
 		}
 

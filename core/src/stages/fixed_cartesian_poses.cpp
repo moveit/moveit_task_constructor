@@ -86,7 +86,7 @@ void FixedCartesianPoses::compute() {
 		if (pose.header.frame_id.empty())
 			pose.header.frame_id = scene->getPlanningFrame();
 		else if (!scene->knowsFrameTransform(pose.header.frame_id)) {
-			ROS_WARN_NAMED("FixedCartesianPoses", "Unknown frame: '%s'", pose.header.frame_id.c_str());
+			RCLCPP_WARN("FixedCartesianPoses", "Unknown frame: '%s'", pose.header.frame_id.c_str());
 			continue;
 		}
 
