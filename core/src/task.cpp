@@ -219,7 +219,7 @@ void Task::enableIntrospection(bool enable) {
 		// reset introspection instance of all stages
 		pimpl()->setIntrospection(nullptr);
 		pimpl()->traverseStages(
-		    [](Stage& stage, int) {
+		    [](Stage& stage, int /*depth*/) {
 			    stage.pimpl()->setIntrospection(nullptr);
 			    return true;
 			 },
@@ -271,7 +271,7 @@ void Task::init() {
 	// provide introspection instance to all stages
 	impl->setIntrospection(impl->introspection_.get());
 	impl->traverseStages(
-	    [impl](Stage& stage, int) {
+	    [impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(impl->introspection_.get());
 		    return true;
 		 },

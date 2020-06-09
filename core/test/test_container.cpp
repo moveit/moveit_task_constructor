@@ -33,7 +33,7 @@ public:
 	  : MonitoringGenerator("monitoring generator " + std::to_string(++mock_id), monitored) {}
 	bool canCompute() const override { return false; }
 	void compute() override {}
-	void onNewSolution(const SolutionBase&) override {}
+	void onNewSolution(const SolutionBase& /*solution*/) override {}
 };
 
 class PropagatorMockup : public PropagatingEitherWay

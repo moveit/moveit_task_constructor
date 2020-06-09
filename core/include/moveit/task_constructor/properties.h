@@ -194,8 +194,8 @@ public:
 	using SerializeFunction = std::string (*)(const boost::any&);
 	using DeserializeFunction = boost::any (*)(const std::string&);
 
-	static std::string dummySerialize(const boost::any&) { return ""; }
-	static boost::any dummyDeserialize(const std::string&) { return boost::any(); }
+	static std::string dummySerialize(const boost::any& /*unused*/) { return ""; }
+	static boost::any dummyDeserialize(const std::string& /*unused*/) { return boost::any(); }
 
 protected:
 	static bool insert(const std::type_index& type_index, const std::string& type_name, SerializeFunction serialize,

@@ -119,7 +119,7 @@ public Q_SLOTS:
 	void interruptCurrentDisplay();
 
 private Q_SLOTS:
-	void onAllAtOnceChanged(bool);
+	void onAllAtOnceChanged(bool all_at_once);
 
 	// trajectory property slots
 	void changedRobotVisualEnabled();

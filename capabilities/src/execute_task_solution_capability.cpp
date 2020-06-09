@@ -166,7 +166,8 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this, sub_traj, description](const plan_execution::ExecutableMotionPlan*) {
+		exec_traj.effect_on_success_ = [this, sub_traj,
+		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
 #if MOVEIT_MASTER
 			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
 #else

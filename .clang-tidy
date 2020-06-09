@@ -4,6 +4,7 @@ Checks:          '-*,
                   modernize-use-override,
                   modernize-use-using,
                   modernize-loop-convert,
+                  readability-named-parameter,
                   '
 HeaderFilterRegex: '.*/moveit/task_constructor/.*\.h'
 AnalyzeTemporaryDtors: false
