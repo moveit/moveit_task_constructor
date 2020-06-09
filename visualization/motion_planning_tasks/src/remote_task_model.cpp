@@ -98,11 +98,11 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 	// insert properties in same order as reported in description
 	rviz::Property* root = property_tree_->getRoot();
 	int index = 0;  // current child index in root
-	for (auto it = props.begin(); it != props.end(); ++it) {
+	for (const auto& prop : props) {
 		int num = root->numChildren();
 		// find first child with name >= it->name
 		int next = index;
-		while (next < num && root->childAt(next)->getName().toStdString() < it->name)
+		while (next < num && root->childAt(next)->getName().toStdString() < prop.name)
 			++next;
 		// and remove all children in range [index, next) at once
 		root->removeChildren(index, next - index);
@@ -110,10 +110,10 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 
 		// if names differ, insert a new child, otherwise reuse existing
 		rviz::Property* old_child = index < num ? root->childAt(index) : nullptr;
-		if (old_child && old_child->getName().toStdString() != it->name)
+		if (old_child && old_child->getName().toStdString() != prop.name)
 			old_child = nullptr;
 
-		rviz::Property* new_child = createProperty(*it, old_child, scene_, display_context_);
+		rviz::Property* new_child = createProperty(prop, old_child, scene_, display_context_);
 		if (new_child != old_child)
 			root->addChild(new_child, index);
 		++index;

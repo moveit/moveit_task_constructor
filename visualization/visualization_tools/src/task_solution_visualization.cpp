@@ -282,22 +282,22 @@ void TaskSolutionVisualization::changedTrail() {
 
 void TaskSolutionVisualization::changedRobotAlpha() {
 	robot_render_->setAlpha(robot_alpha_property_->getFloat());
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setAlpha(robot_alpha_property_->getFloat());
+	for (auto& waypoint : trail_)
+		waypoint->setAlpha(robot_alpha_property_->getFloat());
 }
 
 void TaskSolutionVisualization::changedRobotVisualEnabled() {
 	robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
 	renderCurrentWayPoint();
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
+	for (auto& waypoint : trail_)
+		waypoint->setVisualVisible(robot_visual_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::changedRobotCollisionEnabled() {
 	robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
 	renderCurrentWayPoint();
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
+	for (auto& waypoint : trail_)
+		waypoint->setCollisionVisible(robot_collision_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::onEnable() {
