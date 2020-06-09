@@ -206,14 +206,14 @@ public:
 
 	inline void setStartState(const InterfaceState& state) {
 		// only allow setting once (by Stage)
-		assert(start_ == NULL || start_ == &state);
+		assert(start_ == nullptr || start_ == &state);
 		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state) {
 		// only allow setting once (by Stage)
-		assert(end_ == NULL || end_ == &state);
+		assert(end_ == nullptr || end_ == &state);
 		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}

@@ -52,7 +52,7 @@ class TaskSolutionPanel : public rviz::Panel
 	Q_OBJECT
 
 public:
-	TaskSolutionPanel(QWidget* parent = 0);
+	TaskSolutionPanel(QWidget* parent = nullptr);
 
 	~TaskSolutionPanel() override;
 

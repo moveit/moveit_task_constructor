@@ -163,11 +163,11 @@ public:
 	 *
 	 * If makeRaw() returns NULL and error_return is not NULL, *error_return will be set.
 	 * On success, *error_return will not be changed. */
-	virtual Type* makeRaw(const QString& class_id, QString* error_return = NULL) {
+	virtual Type* makeRaw(const QString& class_id, QString* error_return = nullptr) {
 		typename QHash<QString, BuiltInClassRecord>::const_iterator iter = built_ins_.find(class_id);
 		if (iter != built_ins_.end()) {
 			Type* instance = iter->factory_function_();
-			if (instance == NULL && error_return != NULL) {
+			if (instance == nullptr && error_return != nullptr) {
 				*error_return = "Factory function for built-in class '" + class_id + "' returned NULL.";
 			}
 			return instance;
@@ -180,7 +180,7 @@ public:
 			if (error_return) {
 				*error_return = QString::fromStdString(ex.what());
 			}
-			return NULL;
+			return nullptr;
 		}
 	}
 

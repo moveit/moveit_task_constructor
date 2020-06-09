@@ -79,7 +79,7 @@ class TaskPanel : public rviz::Panel
 	TaskPanelPrivate* d_ptr;
 
 public:
-	TaskPanel(QWidget* parent = 0);
+	TaskPanel(QWidget* parent = nullptr);
 	~TaskPanel() override;
 
 	/// add a new sub panel widget

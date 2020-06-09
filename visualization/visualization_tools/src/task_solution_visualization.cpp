@@ -267,7 +267,7 @@ void TaskSolutionVisualization::changedTrail() {
 	for (std::size_t i = 0; i < trail_.size(); i++) {
 		int waypoint_i = std::min(i * stepsize, t->getWayPointCount() - 1);  // limit to last trajectory point
 		rviz::Robot* r =
-		    new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), NULL);
+		    new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), nullptr);
 		r->load(*scene_->getRobotModel()->getURDF());
 		r->setVisualVisible(robot_visual_enabled_property_->getBool());
 		r->setCollisionVisible(robot_collision_enabled_property_->getBool());
