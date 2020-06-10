@@ -133,6 +133,11 @@ protected:
 	rdf_loader::RDFLoaderPtr rdf_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
 
+	// topic namespace for ROS interfaces of task
+	std::string base_ns_;
+	// Indicates whether description was received for current task
+	bool received_task_description_;
+
 	// Properties
 	rviz::StringProperty* robot_description_property_;
 	rviz::RosTopicProperty* task_solution_topic_property_;

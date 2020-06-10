@@ -59,7 +59,7 @@
 
 namespace moveit_rviz_plugin {
 
-TaskDisplay::TaskDisplay() : Display() {
+TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
 	task_list_model_.reset(new TaskListModel);
 	task_list_model_->setSolutionClient(&get_solution_client);
 
@@ -197,6 +197,15 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 	mainloop_jobs_.addJob([this, id, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
 		task_list_model_->processTaskDescriptionMessage(id, *msg);
+
+		// Start listening to other topics if this is the first description
+		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
+		if (!received_task_description_) {
+			received_task_description_ = true;
+			task_statistics_sub =
+			    update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
+			task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
+		}
 	});
 }
 
@@ -229,6 +238,8 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	task_solution_sub.shutdown();
 	get_solution_client.shutdown();
 
+	received_task_description_ = false;
+
 	// generate task monitoring topics from solution topic
 	const QString& solution_topic = task_solution_topic_property_->getString();
 	if (!solution_topic.endsWith(QString("/").append(SOLUTION_TOPIC))) {
@@ -237,20 +248,14 @@ void TaskDisplay::changedTaskSolutionTopic() {
 		return;
 	}
 
-	std::string base_ns = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
+	base_ns_ = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
 	// listen to task descriptions updates
-	task_description_sub = update_nh_.subscribe(base_ns + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
-
-	// listen to task statistics updates
-	task_statistics_sub = update_nh_.subscribe(base_ns + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
-
-	// listen to task solutions
-	task_solution_sub = update_nh_.subscribe(base_ns + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
+	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
 
 	// service to request solutions
 	get_solution_client =
-	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns + GET_SOLUTION_SERVICE);
+	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns_ + GET_SOLUTION_SERVICE);
 
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
