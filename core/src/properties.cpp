@@ -85,7 +85,7 @@ public:
 		return it->second->second;
 	}
 };
-static PropertyTypeRegistry registry_singleton_;
+static PropertyTypeRegistry REGISTRY_SINGLETON;
 
 bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::string& type_name,
                                   PropertySerializerBase::SerializeFunction serialize,
@@ -106,7 +106,7 @@ bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::
 bool PropertySerializerBase::insert(const std::type_index& type_index, const std::string& type_name,
                                     PropertySerializerBase::SerializeFunction serialize,
                                     PropertySerializerBase::DeserializeFunction deserialize) {
-	return registry_singleton_.insert(type_index, type_name, serialize, deserialize);
+	return REGISTRY_SINGLETON.insert(type_index, type_name, serialize, deserialize);
 }
 
 Property::Property(const type_info& type_info, const std::string& description, const boost::any& default_value)
@@ -149,14 +149,14 @@ void Property::reset() {
 std::string Property::serialize(const boost::any& value) {
 	if (value.empty())
 		return "";
-	return registry_singleton_.entry(value.type()).serialize_(value);
+	return REGISTRY_SINGLETON.entry(value.type()).serialize_(value);
 }
 
 boost::any Property::deserialize(const std::string& type_name, const std::string& wire) {
 	if (type_name != Property::typeName(typeid(std::string)) && wire.empty())
 		return boost::any();
 	else
-		return registry_singleton_.entry(type_name).deserialize_(wire);
+		return REGISTRY_SINGLETON.entry(type_name).deserialize_(wire);
 }
 
 std::string Property::typeName() const {
@@ -170,7 +170,7 @@ std::string Property::typeName(const type_info& type_info) {
 	if (type_info == typeid(boost::any))
 		return "";
 	else
-		return registry_singleton_.entry(type_info).name_;
+		return REGISTRY_SINGLETON.entry(type_info).name_;
 }
 
 bool Property::initsFrom(Property::SourceFlags source) const {
@@ -316,9 +316,9 @@ Property::undefined::undefined(const std::string& name, const std::string& msg) 
 	setName(name);
 }
 
-static boost::format type_error_fmt("type (%1%) doesn't match property's declared type (%2%)");
+static boost::format TYPE_ERROR_FMT("type (%1%) doesn't match property's declared type (%2%)");
 Property::type_error::type_error(const std::string& current_type, const std::string& declared_type)
-  : Property::error(boost::str(type_error_fmt % current_type % declared_type)) {}
+  : Property::error(boost::str(TYPE_ERROR_FMT % current_type % declared_type)) {}
 
 }  // namespace task_constructor
 }  // namespace moveit

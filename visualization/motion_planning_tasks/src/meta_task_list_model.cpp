@@ -45,8 +45,8 @@ MetaTaskListModel::MetaTaskListModel() {
 }
 
 MetaTaskListModel& MetaTaskListModel::instance() {
-	static MetaTaskListModel instance_;
-	return instance_;
+	static MetaTaskListModel instance;
+	return instance;
 }
 
 bool MetaTaskListModel::insertModel(TaskListModel* model, TaskDisplay* display) {

@@ -80,8 +80,8 @@ PropertyFactory::PropertyFactory() {
 }
 
 PropertyFactory& PropertyFactory::instance() {
-	static PropertyFactory instance_;
-	return instance_;
+	static PropertyFactory instance;
+	return instance;
 }
 
 void PropertyFactory::registerType(const std::string& type_name, const PropertyFactoryFunction& f) {

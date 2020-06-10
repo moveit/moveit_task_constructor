@@ -123,7 +123,7 @@ void ContainerBasePrivate::liftSolution(SolutionBasePtr solution, const Interfac
 	if (!storeSolution(solution))
 		return;
 
-	auto findOrCreateExternal = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
+	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
 		auto it = internal_to_external_.find(internal);
 		if (it != internal_to_external_.end())
 			return it->second;
@@ -135,8 +135,8 @@ void ContainerBasePrivate::liftSolution(SolutionBasePtr solution, const Interfac
 	};
 	bool created_from = false;
 	bool created_to = false;
-	InterfaceState* external_from = findOrCreateExternal(internal_from, created_from);
-	InterfaceState* external_to = findOrCreateExternal(internal_to, created_to);
+	InterfaceState* external_from = find_or_create_external(internal_from, created_from);
+	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
 
 	// connect solution to start/end state
 	solution->setStartState(*external_from);

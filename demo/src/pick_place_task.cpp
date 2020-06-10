@@ -117,13 +117,13 @@ void PickPlaceTask::init() {
 	 *               Current State                      *
 	 *                                                  *
 	 ***************************************************/
-	Stage* current_state = nullptr;  // Forward current_state on to grasp pose generator
+	Stage* current_state_ptr = nullptr;  // Forward current_state on to grasp pose generator
 	{
-		auto _current_state = std::make_unique<stages::CurrentState>("current state");
+		auto current_state = std::make_unique<stages::CurrentState>("current state");
 
 		// Verify that object is not attached
 		auto applicability_filter =
-		    std::make_unique<stages::PredicateFilter>("applicability test", std::move(_current_state));
+		    std::make_unique<stages::PredicateFilter>("applicability test", std::move(current_state));
 		applicability_filter->setPredicate([object](const SolutionBase& s, std::string& comment) {
 			if (s.start()->scene()->getCurrentState().hasAttachedBody(object)) {
 				comment = "object with id '" + object + "' is already attached and cannot be picked";
@@ -132,7 +132,7 @@ void PickPlaceTask::init() {
 			return true;
 		});
 
-		current_state = applicability_filter.get();
+		current_state_ptr = applicability_filter.get();
 		t.add(std::move(applicability_filter));
 	}
 
@@ -201,7 +201,7 @@ void PickPlaceTask::init() {
 			stage->setPreGraspPose(hand_open_pose_);
 			stage->setObject(object);
 			stage->setAngleDelta(M_PI / 12);
-			stage->setMonitoredStage(current_state);  // Hook into current state
+			stage->setMonitoredStage(current_state_ptr);  // Hook into current state
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(stage));

@@ -301,11 +301,11 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 		if (!n) {  // create a new Node if neccessary
 			// only emit notify signal if parent node was ever visited
 			bool notify = parent->node_flags_ & WAS_VISITED;
-			QModelIndex parentIdx = index(parent);
+			QModelIndex parent_idx = index(parent);
 			int row = parent->children_.size();
 
 			if (notify)
-				beginInsertRows(parentIdx, row, row);
+				beginInsertRows(parent_idx, row, row);
 			parent->children_.push_back(std::make_unique<Node>(parent));
 			if (notify)
 				endInsertRows();
@@ -575,8 +575,8 @@ void RemoteSolutionModel::sort(int column, Qt::SortOrder order) {
 void RemoteSolutionModel::sortInternal() {
 	Q_EMIT layoutAboutToBeChanged();
 	QModelIndexList old_indexes = persistentIndexList();
-	std::vector<DataList::iterator> old_sorted_;
-	std::swap(sorted_, old_sorted_);
+	std::vector<DataList::iterator> old_sorted;
+	std::swap(sorted_, old_sorted);
 
 	// create new order in sorted_
 	for (auto it = data_.begin(), end = data_.end(); it != end; ++it)
@@ -611,7 +611,7 @@ void RemoteSolutionModel::sortInternal() {
 		int old_row = old_indexes[i].row();
 		auto it_inserted = old_to_new_row.insert(std::make_pair(old_row, -1));
 		if (it_inserted.second) {  // newly inserted: find new row index
-			auto it = detail::findById(sorted_, old_sorted_[old_row]->id);
+			auto it = detail::findById(sorted_, old_sorted[old_row]->id);
 			if (it != sorted_.cend())
 				it_inserted.first->second = it - sorted_.begin();
 		}

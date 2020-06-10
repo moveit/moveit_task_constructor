@@ -11,14 +11,14 @@
 
 using namespace moveit::task_constructor;
 
-static unsigned int mock_id = 0;
+static unsigned int MOCK_ID = 0;
 
 class GeneratorMockup : public Generator
 {
 	int runs = 0;
 
 public:
-	GeneratorMockup(int runs = 0) : Generator("generator " + std::to_string(++mock_id)), runs(runs) {}
+	GeneratorMockup(int runs = 0) : Generator("generator " + std::to_string(++MOCK_ID)), runs(runs) {}
 	bool canCompute() const override { return runs > 0; }
 	void compute() override {
 		if (runs > 0)
@@ -30,7 +30,7 @@ class MonitoringGeneratorMockup : public MonitoringGenerator
 {
 public:
 	MonitoringGeneratorMockup(Stage* monitored)
-	  : MonitoringGenerator("monitoring generator " + std::to_string(++mock_id), monitored) {}
+	  : MonitoringGenerator("monitoring generator " + std::to_string(++MOCK_ID), monitored) {}
 	bool canCompute() const override { return false; }
 	void compute() override {}
 	void onNewSolution(const SolutionBase& /*solution*/) override {}
@@ -43,7 +43,7 @@ class PropagatorMockup : public PropagatingEitherWay
 
 public:
 	PropagatorMockup(int fw = 0, int bw = 0)
-	  : PropagatingEitherWay("propagate " + std::to_string(++mock_id)), fw_runs(fw), bw_runs(bw) {}
+	  : PropagatingEitherWay("propagate " + std::to_string(++MOCK_ID)), fw_runs(fw), bw_runs(bw) {}
 	void computeForward(const InterfaceState& /* from */) override {
 		if (fw_runs > 0)
 			--fw_runs;
@@ -58,7 +58,7 @@ class ForwardMockup : public PropagatorMockup
 public:
 	ForwardMockup(int runs = 0) : PropagatorMockup(runs, 0) {
 		restrictDirection(FORWARD);
-		setName("forward " + std::to_string(mock_id));
+		setName("forward " + std::to_string(MOCK_ID));
 	}
 };
 class BackwardMockup : public PropagatorMockup
@@ -66,7 +66,7 @@ class BackwardMockup : public PropagatorMockup
 public:
 	BackwardMockup(int runs = 0) : PropagatorMockup(0, runs) {
 		restrictDirection(BACKWARD);
-		setName("backward " + std::to_string(mock_id));
+		setName("backward " + std::to_string(MOCK_ID));
 	}
 };
 
@@ -75,7 +75,7 @@ class ConnectMockup : public Connecting
 	int runs = 0;
 
 public:
-	ConnectMockup(int runs = 0) : Connecting("connect " + std::to_string(++mock_id)), runs(runs) {}
+	ConnectMockup(int runs = 0) : Connecting("connect " + std::to_string(++MOCK_ID)), runs(runs) {}
 	void compute(const InterfaceState& /* from */, const InterfaceState& /* to */) override {
 		if (runs > 0)
 			--runs;
@@ -189,7 +189,7 @@ protected:
 	}
 	void initContainer(const std::initializer_list<StageType>& types = {}) {
 		container.clear();
-		mock_id = 0;
+		MOCK_ID = 0;
 		append(container, types);
 	}
 

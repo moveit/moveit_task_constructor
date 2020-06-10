@@ -79,9 +79,9 @@ rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
 }
 
 // TaskPanel singleton
-static QPointer<TaskPanel> singleton_;
+static QPointer<TaskPanel> SINGLETON;
 // count active TaskDisplays
-static uint display_count_ = 0;
+static uint DISPLAY_COUNT = 0;
 
 TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this)) {
 	Q_D(TaskPanel);
@@ -105,8 +105,8 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 
 	// if still undefined, this becomes the global instance
-	if (singleton_.isNull())
-		singleton_ = this;
+	if (SINGLETON.isNull())
+		SINGLETON = this;
 }
 
 TaskPanel::~TaskPanel() {
@@ -131,22 +131,22 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
 }
 
 void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
-	++display_count_;
+	++DISPLAY_COUNT;
 
 	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
-	if (singleton_ || !vis_frame)
+	if (SINGLETON || !vis_frame)
 		return;  // already define, nothing to do
 
 	QDockWidget* dock =
 	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
 	                              Qt::LeftDockWidgetArea, true /* floating */);
-	assert(dock->widget() == singleton_);
+	assert(dock->widget() == SINGLETON);
 }
 
 void TaskPanel::decDisplayCount() {
-	Q_ASSERT(display_count_ > 0);
-	if (--display_count_ == 0 && singleton_)
-		singleton_->deleteLater();
+	Q_ASSERT(DISPLAY_COUNT > 0);
+	if (--DISPLAY_COUNT == 0 && SINGLETON)
+		SINGLETON->deleteLater();
 }
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel* q_ptr) : q_ptr(q_ptr) {
@@ -294,25 +294,25 @@ TaskView::~TaskView() {
 }
 
 void TaskView::save(rviz::Config config) {
-	auto writeSplitterSizes = [&config](QSplitter* splitter, const QString& key) {
+	auto write_splitter_sizes = [&config](QSplitter* splitter, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
 		for (int s : splitter->sizes()) {
 			rviz::Config item = group.listAppendNew();
 			item.setValue(s);
 		}
 	};
-	writeSplitterSizes(d_ptr->tasks_property_splitter, "property_splitter");
-	writeSplitterSizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
+	write_splitter_sizes(d_ptr->tasks_property_splitter, "property_splitter");
+	write_splitter_sizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
 
-	auto writeColumnSizes = [&config](QTreeView* view, const QString& key) {
+	auto write_column_sizes = [&config](QTreeView* view, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
 		for (int c = 0, end = view->header()->count(); c != end; ++c) {
 			rviz::Config item = group.listAppendNew();
 			item.setValue(view->columnWidth(c));
 		}
 	};
-	writeColumnSizes(d_ptr->tasks_view, "tasks_view_columns");
-	writeColumnSizes(d_ptr->solutions_view, "solutions_view_columns");
+	write_column_sizes(d_ptr->tasks_view, "tasks_view_columns");
+	write_column_sizes(d_ptr->solutions_view, "solutions_view_columns");
 
 	const QHeaderView* view = d_ptr->solutions_view->header();
 	rviz::Config group = config.mapMakeChild("solution_sorting");
@@ -324,7 +324,7 @@ void TaskView::load(const rviz::Config& config) {
 	if (!config.isValid())
 		return;
 
-	auto readSizes = [&config](const QString& key) {
+	auto read_sizes = [&config](const QString& key) {
 		rviz::Config group = config.mapGetChild(key);
 		QList<int> sizes, empty;
 		for (int i = 0; i < group.listLength(); ++i) {
@@ -340,14 +340,14 @@ void TaskView::load(const rviz::Config& config) {
 		}
 		return sizes;
 	};
-	d_ptr->tasks_property_splitter->setSizes(readSizes("property_splitter"));
-	d_ptr->tasks_solutions_splitter->setSizes(readSizes("solutions_splitter"));
+	d_ptr->tasks_property_splitter->setSizes(read_sizes("property_splitter"));
+	d_ptr->tasks_solutions_splitter->setSizes(read_sizes("solutions_splitter"));
 
 	int column = 0;
-	for (int w : readSizes("tasks_view_columns"))
+	for (int w : read_sizes("tasks_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
 	column = 0;
-	for (int w : readSizes("solutions_view_columns"))
+	for (int w : read_sizes("solutions_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
 
 	QTreeView* view = d_ptr->solutions_view;
