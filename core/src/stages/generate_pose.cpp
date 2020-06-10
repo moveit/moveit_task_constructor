@@ -60,7 +60,7 @@ void GeneratePose::onNewSolution(const SolutionBase& s) {
 }
 
 bool GeneratePose::canCompute() const {
-	return upstream_solutions_.size() > 0;
+	return !upstream_solutions_.empty();
 }
 
 void GeneratePose::compute() {

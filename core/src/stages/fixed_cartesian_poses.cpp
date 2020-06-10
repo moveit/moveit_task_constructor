@@ -70,7 +70,7 @@ void FixedCartesianPoses::onNewSolution(const SolutionBase& s) {
 }
 
 bool FixedCartesianPoses::canCompute() const {
-	return upstream_solutions_.size() > 0;
+	return !upstream_solutions_.empty();
 }
 
 void FixedCartesianPoses::compute() {
