@@ -116,11 +116,12 @@ Task::Task(const std::string& id, ContainerBase::pointer&& container)
 		enableIntrospection(true);
 }
 
-Task::Task(Task&& other) : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
+Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
+    : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
 	*this = std::move(other);
 }
 
-Task& Task::operator=(Task&& other) {
+Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-constructor)
 	clear();  // remove all stages of current task
 	swap(this->pimpl_, other.pimpl_);
 	return *this;
@@ -133,7 +134,7 @@ struct PlannerCache
 	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
 	ModelList cache_;
 
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, PlannerID id) {
+	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
 		// find model in cache_ and remove expired entries while doing so
 		ModelList::iterator model_it = cache_.begin();
 		while (model_it != cache_.end()) {

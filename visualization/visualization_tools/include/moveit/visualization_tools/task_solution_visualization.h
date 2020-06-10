@@ -102,7 +102,7 @@ public:
 	virtual void reset();
 
 	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
-	void onRobotModelLoaded(moveit::core::RobotModelConstPtr robot_model);
+	void onRobotModelLoaded(const moveit::core::RobotModelConstPtr& robot_model);
 	void onEnable();
 	void onDisable();
 	void setName(const QString& name);

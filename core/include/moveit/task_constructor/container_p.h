@@ -134,7 +134,8 @@ protected:
 	/// copy external_state to a child's interface and remember the link in internal_to map
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 	/// lift solution from internal to external level
-	void liftSolution(SolutionBasePtr solution, const InterfaceState* internal_from, const InterfaceState* internal_to);
+	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
+	                  const InterfaceState* internal_to);
 
 	auto& internalToExternalMap() { return internal_to_external_; }
 	const auto& internalToExternalMap() const { return internal_to_external_; }

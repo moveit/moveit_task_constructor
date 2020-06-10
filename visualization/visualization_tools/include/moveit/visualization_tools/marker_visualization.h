@@ -108,7 +108,7 @@ public:
 	/// remove all hosted markers from display
 	void clearMarkers();
 	/// add markers in MarkerVisualization for display
-	void addMarkers(MarkerVisualizationPtr markers);
+	void addMarkers(const MarkerVisualizationPtr& markers);
 	/// update pose of all markers
 	void update(const planning_scene::PlanningScene& scene, const moveit::core::RobotState& robot_state);
 

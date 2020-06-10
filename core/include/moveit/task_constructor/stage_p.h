@@ -139,10 +139,10 @@ public:
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
 	// methods to spawn new solutions
-	void sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution);
-	void sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution);
-	void spawn(InterfaceState&& state, SolutionBasePtr solution);
-	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+	void sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution);
+	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
+	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
+	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
 	bool storeSolution(const SolutionBasePtr& solution);
 	void newSolution(const SolutionBasePtr& solution);

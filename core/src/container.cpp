@@ -118,7 +118,7 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	internal_to_external_.insert(std::make_pair(&*internal, &*external));
 }
 
-void ContainerBasePrivate::liftSolution(SolutionBasePtr solution, const InterfaceState* internal_from,
+void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to) {
 	if (!storeSolution(solution))
 		return;

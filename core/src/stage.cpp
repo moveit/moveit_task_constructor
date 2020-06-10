@@ -140,7 +140,7 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 	return true;
 }
 
-void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution) {
+void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -157,7 +157,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	newSolution(solution);
 }
 
-void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution) {
+void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -174,7 +174,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	newSolution(solution);
 }
 
-void StagePrivate::spawn(InterfaceState&& state, SolutionBasePtr solution) {
+void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -193,7 +193,7 @@ void StagePrivate::spawn(InterfaceState&& state, SolutionBasePtr solution) {
 	newSolution(solution);
 }
 
-void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution) {
+void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
@@ -742,7 +742,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	return true;
 }
 
-void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr s) {
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& s) {
 	pimpl()->connect(from, to, s);
 }
 

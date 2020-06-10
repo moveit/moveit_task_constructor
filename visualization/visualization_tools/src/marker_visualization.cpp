@@ -188,7 +188,7 @@ void MarkerVisualizationProperty::clearMarkers() {
 	hosted_markers_.clear();
 }
 
-void MarkerVisualizationProperty::addMarkers(MarkerVisualizationPtr markers) {
+void MarkerVisualizationProperty::addMarkers(const MarkerVisualizationPtr& markers) {
 	if (!markers)
 		return;
 

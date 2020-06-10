@@ -1,5 +1,6 @@
 ---
 Checks:          '-*,
+                  performance-*,
                   llvm-namespace-comment,
                   modernize-use-nullptr,
                   modernize-use-override,

@@ -80,8 +80,8 @@ public:
 	              const std::string& adapter_plugins_param_name = "request_adapters");
 	Task(const std::string& id = "",
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
-	Task(Task&& other);
-	Task& operator=(Task&& other);
+	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
+	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	~Task() override;
 
 	const std::string& id() const;

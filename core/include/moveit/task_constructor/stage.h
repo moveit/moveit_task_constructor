@@ -370,7 +370,7 @@ public:
 
 protected:
 	/// register solution as a solution connecting states from -> to
-	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
 	/// convienency methods consuming a SubTrajectory
 	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory) {
