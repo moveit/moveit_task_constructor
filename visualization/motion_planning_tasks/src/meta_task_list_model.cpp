@@ -118,4 +118,4 @@ std::pair<BaseTaskModel*, QModelIndex> MetaTaskListModel::getTaskModel(const QMo
 	Q_ASSERT(dynamic_cast<BaseTaskModel*>(m.first));
 	return std::make_pair(static_cast<BaseTaskModel*>(m.first), m.second);
 }
-}
+}  // namespace moveit_rviz_plugin

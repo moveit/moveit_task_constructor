@@ -189,4 +189,4 @@ private:
 	pluginlib::ClassLoader<Type>* class_loader_;
 	QHash<QString, BuiltInClassRecord> built_ins_;
 };
-}
+}  // namespace moveit_rviz_plugin

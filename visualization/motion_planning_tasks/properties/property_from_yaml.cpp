@@ -291,7 +291,7 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 	root->removeChildren(index, root->numChildren() - index);
 	return root;
 }
-}
+}  // namespace
 
 namespace moveit_rviz_plugin {
 
@@ -303,4 +303,4 @@ rviz::Property* PropertyFactory::createDefault(const std::string& name, const st
 	Parser parser(value);
 	return parser.process(qname, qdesc, old);
 }
-}
+}  // namespace moveit_rviz_plugin

@@ -201,5 +201,5 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 		}
 	}
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

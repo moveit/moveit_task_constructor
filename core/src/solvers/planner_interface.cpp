@@ -49,4 +49,4 @@ PlannerInterface::PlannerInterface() {
 }
 }
 }
-}
+}  // namespace moveit

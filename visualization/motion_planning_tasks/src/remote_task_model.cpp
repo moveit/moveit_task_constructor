@@ -470,7 +470,7 @@ typename T::iterator insert(T& c, typename T::value_type&& item) {
 	else
 		return p.first;
 }
-}
+}  // namespace detail
 
 RemoteSolutionModel::RemoteSolutionModel(QObject* parent) : QAbstractTableModel(parent) {}
 
@@ -660,4 +660,4 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& ids, b
 bool RemoteSolutionModel::isVisible(const RemoteSolutionModel::Data& item) const {
 	return std::isnan(item.cost) || item.cost <= max_cost_;
 }
-}
+}  // namespace moveit_rviz_plugin

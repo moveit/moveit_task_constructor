@@ -60,7 +60,7 @@ findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
 	}
 	return duplicates;
 }
-}
+}  // namespace
 
 namespace moveit {
 namespace task_constructor {
@@ -171,5 +171,5 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 	timing.computeTimeStamps(*merged_traj, 1.0, 1.0);
 	return merged_traj;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

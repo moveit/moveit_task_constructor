@@ -385,5 +385,5 @@ protected:
 /** Return (horizontal) flow symbol for start or end interface (specified by mask) */
 template <unsigned int mask>
 const char* flowSymbol(InterfaceFlags f);
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

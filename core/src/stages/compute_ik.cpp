@@ -431,6 +431,6 @@ void ComputeIK::compute() {
 		spawn(InterfaceState(scene), std::move(solution));
 	}
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

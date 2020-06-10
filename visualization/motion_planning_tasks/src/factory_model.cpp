@@ -91,4 +91,4 @@ QMimeData* FactoryModel::mimeData(const QModelIndexList& indexes) const {
 	}
 	return mime_data;
 }
-}
+}  // namespace moveit_rviz_plugin

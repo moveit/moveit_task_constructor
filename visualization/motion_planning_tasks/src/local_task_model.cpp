@@ -245,4 +245,4 @@ rviz::PropertyTreeModel* LocalTaskModel::getPropertyModel(const QModelIndex& ind
 	}
 	return it_inserted.first->second;
 }
-}
+}  // namespace moveit_rviz_plugin

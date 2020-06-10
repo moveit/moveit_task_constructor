@@ -147,4 +147,4 @@ public:
 	void processSolutionIDs(const std::vector<uint32_t>& successful, const std::vector<uint32_t>& failed,
 	                        size_t num_failed, double total_compute_time);
 };
-}
+}  // namespace moveit_rviz_plugin

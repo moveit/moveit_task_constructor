@@ -158,5 +158,5 @@ inline std::ostream& operator<<(std::ostream& os, const Task& task) {
 	task.printState(os);
 	return os;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

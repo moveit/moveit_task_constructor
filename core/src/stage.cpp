@@ -750,5 +750,5 @@ std::ostream& operator<<(std::ostream& os, const Stage& stage) {
 	os << *stage.pimpl();
 	return os;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

@@ -959,5 +959,5 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	t.setCost(costs);
 	spawner(std::move(t));
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

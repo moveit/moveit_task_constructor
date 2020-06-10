@@ -61,7 +61,7 @@ class EnumProperty;
 class EditableEnumProperty;
 class ColorProperty;
 class PanelDockWidget;
-}
+}  // namespace rviz
 
 namespace moveit {
 namespace core {

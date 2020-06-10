@@ -258,5 +258,5 @@ Introspection::fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& 
 	msg.process_id = impl->process_id_;
 	return msg;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

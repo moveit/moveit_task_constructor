@@ -244,6 +244,6 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	return std::make_shared<SubTrajectory>(trajectory, cost);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

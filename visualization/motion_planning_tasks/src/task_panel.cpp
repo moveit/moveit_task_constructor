@@ -498,6 +498,6 @@ void GlobalSettingsWidget::save(rviz::Config config) {
 void GlobalSettingsWidget::load(const rviz::Config& config) {
 	d_ptr->properties->getRoot()->load(config);
 }
-}
+}  // namespace moveit_rviz_plugin
 
 #include "moc_task_panel.cpp"

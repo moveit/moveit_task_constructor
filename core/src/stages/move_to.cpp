@@ -274,6 +274,6 @@ void MoveTo::computeBackward(const InterfaceState& to) {
 	else
 		silentFailure();
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

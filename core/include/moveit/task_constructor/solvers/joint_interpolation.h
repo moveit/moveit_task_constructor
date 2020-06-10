@@ -64,6 +64,6 @@ public:
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 };
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

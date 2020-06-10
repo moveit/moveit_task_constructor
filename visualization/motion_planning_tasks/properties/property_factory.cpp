@@ -164,4 +164,4 @@ rviz::Property* PropertyFactory::createDefault(const std::string& name, const st
 	}
 }
 #endif
-}
+}  // namespace moveit_rviz_plugin

@@ -212,5 +212,5 @@ QIcon Icon::combinedIcon(const QList<QIcon>& icons) {
 				result.addPixmap(icon.pixmap(window, size, mode), mode);
 	return result;
 }
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin

@@ -460,6 +460,6 @@ void TaskListView::dropEvent(QDropEvent* event) {
 	if (event->isAccepted())
 		expand(index);
 }
-}
+}  // namespace moveit_rviz_plugin
 
 #include "moc_task_list_model.cpp"

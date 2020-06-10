@@ -81,7 +81,7 @@ public:
 private:
 	IconStyleOptions m_style = NONE;
 };
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(moveit_rviz_plugin::utils::Icon::IconStyleOptions)

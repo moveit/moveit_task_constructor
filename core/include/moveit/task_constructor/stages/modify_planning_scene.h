@@ -163,6 +163,6 @@ inline void ModifyPlanningScene::attachObject(const std::string& object, const s
 inline void ModifyPlanningScene::detachObject(const std::string& object, const std::string& link) {
 	attachObjects(Names({ object }), link, false);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

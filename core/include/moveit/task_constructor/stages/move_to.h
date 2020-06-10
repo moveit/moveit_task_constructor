@@ -109,6 +109,6 @@ protected:
 protected:
 	solvers::PlannerInterfacePtr planner_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

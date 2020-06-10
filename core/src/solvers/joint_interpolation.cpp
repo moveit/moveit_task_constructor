@@ -102,6 +102,6 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const moveit_msgs::Constraints& path_constraints) {
 	throw std::runtime_error("Not yet implemented");
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

@@ -66,7 +66,7 @@ std::string rosNormalizeName(const std::string& name) {
 	}
 	return n;
 }
-}
+}  // namespace
 
 namespace moveit {
 namespace task_constructor {
@@ -364,5 +364,5 @@ const core::RobotModelConstPtr& Task::getRobotModel() const {
 void Task::printState(std::ostream& os) const {
 	os << *stages();
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

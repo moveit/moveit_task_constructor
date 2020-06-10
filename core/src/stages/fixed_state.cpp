@@ -60,6 +60,6 @@ void FixedState::compute() {
 	spawn(InterfaceState(scene_), 0.0);
 	ran_ = true;
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

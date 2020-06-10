@@ -76,7 +76,7 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 
 	return nullptr;
 }
-}
+}  // namespace
 
 namespace move_group {
 

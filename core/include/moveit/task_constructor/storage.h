@@ -318,8 +318,8 @@ template <>
 inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>() const {
 	return start_->incomingTrajectories();
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit
 
 namespace std {
 // comparison for pointers to SolutionBase: compare based on value

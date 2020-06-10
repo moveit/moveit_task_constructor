@@ -128,4 +128,4 @@ public:
 	                    const moveit_task_constructor_msgs::Solution& msg);
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg) const;
 };
-}
+}  // namespace moveit_rviz_plugin

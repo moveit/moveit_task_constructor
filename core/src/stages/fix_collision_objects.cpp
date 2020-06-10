@@ -152,6 +152,6 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	result.markAsFailure();
 	return result;
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

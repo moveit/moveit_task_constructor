@@ -121,4 +121,4 @@ private:
 	geometry_msgs::Pose place_pose_;
 	double place_surface_offset_;
 };
-}  // moveit_task_constructor_demo
+}  // namespace moveit_task_constructor_demo

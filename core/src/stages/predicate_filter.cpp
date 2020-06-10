@@ -88,6 +88,6 @@ void PredicateFilter::onNewSolution(const SolutionBase& s) {
 
 	liftSolution(s, cost, comment);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

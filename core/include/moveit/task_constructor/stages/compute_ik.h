@@ -113,6 +113,6 @@ public:
 protected:
 	ordered<const SolutionBase*> upstream_solutions_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

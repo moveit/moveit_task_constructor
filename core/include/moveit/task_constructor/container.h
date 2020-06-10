@@ -227,5 +227,5 @@ public:
 protected:
 	WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child = Stage::pointer());
 };
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

@@ -104,6 +104,6 @@ class SimpleUnGrasp : public SimpleGraspBase
 public:
 	SimpleUnGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "ungrasp");
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

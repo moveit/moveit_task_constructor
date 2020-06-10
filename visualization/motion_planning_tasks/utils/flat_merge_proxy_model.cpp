@@ -598,7 +598,7 @@ void FlatMergeProxyModelPrivate::_q_sourceDataChanged(const QModelIndex& topLeft
 	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight));
 }
 #endif
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin
 
 #include "moc_flat_merge_proxy_model.cpp"

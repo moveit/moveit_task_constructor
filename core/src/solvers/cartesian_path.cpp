@@ -112,6 +112,6 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

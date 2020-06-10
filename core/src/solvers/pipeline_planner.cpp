@@ -138,6 +138,6 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	result = res.trajectory_;
 	return success;
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

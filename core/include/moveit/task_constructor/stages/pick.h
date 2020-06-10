@@ -121,6 +121,6 @@ public:
 	}
 	void setPlaceMotion(const std::map<std::string, double>& joints) { setLiftPlace(joints); }
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

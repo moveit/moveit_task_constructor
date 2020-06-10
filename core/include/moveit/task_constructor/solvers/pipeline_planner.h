@@ -75,6 +75,6 @@ public:
 protected:
 	planning_pipeline::PlanningPipelinePtr planner_;
 };
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

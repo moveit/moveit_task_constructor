@@ -449,4 +449,4 @@ bool PickPlaceTask::execute() {
 
 	return true;
 }
-}
+}  // namespace moveit_task_constructor_demo

@@ -90,6 +90,6 @@ public:
 	                  robot_trajectory::RobotTrajectoryPtr& result,
 	                  const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) = 0;
 };
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

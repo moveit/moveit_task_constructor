@@ -140,6 +140,6 @@ void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& 
                                                  const moveit_msgs::CollisionObject& object) {
 	scene.processCollisionObjectMsg(object);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

@@ -58,5 +58,5 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 robot_trajectory::RobotTrajectoryPtr
 merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
       const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group);
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

@@ -88,4 +88,4 @@ public:
 	/// retrieve TaskModel and its source index corresponding to given proxy index
 	std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 };
-}
+}  // namespace moveit_rviz_plugin

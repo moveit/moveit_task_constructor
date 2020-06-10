@@ -66,6 +66,6 @@ public:
 
 	void setPredicate(const Predicate& p) { setProperty("predicate", p); }
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

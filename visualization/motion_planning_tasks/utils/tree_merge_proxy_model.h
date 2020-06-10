@@ -117,5 +117,5 @@ private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex, QModelIndex))
 #endif
 };
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin

@@ -58,5 +58,5 @@ struct is_container<
                                                      decltype(std::declval<T>().cend())>,
                           void> > : public std::true_type
 {};
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

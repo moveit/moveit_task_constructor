@@ -264,5 +264,5 @@ public:
 	void sendBackward(SubTrajectory&& t, const InterfaceState* to);
 };
 PIMPL_FUNCTIONS(Merger)
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

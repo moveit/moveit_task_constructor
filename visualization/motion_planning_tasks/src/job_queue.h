@@ -63,5 +63,5 @@ public:
 	void waitForAllJobs();
 	void executeJobs();
 };
-}
-}
+}  // namespace tools
+}  // namespace moveit

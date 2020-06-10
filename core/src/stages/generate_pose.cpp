@@ -86,6 +86,6 @@ void GeneratePose::compute() {
 
 	spawn(std::move(state), std::move(trajectory));
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

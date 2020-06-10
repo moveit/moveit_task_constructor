@@ -208,4 +208,4 @@ public:
 
 	void dropEvent(QDropEvent* event) override;
 };
-}
+}  // namespace moveit_rviz_plugin

@@ -61,6 +61,6 @@ protected:
 	void onNewSolution(const SolutionBase& s) override;
 	ordered<const SolutionBase*> upstream_solutions_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

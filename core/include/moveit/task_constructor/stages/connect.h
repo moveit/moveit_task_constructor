@@ -98,6 +98,6 @@ protected:
 	std::list<SubTrajectory> subsolutions_;
 	std::list<InterfaceState> states_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

@@ -71,5 +71,5 @@ private:
 	std::list<Task::TaskCallback> task_cbs_;  // functions to monitor task's planning progress
 };
 PIMPL_FUNCTIONS(Task)
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

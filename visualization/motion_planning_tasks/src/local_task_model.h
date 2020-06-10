@@ -78,4 +78,4 @@ public:
 
 	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
-}
+}  // namespace moveit_rviz_plugin

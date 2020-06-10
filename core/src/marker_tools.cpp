@@ -163,5 +163,5 @@ void generateMarkersForScene(const planning_scene::PlanningSceneConstPtr& scene,
 	generateMarkers<urdf::VisualSharedPtr>(scene->getCurrentState(), callback);
 	generateMarkersForObjects(scene, callback);
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

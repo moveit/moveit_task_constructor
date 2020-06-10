@@ -43,5 +43,5 @@ void generateVisualMarkers(const moveit::core::RobotState& robot_state, const Ma
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  calls generateMarkersForRobot() and generateMarkersForObjects() */
 void generateMarkersForScene(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& callback);
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

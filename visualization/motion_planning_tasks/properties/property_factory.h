@@ -128,4 +128,4 @@ private:
 	void registerType(const std::string& type_name, const PropertyFactoryFunction& f);
 	void registerStage(const std::type_index& type_index, const TreeFactoryFunction& f);
 };
-}
+}  // namespace moveit_rviz_plugin
