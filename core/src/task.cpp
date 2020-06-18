@@ -318,6 +318,8 @@ moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
 	s.fillMessage(goal.solution, pimpl()->introspection_.get());
+	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+
 	ac.sendGoal(goal);
 	ac.waitForResult();
 	return ac.getResult()->error_code;
