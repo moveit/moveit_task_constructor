@@ -231,7 +231,7 @@ public:
 	/* \brief set CostTransform to be applied to costs of this stage's solution costs
 	 *
 	 * This interface can be used to modify the cost associated with each solution of this stage/container.
-	 * The most common case would be linear weighting `[=a](double c){ return a*c; }`
+	 * The most common case would be linear weighting `[](double cost){ return constant*cost; }`
 	 * but any non-linear transform is obviously possible as well.
 	 */
 	void setCostTransform(const CostTransform& transform);

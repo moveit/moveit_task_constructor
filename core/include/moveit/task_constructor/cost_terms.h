@@ -19,7 +19,7 @@ private:
 	double cost_;
 };
 
-/// define cost as execution duration of the whole trajectory
+/// execution duration of the whole trajectory
 double PathLengthCost(const SubTrajectory& s);
 }
 }
