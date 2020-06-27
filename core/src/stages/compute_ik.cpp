@@ -370,7 +370,7 @@ void ComputeIK::compute() {
 	}
 
 	IKSolutions ik_solutions;
-	auto isValid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, &ik_solutions](
+	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance, maximize_clearance, &ik_solutions](
 	    robot_state::RobotState* state, const robot_model::JointModelGroup* jmg, const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
 			if (jmg->distance(joint_positions, sol.data()) < min_solution_distance)
