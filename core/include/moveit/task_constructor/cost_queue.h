@@ -29,7 +29,7 @@ template <typename T, typename Compare = ValueOrPointeeLess<T>>
 class ordered
 {
 public:
-	typedef std::list<T> container_type;
+	using container_type = std::list<T>;
 	using value_type = typename container_type::value_type;
 	using size_type = typename container_type::size_type;
 	using difference_type = typename container_type::difference_type;

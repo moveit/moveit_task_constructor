@@ -82,8 +82,8 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 	setTargetPose(pose_msg);
 }
 
-// found IK solutions with a flag indicating validity
-typedef std::vector<std::vector<double>> IKSolutions;
+// found IK solutions
+using IKSolutions = std::vector<std::vector<double>>;
 
 namespace {
 

@@ -58,7 +58,7 @@ protected:
 	}
 };
 // set of template types to test for
-typedef ::testing::Types<int, int*, mtc::SolutionBasePtr, mtc::SolutionBaseConstPtr> TypeInstances;
+using TypeInstances = ::testing::Types<int, int*, mtc::SolutionBasePtr, mtc::SolutionBaseConstPtr>;
 TYPED_TEST_CASE(ValueOrPointeeLessTest, TypeInstances);
 TYPED_TEST(ValueOrPointeeLessTest, less) {
 	EXPECT_TRUE(this->less(2, 3));

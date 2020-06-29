@@ -64,7 +64,7 @@ class StagePrivate
 
 public:
 	/// container type used to store children
-	typedef std::list<Stage::pointer> container_type;
+	using container_type = std::list<Stage::pointer>;
 	StagePrivate(Stage* me, const std::string& name);
 	virtual ~StagePrivate() = default;
 

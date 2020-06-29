@@ -44,7 +44,7 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-typedef std::vector<geometry_msgs::PoseStamped> PosesList;
+using PosesList = std::vector<geometry_msgs::PoseStamped>;
 
 FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGenerator(name) {
 	auto& p = properties();

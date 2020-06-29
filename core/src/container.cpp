@@ -304,7 +304,7 @@ struct SolutionCollector
 		solutions.emplace_back(std::make_pair(trace, cost));
 	}
 
-	typedef std::list<std::pair<SolutionSequence::container_type, double>> SolutionCostPairs;
+	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, double>>;
 	SolutionCostPairs solutions;
 	const size_t max_depth;
 };

@@ -57,7 +57,7 @@ class PropertyTypeRegistry
 	Entry dummy_;
 
 	// map from type_info to corresponding converter functions
-	typedef std::map<std::type_index, Entry> RegistryMap;
+	using RegistryMap = std::map<std::type_index, Entry>;
 	RegistryMap types_;
 	// map from type names (type.name or ROS msg name) to entry in types_
 	using TypeNameMap = std::map<std::string, RegistryMap::iterator>;

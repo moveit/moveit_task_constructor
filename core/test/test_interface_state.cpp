@@ -4,7 +4,7 @@
 
 using namespace moveit::task_constructor;
 TEST(InterfaceStatePriority, compare) {
-	typedef InterfaceState::Priority Prio;
+	using Prio = InterfaceState::Priority;
 	const double inf = std::numeric_limits<double>::infinity();
 
 	EXPECT_TRUE(Prio(0, 0) == Prio(0, 0));
