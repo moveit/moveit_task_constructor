@@ -28,6 +28,7 @@ else()
 	endmacro()
 endif()
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 add_definitions(-DQT_NO_KEYWORDS)
