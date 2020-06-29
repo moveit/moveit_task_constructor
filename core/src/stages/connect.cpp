@@ -195,7 +195,7 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
 
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
-		inserted->setCreator(pimpl_);
+		inserted->setCreator(this);
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
 

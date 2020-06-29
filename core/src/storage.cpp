@@ -136,7 +136,7 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 	}
 }
 
-void SolutionBase::setCreator(StagePrivate* creator) {
+void SolutionBase::setCreator(Stage* creator) {
 	assert(creator_ == nullptr || creator_ == creator);  // creator must only set once
 	creator_ = creator;
 }
@@ -150,7 +150,7 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	info.cost = this->cost();
 	info.comment = this->comment();
 	const Introspection* ci = introspection;
-	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	info.stage_id = ci ? ci->stageId(this->creator()) : 0;
 
 	const auto& markers = this->markers();
 	info.markers.resize(markers.size());

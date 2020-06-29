@@ -292,7 +292,7 @@ struct SolutionCollector
 		// Traced path should not extend past container boundaries, i.e. trace.size() <= max_depth
 		// However, as the Merging-Connect's solution may be composed of several subsolutions, we need to disregard those
 		size_t len = trace.size();
-		const StagePrivate* prev_creator = nullptr;
+		const Stage* prev_creator = nullptr;
 		for (const auto& s : trace) {
 			if (s->creator() == prev_creator)
 				--len;
@@ -328,13 +328,13 @@ void updateStateCosts(const SolutionSequence::container_type& partial_solution_p
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
 	auto impl = pimpl();
-	const StagePrivate* creator = current.creator();
+	const Stage* creator = current.creator();
 	auto& children = impl->children();
 
 	// find number of stages before and after creator stage
 	size_t num_before = 0, num_after = 0;
 	for (auto it = children.begin(), end = children.end(); it != end; ++it, ++num_before)
-		if ((*it)->pimpl() == creator)
+		if (&(**it) == creator)
 			break;
 	assert(num_before < children.size());  // creator should be one of our children
 	num_after = children.size() - 1 - num_before;
@@ -370,7 +370,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				// insert outgoing solutions in normal order
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
-				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), impl));
+				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
 			} else if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
 				updateStateCosts(in.first, prio);
@@ -650,7 +650,7 @@ ParallelContainerBase::ParallelContainerBase(const std::string& name)
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
 	auto impl = pimpl();
-	impl->liftSolution(std::make_shared<WrappedSolution>(impl, &solution, cost, std::move(comment)), solution.start(),
+	impl->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)), solution.start(),
 	                   solution.end());
 }
 

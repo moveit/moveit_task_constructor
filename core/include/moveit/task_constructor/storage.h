@@ -220,8 +220,8 @@ public:
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
-	inline const StagePrivate* creator() const { return creator_; }
-	void setCreator(StagePrivate* creator);
+	inline const Stage* creator() const { return creator_; }
+	void setCreator(Stage* creator);
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
@@ -243,12 +243,12 @@ public:
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
 
 protected:
-	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0, std::string comment = "")
+	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
-	StagePrivate* creator_;
+	Stage* creator_;
 	// associated cost
 	double cost_;
 	// comment for this solution, e.g. explanation of failure
@@ -293,7 +293,7 @@ public:
 	using container_type = std::vector<const SolutionBase*>;
 
 	explicit SolutionSequence() : SolutionBase() {}
-	SolutionSequence(container_type&& subsolutions, double cost = 0.0, StagePrivate* creator = nullptr)
+	SolutionSequence(container_type&& subsolutions, double cost = 0.0, Stage* creator = nullptr)
 	  : SolutionBase(creator, cost), subsolutions_(std::move(subsolutions)) {}
 
 	void push_back(const SolutionBase& solution);

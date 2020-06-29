@@ -125,7 +125,7 @@ void StagePrivate::validateConnectivity() const {
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
-	solution->setCreator(this);
+	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
