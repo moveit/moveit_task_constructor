@@ -886,8 +886,8 @@ void MergerPrivate::onNewGeneratorSolution(const SolutionBase& s) {
 void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, const SolutionBase& current,
                                         const planning_scene::PlanningSceneConstPtr& start_scene,
                                         const Spawner& spawner) {
-	std::vector<size_t> indeces;  // which solution index was considered last for i-th child?
-	indeces.reserve(children().size());
+	std::vector<size_t> indices;  // which solution index was considered last for i-th child?
+	indices.reserve(children().size());
 
 	ChildSolutionList sub_solutions;
 	sub_solutions.reserve(children().size());
@@ -895,8 +895,8 @@ void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, c
 	// initialize vector of sub solutions
 	for (const auto& pair : all_solutions) {
 		// all children, except current solution's creator, start with zero index
-		indeces.push_back(pair.first != current.creator() ? 0 : pair.second.size() - 1);
-		sub_solutions.push_back(pair.second[indeces.back()]);
+		indices.push_back(pair.first != current.creator() ? 0 : pair.second.size() - 1);
+		sub_solutions.push_back(pair.second[indices.back()]);
 	}
 	while (true) {
 		merge(sub_solutions, start_scene, spawner);
@@ -906,13 +906,13 @@ void MergerPrivate::mergeAnyCombination(const ChildSolutionMap& all_solutions, c
 		for (auto it = all_solutions.cbegin(), end = all_solutions.cend(); it != end; ++it, ++child) {
 			if (it->first == current.creator())
 				continue;  // skip current solution's child
-			if (++indeces[child] >= it->second.size()) {
-				indeces[child] = 0;  // start over with zero
-				sub_solutions[child] = it->second[indeces[child]];
+			if (++indices[child] >= it->second.size()) {
+				indices[child] = 0;  // start over with zero
+				sub_solutions[child] = it->second[indices[child]];
 				continue;  // and continue with next child
 			}
 			// otherwise, a new solution combination is available
-			sub_solutions[child] = it->second[indeces[child]];
+			sub_solutions[child] = it->second[indices[child]];
 			break;
 		}
 		if (child == children().size())  // all combinations exhausted?
