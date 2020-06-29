@@ -75,7 +75,7 @@ class Property
 	         const boost::any& default_value);
 
 public:
-	typedef boost::typeindex::type_info type_info;
+	using type_info = boost::typeindex::type_info;
 
 	/// Construct a property holding a any value
 	Property();

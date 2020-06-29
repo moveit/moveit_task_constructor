@@ -100,7 +100,7 @@ public:
 	void enableIntrospection(bool enable = true);
 	Introspection& introspection();
 
-	typedef std::function<void(const Task& t)> TaskCallback;
+	using TaskCallback = std::function<void(const Task& t)>;
 	using TaskCallbackList = std::list<TaskCallback>;
 	/// add function to be called after each top-level iteration
 	TaskCallbackList::const_iterator addTaskCallback(TaskCallback&& cb);

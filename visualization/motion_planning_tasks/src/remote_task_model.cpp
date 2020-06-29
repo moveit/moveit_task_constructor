@@ -60,7 +60,7 @@ enum NodeFlag
 	WAS_VISITED = 0x01,  // indicate that model should emit change notifications
 	NAME_CHANGED = 0x02,  // indicate that name was manually changed
 };
-typedef QFlags<NodeFlag> NodeFlags;
+using NodeFlags = QFlags<NodeFlag>;
 
 struct RemoteTaskModel::Node
 {

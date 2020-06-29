@@ -117,4 +117,4 @@ private:
 	Int i;
 };
 
-#define DECLARE_FLAGS(Flags, Enum) typedef QFlags<Enum> Flags;
+#define DECLARE_FLAGS(Flags, Enum) using Flags = QFlags<Enum>;

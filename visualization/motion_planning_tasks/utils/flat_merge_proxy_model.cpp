@@ -54,7 +54,7 @@ public:
 
 		QAbstractItemModel* model_;
 		// map of proxy=source QModelIndex's internal pointer to source parent's QModelIndex
-		typedef std::map<void*, QPersistentModelIndex> ProxyToSourceMap;
+		using ProxyToSourceMap = std::map<void*, QPersistentModelIndex>;
 		ProxyToSourceMap proxy_to_source_mapping_;
 		std::vector<ProxyToSourceMap::iterator> invalidated_mappings_;
 

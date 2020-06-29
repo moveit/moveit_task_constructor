@@ -129,7 +129,7 @@ Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-const
 
 struct PlannerCache
 {
-	typedef std::tuple<std::string, std::string, std::string> PlannerID;
+	using PlannerID = std::tuple<std::string, std::string, std::string>;
 	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
 	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
 	ModelList cache_;
