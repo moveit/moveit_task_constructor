@@ -54,7 +54,8 @@ double PathLengthCost(const SubTrajectory& s) {
 
 double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
 	collision_detection::DistanceRequest request;
-	request.type = collision_detection::DistanceRequestType::GLOBAL;
+	request.type =
+	    cumulative ? collision_detection::DistanceRequestType::SINGLE : collision_detection::DistanceRequestType::GLOBAL;
 
 	const auto& state = (interface == Interface::START) ? s.start() : s.end();
 
@@ -74,6 +75,16 @@ double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
 
 	state->scene()->getCollisionEnv()->distanceSelf(request, result, state->scene()->getCurrentState());
 
+	double distance{ 0.0 };
+	if (cumulative) {
+		for (const auto& distance_of_pair : result.distances) {
+			assert(distance_of_pair.second.size() == 1);
+			distance += distance_of_pair.second[0].distance;
+		}
+	} else {
+		distance = result.minimum_distance.distance;
+	}
+
 	const auto& links = result.minimum_distance.link_names;
 
 	if (result.minimum_distance.distance <= 0) {
@@ -82,10 +93,14 @@ double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
 		comment = desc.str();
 		return std::numeric_limits<double>::infinity();
 	} else {
-		boost::format desc("ClearCost: distance %1% between'%2%' and '%3%'");
-		desc % result.minimum_distance.distance % links[0] % links[1];
-		comment = desc.str();
-		return 1.0 / (result.minimum_distance.distance + 1e-5);
+		if (cumulative) {
+			comment = "ClearCost: cumulative distance " + std::to_string(distance);
+		} else {
+			boost::format desc("ClearCost: distance %1% between '%2%' and '%3%'");
+			desc % result.minimum_distance.distance % links[0] % links[1];
+			comment = desc.str();
+		}
+		return 1.0 / (distance + 1e-5);
 	}
 }
 }
