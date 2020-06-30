@@ -213,7 +213,9 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
-	using CostTerm = std::function<double(const SubTrajectory&)>;
+	using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
+	using CostTermShort = std::function<double(const SubTrajectory&)>;
+
 	using CostTransform = std::function<double(const double)>;
 
 	/* \brief set method to determine costs for solutions of this stage
@@ -227,6 +229,7 @@ public:
 	 * See setCostTransform
 	 */
 	void setCostTerm(const CostTerm& term);
+	void setCostTerm(const CostTermShort& term);
 
 	/* \brief set CostTransform to be applied to costs of this stage's solution costs
 	 *

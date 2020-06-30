@@ -42,6 +42,8 @@
 
 #include <moveit/collision_detection/collision_common.h>
 
+#include <boost/format.hpp>
+
 namespace moveit {
 namespace task_constructor {
 namespace cost {
@@ -50,7 +52,7 @@ double PathLengthCost(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
-double ClearanceCost(const SubTrajectory& s) {
+double ClearanceCost(const SubTrajectory& s, std::string& comment) {
 	collision_detection::DistanceRequest request;
 	request.type = collision_detection::DistanceRequestType::GLOBAL;
 
@@ -68,15 +70,17 @@ double ClearanceCost(const SubTrajectory& s) {
 
 	s.start()->scene()->getCollisionEnv()->distanceSelf(request, result, s.start()->scene()->getCurrentState());
 
+	const auto& links = result.minimum_distance.link_names;
+
 	if (result.minimum_distance.distance <= 0) {
-		// TODO: this should be a comment in the solution
-		ROS_ERROR_STREAM_NAMED("ClearanceCost", "allegedly valid solution has an unwanted collide between '"
-		                                            << result.minimum_distance.link_names[0] << "' and '"
-		                                            << result.minimum_distance.link_names[1] << "'");
+		boost::format desc("ClearCost: allegedly valid solution has an unwanted collide between '%1%' and '%2%'");
+		desc % links[0] % links[1];
+		comment = desc.str();
 		return std::numeric_limits<double>::infinity();
 	} else {
-		// ROS_INFO_STREAM_NAMED("ClearanceCost", result.minimum_distance.link_names[0] << " has distance " <<
-		// result.minimum_distance.distance << " to " << result.minimum_distance.link_names[1]);
+		boost::format desc("ClearCost: distance %1% between'%2%' and '%3%'");
+		desc % result.minimum_distance.distance % links[0] % links[1];
+		comment = desc.str();
 		return 1.0 / (result.minimum_distance.distance + 1e-5);
 	}
 }

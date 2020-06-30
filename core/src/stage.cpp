@@ -225,13 +225,22 @@ bool StagePrivate::addCost(SolutionBase& solution) {
 	double cost{ 0.0 };
 
 	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };
-	if (trajectory && cost_term_)
-		// CostTerm only applies to SubTrajectory
-		cost = cost_term_(*trajectory);
-	else
-		// everything else is just transformed
+	if (trajectory && cost_term_) {
+		// compute specific cost
+		std::string comment;
+		cost = cost_term_(*trajectory, comment);
+		// If a comment was specified, add it to the solution
+		if (!comment.empty() && !solution.comment().empty()) {
+			solution.setComment(solution.comment() + " (" + comment + ")");
+		} else if (!comment.empty()) {
+			solution.setComment(comment);
+		}
+	} else {
+		// otherwise forward current cost
 		cost = solution.cost();
+	}
 
+	// all costs are transformed
 	solution.setCost(cost_transform_(cost));
 
 	return !solution.isFailure();
@@ -335,6 +344,10 @@ void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 
 void Stage::setCostTerm(const CostTerm& term) {
 	pimpl()->cost_term_ = term;
+}
+
+void Stage::setCostTerm(const CostTermShort& term) {
+	setCostTerm([=](auto&& solution, auto&&) { return term(solution); });
 }
 
 void Stage::setCostTransform(const CostTransform& transform) {

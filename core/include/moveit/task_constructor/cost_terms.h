@@ -23,7 +23,7 @@ private:
 double PathLengthCost(const SubTrajectory& s);
 
 /// distance to self-collision
-double ClearanceCost(const SubTrajectory& s);
+double ClearanceCost(const SubTrajectory& s, std::string& comment);
 }
 }
 }
