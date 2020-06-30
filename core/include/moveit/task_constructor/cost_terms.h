@@ -24,6 +24,15 @@ double PathLengthCost(const SubTrajectory& s);
 /// execution duration of the whole trajectory
 double TrajectoryDurationCost(const SubTrajectory& s);
 
+struct LinkMotionCost
+{
+	LinkMotionCost(std::string link_name) : link_name(link_name) {}
+
+	double operator()(const SubTrajectory&, std::string&);
+
+	std::string link_name;
+};
+
 /** inverse distance to collision
  *
  * \arg interface compute distances using START or END interface of solution

@@ -64,6 +64,29 @@ double TrajectoryDurationCost(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
+double LinkMotionCost::operator()(const SubTrajectory& s, std::string& comment) {
+	const auto& traj{ s.trajectory() };
+
+	if (traj == nullptr || traj->getWayPointCount() == 0)
+		return 0.0;
+
+	if (!traj->getWayPoint(0).knowsFrameTransform(link_name)) {
+		boost::format desc("LinkMotionCost: frame '%1%' unknown in trajectory");
+		desc % link_name;
+		comment = desc.str();
+		return std::numeric_limits<double>::infinity();
+	}
+
+	double distance{ 0.0 };
+	Eigen::Translation3d position{ traj->getWayPoint(0).getFrameTransform(link_name).translation() };
+	for (size_t i{ 1 }; i < traj->getWayPointCount(); ++i) {
+		Eigen::Translation3d new_position{ traj->getWayPoint(i).getFrameTransform(link_name).translation() };
+		distance += (new_position.vector() - position.vector()).norm();
+		position = new_position;
+	}
+	return distance;
+}
+
 double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
 	collision_detection::DistanceRequest request;
 	request.type =
