@@ -47,6 +47,7 @@ class QIcon;
 namespace rviz {
 class WindowManagerInterface;
 class Property;
+class BoolProperty;
 class EnumProperty;
 }
 
@@ -125,6 +126,8 @@ protected:
 	};
 	rviz::EnumProperty* initial_task_expand;
 
+	rviz::BoolProperty* show_time_column;
+
 public:
 	TaskView(TaskPanel* parent, rviz::Property* root);
 	~TaskView() override;
@@ -141,6 +144,7 @@ protected Q_SLOTS:
 	void onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous);
 	void onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 	void onExecCurrentSolution() const;
+	void onShowTimeChanged();
 };
 
 class GlobalSettingsWidgetPrivate;

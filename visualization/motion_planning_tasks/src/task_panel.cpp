@@ -234,11 +234,11 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	tasks_view->setDropIndicatorShown(true);
 	tasks_view->setDragEnabled(true);
 
-	solutions_view->setAutoHideSections({ 1, 2 });
-	solutions_view->setStretchSection(2);
+	actionShowTimeColumn->setChecked(true);
 
 	// init actions
-	tasks_view->addActions({ actionAddLocalTask, actionRemoveTaskTreeRows });
+	// TODO(v4hn): add actionAddLocalTask once there is something meaningful to add
+	tasks_view->addActions({ /*actionAddLocalTask,*/ actionRemoveTaskTreeRows, actionShowTimeColumn });
 }
 
 std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const QModelIndex& index) const {
@@ -263,9 +263,13 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new TaskViewPrivate(this)) {
 	Q_D(TaskView);
 
+	d_ptr->tasks_property_splitter->setStretchFactor(0, 3);
+	d_ptr->tasks_property_splitter->setStretchFactor(1, 1);
+
 	// connect signals
 	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
 	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
+	connect(d->actionShowTimeColumn, &QAction::triggered, [this](bool checked) { show_time_column->setValue(checked); });
 
 	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)), this,
 	        SLOT(onCurrentStageChanged(QModelIndex, QModelIndex)));
@@ -287,6 +291,9 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
+
+	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
+	connect(show_time_column, SIGNAL(changed()), this, SLOT(onShowTimeChanged()));
 }
 
 TaskView::~TaskView() {
@@ -304,15 +311,15 @@ void TaskView::save(rviz::Config config) {
 	write_splitter_sizes(d_ptr->tasks_property_splitter, "property_splitter");
 	write_splitter_sizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
 
-	auto write_column_sizes = [&config](QTreeView* view, const QString& key) {
+	auto write_column_sizes = [&config](QHeaderView* view, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
-		for (int c = 0, end = view->header()->count(); c != end; ++c) {
+		for (int c = 0, end = view->count(); c != end; ++c) {
 			rviz::Config item = group.listAppendNew();
-			item.setValue(view->columnWidth(c));
+			item.setValue(view->sectionSize(c));
 		}
 	};
-	write_column_sizes(d_ptr->tasks_view, "tasks_view_columns");
-	write_column_sizes(d_ptr->solutions_view, "solutions_view_columns");
+	write_column_sizes(d_ptr->tasks_view->header(), "tasks_view_columns");
+	write_column_sizes(d_ptr->solutions_view->header(), "solutions_view_columns");
 
 	const QHeaderView* view = d_ptr->solutions_view->header();
 	rviz::Config group = config.mapMakeChild("solution_sorting");
@@ -413,10 +420,10 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 
 	// update the PropertyModel
-	view = d_ptr->property_view;
-	sm = view->selectionModel();
+	QTreeView* pview = d_ptr->property_view;
+	sm = pview->selectionModel();
 	m = task ? task->getPropertyModel(task_index) : nullptr;
-	view->setModel(m);
+	pview->setModel(m);
 	delete sm;  // we don't store the selection model
 }
 
@@ -474,6 +481,14 @@ void TaskView::onExecCurrentSolution() const {
 	d_ptr->exec_action_client_.sendGoal(goal);
 }
 
+void TaskView::onShowTimeChanged() {
+	auto* header = d_ptr->tasks_view->header();
+	bool show = show_time_column->getBool();
+	if (header->count() > 3)
+		d_ptr->tasks_view->header()->setSectionHidden(3, !show);
+	d_ptr->actionShowTimeColumn->setChecked(show);
+}
+
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
   : q_ptr(q_ptr) {
 	setupUi(q_ptr);
@@ -484,6 +499,8 @@ GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q
 GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new GlobalSettingsWidgetPrivate(this, root)) {
 	Q_D(GlobalSettingsWidget);
+
+	d->view->expandAll();
 	connect(d->properties, &rviz::PropertyTreeModel::configChanged, this, &GlobalSettingsWidget::configChanged);
 }
 

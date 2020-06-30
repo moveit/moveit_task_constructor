@@ -232,13 +232,6 @@ QModelIndex RemoteTaskModel::parent(const QModelIndex& child) const {
 	return this->index(p);
 }
 
-Qt::ItemFlags RemoteTaskModel::flags(const QModelIndex& index) const {
-	Qt::ItemFlags flags = BaseTaskModel::flags(index);
-	if (index.column() == 0)
-		flags |= Qt::ItemIsEditable;  // name is editable
-	return flags;
-}
-
 QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 	Node* n = node(index);
 	if (!n)
@@ -495,7 +488,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 						return tr("comment");
 				}
 			case Qt::TextAlignmentRole:
-				return section == 2 ? Qt::AlignLeft : Qt::AlignRight;
+				return Qt::AlignLeft;
 		}
 	}
 	return QAbstractItemModel::headerData(section, orientation, role);
@@ -509,8 +502,10 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 
 	switch (role) {
 		case Qt::UserRole:
-		case Qt::ToolTipRole:
 			return item.id;
+
+		case Qt::ToolTipRole:
+			return item.comment;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {
