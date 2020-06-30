@@ -49,7 +49,7 @@ namespace stages {
 using PosesList = std::vector<geometry_msgs::PoseStamped>;
 
 FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGenerator(name) {
-	setCostTerm(cost::ConstantCost(0.0));
+	setCostTerm(cost::Constant(0.0));
 
 	auto& p = properties();
 	p.declare<PosesList>("poses", PosesList(), "target poses to spawn");

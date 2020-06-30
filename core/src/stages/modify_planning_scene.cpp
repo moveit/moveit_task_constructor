@@ -47,7 +47,7 @@ namespace task_constructor {
 namespace stages {
 
 ModifyPlanningScene::ModifyPlanningScene(const std::string& name) : PropagatingEitherWay(name) {
-	setCostTerm(cost::ConstantCost(0.0));
+	setCostTerm(cost::Constant(0.0));
 }
 
 void ModifyPlanningScene::attachObjects(const Names& objects, const std::string& attach_link, bool attach) {

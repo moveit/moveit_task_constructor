@@ -44,7 +44,7 @@ namespace task_constructor {
 namespace stages {
 
 FixedState::FixedState(const std::string& name) : Generator(name) {
-	setCostTerm(cost::ConstantCost(0.0));
+	setCostTerm(cost::Constant(0.0));
 }
 
 void FixedState::setState(const planning_scene::PlanningScenePtr& scene) {

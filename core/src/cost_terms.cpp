@@ -48,7 +48,7 @@ namespace moveit {
 namespace task_constructor {
 namespace cost {
 
-double PathLengthCost(const SubTrajectory& s) {
+double PathLength(const SubTrajectory& s) {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr)
@@ -60,11 +60,11 @@ double PathLengthCost(const SubTrajectory& s) {
 	return path_length;
 }
 
-double TrajectoryDurationCost(const SubTrajectory& s) {
+double TrajectoryDuration(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
-double LinkMotionCost::operator()(const SubTrajectory& s, std::string& comment) {
+double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) {
 	const auto& traj{ s.trajectory() };
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
@@ -87,7 +87,7 @@ double LinkMotionCost::operator()(const SubTrajectory& s, std::string& comment) 
 	return distance;
 }
 
-double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
+double Clearance::operator()(const SubTrajectory& s, std::string& comment) {
 	collision_detection::DistanceRequest request;
 	request.type =
 	    cumulative ? collision_detection::DistanceRequestType::SINGLE : collision_detection::DistanceRequestType::GLOBAL;

@@ -49,7 +49,7 @@ namespace stages {
 
 MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
-	setCostTerm(cost::PathLengthCost);
+	setCostTerm(cost::PathLength);
 
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);

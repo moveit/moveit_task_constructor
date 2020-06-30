@@ -4,14 +4,14 @@
 
 namespace moveit {
 namespace task_constructor {
+/// These structures all implement the Stage::CostTerm API and can be configured via Stage::setCostTerm()
 namespace cost {
 
-/// These structures all implement the Stage::CostTerm API and can be configured via Stage::setCostTerm()
 /// add a constant cost to each solution
-struct ConstantCost
+struct Constant
 {
 public:
-	ConstantCost(double c) : cost(c) {}
+	Constant(double c) : cost(c) {}
 
 	double operator()(const SubTrajectory&, std::string& /* unused */) const { return cost; }
 
@@ -19,14 +19,14 @@ public:
 };
 
 /// trajectory length (interpolated between waypoints)
-double PathLengthCost(const SubTrajectory& s);
+double PathLength(const SubTrajectory& s);
 
 /// execution duration of the whole trajectory
-double TrajectoryDurationCost(const SubTrajectory& s);
+double TrajectoryDuration(const SubTrajectory& s);
 
-struct LinkMotionCost
+struct LinkMotion
 {
-	LinkMotionCost(std::string link_name) : link_name(link_name) {}
+	LinkMotion(std::string link_name) : link_name(link_name) {}
 
 	double operator()(const SubTrajectory&, std::string&);
 
@@ -40,10 +40,10 @@ struct LinkMotionCost
  * \arg cumulative if true, compute clearance as aggregated distance of all bodies
  * \arg group_property the name of the property which defines the group to look at
  * */
-struct ClearanceCost
+struct Clearance
 {
-	ClearanceCost(Interface::Direction interface = Interface::START, bool with_world = true, bool cumulative = false,
-	              std::string group_property = "group")
+	Clearance(Interface::Direction interface = Interface::START, bool with_world = true, bool cumulative = false,
+	          std::string group_property = "group")
 	  : interface(interface), with_world(with_world), group_property(group_property) {}
 
 	double operator()(const SubTrajectory& s, std::string& comment);
