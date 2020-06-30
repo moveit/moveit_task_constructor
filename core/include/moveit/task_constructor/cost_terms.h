@@ -21,8 +21,24 @@ public:
 /// execution duration of the whole trajectory
 double PathLengthCost(const SubTrajectory& s);
 
-/// distance to self-collision
-double ClearanceCost(const SubTrajectory& s, std::string& comment);
+/** inverse distance to collision
+ *
+ * \arg interface compute distances using START or END interface of solution
+ * \arg with_world check distances to world objects as well or only look at self-collisions
+ * \arg group_property the name of the property which defines the group to look at
+ * */
+struct ClearanceCost
+{
+	ClearanceCost(Interface::Direction interface = Interface::START, bool with_world = true,
+	              std::string group_property = "group")
+	  : interface(interface), with_world(with_world), group_property(group_property) {}
+
+	double operator()(const SubTrajectory& s, std::string& comment);
+
+	Interface::Direction interface;
+	bool with_world;
+	std::string group_property;
+};
 }
 }
 }

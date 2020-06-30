@@ -52,23 +52,27 @@ double PathLengthCost(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
-double ClearanceCost(const SubTrajectory& s, std::string& comment) {
+double ClearanceCost::operator()(const SubTrajectory& s, std::string& comment) {
 	collision_detection::DistanceRequest request;
 	request.type = collision_detection::DistanceRequestType::GLOBAL;
 
-	// TODO: possibly parameterize hardcoded property name?
-	const std::string group{ "group" };
-	auto& state_properties{ s.start()->properties() };
-	auto& stage_properties{ s.creator()->properties() };
-	request.group_name = state_properties.hasProperty(group) ? state_properties.get<std::string>(group) :
-	                                                           stage_properties.get<std::string>(group);
+	const auto& state = (interface == Interface::START) ? s.start() : s.end();
 
-	request.enableGroup(s.start()->scene()->getRobotModel());
-	request.acm = &s.start()->scene()->getAllowedCollisionMatrix();
+	// prefer interface state property over stage property to find group_name
+	// TODO: This pattern is general enough to justify its own interface (in the properties?).
+	auto& state_properties{ state->properties() };
+	auto& stage_properties{ s.creator()->properties() };
+	request.group_name = state_properties.hasProperty(group_property) ?
+	                         state_properties.get<std::string>(group_property) :
+	                         stage_properties.get<std::string>(group_property);
+
+	// look at all forbidden collisions involving group_name
+	request.enableGroup(state->scene()->getRobotModel());
+	request.acm = &state->scene()->getAllowedCollisionMatrix();
 
 	collision_detection::DistanceResult result;
 
-	s.start()->scene()->getCollisionEnv()->distanceSelf(request, result, s.start()->scene()->getCurrentState());
+	state->scene()->getCollisionEnv()->distanceSelf(request, result, state->scene()->getCurrentState());
 
 	const auto& links = result.minimum_distance.link_names;
 
