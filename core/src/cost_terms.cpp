@@ -49,6 +49,18 @@ namespace task_constructor {
 namespace cost {
 
 double PathLengthCost(const SubTrajectory& s) {
+	const auto& traj = s.trajectory();
+
+	if (traj == nullptr)
+		return 0.0;
+
+	double path_length{ 0.0 };
+	for (size_t i = 1; i < traj->getWayPointCount(); ++i)
+		path_length += traj->getWayPoint(i - 1).distance(traj->getWayPoint(i));
+	return path_length;
+}
+
+double TrajectoryDurationCost(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 

@@ -18,8 +18,11 @@ public:
 	double cost;
 };
 
-/// execution duration of the whole trajectory
+/// trajectory length (interpolated between waypoints)
 double PathLengthCost(const SubTrajectory& s);
+
+/// execution duration of the whole trajectory
+double TrajectoryDurationCost(const SubTrajectory& s);
 
 /** inverse distance to collision
  *
