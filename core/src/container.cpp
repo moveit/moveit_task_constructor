@@ -473,7 +473,8 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		exceptions.append(e);
 	}
 
-	required_interface_ = first.pimpl()->interfaceFlags() & START_IF_MASK | last.pimpl()->interfaceFlags() & END_IF_MASK;
+	required_interface_ = (first.pimpl()->interfaceFlags() & START_IF_MASK) |  // clang-format off
+	                      (last.pimpl()->interfaceFlags() & END_IF_MASK);  // clang-format off
 
 	if (exceptions)
 		throw exceptions;
