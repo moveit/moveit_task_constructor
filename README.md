@@ -30,10 +30,10 @@ Ideas and requests for other interesting/useful features are welcome.
 If you use this framework in your project, please cite the associated paper:
 
 
-    Michael Görner*, Robert Haschke*, Helge Ritter, and Jianwei Zhang,
-    MoveIt! Task Constructor for Task-Level Motion Planning,
-    International Conference on Robotics and Automation, ICRA 2019, Montreal, Canada.
-    [[DOI]](https://doi.org/10.1109/ICRA.2019.8793898) [PDF](https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf).
+Michael Görner*, Robert Haschke*, Helge Ritter, and Jianwei Zhang,
+MoveIt! Task Constructor for Task-Level Motion Planning,
+International Conference on Robotics and Automation, ICRA 2019, Montreal, Canada.
+[[DOI]](https://doi.org/10.1109/ICRA.2019.8793898) [[PDF]](https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf).
 
 
 ```plain
