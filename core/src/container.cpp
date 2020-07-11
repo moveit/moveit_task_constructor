@@ -805,6 +805,9 @@ void Merger::compute() {
 }
 
 void Merger::onNewSolution(const SolutionBase& s) {
+	if (s.isFailure())  // ignore failure solutions
+		return;
+
 	auto impl = pimpl();
 	switch (impl->interfaceFlags()) {
 		case PROPAGATE_FORWARDS:
@@ -821,8 +824,8 @@ void Merger::onNewSolution(const SolutionBase& s) {
 
 void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	const SubTrajectory* trajectory = dynamic_cast<const SubTrajectory*>(&s);
-	if (!trajectory) {
-		ROS_ERROR_NAMED("Merger", "Only simple trajectories are supported");
+	if (!trajectory || !trajectory->trajectory()) {
+		ROS_ERROR_NAMED("Merger", "Only simple, valid trajectories are supported");
 		return;
 	}
 
@@ -872,7 +875,7 @@ void MergerPrivate::sendBackward(SubTrajectory&& t, const InterfaceState* to) {
 	StagePrivate::sendBackward(InterfaceState(from), *to, std::make_shared<SubTrajectory>(std::move(t)));
 }
 
-void MergerPrivate::onNewGeneratorSolution(const SolutionBase& s) {
+void MergerPrivate::onNewGeneratorSolution(const SolutionBase& /* s */) {
 	// TODO: implement in similar fashion as onNewPropagateSolution(), but also merge start/end states
 }
 
@@ -918,13 +921,8 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	// transform vector of SubTrajectories into vector of RobotTrajectories
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
 	sub_trajectories.reserve(sub_solutions.size());
-	for (const auto& sub : sub_solutions) {
-		// TODO: directly skip failures in mergeAnyCombination() or even earlier
-		if (sub->isFailure())
-			return;
-		if (sub->trajectory())
-			sub_trajectories.push_back(sub->trajectory());
-	}
+	for (const auto& sub : sub_solutions)
+		sub_trajectories.push_back(sub->trajectory());
 
 	moveit::core::JointModelGroup* jmg = jmg_merged_.get();
 	robot_trajectory::RobotTrajectoryPtr merged;
