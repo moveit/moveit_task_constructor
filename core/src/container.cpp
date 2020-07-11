@@ -937,18 +937,28 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	if (!merged)
 		return;
 
-	// check merged trajectory for collisions
-	if (!start_scene->isPathValid(*merged))
-		return;
-
 	SubTrajectory t(merged);
-	// accumulate costs and markers
-	double costs = 0.0;
-	for (const auto& sub : sub_solutions) {
-		costs += sub->cost();
-		t.markers().insert(t.markers().end(), sub->markers().begin(), sub->markers().end());
+
+	// check merged trajectory for collisions
+	std::vector<std::size_t> invalid_index;
+	if (!start_scene->isPathValid(*merged, "", true, &invalid_index)) {
+		t.markAsFailure();
+		std::ostringstream oss;
+		oss << "Invalid waypoint(s): ";
+		if (invalid_index.size() == merged->getWayPointCount())
+			oss << "all";
+		else for (size_t i : invalid_index)
+			oss << i << ", ";
+		t.setComment(oss.str());
+	} else {
+		// accumulate costs and markers
+		double costs = 0.0;
+		for (const auto& sub : sub_solutions) {
+			costs += sub->cost();
+			t.markers().insert(t.markers().end(), sub->markers().begin(), sub->markers().end());
+		}
+		t.setCost(costs);
 	}
-	t.setCost(costs);
 	spawner(std::move(t));
 }
 }  // namespace task_constructor
