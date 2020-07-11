@@ -756,8 +756,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
 void MergerPrivate::resolveInterface(InterfaceFlags expected) {
-	ContainerBasePrivate::resolveInterface(expected);
-	switch (interfaceFlags()) {
+	ParallelContainerBasePrivate::resolveInterface(expected);
+	switch (requiredInterface()) {
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:
 		case UNKNOWN:
