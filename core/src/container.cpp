@@ -204,20 +204,21 @@ bool ContainerBase::insert(Stage::pointer&& stage, int before) {
 	return true;
 }
 
-bool ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
+Stage::pointer ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
 	if (pos == children_.end())
-		return false;
+		return Stage::pointer();
 
 	(*pos)->pimpl()->unparent();
-	children_.erase(pos);
-	return true;
+	Stage::pointer result = std::move(*children_.erase(pos, pos));  // stage from non-const iterator to pos
+	children_.erase(pos);  // actually erase stage
+	return result;
 }
 
-bool ContainerBase::remove(int pos) {
+Stage::pointer ContainerBase::remove(int pos) {
 	return pimpl()->remove(pimpl()->childByIndex(pos, false));
 }
 
-bool ContainerBase::remove(Stage* child) {
+Stage::pointer ContainerBase::remove(Stage* child) {
 	auto it = pimpl()->children_.begin(), end = pimpl()->children_.end();
 	for (; it != end && it->get() != child; ++it)
 		;

@@ -65,8 +65,8 @@ public:
 	void add(Stage::pointer&& stage);
 
 	virtual bool insert(Stage::pointer&& stage, int before = -1);
-	virtual bool remove(int pos);
-	virtual bool remove(Stage* child);
+	virtual Stage::pointer remove(int pos);
+	virtual Stage::pointer remove(Stage* child);
 	virtual void clear();
 
 	void reset() override;
