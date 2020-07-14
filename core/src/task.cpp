@@ -104,7 +104,7 @@ const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
-Task::Task(const std::string& id, ContainerBase::pointer&& container)
+Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& container)
   : WrapperBase(new TaskPrivate(this, id), std::move(container)) {
 	if (!id.empty())
 		stages()->setName(id);
@@ -112,7 +112,7 @@ Task::Task(const std::string& id, ContainerBase::pointer&& container)
 	// monitor state on commandline
 	// addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default, but only if ros::init() was called
-	if (ros::isInitialized())
+	if (ros::isInitialized() && introspection)
 		enableIntrospection(true);
 }
 

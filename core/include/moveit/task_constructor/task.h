@@ -78,7 +78,7 @@ public:
 	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
 	              const std::string& planning_plugin_param_name = "planning_plugin",
 	              const std::string& adapter_plugins_param_name = "request_adapters");
-	Task(const std::string& id = "",
+	Task(const std::string& id = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
