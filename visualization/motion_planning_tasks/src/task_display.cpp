@@ -205,7 +205,7 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 
 		// Start listening to other topics if this is the first description
 		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
-		if (!received_task_description_) {
+		if (!received_task_description_ && !msg->stages.empty()) {
 			received_task_description_ = true;
 			task_statistics_sub =
 			    update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
