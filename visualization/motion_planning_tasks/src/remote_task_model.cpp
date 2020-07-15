@@ -353,7 +353,7 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 		// emit notify about model changes when node was already visited
 		if (n->node_flags_ & WAS_VISITED) {
 			QModelIndex idx = index(n);
-			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 2));
+			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 3));
 		}
 	}
 }
