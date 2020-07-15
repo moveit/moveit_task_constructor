@@ -289,6 +289,8 @@ void TaskDisplay::onTasksRemoved(const QModelIndex& parent, int first, int last)
 
 	for (; first <= last; ++first)
 		delete tasks_property_->takeChildAt(first);
+
+	trajectory_visual_->reset();
 }
 
 void TaskDisplay::onTaskDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) {
