@@ -69,7 +69,7 @@ struct type_caster<T, enable_if_t<ros::message_traits::IsMessage<T>::value>>
 		if (!moveit::python::convertible(src, ros::message_traits::DataType<T>::value()))
 			return false;
 		// serialize src into (python) buffer
-		object pstream = module::import("StringIO").attr("StringIO")();
+		object pstream = module::import("io").attr("BytesIO")();
 		src.attr("serialize")(pstream);
 		object pbuffer = pstream.attr("getvalue")();
 		// deserialize C++ type from buffer

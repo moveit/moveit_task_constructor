@@ -18,7 +18,7 @@ py::object createMessage(const std::string& ros_msg_name) {
 bool convertible(const pybind11::handle& h, const char* ros_msg_name) {
 	try {
 		PyObject* o = h.attr("_type").ptr();
-		return PyString_Check(o) && strcmp(PyString_AS_STRING(o), ros_msg_name) == 0;
+		return py::cast<std::string>(o) == ros_msg_name;
 	} catch (const std::exception& e) {
 		return false;
 	}

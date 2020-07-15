@@ -1,6 +1,6 @@
 #! /usr/bin/env python
-# -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import unittest
 import rostest
 from moveit.python_tools import roscpp_init
@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
 
         self.assertEqual(len(task.solutions), 1)
         for s in task.solutions:
-            print s
+            print(s)
         s = task.solutions[0]
         task.execute(s)
 
@@ -65,8 +65,6 @@ class Test(unittest.TestCase):
         task.init()
         if task.plan():
             task.publish(task.solutions[0])
-
-        rospy.sleep(100)
 
 
 if __name__ == '__main__':

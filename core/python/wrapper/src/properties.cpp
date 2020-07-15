@@ -94,12 +94,21 @@ boost::any PropertyConverterRegistry::fromPython(const py::object& po) {
 
 	if (PyBool_Check(o))
 		return (o == Py_True);
+#if PY_MAJOR_VERSION >= 3
+	if (PyLong_Check(o))
+		return PyLong_AS_LONG(o);
+#else
 	if (PyInt_Check(o))
 		return PyInt_AS_LONG(o);
+#endif
 	if (PyFloat_Check(o))
 		return PyFloat_AS_DOUBLE(o);
+#if PY_MAJOR_VERSION >= 3
+	if (PyUnicode_Check(o))
+#else
 	if (PyString_Check(o))
-		return std::string(PyString_AS_STRING(o));
+#endif
+		return py::cast<std::string>(o);
 
 	const std::string& ros_msg_name = rosMsgName(o);
 	auto it = registry_singleton_.msg_names_.find(ros_msg_name);

@@ -46,7 +46,7 @@ void setForwardedProperties(Stage& self, const py::object& names) {
 	std::set<std::string> s;
 	try {
 		// handle string argument as single name
-		if (PyString_Check(names.ptr()))
+		if (PyBytes_Check(names.ptr()))
 			s.emplace(names.cast<std::string>());
 		else  // expect iterable otherwise
 			for (auto item : names)
