@@ -64,7 +64,7 @@ double TrajectoryDuration(const SubTrajectory& s) {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
-double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) {
+double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) const {
 	const auto& traj{ s.trajectory() };
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
@@ -87,7 +87,7 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) {
 	return distance;
 }
 
-double Clearance::operator()(const SubTrajectory& s, std::string& comment) {
+double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
 	const std::string PREFIX{ "Clearance: " };
 
 	collision_detection::DistanceRequest request;
