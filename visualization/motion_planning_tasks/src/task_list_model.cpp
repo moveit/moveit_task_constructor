@@ -371,11 +371,11 @@ void TaskListView::setModel(QAbstractItemModel* model) {
 	}
 }
 
-void TaskListView::dataChanged(const QModelIndex& /*topLeft*/, const QModelIndex& bottomRight,
-                               const QVector<int>& /*roles*/) {
+void TaskListView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles) {
 	if (bottomRight.column() > 0) {
 		updateColumnWidth();
 	}
+	QTreeView::dataChanged(topLeft, bottomRight, roles);
 }
 
 void TaskListView::updateColumnWidth() {
