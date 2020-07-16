@@ -88,11 +88,13 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) {
 }
 
 double Clearance::operator()(const SubTrajectory& s, std::string& comment) {
+	const std::string PREFIX{ "Clearance: " };
+
 	collision_detection::DistanceRequest request;
 	request.type =
 	    cumulative ? collision_detection::DistanceRequestType::SINGLE : collision_detection::DistanceRequestType::GLOBAL;
 
-	const auto& state = (interface == Interface::START) ? s.start() : s.end();
+	const auto& state{ (interface == Interface::END) ? s.end() : s.start() };
 
 	// prefer interface state property over stage property to find group_name
 	// TODO: This pattern is general enough to justify its own interface (in the properties?).
@@ -106,37 +108,70 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) {
 	request.enableGroup(state->scene()->getRobotModel());
 	request.acm = &state->scene()->getAllowedCollisionMatrix();
 
-	collision_detection::DistanceResult result;
+	// compute relevant distance data for state & robot
+	auto check_distance{ [=](const InterfaceState* state, const moveit::core::RobotState& robot) {
+		collision_detection::DistanceResult result;
+		if (with_world)
+			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);
+		else
+			state->scene()->getCollisionEnv()->distanceSelf(request, result, robot);
 
-	state->scene()->getCollisionEnv()->distanceSelf(request, result, state->scene()->getCurrentState());
+		if (result.minimum_distance.distance <= 0) {
+			return result.minimum_distance;
+		}
+
+		if (cumulative) {
+			double distance{ 0.0 };
+			for (const auto& distance_of_pair : result.distances) {
+				assert(distance_of_pair.second.size() == 1);
+				distance += distance_of_pair.second[0].distance;
+			}
+			result.minimum_distance.distance = distance;
+		}
+
+		return result.minimum_distance;
+	} };
+
+	auto collision_comment{ [=](const auto& distance) {
+		boost::format desc{ PREFIX + "allegedly valid solution collides between '%1%' and '%2%'" };
+		desc % distance.link_names[0] % distance.link_names[1];
+		return desc.str();
+	} };
 
 	double distance{ 0.0 };
-	if (cumulative) {
-		for (const auto& distance_of_pair : result.distances) {
-			assert(distance_of_pair.second.size() == 1);
-			distance += distance_of_pair.second[0].distance;
+
+	if (interface == Interface::START || interface == Interface::END ||
+	    (interface == Interface::NONE && s.trajectory() == nullptr)) {
+		auto distance_data{ check_distance(state, state->scene()->getCurrentState()) };
+		if (distance_data.distance < 0) {
+			comment = collision_comment(distance_data);
+			return std::numeric_limits<double>::infinity();
 		}
-	} else {
-		distance = result.minimum_distance.distance;
-	}
-
-	const auto& links = result.minimum_distance.link_names;
-
-	if (result.minimum_distance.distance <= 0) {
-		boost::format desc("ClearCost: allegedly valid solution has an unwanted collide between '%1%' and '%2%'");
-		desc % links[0] % links[1];
-		comment = desc.str();
-		return std::numeric_limits<double>::infinity();
-	} else {
-		if (cumulative) {
-			comment = "ClearCost: cumulative distance " + std::to_string(distance);
-		} else {
-			boost::format desc("ClearCost: distance %1% between '%2%' and '%3%'");
-			desc % result.minimum_distance.distance % links[0] % links[1];
+		distance = distance_data.distance;
+		if (!cumulative) {
+			boost::format desc{ PREFIX + "distance %1% between '%2%' and '%3%'" };
+			desc % distance % distance_data.link_names[0] % distance_data.link_names[1];
 			comment = desc.str();
+		} else {
+			comment = PREFIX + "cumulative distance " + std::to_string(distance);
 		}
-		return 1.0 / (distance + 1e-5);
+	} else {  // check trajectory
+		for (size_t i = 0; i < s.trajectory()->getWayPointCount(); ++i) {
+			auto distance_data = check_distance(state, s.trajectory()->getWayPoint(i));
+			if (distance_data.distance < 0) {
+				comment = collision_comment(distance_data);
+				return std::numeric_limits<double>::infinity();
+			}
+			distance += distance_data.distance;
+		}
+		distance /= s.trajectory()->getWayPointCount();
+
+		boost::format desc(PREFIX + "average%1% distance: %2%");
+		desc % (cumulative ? " cumulative" : "") % distance;
+		comment = desc.str();
 	}
+
+	return 1.0 / (distance + 1e-5);
 }
 }
 }
