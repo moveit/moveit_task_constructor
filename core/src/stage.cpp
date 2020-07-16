@@ -156,7 +156,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	solution->setStartState(from);
 	solution->setEndState(*to_it);
 
-	if (!solution->isFailure() && addCost(*solution)) {
+	if (!solution->isFailure() && computeCost(*solution)) {
 		nextStarts()->add(*to_it);
 	}
 
@@ -174,7 +174,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	solution->setStartState(*from_it);
 	solution->setEndState(to);
 
-	if (!solution->isFailure() && addCost(*solution))
+	if (!solution->isFailure() && computeCost(*solution))
 		prevEnds()->add(*from_it);
 
 	newSolution(solution);
@@ -191,7 +191,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 	solution->setStartState(*from);
 	solution->setEndState(*to);
 
-	if (!solution->isFailure() && addCost(*solution)) {
+	if (!solution->isFailure() && computeCost(*solution)) {
 		prevEnds()->add(*from);
 		nextStarts()->add(*to);
 	}
@@ -207,7 +207,7 @@ void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to,
 	solution->setEndState(to);
 
 	if (!solution->isFailure())
-		addCost(*solution);
+		computeCost(*solution);
 
 	newSolution(solution);
 }
@@ -221,7 +221,7 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 		parent()->onNewSolution(*solution);
 }
 
-bool StagePrivate::addCost(SolutionBase& solution) {
+bool StagePrivate::computeCost(SolutionBase& solution) {
 	double cost{ 0.0 };
 
 	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };

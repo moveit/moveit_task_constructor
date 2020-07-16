@@ -158,7 +158,7 @@ public:
 	 *
 	 * @return true if solution remains feasible (is no failure)
 	 */
-	bool addCost(SolutionBase& solution);
+	bool computeCost(SolutionBase& solution);
 
 protected:
 	// associated/owning Stage instance
