@@ -1,0 +1,11 @@
+# goal sent to client
+string action_name
+---
+# result sent to server
+string grasp_state
+---
+# feedback sent to server
+# grasp poses
+geometry_msgs/PoseStamped[] grasp_candidates
+# cost of each grasp
+float64[] costs
