@@ -66,13 +66,26 @@ public:
 	  : nh_(std::string("~/") + task->id())  // topics + services are advertised in private namespace
 	  , task_(task)
 	  , process_id_(getProcessId()) {
-		resetMaps();
 		task_description_publisher_ =
-		    nh_.advertise<moveit_task_constructor_msgs::TaskDescription>(DESCRIPTION_TOPIC, 1, true);
+		    nh_.advertise<moveit_task_constructor_msgs::TaskDescription>(DESCRIPTION_TOPIC, 2, true);
+		// send reset message as early as possible to give subscribers time to see it
+		indicateReset();
+
 		task_statistics_publisher_ =
 		    nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
 		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
+
+		resetMaps();
 	}
+
+	void indicateReset() {
+		// send empty task description message to indicate reset
+		::moveit_task_constructor_msgs::TaskDescription msg;
+		msg.process_id = process_id_;
+		msg.id = task_->id();
+		task_description_publisher_.publish(msg);
+	}
+
 	void resetMaps() {
 		// reset maps
 		stage_to_id_map_.clear();
@@ -118,12 +131,7 @@ void Introspection::publishTaskState() {
 }
 
 void Introspection::reset() {
-	// send empty task description message to indicate reset
-	::moveit_task_constructor_msgs::TaskDescription msg;
-	msg.process_id = impl->process_id_;
-	msg.id = impl->task_->id();
-	impl->task_description_publisher_.publish(msg);
-
+	impl->indicateReset();
 	impl->resetMaps();
 }
 
