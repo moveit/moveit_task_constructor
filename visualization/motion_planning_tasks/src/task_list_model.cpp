@@ -391,11 +391,12 @@ void SolutionListView::setModel(QAbstractItemModel* model) {
 	updateColumnWidth();
 }
 
-void SolutionListView::dataChanged(const QModelIndex& /*topLeft*/, const QModelIndex& bottomRight,
-                                   const QVector<int>& /*roles*/) {
+void SolutionListView::dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
+                                   const QVector<int>& roles) {
 	if (bottomRight.column() > 0) {
 		updateColumnWidth();
 	}
+	QTreeView::dataChanged(topLeft, bottomRight, roles);
 }
 
 void SolutionListView::resizeEvent(QResizeEvent* e) {
