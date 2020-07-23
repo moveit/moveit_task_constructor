@@ -199,7 +199,7 @@ uint32_t Introspection::solutionId(const SolutionBase& s) {
 }
 
 void Introspection::fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::StageStatistics& s) {
-	// successfull solutions
+	// successful solutions
 	for (const auto& solution : stage.solutions())
 		s.solved.push_back(solutionId(*solution));
 
