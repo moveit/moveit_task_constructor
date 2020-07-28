@@ -3,7 +3,7 @@
 # unique id within task
 uint32 id
 
-# successful solution IDs of this stage
+# successful solution IDs of this stage, sorted by increasing cost
 uint32[] solved
 
 # (optional) failed solution IDs of this stage
