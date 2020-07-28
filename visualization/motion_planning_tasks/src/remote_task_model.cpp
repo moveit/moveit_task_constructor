@@ -640,7 +640,8 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& succes
 }
 
 void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& ids, bool successful) {
-	// ids are ordered by cost, insert them into data_ list sorted by id
+	// Interface axiom: ids are sorted by cost
+	// insert them into data_ list sorted by id
 	double default_cost =
 	    successful ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
 	uint32_t cost_rank = 0;
