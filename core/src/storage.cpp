@@ -141,6 +141,16 @@ void SolutionBase::setCreator(Stage* creator) {
 	creator_ = creator;
 }
 
+void SolutionBase::setStartStateUnsafe(const InterfaceState& state) {
+	start_ = &state;
+	const_cast<InterfaceState&>(state).addOutgoing(this);
+}
+
+void SolutionBase::setEndStateUnsafe(const InterfaceState& state) {
+	end_ = &state;
+	const_cast<InterfaceState&>(state).addIncoming(this);
+}
+
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }

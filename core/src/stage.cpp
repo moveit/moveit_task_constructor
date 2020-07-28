@@ -130,7 +130,6 @@ void StagePrivate::validateConnectivity() const {
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
-	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
@@ -147,34 +146,59 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
+
+	solution->setCreator(me());
+
+	if (!solution->isFailure()) {
+		// chicken-and-egg problem: we don't know whether/where we will store the solution,
+		// but need to store it properly to compute the cost with a clean interface:
+		// set state copies for solution before computing cost:
+		InterfaceState tmp_from{ from }, tmp_to{ to };
+		solution->setStartState(tmp_from);
+		solution->setEndState(tmp_to);
+
+		computeCost(*solution);
+	}
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 	me()->forwardProperties(from, to);
 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
-	solution->setStartState(from);
-	solution->setEndState(*to_it);
+	// register stored interfaces with solution
+	solution->setStartStateUnsafe(from);
+	solution->setEndStateUnsafe(*to_it);
 
-	if (!solution->isFailure() && computeCost(*solution)) {
+	if (!solution->isFailure())
 		nextStarts()->add(*to_it);
-	}
 
 	newSolution(solution);
 }
 
 void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
+
+	solution->setCreator(me());
+
+	if (!solution->isFailure()) {
+		InterfaceState tmp_from{ from }, tmp_to{ to };
+		solution->setStartState(tmp_from);
+		solution->setEndState(tmp_to);
+
+		computeCost(*solution);
+	}
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
-	solution->setStartState(*from_it);
-	solution->setEndState(to);
+	solution->setStartStateUnsafe(*from_it);
+	solution->setEndStateUnsafe(to);
 
-	if (!solution->isFailure() && computeCost(*solution))
+	if (!solution->isFailure())
 		prevEnds()->add(*from_it);
 
 	newSolution(solution);
@@ -182,16 +206,27 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
+
+	solution->setCreator(me());
+
+	if (!solution->isFailure()) {
+		InterfaceState tmp_from{ state }, tmp_to{ state };
+		solution->setStartState(tmp_from);
+		solution->setEndState(tmp_to);
+
+		computeCost(*solution);
+	}
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
 	auto to = states_.insert(states_.end(), std::move(state));
 
-	solution->setStartState(*from);
-	solution->setEndState(*to);
+	solution->setStartStateUnsafe(*from);
+	solution->setEndStateUnsafe(*to);
 
-	if (!solution->isFailure() && computeCost(*solution)) {
+	if (!solution->isFailure()) {
 		prevEnds()->add(*from);
 		nextStarts()->add(*to);
 	}
@@ -200,14 +235,21 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 }
 
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
+	solution->setCreator(me());
+
+	if (!solution->isFailure()) {
+		InterfaceState tmp_from{ from }, tmp_to{ to };
+		solution->setStartState(tmp_from);
+		solution->setEndState(tmp_to);
+
+		computeCost(*solution);
+	}
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
-	solution->setStartState(from);
-	solution->setEndState(to);
-
-	if (!solution->isFailure())
-		computeCost(*solution);
+	solution->setStartStateUnsafe(from);
+	solution->setEndStateUnsafe(to);
 
 	newSolution(solution);
 }
