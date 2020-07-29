@@ -160,6 +160,7 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Int
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
+	t.creator_name = this->creator()->name();
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
