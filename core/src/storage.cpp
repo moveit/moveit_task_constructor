@@ -146,6 +146,7 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	info.comment = this->comment();
 	const Introspection* ci = introspection;
 	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	info.creator_name = this->creator()->name();
 
 	const auto& markers = this->markers();
 	info.markers.resize(markers.size());
@@ -160,7 +161,6 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Int
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
-	t.creator_name = this->creator()->name();
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
