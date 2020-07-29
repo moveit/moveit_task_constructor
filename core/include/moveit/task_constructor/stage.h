@@ -180,6 +180,8 @@ public:
 	const std::string& name() const;
 	void setName(const std::string& name);
 
+	uint32_t introspectionId() const;
+
 	/** set computation timeout (in seconds)
 	 *
 	 * The logic of the individual stage should ensure this limit is respected.
