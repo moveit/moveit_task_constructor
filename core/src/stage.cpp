@@ -253,7 +253,7 @@ void Stage::reset() {
 	impl->properties_.reset();
 }
 
-void Stage::init(const moveit::core::RobotModelConstPtr& robot_model) {
+void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	// init properties once from parent
 	auto impl = pimpl();
 	impl->properties_.reset();
