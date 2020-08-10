@@ -47,7 +47,10 @@ namespace solvers {
 
 MOVEIT_CLASS_FORWARD(JointInterpolationPlanner)
 
-/** Use MoveIt's PlanningPipeline to plan a trajectory between to scenes */
+/** Interpolate a trajectory between states in joint space
+ *
+ * Fails if direct joint space interpolation fails.
+ */
 class JointInterpolationPlanner : public PlannerInterface
 {
 public:
