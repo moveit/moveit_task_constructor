@@ -9,6 +9,10 @@ The framework enables the hierarchical organization of basic stages using *conta
 
 [![Video associated with ICRA 2019 paper](https://img.youtube.com/vi/fCORKVYsdDI/0.jpg )](https://www.youtube.com/watch?v=fCORKVYsdDI)
 
+## Tutorial
+
+We provide a tutorial for a pick-and-place pipeline without bells & whistles [as part of the MoveIt tutorials](https://ros-planning.github.io/moveit_tutorials/doc/moveit_task_constructor/moveit_task_constructor_tutorial.html).
+
 ## Roadmap
 
 **Feedback, reports and contributions are very welcome.**
