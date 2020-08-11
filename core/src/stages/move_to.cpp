@@ -120,6 +120,20 @@ bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::Joint
 	} catch (const boost::bad_any_cast&) {
 	}
 
+	try {
+		const std::map<std::string, double>& joint_map = boost::any_cast<std::map<std::string, double>>(goal);
+		const auto& accepted = jmg->getJointModelNames();
+		for (const auto& joint : joint_map) {
+			if (std::find(accepted.begin(), accepted.end(), joint.first) == accepted.end())
+				throw InitStageException(*this,
+				                         "Joint '" + joint.first + "' is not part of group '" + jmg->getName() + "'");
+			state.setVariablePosition(joint.first, joint.second);
+		}
+		state.update();
+		return true;
+	} catch (const boost::bad_any_cast&) {
+	}
+
 	return false;
 }
 
