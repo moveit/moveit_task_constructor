@@ -178,6 +178,10 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Int
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
+double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const {
+	return f(*this, comment);
+}
+
 void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
 }
@@ -217,6 +221,22 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 	}
 }
 
+double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) const {
+	double cost{ 0.0 };
+	std::string subcomment;
+	for (auto& solution : subsolutions_) {
+		cost += solution->computeCost(f, subcomment);
+		if (!subcomment.empty()) {
+			if (!comment.empty())
+				comment.append(", ");
+			comment.append(subcomment);
+			subcomment.clear();
+		}
+	}
+
+	return cost;
+}
+
 void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
                                   Introspection* introspection) const {
 	wrapped_->fillMessage(solution, introspection);
@@ -227,5 +247,10 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& soluti
 	sub_msg.sub_solution_id.push_back(introspection ? introspection->solutionId(*wrapped_) : 0);
 	solution.sub_solution.insert(solution.sub_solution.begin(), std::move(sub_msg));
 }
+
+double WrappedSolution::computeCost(const CostTerm& f, std::string& comment) const {
+	return wrapped_->computeCost(f, comment);
+}
+
 }  // namespace task_constructor
 }  // namespace moveit

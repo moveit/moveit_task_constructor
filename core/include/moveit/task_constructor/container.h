@@ -80,9 +80,6 @@ public:
 
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
-
-	/// most containers should only use setCostTransform and leave the costs to their children
-	using Stage::setCostTerm;
 };
 std::ostream& operator<<(std::ostream& os, const ContainerBase& stage);
 
@@ -226,9 +223,6 @@ public:
 
 	bool canCompute() const override;
 	void compute() override;
-
-	// Wrappers sometimes do the real work (e.g., IK), so they can specify costs
-	using Stage::setCostTerm;
 
 protected:
 	WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child = Stage::pointer());

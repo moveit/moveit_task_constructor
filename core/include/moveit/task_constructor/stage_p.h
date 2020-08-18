@@ -169,7 +169,7 @@ protected:
 	InterfacePtr ends_;
 
 	// user-configurable cost estimator
-	Stage::CostTerm cost_term_;
+	CostTerm cost_term_;
 
 	// The total compute time
 	std::chrono::duration<double> total_compute_time_;

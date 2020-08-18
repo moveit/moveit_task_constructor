@@ -193,6 +193,13 @@ private:
 	using base_type::remove_if;
 };
 
+class SubTrajectory;
+/** Interface for cost terms to be configured via Stage::setCostTerm()
+ *
+ * Look at moveit/task_constructor/cost_terms.h for various implementations
+ */
+using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
+
 class StagePrivate;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
@@ -245,6 +252,9 @@ public:
 	                         Introspection* introspection = nullptr) const = 0;
 	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
+	/// compute cost of this solution according to the specified CostTerm
+	virtual double computeCost(const CostTerm& cost, std::string& comment) const = 0;
+
 	/// order solutions by their cost
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
 
@@ -294,6 +304,8 @@ public:
 
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
 
+	double computeCost(const CostTerm& cost, std::string& comment) const override;
+
 private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
@@ -318,6 +330,9 @@ public:
 
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+
+	/// aggregate costs along the sequence
+	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
 	const container_type& solutions() const { return subsolutions_; }
 
@@ -348,6 +363,8 @@ public:
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
 	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
+	/// compute cost of wrapped child
+	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
 	const SolutionBase* wrapped() const { return wrapped_; }
 

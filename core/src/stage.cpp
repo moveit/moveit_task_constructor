@@ -97,11 +97,7 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me)
-  , name_(name)
-  , total_compute_time_{}
-  , parent_(nullptr)
-  , introspection_(nullptr) {}
+  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -249,17 +245,13 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 	solution.setStartState(tmp_from);
 	solution.setEndState(tmp_to);
 
-	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };
-	if (trajectory) {
-		// compute specific cost
-		std::string comment;
-		solution.setCost(cost_term_(*trajectory, comment));
-		// If a comment was specified, add it to the solution
-		if (!comment.empty() && !solution.comment().empty()) {
-			solution.setComment(solution.comment() + " (" + comment + ")");
-		} else if (!comment.empty()) {
-			solution.setComment(comment);
-		}
+	std::string comment;
+	solution.setCost(solution.computeCost(cost_term_, comment));
+	// If a comment was specified, add it to the solution
+	if (!comment.empty() && !solution.comment().empty()) {
+		solution.setComment(solution.comment() + " (" + comment + ")");
+	} else if (!comment.empty()) {
+		solution.setComment(comment);
 	}
 }
 

@@ -213,17 +213,10 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
-	using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
 	using CostTermShort = std::function<double(const SubTrajectory&)>;
 	/* \brief set method to determine costs for solutions of this stage
 	 *
-	 * This interface supports only primitive solutions, no containers.
-	 *
-	 * In order to support containers, the associated CostTerms would need to be able
-	 * to decide costs for arbitrary partial solutions of the container.
-	 * These need to be determined for scheduling, but would make the terms too complex.
-	 *
-	 * See setCostTransform
+	 * For composite stages, costs are computed for each SubTrajectory and aggregated
 	 */
 	void setCostTerm(const CostTerm& term);
 	void setCostTerm(const CostTermShort& term);
