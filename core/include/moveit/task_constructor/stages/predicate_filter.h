@@ -65,6 +65,7 @@ public:
 	void onNewSolution(const SolutionBase& s) override;
 
 	void setPredicate(const Predicate& p) { setProperty("predicate", p); }
+	void setIgnoreFilter(bool ignore) { setProperty("ignore_filter", ignore); }
 };
 }  // namespace stages
 }  // namespace task_constructor

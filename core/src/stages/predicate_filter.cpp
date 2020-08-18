@@ -52,7 +52,7 @@ PredicateFilter::PredicateFilter(const std::string& name, Stage::pointer&& child
   : WrapperBase(name, std::move(child)) {
 	auto& p = properties();
 	p.declare<Predicate>("predicate", "predicate to filter wrapped solutions");
-	p.declare<bool>("ignore_filter", false);
+	p.declare<bool>("ignore_filter", false, "ignore predicate and forward all solutions");
 }
 
 void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model) {
@@ -85,7 +85,7 @@ void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	std::string comment = s.comment();
 
 	double cost = s.cost();
-	if (!props.get<Predicate>("predicate")(s, comment))
+	if (!props.get<bool>("ignore_filter") && !props.get<Predicate>("predicate")(s, comment))
 		cost = std::numeric_limits<double>::infinity();
 
 	liftSolution(s, cost, comment);
