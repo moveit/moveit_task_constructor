@@ -312,6 +312,29 @@ private:
 };
 MOVEIT_CLASS_FORWARD(SolutionSequence)
 
+/** Wrap an existing solution
+ *
+ * used by parallel containers and wrappers.
+ *
+ * This essentially wraps a solution of a child and thus allows
+ * for new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase
+{
+public:
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped, double cost, std::string comment)
+	  : SolutionBase(creator, cost, std::move(comment)), wrapped_(wrapped) {}
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped, double cost)
+	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
+	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
+	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
+	                 Introspection* introspection = nullptr) const override;
+
+private:
+	const SolutionBase* wrapped_;
+};
+
 template <>
 inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {
 	return end_->outgoingTrajectories();
