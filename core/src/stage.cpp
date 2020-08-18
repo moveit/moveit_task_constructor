@@ -356,7 +356,10 @@ void Stage::setCostTerm(const CostTerm& term) {
 }
 
 void Stage::setCostTerm(const CostTermShort& term) {
-	setCostTerm([=](auto&& solution, auto&&) { return term(solution); });
+	if (term)
+		setCostTerm([=](auto&& solution, auto&&) { return term(solution); });
+	else
+		pimpl()->cost_term_ = nullptr;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {
