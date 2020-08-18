@@ -154,11 +154,8 @@ public:
 		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
 
-	/** compute cost for solution through configured CostTerm
-	 *
-	 * @return true if solution remains feasible (is no failure)
-	 */
-	bool computeCost(SolutionBase& solution);
+	/** compute cost for solution through configured CostTerm */
+	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
 protected:
 	// associated/owning Stage instance

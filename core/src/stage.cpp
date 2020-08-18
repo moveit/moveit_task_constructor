@@ -148,19 +148,11 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 
 	solution->setCreator(me());
 
-	if (!solution->isFailure()) {
-		// chicken-and-egg problem: we don't know whether/where we will store the solution,
-		// but need to store it properly to compute the cost with a clean interface:
-		// set state copies for solution before computing cost:
-		InterfaceState tmp_from{ from }, tmp_to{ to };
-		solution->setStartState(tmp_from);
-		solution->setEndState(tmp_to);
-
-		computeCost(*solution);
-	}
+	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
 		return;  // solution dropped
+
 	me()->forwardProperties(from, to);
 
 	auto to_it = states_.insert(states_.end(), std::move(to));
@@ -180,16 +172,11 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 	solution->setCreator(me());
 
-	if (!solution->isFailure()) {
-		InterfaceState tmp_from{ from }, tmp_to{ to };
-		solution->setStartState(tmp_from);
-		solution->setEndState(tmp_to);
-
-		computeCost(*solution);
-	}
+	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
 		return;  // solution dropped
+
 	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
@@ -208,13 +195,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 
 	solution->setCreator(me());
 
-	if (!solution->isFailure()) {
-		InterfaceState tmp_from{ state }, tmp_to{ state };
-		solution->setStartState(tmp_from);
-		solution->setEndState(tmp_to);
-
-		computeCost(*solution);
-	}
+	computeCost(state, state, *solution);
 
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -236,13 +217,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	solution->setCreator(me());
 
-	if (!solution->isFailure()) {
-		InterfaceState tmp_from{ from }, tmp_to{ to };
-		solution->setStartState(tmp_from);
-		solution->setEndState(tmp_to);
-
-		computeCost(*solution);
-	}
+	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -262,28 +237,30 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 		parent()->onNewSolution(*solution);
 }
 
-bool StagePrivate::computeCost(SolutionBase& solution) {
-	double cost{ 0.0 };
+void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
+	// no reason to compute costs for a failed solution
+	if (solution.isFailure() || !cost_term_)
+		return;
+
+	// chicken-and-egg problem: we don't know whether/where we will store the solution yet,
+	// but need to store it properly to compute the cost with a clean interface:
+	// set state copies for solution before computing cost:
+	InterfaceState tmp_from{ from }, tmp_to{ to };
+	solution.setStartState(tmp_from);
+	solution.setEndState(tmp_to);
 
 	auto* trajectory{ dynamic_cast<const SubTrajectory*>(&solution) };
-	if (trajectory && cost_term_) {
+	if (trajectory) {
 		// compute specific cost
 		std::string comment;
-		cost = cost_term_(*trajectory, comment);
+		solution.setCost(cost_term_(*trajectory, comment));
 		// If a comment was specified, add it to the solution
 		if (!comment.empty() && !solution.comment().empty()) {
 			solution.setComment(solution.comment() + " (" + comment + ")");
 		} else if (!comment.empty()) {
 			solution.setComment(comment);
 		}
-	} else {
-		// otherwise forward current cost
-		cost = solution.cost();
 	}
-
-	solution.setCost(cost);
-
-	return !solution.isFailure();
 }
 
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
