@@ -220,6 +220,8 @@ public:
 	 */
 	void setCostTerm(const CostTerm& term);
 	void setCostTerm(const CostTermShort& term);
+	// avoid overloading ambiguity for resetting the cost term
+	void setCostTerm(const std::nullptr_t) { setCostTerm(static_cast<CostTerm>(nullptr)); }
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
