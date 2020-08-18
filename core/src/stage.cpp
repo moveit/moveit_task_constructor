@@ -99,7 +99,6 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
   : me_(me)
   , name_(name)
-  , cost_transform_([](auto x) { return x; })
   , total_compute_time_{}
   , parent_(nullptr)
   , introspection_(nullptr) {}
@@ -282,8 +281,7 @@ bool StagePrivate::computeCost(SolutionBase& solution) {
 		cost = solution.cost();
 	}
 
-	// all costs are transformed
-	solution.setCost(cost_transform_(cost));
+	solution.setCost(cost);
 
 	return !solution.isFailure();
 }
@@ -390,10 +388,6 @@ void Stage::setCostTerm(const CostTerm& term) {
 
 void Stage::setCostTerm(const CostTermShort& term) {
 	setCostTerm([=](auto&& solution, auto&&) { return term(solution); });
-}
-
-void Stage::setCostTransform(const CostTransform& transform) {
-	pimpl()->cost_transform_ = transform;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

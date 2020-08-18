@@ -215,9 +215,6 @@ public:
 
 	using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
 	using CostTermShort = std::function<double(const SubTrajectory&)>;
-
-	using CostTransform = std::function<double(const double)>;
-
 	/* \brief set method to determine costs for solutions of this stage
 	 *
 	 * This interface supports only primitive solutions, no containers.
@@ -230,14 +227,6 @@ public:
 	 */
 	void setCostTerm(const CostTerm& term);
 	void setCostTerm(const CostTermShort& term);
-
-	/* \brief set CostTransform to be applied to costs of this stage's solution costs
-	 *
-	 * This interface can be used to modify the cost associated with each solution of this stage/container.
-	 * The most common case would be linear weighting `[](double cost){ return constant*cost; }`
-	 * but any non-linear transform is obviously possible as well.
-	 */
-	void setCostTransform(const CostTransform& transform);
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;

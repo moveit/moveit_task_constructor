@@ -173,7 +173,6 @@ protected:
 
 	// user-configurable cost estimator
 	Stage::CostTerm cost_term_;
-	Stage::CostTransform cost_transform_;
 
 	// The total compute time
 	std::chrono::duration<double> total_compute_time_;
