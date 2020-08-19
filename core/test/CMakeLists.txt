@@ -24,6 +24,8 @@ if (CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}-test-interface_state test_interface_state.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-interface_state ${PROJECT_NAME} gtest_main)
 
+	catkin_add_gtest(${PROJECT_NAME}-test-cost_terms test_cost_terms.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-cost_terms ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
 
 	# building these integration tests works without moveit config packages
 	add_executable(pick_ur5 pick_ur5.cpp)
