@@ -201,10 +201,13 @@ class SubTrajectory;
 using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
 
 class StagePrivate;
+class ContainerBasePrivate;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
 	friend StagePrivate;  // for set[Start|End]StateUnsafe
+	friend ContainerBasePrivate;
+
 public:
 	virtual ~SolutionBase() = default;
 
