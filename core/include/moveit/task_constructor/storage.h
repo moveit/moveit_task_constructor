@@ -100,6 +100,9 @@ public:
 	InterfaceState(const planning_scene::PlanningScenePtr& ps);
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
 
+	/// provide an initial priority for the state (for internal use only)
+	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p);
+
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);
 

@@ -60,6 +60,11 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps) 
 		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
+InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p)
+  : InterfaceState(ps) {
+	priority_ = p;
+}
+
 InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
