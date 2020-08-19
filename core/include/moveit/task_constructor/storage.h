@@ -331,6 +331,8 @@ public:
 	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
 
+	const SolutionBase* wrapped() const { return wrapped_; }
+
 private:
 	const SolutionBase* wrapped_;
 };
