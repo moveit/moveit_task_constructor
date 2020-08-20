@@ -120,7 +120,7 @@ class ParallelContainerBase;
  *  - Fallbacks: the children are considered in series
  *  - Merger: solutions of all children (actuating disjoint groups)
  *            are merged into a single solution for parallel execution
-*/
+ */
 class ParallelContainerBase : public ContainerBase
 {
 public:

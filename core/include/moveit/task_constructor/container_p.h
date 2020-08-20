@@ -49,8 +49,8 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(JointModelGroup)
 MOVEIT_CLASS_FORWARD(RobotState)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {

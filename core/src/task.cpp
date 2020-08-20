@@ -117,7 +117,7 @@ Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& c
 }
 
 Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
-    : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
+  : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
 	*this = std::move(other);
 }
 
@@ -223,7 +223,7 @@ void Task::enableIntrospection(bool enable) {
 		    [](Stage& stage, int /*depth*/) {
 			    stage.pimpl()->setIntrospection(nullptr);
 			    return true;
-			 },
+		    },
 		    1, UINT_MAX);
 		impl->introspection_.reset();
 	}
@@ -275,7 +275,7 @@ void Task::init() {
 	    [impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(impl->introspection_.get());
 		    return true;
-		 },
+	    },
 	    1, UINT_MAX);
 
 	// first time publish task

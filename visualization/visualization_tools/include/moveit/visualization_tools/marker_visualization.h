@@ -14,7 +14,7 @@ class SceneNode;
 namespace rviz {
 class DisplayContext;
 class MarkerBase;
-}
+}  // namespace rviz
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -23,7 +23,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 }
-}
+}  // namespace moveit
 
 namespace moveit_rviz_plugin {
 

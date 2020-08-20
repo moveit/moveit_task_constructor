@@ -48,7 +48,7 @@ namespace rviz {
 class Property;
 class PropertyTreeModel;
 class DisplayContext;
-}
+}  // namespace rviz
 namespace planning_scene {
 class PlanningScene;
 }
@@ -56,7 +56,7 @@ namespace moveit {
 namespace task_constructor {
 class Stage;
 }
-}
+}  // namespace moveit
 
 namespace moveit_rviz_plugin {
 

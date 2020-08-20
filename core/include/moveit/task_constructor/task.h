@@ -52,8 +52,8 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 MOVEIT_CLASS_FORWARD(RobotState)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
@@ -108,9 +108,9 @@ public:
 	void eraseTaskCallback(TaskCallbackList::const_iterator which);
 
 	/// expose SolutionCallback API
-	using WrapperBase::SolutionCallback;
 	using WrapperBase::addSolutionCallback;
 	using WrapperBase::removeSolutionCallback;
+	using WrapperBase::SolutionCallback;
 
 	/// reset all stages
 	void reset() final;

@@ -125,7 +125,7 @@ bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::Joint
 
 bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                         decltype(std::declval<SolutionBase>().markers()) & markers) {
+                         decltype(std::declval<SolutionBase>().markers())& markers) {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
 		tf::poseMsgToEigen(target.pose, target_eigen);
@@ -147,7 +147,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 
 bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
                           const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                          decltype(std::declval<SolutionBase>().markers()) & /*unused*/) {
+                          decltype(std::declval<SolutionBase>().markers())& /*unused*/) {
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
 		Eigen::Vector3d target_point;

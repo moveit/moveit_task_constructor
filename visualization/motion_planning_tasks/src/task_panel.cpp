@@ -226,7 +226,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 			                 }
 			                 tasks_view->setExpanded(parent, true);  // expand parent group item
 		                 }
-		              });
+	                 });
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
