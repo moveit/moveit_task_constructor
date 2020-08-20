@@ -48,7 +48,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(JointModelGroup)
 }
-}
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {

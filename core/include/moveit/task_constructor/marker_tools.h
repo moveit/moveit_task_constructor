@@ -12,8 +12,8 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 MOVEIT_CLASS_FORWARD(LinkModel)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {

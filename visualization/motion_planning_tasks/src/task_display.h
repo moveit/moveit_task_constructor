@@ -54,13 +54,13 @@
 namespace rviz {
 class StringProperty;
 class RosTopicProperty;
-}
+}  // namespace rviz
 
 namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 }
-}
+}  // namespace moveit
 namespace rdf_loader {
 MOVEIT_CLASS_FORWARD(RDFLoader)
 }

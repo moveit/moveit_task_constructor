@@ -57,7 +57,7 @@ std::string getProcessId() {
 	gethostname(our_hostname, sizeof(our_hostname) - 1);
 	return std::to_string(getpid()) + "@" + our_hostname;
 }
-}
+}  // namespace
 
 class IntrospectionPrivate
 {

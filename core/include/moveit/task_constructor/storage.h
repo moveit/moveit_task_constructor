@@ -182,10 +182,10 @@ private:
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
-	using base_type::moveTo;
-	using base_type::moveFrom;
-	using base_type::insert;
 	using base_type::erase;
+	using base_type::insert;
+	using base_type::moveFrom;
+	using base_type::moveTo;
 	using base_type::remove_if;
 };
 
@@ -329,4 +329,4 @@ struct less<moveit::task_constructor::SolutionBase*>
 		return *x < *y;
 	}
 };
-}
+}  // namespace std

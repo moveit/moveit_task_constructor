@@ -596,7 +596,7 @@ void RemoteSolutionModel::sortInternal() {
 			          if (comp == 0)  // if still undecided, id decides
 				          comp = (left->id < right->id ? -1 : 1);
 			          return (sort_order_ == Qt::AscendingOrder) ? (comp < 0) : (comp >= 0);
-			       });
+		          });
 	}
 
 	// map old indexes to new ones

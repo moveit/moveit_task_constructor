@@ -49,7 +49,7 @@ class WindowManagerInterface;
 class Property;
 class BoolProperty;
 class EnumProperty;
-}
+}  // namespace rviz
 
 namespace moveit_rviz_plugin {
 
@@ -108,7 +108,7 @@ class MetaTaskListModel;
  *  Subscribing to task_monitoring and task_solution topics, it collects information
  *  about running tasks and their solutions and allows to inspect both,
  *  successful solutions and failed solution attempts.
-*/
+ */
 class TaskViewPrivate;
 class TaskView : public SubPanel
 {

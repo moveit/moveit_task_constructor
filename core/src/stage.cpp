@@ -720,7 +720,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
 		                       [from_object](const moveit::core::AttachedBody* object) {
 			                       return object->getName() == from_object->getName();
-			                    });
+		                       });
 		if (it == to_attached.cend()) {
 			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object->getName());
 			return false;

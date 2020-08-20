@@ -43,7 +43,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 }
-}
+}  // namespace moveit
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }

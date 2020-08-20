@@ -58,7 +58,7 @@ class ServiceClient;
 namespace rviz {
 class PropertyTreeModel;
 class DisplayContext;
-}
+}  // namespace rviz
 
 namespace moveit_rviz_plugin {
 
