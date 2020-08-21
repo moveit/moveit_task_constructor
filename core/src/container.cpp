@@ -360,8 +360,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			InterfaceState::Priority prio(static_cast<unsigned int>(in.first.size() + 1 + out.first.size()),
-			                              in.second + current.cost() + out.second);
+			InterfaceState::Priority prio(
+			    static_cast<unsigned int>(in.first.size() + 1 + out.first.size()),
+			    pimpl()->aggregator_(pimpl()->aggregator_(in.second, current.cost()), out.second));
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
 				if (std::isinf(prio.cost()))
@@ -374,7 +375,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				// insert outgoing solutions in normal order
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
-				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
+				auto sequence{ std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this) };
+				sequence->setCostAggregator(pimpl()->aggregator_);
+				sorted.insert(std::move(sequence));
 			} else if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
 				updateStateCosts(in.first, prio);
@@ -393,7 +396,7 @@ SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(i
 SerialContainer::SerialContainer(const std::string& name) : SerialContainer(new SerialContainerPrivate(this, name)) {}
 
 SerialContainerPrivate::SerialContainerPrivate(SerialContainer* me, const std::string& name)
-  : ContainerBasePrivate(me, name) {}
+  : ContainerBasePrivate(me, name), aggregator_(std::plus<double>{}) {}
 
 void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2) {
 	InterfaceFlags flags1 = stage1.requiredInterface();
@@ -518,6 +521,10 @@ void SerialContainerPrivate::validateConnectivity() const {
 	}
 }
 
+void SerialContainer::setCostAggregator(const SolutionSequence::CostAggregator& agg) {
+	pimpl()->aggregator_ = agg;
+}
+
 bool SerialContainer::canCompute() const {
 	for (const auto& stage : pimpl()->children()) {
 		if (stage->pimpl()->canCompute())
@@ -549,11 +556,14 @@ void SerialContainer::traverse(const SolutionBase& start, const SolutionProcesso
 	else
 		for (SolutionBase* successor : solutions) {
 			trace.push_back(successor);
-			trace_cost += successor->cost();
+
+			double previous_trace_cost { trace_cost };
+
+			trace_cost = pimpl()->aggregator_(trace_cost, successor->cost());
 
 			traverse<dir>(*successor, cb, trace, trace_cost);
 
-			trace_cost -= successor->cost();
+			trace_cost = previous_trace_cost;
 			trace.pop_back();
 		}
 }

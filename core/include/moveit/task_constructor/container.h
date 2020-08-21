@@ -94,6 +94,12 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
+	/** Specify how to aggregate costs of childrens' solutions
+	 *
+	 * By default costs are added up
+	 */
+	void setCostAggregator(const SolutionSequence::CostAggregator& agg);
+
 protected:
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase& s) override;

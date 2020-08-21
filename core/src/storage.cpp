@@ -182,8 +182,17 @@ double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const
 	return f(*this, comment);
 }
 
+SolutionSequence::SolutionSequence() : SolutionBase(), aggregator_(std::plus<double>{}) {}
+
+SolutionSequence::SolutionSequence(container_type&& subsolutions, double cost, Stage* creator)
+  : SolutionBase(creator, cost), aggregator_(std::plus<double>{}), subsolutions_(std::move(subsolutions)) {}
+
 void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
+}
+
+void SolutionSequence::setCostAggregator(const CostAggregator& agg) {
+	aggregator_ = agg;
 }
 
 void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
@@ -225,7 +234,8 @@ double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) co
 	double cost{ 0.0 };
 	std::string subcomment;
 	for (auto& solution : subsolutions_) {
-		cost += solution->computeCost(f, subcomment);
+		auto subcost{ solution->computeCost(f, subcomment) };
+		cost = aggregator_(cost, subcost);
 		if (!subcomment.empty()) {
 			if (!comment.empty())
 				comment.append(", ");
