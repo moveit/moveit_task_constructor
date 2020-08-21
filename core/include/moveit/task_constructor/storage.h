@@ -135,6 +135,8 @@ private:
 	Interface* owner_ = nullptr;  // allow update of priority
 };
 
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& p);
+
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
 class Interface : public ordered<InterfaceState*>
 {

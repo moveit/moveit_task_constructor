@@ -84,6 +84,10 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 		return this->depth() > other.depth();
 }
 
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& p) {
+	return os << "[depth: " << p.depth() << ", cost: " << p.cost() << "]";
+}
+
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
 
 // Announce a new InterfaceState
