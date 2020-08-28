@@ -193,13 +193,7 @@ private:
 	using base_type::remove_if;
 };
 
-class SubTrajectory;
-/** Interface for cost terms to be configured via Stage::setCostTerm()
- *
- * Look at moveit/task_constructor/cost_terms.h for various implementations
- */
-using CostTerm = std::function<double(const SubTrajectory&, std::string&)>;
-
+class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
 /// abstract base class for solutions (primitive and sequences)

@@ -40,6 +40,7 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/cost_queue.h>
 
 #include <ros/ros.h>

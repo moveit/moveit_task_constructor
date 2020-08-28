@@ -138,6 +138,7 @@ private:
 };
 std::ostream& operator<<(std::ostream& os, const InitStageException& e);
 
+class CostTerm;
 class ContainerBase;
 class StagePrivate;
 class Stage
@@ -213,15 +214,11 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
-	using CostTermShort = std::function<double(const SubTrajectory&)>;
 	/* \brief set method to determine costs for solutions of this stage
 	 *
 	 * For composite stages, costs are computed for each SubTrajectory and aggregated
 	 */
 	void setCostTerm(const CostTerm& term);
-	void setCostTerm(const CostTermShort& term);
-	// avoid overloading ambiguity for resetting the cost term
-	void setCostTerm(const std::nullptr_t) { setCostTerm(static_cast<CostTerm>(nullptr)); }
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;

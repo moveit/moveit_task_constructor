@@ -42,13 +42,45 @@
 
 #include <moveit/collision_detection/collision_common.h>
 
+#include <Eigen/Geometry>
+
 #include <boost/format.hpp>
 
 namespace moveit {
 namespace task_constructor {
+
+CostTerm::CostTerm() : term_{ nullptr }, supports_{ SolutionType::NONE } {}
+
+CostTerm::CostTerm(std::nullptr_t) : CostTerm{} {}
+
+CostTerm::CostTerm(std::function<double(const SubTrajectory&, std::string&)> t)
+  : term_{ [t](auto&& s, auto&& c) { return t(static_cast<const SubTrajectory&>(s), c); } }
+  , supports_{ SolutionType::TRAJECTORY } {}
+
+CostTerm::CostTerm(std::function<double(const SubTrajectory&)> t)
+  : term_{ [t](auto&& s, auto&&) { return t(static_cast<const SubTrajectory&>(s)); } }
+  , supports_{ SolutionType::TRAJECTORY } {}
+
+CostTerm::CostTerm(std::function<double(const SolutionBase&, std::string&)> term, Flags<SolutionType> flags)
+  : term_{ term }, supports_{ flags } {}
+
+CostTerm::operator bool() const {
+	return supports_ != Flags<SolutionType>{ SolutionType::NONE };
+}
+
+double CostTerm::operator()(const SolutionBase& s, std::string& comment) const {
+	assert(bool{ term_ });
+	return term_(s, comment);
+}
+
 namespace cost {
 
-double PathLength(const SubTrajectory& s) {
+Constant::Constant(double c)
+  : cost{ c }, CostTerm{ [this](auto&&, auto&&) { return this->cost; }, SolutionType::ALL } {}
+
+namespace {
+
+double pathLength(const SubTrajectory& s) {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr)
@@ -60,11 +92,18 @@ double PathLength(const SubTrajectory& s) {
 	return path_length;
 }
 
-double TrajectoryDuration(const SubTrajectory& s) {
-	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
-}
+}  // namespace
 
-double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) const {
+PathLength::PathLength() : CostTerm{ pathLength } {}
+
+TrajectoryDuration::TrajectoryDuration()
+  : CostTerm{ [](auto&& s, auto&&) { return s.trajectory() ? s.trajectory()->getDuration() : 0.0; } } {}
+
+LinkMotion::LinkMotion(std::string link)
+  : CostTerm{ [this](const SubTrajectory& s, std::string& c) { return this->compute(s, c); } }
+  , link_name{ std::move(link) } {}
+
+double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 	const auto& traj{ s.trajectory() };
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
@@ -87,7 +126,14 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) cons
 	return distance;
 }
 
-double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
+Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Interface::Direction interface)
+  : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }
+  , with_world(with_world)
+  , cumulative(cumulative)
+  , group_property(group_property)
+  , interface(interface) {}
+
+double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
 	const std::string PREFIX{ "Clearance: " };
 
 	collision_detection::DistanceRequest request;
@@ -173,6 +219,6 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 
 	return 1.0 / (distance + 1e-5);
 }
-}
-}
-}
+}  // namespace cost
+}  // namespace task_constructor
+}  // namespace moveit

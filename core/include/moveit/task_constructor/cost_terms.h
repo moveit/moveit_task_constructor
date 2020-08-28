@@ -39,36 +39,80 @@
 #pragma once
 
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/utils.h>
 
 namespace moveit {
 namespace task_constructor {
-/// These structures all implement the Stage::CostTerm API and can be configured via Stage::setCostTerm()
+
+class CostTerm
+{
+public:
+	CostTerm(std::function<double(const SubTrajectory&)>);
+	CostTerm(std::function<double(const SubTrajectory&, std::string&)>);
+	CostTerm(std::nullptr_t);
+	CostTerm();
+
+	// is this a valid CostTerm?
+	operator bool() const;
+
+	double operator()(const SolutionBase& s, std::string& comment) const;
+
+	/** describes the supported types of solutions that should be forwarded to this CostTerm
+	 *
+	 * CostTerms that support more than `SubTrajectory`s should inherit and overwrite the internal supports_ flag
+	 */
+	enum class SolutionType
+	{
+		NONE = 0,
+		TRAJECTORY = 1 << 0,
+		SEQUENCE = 1 << 1,
+		WRAPPER = 1 << 2,
+		ALL = TRAJECTORY | SEQUENCE | WRAPPER
+	};
+	Flags<SolutionType> supports() const;
+
+protected:
+	CostTerm(std::function<double(const SolutionBase&, std::string&)>, Flags<SolutionType>);
+
+	std::function<double(const SolutionBase&, std::string&)> term_;
+	Flags<SolutionType> supports_;
+};
+
 namespace cost {
 
 /// add a constant cost to each solution
-struct Constant
+class Constant : public CostTerm
 {
 public:
-	Constant(double c) : cost(c) {}
-
-	double operator()(const SubTrajectory&, std::string& /* unused */) const { return cost; }
+	Constant(double c);
 
 	double cost;
 };
 
 /// trajectory length (interpolated between waypoints)
-double PathLength(const SubTrajectory& s);
+class PathLength : public CostTerm
+{
+public:
+	PathLength();
+	// TODO(v4hn): allow to consider specific joints only
+};
 
 /// execution duration of the whole trajectory
-double TrajectoryDuration(const SubTrajectory& s);
-
-struct LinkMotion
+class TrajectoryDuration : public CostTerm
 {
-	LinkMotion(std::string link_name) : link_name(link_name) {}
+public:
+	TrajectoryDuration();
+};
 
-	double operator()(const SubTrajectory&, std::string&) const;
+class LinkMotion : public CostTerm
+{
+public:
+	LinkMotion(std::string link_name);
 
 	std::string link_name;
+
+protected:
+	double compute(const SubTrajectory&, std::string&) const;
 };
 
 /** inverse distance to collision
@@ -79,19 +123,20 @@ struct LinkMotion
  * \arg interface compute distances using START or END interface of solution *only*, instead of averaging over
  * trajectory
  * */
-struct Clearance
+class Clearance : public CostTerm
 {
+public:
 	Clearance(bool with_world = true, bool cumulative = false, std::string group_property = "group",
-	          Interface::Direction interface = Interface::NONE)
-	  : with_world(with_world), cumulative(cumulative), group_property(group_property), interface(interface) {}
-
-	double operator()(const SubTrajectory& s, std::string& comment) const;
-
+	          Interface::Direction interface = Interface::NONE);
 	bool with_world;
 	bool cumulative;
 	std::string group_property;
 	Interface::Direction interface;
+
+protected:
+	double compute(const SubTrajectory& s, std::string& comment) const;
 };
-}
-}
-}
+
+}  // namespace cost
+}  // namespace task_constructor
+}  // namespace moveit

@@ -254,7 +254,8 @@ TEST(CostTerm, ForwardCanModifyCost) {
 	auto stage{ std::make_unique<BackwardMockup>() };
 	cost::Constant constant{ 8.0 };
 	stage->setCostTerm(constant);
-	container.setCostTerm([](auto&& s) { return s.cost() * s.cost(); });
+	container.setCostTerm(static_cast<std::function<double(const SubTrajectory&)>>(
+	    [](const SubTrajectory& s) { return s.cost() * s.cost(); }));
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
@@ -319,7 +320,7 @@ TEST(CostTerm, CompositeSolutionsContainerCost) {
 
 	auto s3{ std::make_unique<ForwardMockup>() };
 
-	container.setCostTerm(cost::TrajectoryDuration);
+	container.setCostTerm(cost::TrajectoryDuration{});
 	container.computeWithStages({ std::move(c1), std::move(s3) });
 	EXPECT_EQ(container.solutions().front()->cost(), 3 * TRAJECTORY_DURATION)
 	    << "container cost term overwrites stage costs";
