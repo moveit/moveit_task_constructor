@@ -1,4 +1,4 @@
-/*********************************************************************
+﻿/*********************************************************************
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2020, Hamburg University
@@ -53,15 +53,15 @@ CostTerm::CostTerm() : term_{ nullptr }, supports_{ SolutionType::NONE } {}
 
 CostTerm::CostTerm(std::nullptr_t) : CostTerm{} {}
 
-CostTerm::CostTerm(std::function<double(const SubTrajectory&, std::string&)> t)
-  : term_{ [t](auto&& s, auto&& c) { return t(static_cast<const SubTrajectory&>(s), c); } }
-  , supports_{ SolutionType::TRAJECTORY } {}
+CostTerm::CostTerm(const SubTrajectorySig& term)
+  : CostTerm{ [term](const SolutionBase& s, std::string& c) { return term(static_cast<const SubTrajectory&>(s), c); },
+	           SolutionType::TRAJECTORY } {}
 
-CostTerm::CostTerm(std::function<double(const SubTrajectory&)> t)
-  : term_{ [t](auto&& s, auto&&) { return t(static_cast<const SubTrajectory&>(s)); } }
-  , supports_{ SolutionType::TRAJECTORY } {}
+CostTerm::CostTerm(const SubTrajectoryShortSig& term)
+  : CostTerm{ [term](const SolutionBase& s, std::string&) { return term(static_cast<const SubTrajectory&>(s)); },
+	           SolutionType::TRAJECTORY } {}
 
-CostTerm::CostTerm(std::function<double(const SolutionBase&, std::string&)> term, Flags<SolutionType> flags)
+CostTerm::CostTerm(const std::function<double(const SolutionBase&, std::string&)>& term, Flags<SolutionType> flags)
   : term_{ term }, supports_{ flags } {}
 
 CostTerm::operator bool() const {
@@ -76,7 +76,7 @@ double CostTerm::operator()(const SolutionBase& s, std::string& comment) const {
 namespace cost {
 
 Constant::Constant(double c)
-  : cost{ c }, CostTerm{ [this](auto&&, auto&&) { return this->cost; }, SolutionType::ALL } {}
+  : CostTerm{ [this](auto&&, auto&&) { return this->cost; }, SolutionType::ALL }, cost{ c } {}
 
 namespace {
 
@@ -100,8 +100,7 @@ TrajectoryDuration::TrajectoryDuration()
   : CostTerm{ [](auto&& s, auto&&) { return s.trajectory() ? s.trajectory()->getDuration() : 0.0; } } {}
 
 LinkMotion::LinkMotion(std::string link)
-  : CostTerm{ [this](const SubTrajectory& s, std::string& c) { return this->compute(s, c); } }
-  , link_name{ std::move(link) } {}
+  : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }, link_name{ std::move(link) } {}
 
 double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 	const auto& traj{ s.trajectory() };

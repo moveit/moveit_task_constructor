@@ -47,8 +47,15 @@ namespace task_constructor {
 class CostTerm
 {
 public:
-	CostTerm(std::function<double(const SubTrajectory&)>);
-	CostTerm(std::function<double(const SubTrajectory&, std::string&)>);
+	using SubTrajectorySig = std::function<double(const SubTrajectory&, std::string&)>;
+	using SubTrajectoryShortSig = std::function<double(const SubTrajectory&)>;
+
+	// accept lambdas according to either signature above
+	template <typename Term>
+	CostTerm(const Term& t) : CostTerm{ decltype(sigMatcher(t)){ t } } {}
+
+	CostTerm(const SubTrajectorySig&);
+	CostTerm(const SubTrajectoryShortSig&);
 	CostTerm(std::nullptr_t);
 	CostTerm();
 
@@ -72,10 +79,16 @@ public:
 	Flags<SolutionType> supports() const;
 
 protected:
-	CostTerm(std::function<double(const SolutionBase&, std::string&)>, Flags<SolutionType>);
+	CostTerm(const std::function<double(const SolutionBase&, std::string&)>&, Flags<SolutionType>);
 
 	std::function<double(const SolutionBase&, std::string&)> term_;
 	Flags<SolutionType> supports_;
+
+private:
+	template <typename T>
+	auto sigMatcher(const T& t) -> decltype(t(SubTrajectory{}), SubTrajectoryShortSig{});
+	template <typename T>
+	auto sigMatcher(const T& t) -> decltype(t(SubTrajectory{}, std::string{}), SubTrajectorySig{});
 };
 
 namespace cost {
