@@ -1,4 +1,5 @@
 # C++ wrapper code
+add_compile_options(-Wno-deprecated-declarations)  # suppress warnings due to std::auto_ptr
 add_subdirectory(wrapper)
 
 if(CATKIN_ENABLE_TESTING)
