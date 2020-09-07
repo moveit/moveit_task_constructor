@@ -272,7 +272,7 @@ class TestTask(unittest.TestCase):
     def test(self):
         task = core.Task()
         self.assertEqual(task.id, "")
-        task = core.Task("foo", core.SerialContainer())
+        task = core.Task("foo", True, core.SerialContainer())
         self.assertEqual(task.id, "foo")
         task = core.Task("task")
         self.assertEqual(task.id, "task")

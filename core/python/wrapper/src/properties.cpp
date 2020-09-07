@@ -258,5 +258,5 @@ void export_properties() {
 	    .def("exposeTo", &PropertyMap_exposeTo_2)
 	    .def("exposeTo", &PropertyMap_exposeTo_l);
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

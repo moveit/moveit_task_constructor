@@ -60,7 +60,7 @@ void GeneratePose::onNewSolution(const SolutionBase& s) {
 }
 
 bool GeneratePose::canCompute() const {
-	return upstream_solutions_.size() > 0;
+	return !upstream_solutions_.empty();
 }
 
 void GeneratePose::compute() {
@@ -86,6 +86,6 @@ void GeneratePose::compute() {
 
 	spawn(std::move(state), std::move(trajectory));
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

@@ -52,11 +52,11 @@ class TaskSolutionPanel : public rviz::Panel
 	Q_OBJECT
 
 public:
-	TaskSolutionPanel(QWidget* parent = 0);
+	TaskSolutionPanel(QWidget* parent = nullptr);
 
-	virtual ~TaskSolutionPanel();
+	~TaskSolutionPanel() override;
 
-	void onInitialize();
+	void onInitialize() override;
 	void onEnable();
 	void onDisable();
 	void update(int way_point_count);

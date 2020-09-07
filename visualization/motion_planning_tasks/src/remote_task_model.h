@@ -72,7 +72,7 @@ class RemoteTaskModel : public BaseTaskModel
 public:
 	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
 	                QObject* parent = nullptr);
-	~RemoteTaskModel();
+	~RemoteTaskModel() override;
 
 	void setSolutionClient(ros::ServiceClient* client);
 
@@ -81,7 +81,6 @@ public:
 	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
 	QModelIndex parent(const QModelIndex& index) const override;
 
-	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
 	bool setData(const QModelIndex& index, const QVariant& value, int role = Qt::EditRole) override;
 
@@ -114,10 +113,11 @@ class RemoteSolutionModel : public QAbstractTableModel
 		inline bool operator<(const Data& other) const { return this->id < other.id; }
 	};
 	// successful and failed solutions ordered by id / creation
-	typedef std::list<Data> DataList;
+	using DataList = std::list<Data>;
 	DataList data_;
 	size_t num_failed_data_ = 0;  // number of failed solutions in data_
 	size_t num_failed_ = 0;  // number of reported failures
+	double total_compute_time_ = 0.0;
 
 	// solutions ordered (by default according to cost)
 	int sort_column_ = -1;
@@ -134,6 +134,7 @@ public:
 
 	uint numSuccessful() const { return data_.size() - num_failed_data_; }
 	uint numFailed() const { return num_failed_; }
+	double totalComputeTime() const { return total_compute_time_; }
 
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -143,6 +144,6 @@ public:
 
 	void setSolutionData(uint32_t id, float cost, const QString& comment);
 	void processSolutionIDs(const std::vector<uint32_t>& successful, const std::vector<uint32_t>& failed,
-	                        size_t num_failed);
+	                        size_t num_failed, double total_compute_time);
 };
-}
+}  // namespace moveit_rviz_plugin

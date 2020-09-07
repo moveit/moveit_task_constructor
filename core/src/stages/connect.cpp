@@ -83,16 +83,11 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 	}
 
 	if (!errors && groups.size() >= 2) {  // enable merging?
-		merged_jmg_.reset(task_constructor::merge(groups));
-		if (merged_jmg_->getJointModels().size() != num_joints) {
-			// overlapping joint groups: analyse in more detail
-			std::vector<const moveit::core::JointModel*> duplicates;
-			std::string names;
-			if (findDuplicates(groups, merged_jmg_->getJointModels(), duplicates, names)) {
-				ROS_INFO_STREAM_NAMED("Connect", this->name() << ": overlapping joint groups: " << names
-				                                              << ". Disabling merging.");
-				merged_jmg_.reset();  // fallback to serial connect
-			}
+		try {
+			merged_jmg_.reset();
+			merged_jmg_.reset(task_constructor::merge(groups));
+		} catch (const std::runtime_error& e) {
+			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
 		}
 	}
 
@@ -200,7 +195,7 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
 
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
-		inserted->setCreator(pimpl_);
+		inserted->setCreator(this);
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
 
@@ -249,6 +244,6 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	return std::make_shared<SubTrajectory>(trajectory, cost);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

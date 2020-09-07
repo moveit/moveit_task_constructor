@@ -55,4 +55,4 @@ public:
 	QStringList mimeTypes() const override;
 	QMimeData* mimeData(const QModelIndexList& indexes) const override;
 };
-}
+}  // namespace moveit_rviz_plugin

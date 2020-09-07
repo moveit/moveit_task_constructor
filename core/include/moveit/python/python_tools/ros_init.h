@@ -27,5 +27,5 @@ private:
 private:
 	std::unique_ptr<ros::AsyncSpinner> spinner;
 };
-}
-}
+}  // namespace python
+}  // namespace moveit

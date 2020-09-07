@@ -43,7 +43,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 }
-}
+}  // namespace moveit
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
 }
@@ -76,6 +76,8 @@ class DisplaySolution
 		planning_scene::PlanningSceneConstPtr scene_;
 		/// sub trajectories, might be empty
 		robot_trajectory::RobotTrajectoryPtr trajectory_;
+		/// joints involved in the trajectory
+		std::vector<std::string> joints_;
 		/// comment of the trajectory
 		std::string comment_;
 		/// id of creating stage
@@ -96,7 +98,7 @@ public:
 	bool empty() const { return steps_ == 0; }
 
 	/// pair of trajectory part and way point index within part
-	typedef std::pair<size_t, size_t> IndexPair;
+	using IndexPair = std::pair<size_t, size_t>;
 	IndexPair indexPair(size_t index) const;
 
 	float getWayPointDurationFromPrevious(const IndexPair& idx_pair) const;
@@ -126,4 +128,4 @@ public:
 	                    const moveit_task_constructor_msgs::Solution& msg);
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg) const;
 };
-}
+}  // namespace moveit_rviz_plugin

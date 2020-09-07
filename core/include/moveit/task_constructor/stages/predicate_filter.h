@@ -41,7 +41,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 }
-}
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
@@ -56,7 +56,7 @@ namespace stages {
 class PredicateFilter : public WrapperBase
 {
 public:
-	typedef std::function<bool(const SolutionBase&, std::string&)> Predicate;
+	using Predicate = std::function<bool(const SolutionBase&, std::string&)>;
 
 	PredicateFilter(const std::string& name, Stage::pointer&& child = Stage::pointer());
 
@@ -65,7 +65,8 @@ public:
 	void onNewSolution(const SolutionBase& s) override;
 
 	void setPredicate(const Predicate& p) { setProperty("predicate", p); }
+	void setIgnoreFilter(bool ignore) { setProperty("ignore_filter", ignore); }
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

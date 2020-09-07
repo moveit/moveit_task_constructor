@@ -93,9 +93,9 @@ void CurrentState::compute() {
 	}
 	ROS_WARN("failed to acquire current PlanningScene");
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit
 
 /// register plugin
 #include <pluginlib/class_list_macros.h>

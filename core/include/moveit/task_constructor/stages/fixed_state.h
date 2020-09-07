@@ -59,6 +59,6 @@ protected:
 	planning_scene::PlanningScenePtr scene_;
 	bool ran_ = false;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

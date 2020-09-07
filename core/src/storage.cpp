@@ -60,6 +60,11 @@ InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps) 
 		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
 
+InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p)
+  : InterfaceState(ps) {
+	priority_ = p;
+}
+
 InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
@@ -131,7 +136,7 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 	}
 }
 
-void SolutionBase::setCreator(StagePrivate* creator) {
+void SolutionBase::setCreator(Stage* creator) {
 	assert(creator_ == nullptr || creator_ == creator);  // creator must only set once
 	creator_ = creator;
 }
@@ -145,7 +150,7 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	info.cost = this->cost();
 	info.comment = this->comment();
 	const Introspection* ci = introspection;
-	info.stage_id = ci ? ci->stageId(this->creator()->me()) : 0;
+	info.stage_id = ci ? ci->stageId(this->creator()) : 0;
 
 	const auto& markers = this->markers();
 	info.markers.resize(markers.size());
@@ -201,5 +206,16 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 		}
 	}
 }
+
+void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
+                                  Introspection* introspection) const {
+	wrapped_->fillMessage(solution, introspection);
+
+	// prepend this solutions info as a SubSolution msg
+	moveit_task_constructor_msgs::SubSolution sub_msg;
+	SolutionBase::fillInfo(sub_msg.info, introspection);
+	sub_msg.sub_solution_id.push_back(introspection ? introspection->solutionId(*wrapped_) : 0);
+	solution.sub_solution.insert(solution.sub_solution.begin(), std::move(sub_msg));
 }
-}
+}  // namespace task_constructor
+}  // namespace moveit

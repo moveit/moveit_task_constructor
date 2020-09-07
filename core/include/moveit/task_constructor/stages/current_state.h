@@ -59,6 +59,6 @@ protected:
 	moveit::core::RobotModelConstPtr robot_model_;
 	planning_scene::PlanningScenePtr scene_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

@@ -46,12 +46,14 @@
 
 #include <moveit/macros/class_forward.h>
 
+#include <moveit_msgs/MoveItErrorCodes.h>
+
 namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 MOVEIT_CLASS_FORWARD(RobotState)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
@@ -76,11 +78,11 @@ public:
 	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
 	              const std::string& planning_plugin_param_name = "planning_plugin",
 	              const std::string& adapter_plugins_param_name = "request_adapters");
-	Task(const std::string& id = "",
+	Task(const std::string& id = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
-	Task(Task&& other);
-	Task& operator=(Task&& other);
-	~Task();
+	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
+	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
+	~Task() override;
 
 	std::string id() const;
 
@@ -90,25 +92,25 @@ public:
 	/// load robot model from given parameter
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
-	// TODO: use Stage::insert as well?
 	void add(Stage::pointer&& stage);
+	bool insert(Stage::pointer&& stage, int before = -1) override;
 	void clear() final;
 
 	/// enable introspection publishing for use with rviz
 	void enableIntrospection(bool enable = true);
 	Introspection& introspection();
 
-	typedef std::function<void(const Task& t)> TaskCallback;
-	typedef std::list<TaskCallback> TaskCallbackList;
+	using TaskCallback = std::function<void(const Task& t)>;
+	using TaskCallbackList = std::list<TaskCallback>;
 	/// add function to be called after each top-level iteration
 	TaskCallbackList::const_iterator addTaskCallback(TaskCallback&& cb);
 	/// remove function callback
-	void erase(TaskCallbackList::const_iterator which);
+	void eraseTaskCallback(TaskCallbackList::const_iterator which);
 
 	/// expose SolutionCallback API
-	using WrapperBase::SolutionCallback;
 	using WrapperBase::addSolutionCallback;
 	using WrapperBase::removeSolutionCallback;
+	using WrapperBase::SolutionCallback;
 
 	/// reset all stages
 	void reset() final;
@@ -119,8 +121,8 @@ public:
 	bool plan(size_t max_solutions = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
-	/// execute solution
-	void execute(const SolutionBase& s);
+	/// execute solution, return the result
+	moveit_msgs::MoveItErrorCodes execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;
@@ -156,5 +158,5 @@ inline std::ostream& operator<<(std::ostream& os, const Task& task) {
 	task.printState(os);
 	return os;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

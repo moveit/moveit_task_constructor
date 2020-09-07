@@ -48,7 +48,7 @@ namespace rviz {
 class Property;
 class PropertyTreeModel;
 class DisplayContext;
-}
+}  // namespace rviz
 namespace planning_scene {
 class PlanningScene;
 }
@@ -56,7 +56,7 @@ namespace moveit {
 namespace task_constructor {
 class Stage;
 }
-}
+}  // namespace moveit
 
 namespace moveit_rviz_plugin {
 
@@ -75,14 +75,11 @@ class PropertyFactory
 public:
 	static PropertyFactory& instance();
 
-	typedef std::function<rviz::Property*(const QString& name, moveit::task_constructor::Property&,
-	                                      const planning_scene::PlanningScene* scene,
-	                                      rviz::DisplayContext* display_context)>
-	    PropertyFactoryFunction;
-	typedef std::function<rviz::PropertyTreeModel*(moveit::task_constructor::PropertyMap&,
-	                                               const planning_scene::PlanningScene* scene,
-	                                               rviz::DisplayContext* display_context)>
-	    TreeFactoryFunction;
+	using PropertyFactoryFunction =
+	    std::function<rviz::Property*(const QString&, moveit::task_constructor::Property&,
+	                                  const planning_scene::PlanningScene*, rviz::DisplayContext*)>;
+	using TreeFactoryFunction = std::function<rviz::PropertyTreeModel*(
+	    moveit::task_constructor::PropertyMap&, const planning_scene::PlanningScene*, rviz::DisplayContext*)>;
 
 	/// register a factory function for type T
 	template <typename T>
@@ -131,4 +128,4 @@ private:
 	void registerType(const std::string& type_name, const PropertyFactoryFunction& f);
 	void registerStage(const std::type_index& type_index, const TreeFactoryFunction& f);
 };
-}
+}  // namespace moveit_rviz_plugin

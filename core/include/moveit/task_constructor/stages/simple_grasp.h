@@ -45,7 +45,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 }
-}
+}  // namespace moveit
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -104,6 +104,6 @@ class SimpleUnGrasp : public SimpleGraspBase
 public:
 	SimpleUnGrasp(Stage::pointer&& generator = Stage::pointer(), const std::string& name = "ungrasp");
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

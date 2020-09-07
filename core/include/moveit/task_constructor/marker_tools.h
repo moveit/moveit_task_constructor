@@ -12,14 +12,14 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 MOVEIT_CLASS_FORWARD(LinkModel)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
 
 /** signature of callback function, passing the generated marker and the name of the robot link / scene object */
-typedef std::function<void(visualization_msgs::Marker&, const std::string&)> MarkerCallback;
+using MarkerCallback = std::function<void(visualization_msgs::Marker&, const std::string&)>;
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  object_names: set of links to include (or all if empty) */
@@ -43,5 +43,5 @@ void generateVisualMarkers(const moveit::core::RobotState& robot_state, const Ma
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  calls generateMarkersForRobot() and generateMarkersForObjects() */
 void generateMarkersForScene(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& callback);
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

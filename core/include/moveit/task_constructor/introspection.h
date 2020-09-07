@@ -112,5 +112,5 @@ private:
 	/// retrieve solution with given id
 	const SolutionBase* solutionFromId(uint id) const;
 };
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

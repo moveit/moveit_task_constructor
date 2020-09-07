@@ -89,8 +89,8 @@ void ContainerBase_insert(ContainerBase& self, std::auto_ptr<Stage> stage, int b
 }
 BOOST_PYTHON_FUNCTION_OVERLOADS(ContainerBase_insert_overloads, ContainerBase_insert, 2, 3)
 
-Task* Task_init(const std::string& id, std::auto_ptr<ContainerBase> container) {
-	return new Task(id, std::unique_ptr<ContainerBase>{ container.release() });
+Task* Task_init(const std::string& id, bool introspection, std::auto_ptr<ContainerBase> container) {
+	return new Task(id, introspection, std::unique_ptr<ContainerBase>{ container.release() });
 }
 
 void Task_add(Task& self, std::auto_ptr<Stage> stage) {
@@ -125,7 +125,7 @@ void Task_execute(Task& self, SolutionBasePtr& solution) {
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_plan_overloads, Task::plan, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Task_enableIntrospection_overloads, Task::enableIntrospection, 0, 1)
-}
+}  // namespace
 
 void export_core() {
 	bp::register_exception_translator<InitStageException>(InitStageException_translator);
@@ -165,8 +165,7 @@ void export_core() {
 	bp::enum_<PropagatingEitherWay::Direction>("PropagationDirection")
 	    .value("AUTO", PropagatingEitherWay::AUTO)
 	    .value("FORWARD", PropagatingEitherWay::FORWARD)
-	    .value("BACKWARD", PropagatingEitherWay::BACKWARD)
-	    .value("BOTHWAY", PropagatingEitherWay::BOTHWAY);
+	    .value("BACKWARD", PropagatingEitherWay::BACKWARD);
 
 	bp::class_<PropagatingEitherWay, std::auto_ptr<PropagatingEitherWay>, bp::bases<Stage>, boost::noncopyable>(
 	    "PropagatingEitherWay", bp::no_init)
@@ -217,7 +216,7 @@ void export_core() {
 	    .add_property("failures", bp::make_function(&Task::failures, bp::return_internal_reference<>()))
 
 	    .def("__init__", bp::make_constructor(&Task_init))
-	    .def(bp::init<bp::optional<const std::string&>>())
+	    .def(bp::init<bp::optional<const std::string&, bool>>())
 	    .def("loadRobotModel", &Task::loadRobotModel)
 	    .def("enableIntrospection", &Task::enableIntrospection, Task_enableIntrospection_overloads())
 	    .def("clear", &Task::clear)
@@ -229,5 +228,5 @@ void export_core() {
 	    .def("publish", &Task_publish)
 	    .def("execute", &Task_execute);
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

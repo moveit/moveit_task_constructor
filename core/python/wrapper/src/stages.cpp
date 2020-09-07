@@ -267,5 +267,5 @@ void export_stages() {
 	    ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleUnGrasp>, std::auto_ptr<Stage>>();
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

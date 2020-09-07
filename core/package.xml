@@ -21,6 +21,7 @@
 
 	<test_depend>rosunit</test_depend>
 	<test_depend>rostest</test_depend>
+	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
 
 	<export>
 		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>

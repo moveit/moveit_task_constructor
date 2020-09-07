@@ -257,7 +257,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			}
 		} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
 			success = true;
-		}
+		} else if (!success)
+			solution.setComment("failed to move full distance");
 
 		// add an arrow marker
 		visualization_msgs::Marker m;
@@ -323,6 +324,6 @@ void MoveRelative::computeBackward(const InterfaceState& to) {
 	else
 		silentFailure();
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

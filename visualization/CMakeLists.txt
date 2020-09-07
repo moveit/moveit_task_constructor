@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0.2)
 project(moveit_task_constructor_visualization)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -58,3 +58,5 @@ add_subdirectory(motion_planning_tasks)
 install(FILES
 	motion_planning_tasks_rviz_plugin_description.xml
 	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+install(DIRECTORY icons DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

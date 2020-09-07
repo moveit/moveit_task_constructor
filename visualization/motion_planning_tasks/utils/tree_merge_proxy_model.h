@@ -60,7 +60,7 @@ protected:
 
 public:
 	TreeMergeProxyModel(QObject* parent = nullptr);
-	~TreeMergeProxyModel();
+	~TreeMergeProxyModel() override;
 
 	/// number of embedded models
 	size_t modelCount() const;
@@ -117,5 +117,5 @@ private:
 	Q_PRIVATE_SLOT(d_func(), void _q_sourceDataChanged(QModelIndex, QModelIndex))
 #endif
 };
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin

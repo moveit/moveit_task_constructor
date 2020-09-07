@@ -156,6 +156,6 @@ SimpleGrasp::SimpleGrasp(std::unique_ptr<Stage>&& generator, const std::string& 
 SimpleUnGrasp::SimpleUnGrasp(std::unique_ptr<Stage>&& generator, const std::string& name) : SimpleGraspBase(name) {
 	setup(std::move(generator), false);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

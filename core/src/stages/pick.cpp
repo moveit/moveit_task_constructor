@@ -98,6 +98,6 @@ void PickPlaceBase::setLiftPlace(const std::map<std::string, double>& joints) {
 	auto& p = lift_stage_->properties();
 	p.set("joints", joints);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

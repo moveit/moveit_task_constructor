@@ -67,9 +67,18 @@ PipelinePlanner::PipelinePlanner() {
 	                    planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
-void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
-	planner_ = Task::createPlanner(robot_model);
+PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline) : PipelinePlanner() {
+	planner_ = planning_pipeline;
+}
 
+void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
+	if (!planner_) {
+		planner_ = Task::createPlanner(robot_model);
+	} else if (robot_model != planner_->getRobotModel()) {
+		throw std::runtime_error(
+		    "The robot model of the planning pipeline isn't the same as the task's robot model -- "
+		    "use Task::setRobotModel for setting the robot model when using custom planning pipeline");
+	}
 	planner_->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
 	planner_->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 }
@@ -129,6 +138,6 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	result = res.trajectory_;
 	return success;
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

@@ -60,7 +60,7 @@ enum NodeFlag
 	WAS_VISITED = 0x01,  // indicate that model should emit change notifications
 	NAME_CHANGED = 0x02,  // indicate that name was manually changed
 };
-typedef QFlags<NodeFlag> NodeFlags;
+using NodeFlags = QFlags<NodeFlag>;
 
 struct RemoteTaskModel::Node
 {
@@ -98,11 +98,11 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 	// insert properties in same order as reported in description
 	rviz::Property* root = property_tree_->getRoot();
 	int index = 0;  // current child index in root
-	for (auto it = props.begin(); it != props.end(); ++it) {
+	for (const auto& prop : props) {
 		int num = root->numChildren();
 		// find first child with name >= it->name
 		int next = index;
-		while (next < num && root->childAt(next)->getName().toStdString() < it->name)
+		while (next < num && root->childAt(next)->getName().toStdString() < prop.name)
 			++next;
 		// and remove all children in range [index, next) at once
 		root->removeChildren(index, next - index);
@@ -110,10 +110,10 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 
 		// if names differ, insert a new child, otherwise reuse existing
 		rviz::Property* old_child = index < num ? root->childAt(index) : nullptr;
-		if (old_child && old_child->getName().toStdString() != it->name)
+		if (old_child && old_child->getName().toStdString() != prop.name)
 			old_child = nullptr;
 
-		rviz::Property* new_child = createProperty(*it, old_child, scene_, display_context_);
+		rviz::Property* new_child = createProperty(prop, old_child, scene_, display_context_);
 		if (new_child != old_child)
 			root->addChild(new_child, index);
 		++index;
@@ -232,13 +232,6 @@ QModelIndex RemoteTaskModel::parent(const QModelIndex& child) const {
 	return this->index(p);
 }
 
-Qt::ItemFlags RemoteTaskModel::flags(const QModelIndex& index) const {
-	Qt::ItemFlags flags = BaseTaskModel::flags(index);
-	if (index.column() == 0)
-		flags |= Qt::ItemIsEditable;  // name is editable
-	return flags;
-}
-
 QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 	Node* n = node(index);
 	if (!n)
@@ -254,6 +247,8 @@ QVariant RemoteTaskModel::data(const QModelIndex& index, int role) const {
 					return n->solutions_->numSuccessful();
 				case 2:
 					return n->solutions_->numFailed();
+				case 3:
+					return QLocale().toString(n->solutions_->totalComputeTime(), 'f', 4);
 			}
 			break;
 		case Qt::ForegroundRole:
@@ -299,11 +294,11 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 		if (!n) {  // create a new Node if neccessary
 			// only emit notify signal if parent node was ever visited
 			bool notify = parent->node_flags_ & WAS_VISITED;
-			QModelIndex parentIdx = index(parent);
+			QModelIndex parent_idx = index(parent);
 			int row = parent->children_.size();
 
 			if (notify)
-				beginInsertRows(parentIdx, row, row);
+				beginInsertRows(parent_idx, row, row);
 			parent->children_.push_back(std::make_unique<Node>(parent));
 			if (notify)
 				endInsertRows();
@@ -353,7 +348,7 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 			continue;
 		}
 		Node* n = it->second;
-		n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed);
+		n->solutions_->processSolutionIDs(s.solved, s.failed, s.num_failed, s.total_compute_time);
 
 		// emit notify about model changes when node was already visited
 		if (n->node_flags_ & WAS_VISITED) {
@@ -468,7 +463,7 @@ typename T::iterator insert(T& c, typename T::value_type&& item) {
 	else
 		return p.first;
 }
-}
+}  // namespace detail
 
 RemoteSolutionModel::RemoteSolutionModel(QObject* parent) : QAbstractTableModel(parent) {}
 
@@ -493,7 +488,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 						return tr("comment");
 				}
 			case Qt::TextAlignmentRole:
-				return section == 2 ? Qt::AlignLeft : Qt::AlignRight;
+				return Qt::AlignLeft;
 		}
 	}
 	return QAbstractItemModel::headerData(section, orientation, role);
@@ -507,8 +502,10 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 
 	switch (role) {
 		case Qt::UserRole:
-		case Qt::ToolTipRole:
 			return item.id;
+
+		case Qt::ToolTipRole:
+			return item.comment;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {
@@ -519,7 +516,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 						return tr(u8"∞");
 					if (std::isnan(item.cost))
 						return QVariant();
-					return item.cost;
+					return QLocale().toString(item.cost, 'f', 4);
 				case 2:
 					return item.comment;
 			}
@@ -573,8 +570,8 @@ void RemoteSolutionModel::sort(int column, Qt::SortOrder order) {
 void RemoteSolutionModel::sortInternal() {
 	Q_EMIT layoutAboutToBeChanged();
 	QModelIndexList old_indexes = persistentIndexList();
-	std::vector<DataList::iterator> old_sorted_;
-	std::swap(sorted_, old_sorted_);
+	std::vector<DataList::iterator> old_sorted;
+	std::swap(sorted_, old_sorted);
 
 	// create new order in sorted_
 	for (auto it = data_.begin(), end = data_.end(); it != end; ++it)
@@ -599,7 +596,7 @@ void RemoteSolutionModel::sortInternal() {
 			          if (comp == 0)  // if still undecided, id decides
 				          comp = (left->id < right->id ? -1 : 1);
 			          return (sort_order_ == Qt::AscendingOrder) ? (comp < 0) : (comp >= 0);
-			       });
+		          });
 	}
 
 	// map old indexes to new ones
@@ -609,7 +606,7 @@ void RemoteSolutionModel::sortInternal() {
 		int old_row = old_indexes[i].row();
 		auto it_inserted = old_to_new_row.insert(std::make_pair(old_row, -1));
 		if (it_inserted.second) {  // newly inserted: find new row index
-			auto it = detail::findById(sorted_, old_sorted_[old_row]->id);
+			auto it = detail::findById(sorted_, old_sorted[old_row]->id);
 			if (it != sorted_.cend())
 				it_inserted.first->second = it - sorted_.begin();
 		}
@@ -622,7 +619,8 @@ void RemoteSolutionModel::sortInternal() {
 
 // process solution ids received in stage statistics
 void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& successful,
-                                             const std::vector<uint32_t>& failed, size_t num_failed) {
+                                             const std::vector<uint32_t>& failed, size_t num_failed,
+                                             double total_compute_time) {
 	// append new items to the end of data_
 	processSolutionIDs(successful, true);
 	processSolutionIDs(failed, false);
@@ -636,12 +634,14 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& succes
 	// but it may report the overall number of failures
 	num_failed_data_ = failed.size();  // needed to compute number of successes
 	num_failed_ = std::max(num_failed, num_failed_data_);
+	total_compute_time_ = total_compute_time;
 
 	sortInternal();
 }
 
 void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& ids, bool successful) {
-	// ids are ordered by cost, insert them into data_ list sorted by id
+	// Interface axiom: ids are sorted by cost
+	// insert them into data_ list sorted by id
 	double default_cost =
 	    successful ? std::numeric_limits<double>::quiet_NaN() : std::numeric_limits<double>::infinity();
 	uint32_t cost_rank = 0;
@@ -656,4 +656,4 @@ void RemoteSolutionModel::processSolutionIDs(const std::vector<uint32_t>& ids, b
 bool RemoteSolutionModel::isVisible(const RemoteSolutionModel::Data& item) const {
 	return std::isnan(item.cost) || item.cost <= max_cost_;
 }
-}
+}  // namespace moveit_rviz_plugin

@@ -109,5 +109,5 @@ PyObject* RosMsgConverterBase::toPython(const std::string& data, const boost::py
 	msg.attr("deserialize")(boost::python::object(data));
 	return boost::python::incref(msg.ptr());
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

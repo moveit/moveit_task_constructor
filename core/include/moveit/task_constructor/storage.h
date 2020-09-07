@@ -65,7 +65,6 @@ namespace task_constructor {
 class SolutionBase;
 MOVEIT_CLASS_FORWARD(InterfaceState)
 MOVEIT_CLASS_FORWARD(Interface)
-typedef std::weak_ptr<Interface> InterfaceWeakPtr;
 MOVEIT_CLASS_FORWARD(Stage)
 MOVEIT_CLASS_FORWARD(Introspection)
 
@@ -95,11 +94,14 @@ public:
 		}
 		bool operator<(const Priority& other) const;
 	};
-	typedef std::deque<SolutionBase*> Solutions;
+	using Solutions = std::deque<SolutionBase*>;
 
 	/// create an InterfaceState from a planning scene
 	InterfaceState(const planning_scene::PlanningScenePtr& ps);
 	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps);
+
+	/// provide an initial priority for the state (for internal use only)
+	InterfaceState(const planning_scene::PlanningSceneConstPtr& ps, const Priority& p);
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);
@@ -135,7 +137,7 @@ private:
 /** Interface provides a cost-sorted list of InterfaceStates available as input for a stage. */
 class Interface : public ordered<InterfaceState*>
 {
-	typedef ordered<InterfaceState*> base_type;
+	using base_type = ordered<InterfaceState*>;
 
 public:
 	// iterators providing convinient access to stored InterfaceState
@@ -166,7 +168,7 @@ public:
 		START = FORWARD,
 		END = BACKWARD
 	};
-	typedef std::function<void(iterator it, bool updated)> NotifyFunction;
+	using NotifyFunction = std::function<void(iterator, bool)>;
 	Interface(const NotifyFunction& notify = NotifyFunction());
 
 	/// add a new InterfaceState
@@ -183,10 +185,10 @@ private:
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
-	using base_type::moveTo;
-	using base_type::moveFrom;
-	using base_type::insert;
 	using base_type::erase;
+	using base_type::insert;
+	using base_type::moveFrom;
+	using base_type::moveTo;
 	using base_type::remove_if;
 };
 
@@ -200,25 +202,26 @@ public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 
+	/// Retrieve following (FORWARD) or preceding (BACKWARD) solution segments
 	template <Interface::Direction dir>
 	inline const InterfaceState::Solutions& trajectories() const;
 
 	inline void setStartState(const InterfaceState& state) {
 		// only allow setting once (by Stage)
-		assert(start_ == NULL || start_ == &state);
+		assert(start_ == nullptr || start_ == &state);
 		start_ = &state;
 		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
 	inline void setEndState(const InterfaceState& state) {
 		// only allow setting once (by Stage)
-		assert(end_ == NULL || end_ == &state);
+		assert(end_ == nullptr || end_ == &state);
 		end_ = &state;
 		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
-	inline const StagePrivate* creator() const { return creator_; }
-	void setCreator(StagePrivate* creator);
+	inline const Stage* creator() const { return creator_; }
+	void setCreator(Stage* creator);
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
@@ -240,12 +243,12 @@ public:
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
 
 protected:
-	SolutionBase(StagePrivate* creator = nullptr, double cost = 0.0, std::string comment = "")
+	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
-	StagePrivate* creator_;
+	Stage* creator_;
 	// associated cost
 	double cost_;
 	// comment for this solution, e.g. explanation of failure
@@ -287,16 +290,18 @@ MOVEIT_CLASS_FORWARD(SubTrajectory)
 class SolutionSequence : public SolutionBase
 {
 public:
-	typedef std::vector<const SolutionBase*> container_type;
+	using container_type = std::vector<const SolutionBase*>;
 
 	explicit SolutionSequence() : SolutionBase() {}
-	SolutionSequence(container_type&& subsolutions, double cost = 0.0, StagePrivate* creator = nullptr)
+	SolutionSequence(container_type&& subsolutions, double cost = 0.0, Stage* creator = nullptr)
 	  : SolutionBase(creator, cost), subsolutions_(std::move(subsolutions)) {}
 
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+
+	const container_type& solutions() const { return subsolutions_; }
 
 	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
 	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
@@ -307,6 +312,31 @@ private:
 };
 MOVEIT_CLASS_FORWARD(SolutionSequence)
 
+/** Wrap an existing solution
+ *
+ * used by parallel containers and wrappers.
+ *
+ * This essentially wraps a solution of a child and thus allows
+ * for new clones of start / end states, which in turn will
+ * have separate incoming/outgoing trajectories */
+class WrappedSolution : public SolutionBase
+{
+public:
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped, double cost, std::string comment)
+	  : SolutionBase(creator, cost, std::move(comment)), wrapped_(wrapped) {}
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped, double cost)
+	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
+	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
+	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
+	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
+	                 Introspection* introspection = nullptr) const override;
+
+	const SolutionBase* wrapped() const { return wrapped_; }
+
+private:
+	const SolutionBase* wrapped_;
+};
+
 template <>
 inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {
 	return end_->outgoingTrajectories();
@@ -315,8 +345,8 @@ template <>
 inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>() const {
 	return start_->incomingTrajectories();
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit
 
 namespace std {
 // comparison for pointers to SolutionBase: compare based on value
@@ -327,4 +357,4 @@ struct less<moveit::task_constructor::SolutionBase*>
 		return *x < *y;
 	}
 };
-}
+}  // namespace std

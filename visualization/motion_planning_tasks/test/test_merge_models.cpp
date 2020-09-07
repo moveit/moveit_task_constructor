@@ -61,17 +61,18 @@ void modifySourceModel(QAbstractItemModel* src, T* proxy, const QModelIndex& src
 	const char* new_value = "foo";
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	auto con = proxy->connect(proxy, &T::dataChanged, [&called, &src_index, new_value](const QModelIndex& topLeft,
-	                                                                                   const QModelIndex& bottomRight) {
-		EXPECT_EQ(topLeft.row(), src_index.row());
-		EXPECT_EQ(topLeft.column(), src_index.column());
+	auto con =
+	    proxy->connect(proxy, &T::dataChanged,
+	                   [&called, &src_index, new_value](const QModelIndex& topLeft, const QModelIndex& bottomRight) {
+		                   EXPECT_EQ(topLeft.row(), src_index.row());
+		                   EXPECT_EQ(topLeft.column(), src_index.column());
 
-		EXPECT_EQ(bottomRight.row(), src_index.row());
-		EXPECT_EQ(bottomRight.column(), src_index.column());
+		                   EXPECT_EQ(bottomRight.row(), src_index.row());
+		                   EXPECT_EQ(bottomRight.column(), src_index.column());
 
-		EXPECT_STREQ(topLeft.data().toString().toLatin1().data(), new_value);
-		called = true;
-	});
+		                   EXPECT_STREQ(topLeft.data().toString().toLatin1().data(), new_value);
+		                   called = true;
+	                   });
 #endif
 
 	EXPECT_TRUE(src->setData(src_index, new_value));
@@ -195,7 +196,7 @@ class FlatMergeModelRemove : public ::testing::Test
 {
 protected:
 	FlatMergeProxyModel flat;
-	void SetUp() {
+	void SetUp() override {
 		flat.insertModel(createStandardModel(&flat, 1, 3, 2));
 		flat.insertModel(createStandardModel(&flat, 2, 3, 2));
 		flat.insertModel(createStandardModel(&flat, 3, 3, 2));

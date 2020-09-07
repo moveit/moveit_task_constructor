@@ -45,5 +45,5 @@ void export_solvers() {
 	    .property<double>("min_fraction");
 	bp::implicitly_convertible<CartesianPathPtr, PlannerInterfacePtr>();
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

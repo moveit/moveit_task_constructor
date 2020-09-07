@@ -45,8 +45,8 @@ MetaTaskListModel::MetaTaskListModel() {
 }
 
 MetaTaskListModel& MetaTaskListModel::instance() {
-	static MetaTaskListModel instance_;
-	return instance_;
+	static MetaTaskListModel instance;
+	return instance;
 }
 
 bool MetaTaskListModel::insertModel(TaskListModel* model, TaskDisplay* display) {
@@ -118,4 +118,4 @@ std::pair<BaseTaskModel*, QModelIndex> MetaTaskListModel::getTaskModel(const QMo
 	Q_ASSERT(dynamic_cast<BaseTaskModel*>(m.first));
 	return std::make_pair(static_cast<BaseTaskModel*>(m.first), m.second);
 }
-}
+}  // namespace moveit_rviz_plugin

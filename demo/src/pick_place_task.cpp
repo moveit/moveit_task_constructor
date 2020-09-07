@@ -84,7 +84,7 @@ void PickPlaceTask::loadParameters() {
 
 void PickPlaceTask::init() {
 	ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
-	const std::string object = "object";
+	const std::string object = object_name_;
 
 	// Reset ROS introspection before constructing the new object
 	// TODO(henningkayser): verify this is a bug, fix if possible
@@ -117,13 +117,13 @@ void PickPlaceTask::init() {
 	 *               Current State                      *
 	 *                                                  *
 	 ***************************************************/
-	Stage* current_state = nullptr;  // Forward current_state on to grasp pose generator
+	Stage* current_state_ptr = nullptr;  // Forward current_state on to grasp pose generator
 	{
-		auto _current_state = std::make_unique<stages::CurrentState>("current state");
+		auto current_state = std::make_unique<stages::CurrentState>("current state");
 
-		// Verify that object is not attachd
+		// Verify that object is not attached
 		auto applicability_filter =
-		    std::make_unique<stages::PredicateFilter>("applicability test", std::move(_current_state));
+		    std::make_unique<stages::PredicateFilter>("applicability test", std::move(current_state));
 		applicability_filter->setPredicate([object](const SolutionBase& s, std::string& comment) {
 			if (s.start()->scene()->getCurrentState().hasAttachedBody(object)) {
 				comment = "object with id '" + object + "' is already attached and cannot be picked";
@@ -132,7 +132,7 @@ void PickPlaceTask::init() {
 			return true;
 		});
 
-		current_state = applicability_filter.get();
+		current_state_ptr = applicability_filter.get();
 		t.add(std::move(applicability_filter));
 	}
 
@@ -201,7 +201,7 @@ void PickPlaceTask::init() {
 			stage->setPreGraspPose(hand_open_pose_);
 			stage->setObject(object);
 			stage->setAngleDelta(M_PI / 12);
-			stage->setMonitoredStage(current_state);  // Hook into current state
+			stage->setMonitoredStage(current_state_ptr);  // Hook into current state
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(stage));
@@ -229,7 +229,7 @@ void PickPlaceTask::init() {
 		 ***************************************************/
 		{
 			auto stage = std::make_unique<stages::MoveTo>("close hand", sampling_planner);
-			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
+			stage->setGroup(hand_group_name_);
 			stage->setGoal(hand_close_pose_);
 			grasp->insert(std::move(stage));
 		}
@@ -357,7 +357,7 @@ void PickPlaceTask::init() {
 		 *****************************************************/
 		{
 			auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
-			stage->properties().property("group").configureInitFrom(Stage::PARENT, hand_group_name_);
+			stage->setGroup(hand_group_name_);
 			stage->setGoal(hand_open_pose_);
 			place->insert(std::move(stage));
 		}
@@ -419,10 +419,10 @@ void PickPlaceTask::init() {
 bool PickPlaceTask::plan() {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	ros::NodeHandle pnh("~");
-	int planning_attempts = pnh.param<int>("planning_attempts", 10);
+	int max_solutions = pnh.param<int>("max_solutions", 10);
 
 	try {
-		task_->plan(planning_attempts);
+		task_->plan(max_solutions);
 	} catch (InitStageException& e) {
 		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;
@@ -449,4 +449,4 @@ bool PickPlaceTask::execute() {
 
 	return true;
 }
-}
+}  // namespace moveit_task_constructor_demo

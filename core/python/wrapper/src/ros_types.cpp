@@ -62,5 +62,5 @@ public:
 	}
 };
 static ConverterInit init;
-}
-}
+}  // namespace python
+}  // namespace moveit

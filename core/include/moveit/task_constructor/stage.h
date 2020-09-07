@@ -54,7 +54,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 }
-}
+}  // namespace moveit
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -83,18 +83,35 @@ enum InterfaceFlag
 	PROPAGATE_BACKWARDS = READS_END | WRITES_PREV_END,
 	GENERATE = WRITES_PREV_END | WRITES_NEXT_START,
 };
-typedef Flags<InterfaceFlag> InterfaceFlags;
+
+using InterfaceFlags = Flags<InterfaceFlag>;
+
+/** invert interface such that
+ * - new end can connect to old start
+ * - new start can connect to old end
+ */
+constexpr InterfaceFlags invert(InterfaceFlags f) {
+	InterfaceFlags inv;
+	if (f & READS_START)
+		inv = inv | WRITES_NEXT_START;
+	if (f & WRITES_PREV_END)
+		inv = inv | READS_END;
+	if (f & READS_END)
+		inv = inv | WRITES_PREV_END;
+	if (f & WRITES_NEXT_START)
+		inv = inv | READS_START;
+	return inv;
+};
 
 // some useful constants
 constexpr InterfaceFlags UNKNOWN;
 constexpr InterfaceFlags START_IF_MASK({ READS_START, WRITES_PREV_END });
 constexpr InterfaceFlags END_IF_MASK({ READS_END, WRITES_NEXT_START });
-constexpr InterfaceFlags PROPAGATE_BOTHWAYS({ PROPAGATE_FORWARDS, PROPAGATE_BACKWARDS });
 
 MOVEIT_CLASS_FORWARD(Interface)
 MOVEIT_CLASS_FORWARD(Stage)
 class InterfaceState;
-typedef std::pair<const InterfaceState&, const InterfaceState&> InterfaceStatePair;
+using InterfaceStatePair = std::pair<const InterfaceState&, const InterfaceState&>;
 
 /// exception thrown by Stage::init()
 /// It collects individual errors in stages throughout the pipeline to allow overall error reporting
@@ -114,7 +131,7 @@ public:
 	/// check of existing errors
 	operator bool() const { return !errors_.empty(); }
 
-	virtual const char* what() const noexcept override;
+	const char* what() const noexcept override;
 
 private:
 	std::list<std::pair<const Stage*, const std::string>> errors_;
@@ -127,7 +144,7 @@ class Stage
 {
 public:
 	PRIVATE_CLASS(Stage)
-	typedef std::unique_ptr<Stage> pointer;
+	using pointer = std::unique_ptr<Stage>;
 	/** Names for property initialization sources
 	 *
 	 * - INTERFACE allows to pass properties from one stage to the next (in a SerialContainer).
@@ -163,6 +180,8 @@ public:
 	const std::string& name() const;
 	void setName(const std::string& name);
 
+	uint32_t introspectionId() const;
+
 	/** set computation timeout (in seconds)
 	 *
 	 * The logic of the individual stage should ensure this limit is respected.
@@ -186,8 +205,8 @@ public:
 	}
 	void setForwardedProperties(const std::set<std::string>& names) { setProperty("forwarded_properties", names); }
 
-	typedef std::function<void(const SolutionBase& s)> SolutionCallback;
-	typedef std::list<SolutionCallback> SolutionCallbackList;
+	using SolutionCallback = std::function<void(const SolutionBase&)>;
+	using SolutionCallbackList = std::list<SolutionCallback>;
 	/// add function to be called for every newly found solution or failure
 	SolutionCallbackList::const_iterator addSolutionCallback(SolutionCallback&& cb);
 	/// remove function callback
@@ -209,7 +228,8 @@ public:
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 	/// analyze source of error and report accordingly
-	void reportPropertyError(const Property::error& e);
+	[[noreturn]] void reportPropertyError(const Property::error& e);
+	double getTotalComputeTime() const;
 
 protected:
 	/// Stage can only be instantiated through derived classes
@@ -252,11 +272,8 @@ public:
 		AUTO = 0x00,  // auto-derive direction from context
 		FORWARD = 0x01,  // propagate forward only
 		BACKWARD = 0x02,  // propagate backward only
-		BOTHWAY = FORWARD | BACKWARD,  // propagate both ways
 	};
 	void restrictDirection(Direction dir);
-
-	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	virtual void computeForward(const InterfaceState& from) = 0;
 	virtual void computeBackward(const InterfaceState& to) = 0;
@@ -355,7 +372,7 @@ public:
 
 protected:
 	/// register solution as a solution connecting states from -> to
-	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
 	/// convienency methods consuming a SubTrajectory
 	void connect(const InterfaceState& from, const InterfaceState& to, SubTrajectory&& trajectory) {
@@ -367,6 +384,8 @@ protected:
 	}
 };
 
-const char* flowSymbol(moveit::task_constructor::InterfaceFlags f);
-}
-}
+/** Return (horizontal) flow symbol for start or end interface (specified by mask) */
+template <unsigned int mask>
+const char* flowSymbol(InterfaceFlags f);
+}  // namespace task_constructor
+}  // namespace moveit

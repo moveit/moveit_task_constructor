@@ -43,17 +43,10 @@
 namespace moveit {
 namespace task_constructor {
 
-/// create a new JointModelGroup comprising all joints of the given groups
-moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups);
-
-/** find duplicate, non-fixed joints
+/** Create a new JointModelGroup comprising all joints of the given groups
  *
- * Merging is only allowed for disjoint joint sets. Fixed joints are tolerated.
- * Assumes that \e joints is the the union of the joint sets of all \e groups (w/o duplicates).
- * The list of duplicate joints is returned in \e duplicates and in \e names (as a comma-separated list) */
-bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& groups,
-                    std::vector<const moveit::core::JointModel*> joints,
-                    std::vector<const moveit::core::JointModel*>& duplicates, std::string& names);
+ *  Throws if there are any duplicate, active joints in the groups */
+moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::JointModelGroup*>& groups);
 
 /** merge all sub trajectories into a single RobotTrajectory for parallel execution
  *
@@ -65,5 +58,5 @@ bool findDuplicates(const std::vector<const moveit::core::JointModelGroup*>& gro
 robot_trajectory::RobotTrajectoryPtr
 merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
       const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group);
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

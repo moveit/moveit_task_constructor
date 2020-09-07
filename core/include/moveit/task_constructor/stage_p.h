@@ -41,7 +41,11 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_queue.h>
+
+#include <ros/ros.h>
+
 #include <ostream>
+#include <chrono>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
 #define PIMPL_FUNCTIONS(Class)                                                                       \
@@ -60,22 +64,18 @@ class StagePrivate
 
 public:
 	/// container type used to store children
-	typedef std::list<Stage::pointer> container_type;
+	using container_type = std::list<Stage::pointer>;
 	StagePrivate(Stage* me, const std::string& name);
 	virtual ~StagePrivate() = default;
 
 	/// actually configured interface of this stage (only valid after init())
 	InterfaceFlags interfaceFlags() const;
 
-	/** Interface required by this stage
-	 *
-	 * If the interface is unknown (because it is auto-detected from context), return 0 */
+	/// Retrieve interface required by this stage, UNKNOWN if auto-detected from context
 	virtual InterfaceFlags requiredInterface() const = 0;
 
-	/** Prune interface to comply with the given propagation direction
-	 *
-	 * PropagatingEitherWay uses this in restrictDirection() */
-	virtual void pruneInterface(InterfaceFlags accepted) {}
+	/// Resolve interface/propagation direction to comply with the given external interface
+	virtual void resolveInterface(InterfaceFlags /* expected */) {}
 
 	/// validate connectivity of children (after init() was done)
 	virtual void validateConnectivity() const;
@@ -111,34 +111,60 @@ public:
 		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
 	}
 
-	/// the following methods should be called only by a container
-	/// to setup the connection structure of their children
-	inline void setHierarchy(ContainerBase* parent, container_type::iterator it) {
+	/// set parent of stage
+	/// enforce only one parent exists
+	inline bool setParent(ContainerBase* parent) {
+		if (parent_) {
+			ROS_ERROR_STREAM("Tried to add stage '" << name() << "' to two parents");
+			return false;  // it's not allowed to add a stage to a parent if it already has one
+		}
 		parent_ = parent;
-		it_ = it;
+		return true;
 	}
+
+	/// explicitly orphan stage
+	inline void unparent() {
+		parent_ = nullptr;
+		it_ = container_type::iterator();
+	}
+
+	/// the following methods should be called only by the current parent
+	/// to setup the connection structure of their children
+	inline void setParentPosition(container_type::iterator it) { it_ = it; }
+	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
+
 	inline void setPrevEnds(const InterfacePtr& prev_ends) { prev_ends_ = prev_ends; }
 	inline void setNextStarts(const InterfacePtr& next_starts) { next_starts_ = next_starts; }
-	inline void setIntrospection(Introspection* introspection) { introspection_ = introspection; }
+
 	void composePropertyErrorMsg(const std::string& name, std::ostream& os);
 
 	// methods to spawn new solutions
-	void sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution);
-	void sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution);
-	void spawn(InterfaceState&& state, SolutionBasePtr solution);
-	void connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution);
+	void sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution);
+	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
+	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
+	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
 	bool storeSolution(const SolutionBasePtr& solution);
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
+	void runCompute() {
+		auto compute_start_time = std::chrono::steady_clock::now();
+		compute();
+		auto compute_stop_time = std::chrono::steady_clock::now();
+		total_compute_time_ += compute_stop_time - compute_start_time;
+	}
 
 protected:
 	Stage* me_;  // associated/owning Stage instance
 	std::string name_;
 	PropertyMap properties_;
 
+	// pull interfaces, created by the stage as required
 	InterfacePtr starts_;
 	InterfacePtr ends_;
+
+	// The total compute time
+	std::chrono::duration<double> total_compute_time_;
 
 	// functions called for each new solution
 	std::list<Stage::SolutionCallback> solution_cbs_;
@@ -153,6 +179,8 @@ private:
 	ContainerBase* parent_;  // owning parent
 	container_type::iterator it_;  // iterator into parent's children_ list referring to this
 
+	// push interfaces, assigned by the parent container
+	// linking to previous/next sibling's pull interfaces
 	InterfaceWeakPtr prev_ends_;  // interface to be used for sendBackward()
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 
@@ -179,19 +207,17 @@ class PropagatingEitherWayPrivate : public ComputeBasePrivate
 	friend class PropagatingEitherWay;
 
 public:
-	PropagatingEitherWay::Direction required_interface_dirs_;
+	PropagatingEitherWay::Direction configured_dir_;
+	InterfaceFlags required_interface_;
 
-	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me,
-	                                   PropagatingEitherWay::Direction required_interface_dirs_,
+	inline PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction configured_dir_,
 	                                   const std::string& name);
 
 	InterfaceFlags requiredInterface() const override;
 	// initialize pull interfaces for given propagation directions
 	void initInterface(PropagatingEitherWay::Direction dir);
-	// prune interface to the given propagation direction
-	void pruneInterface(InterfaceFlags accepted) override;
-	// validate that we can propagate in one direction at least
-	void validateConnectivity() const override;
+	// resolve interface to the given propagation direction
+	void resolveInterface(InterfaceFlags expected) override;
 
 	bool canCompute() const override;
 	void compute() override;
@@ -254,7 +280,7 @@ class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 
-	typedef std::pair<Interface::const_iterator, Interface::const_iterator> StatePair;
+	using StatePair = std::pair<Interface::const_iterator, Interface::const_iterator>;
 	struct StatePairLess
 	{
 		bool operator()(const StatePair& x, const StatePair& y) const {
@@ -281,5 +307,5 @@ private:
 	ordered<StatePair, StatePairLess> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

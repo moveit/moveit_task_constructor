@@ -159,6 +159,6 @@ void GeneratePlacePose::compute() {
 	// any other case: only try given target pose
 	spawner(target_pose, 1, 1);
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

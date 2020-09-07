@@ -39,14 +39,42 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/planning_scene/planning_scene.h>
+
+#include <ros/console.h>
+
+#include <boost/format.hpp>
+
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
-#include <ros/console.h>
 #include <utility>
 
 namespace moveit {
 namespace task_constructor {
+
+template <>
+const char* flowSymbol<START_IF_MASK>(InterfaceFlags f) {
+	f = f & START_IF_MASK;
+	if (f == READS_START)
+		return "→";
+	if (f == WRITES_PREV_END)
+		return "←";
+	if (f == UNKNOWN)
+		return "?";
+	return "↔";
+}
+
+template <>
+const char* flowSymbol<END_IF_MASK>(InterfaceFlags f) {
+	f = f & END_IF_MASK;
+	if (f == READS_END)
+		return "←";
+	if (f == WRITES_NEXT_START)
+		return "→";
+	if (f == UNKNOWN)
+		return "?";
+	return "↔";
+}
 
 void InitStageException::push_back(const Stage& stage, const std::string& msg) {
 	errors_.emplace_back(std::make_pair(&stage, msg));
@@ -57,7 +85,7 @@ void InitStageException::append(InitStageException& other) {
 }
 
 const char* InitStageException::what() const noexcept {
-	static const char* msg = "Error initializing stage(s)";
+	static const char* msg = "Error initializing stage(s). ROS_ERROR_STREAM(e) for details.";
 	return msg;
 }
 
@@ -69,7 +97,7 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), parent_(nullptr), introspection_(nullptr) {}
+  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -88,12 +116,16 @@ void StagePrivate::validateConnectivity() const {
 	// check that the required interface is provided
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
-	if ((required & actual) != required)
-		throw InitStageException(*me(), "required interface is not satisfied");
+	if ((required & actual) != required) {
+		boost::format desc("actual interface %1% %2% does not match required interface %3% %4%");
+		desc % flowSymbol<START_IF_MASK>(actual) % flowSymbol<END_IF_MASK>(actual);
+		desc % flowSymbol<START_IF_MASK>(required) % flowSymbol<END_IF_MASK>(required);
+		throw InitStageException(*me(), desc.str());
+	}
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
-	solution->setCreator(this);
+	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
@@ -108,7 +140,7 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 	return true;
 }
 
-void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, SolutionBasePtr solution) {
+void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -125,7 +157,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	newSolution(solution);
 }
 
-void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, SolutionBasePtr solution) {
+void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -142,7 +174,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	newSolution(solution);
 }
 
-void StagePrivate::spawn(InterfaceState&& state, SolutionBasePtr solution) {
+void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
 	if (!storeSolution(solution))
 		return;  // solution dropped
@@ -161,7 +193,7 @@ void StagePrivate::spawn(InterfaceState&& state, SolutionBasePtr solution) {
 	newSolution(solution);
 }
 
-void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr solution) {
+void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
@@ -221,7 +253,7 @@ void Stage::reset() {
 	impl->properties_.reset();
 }
 
-void Stage::init(const moveit::core::RobotModelConstPtr& robot_model) {
+void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	// init properties once from parent
 	auto impl = pimpl();
 	impl->properties_.reset();
@@ -249,6 +281,12 @@ const std::string& Stage::name() const {
 
 void Stage::setName(const std::string& name) {
 	pimpl_->name_ = name;
+}
+
+uint32_t Stage::introspectionId() const {
+	if (!pimpl_->introspection_)
+		throw std::runtime_error("Task is not initialized yet or Introspection was disabled.");
+	return const_cast<const moveit::task_constructor::Introspection*>(pimpl_->introspection_)->stageId(this);
 }
 
 void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest) {
@@ -298,6 +336,10 @@ void Stage::setProperty(const std::string& name, const boost::any& value) {
 	pimpl()->properties_.set(name, value);
 }
 
+double Stage::getTotalComputeTime() const {
+	return pimpl()->total_compute_time_.count();
+}
+
 void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std::ostream& os) {
 	if (property_name.empty())
 		return;
@@ -314,7 +356,7 @@ void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std
 			os << ", inherits from parent";
 		if (p.initsFrom(Stage::INTERFACE))
 			os << ", initializes from interface";
-	} catch (const Property::undeclared& e) {
+	} catch (const Property::undeclared&) {
 		os << "undeclared";
 	}
 	if (parent()->parent())
@@ -328,43 +370,6 @@ void Stage::reportPropertyError(const Property::error& e) {
 	throw std::runtime_error(oss.str());
 }
 
-template <InterfaceFlag own, InterfaceFlag other>
-const char* direction(const StagePrivate& stage) {
-	InterfaceFlags f = stage.interfaceFlags();
-
-	bool own_if = f & own;
-	bool other_if = f & other;
-	bool reverse = own & START_IF_MASK;
-	if (own_if && other_if)
-		return "<>";
-	if (!own_if && !other_if)
-		return "--";
-	if (other_if ^ reverse)
-		return "->";
-	return "<-";
-}
-
-const char* flowSymbol(InterfaceFlags f) {
-	if (f == UNKNOWN)
-		return "?";  // unknown interface
-
-	// f should have either INPUT or OUTPUT flags set (not both)
-	assert(static_cast<bool>(f & START_IF_MASK) ^ static_cast<bool>(f & END_IF_MASK));
-
-	if (f & START_IF_MASK) {
-		if (f == READS_START)
-			return "↓";
-		if (f == WRITES_PREV_END)
-			return "↑";
-	} else if (f & END_IF_MASK) {
-		if (f == READS_END)
-			return "↑";
-		if (f == WRITES_NEXT_START)
-			return "↓";
-	}
-	return "⇅";
-}
-
 std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 	// starts
 	for (const InterfaceConstPtr& i : { impl.prevEnds(), impl.starts() }) {
@@ -375,8 +380,9 @@ std::ostream& operator<<(std::ostream& os, const StagePrivate& impl) {
 			os << "-";
 	}
 	// trajectories
-	os << std::setw(5) << direction<READS_START, WRITES_PREV_END>(impl) << std::setw(3) << impl.solutions_.size()
-	   << std::setw(5) << direction<READS_END, WRITES_NEXT_START>(impl);
+	os << " " << flowSymbol<START_IF_MASK>(impl.interfaceFlags() | impl.requiredInterface()) << " ";
+	os << std::setw(3) << impl.solutions_.size();
+	os << " " << flowSymbol<END_IF_MASK>(impl.interfaceFlags() | impl.requiredInterface()) << " ";
 	// ends
 	for (const InterfaceConstPtr& i : { impl.ends(), impl.nextStarts() }) {
 		os << std::setw(3);
@@ -394,67 +400,57 @@ ComputeBase::ComputeBase(ComputeBasePrivate* impl) : Stage(impl) {}
 
 PropagatingEitherWayPrivate::PropagatingEitherWayPrivate(PropagatingEitherWay* me, PropagatingEitherWay::Direction dir,
                                                          const std::string& name)
-  : ComputeBasePrivate(me, name), required_interface_dirs_(dir) {
-	initInterface(required_interface_dirs_);
+  : ComputeBasePrivate(me, name), configured_dir_(dir) {
+	initInterface(dir);
 }
 
 // initialize pull interfaces to match requested propagation directions
 void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction dir) {
-	if (dir & PropagatingEitherWay::FORWARD) {
-		if (!starts_)  // keep existing interface if possible
-			starts_.reset(
-			    new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedStarts, this, std::placeholders::_1)));
-	} else {
-		starts_.reset();
-	}
-
-	if (dir & PropagatingEitherWay::BACKWARD) {
-		if (!ends_)  // keep existing interface if possible
-			ends_.reset(
-			    new Interface(std::bind(&PropagatingEitherWayPrivate::dropFailedEnds, this, std::placeholders::_1)));
-	} else {
-		ends_.reset();
+	switch (dir) {
+		case PropagatingEitherWay::FORWARD:
+			required_interface_ = PROPAGATE_FORWARDS;
+			if (!starts_)  // keep existing interface if possible
+				starts_.reset(
+				    new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedStarts(it); }));
+			ends_.reset();
+			return;
+		case PropagatingEitherWay::BACKWARD:
+			required_interface_ = PROPAGATE_BACKWARDS;
+			starts_.reset();
+			if (!ends_)  // keep existing interface if possible
+				ends_.reset(new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedEnds(it); }));
+			return;
+		case PropagatingEitherWay::AUTO:
+			required_interface_ = UNKNOWN;
+			return;
 	}
 }
 
-void PropagatingEitherWayPrivate::pruneInterface(InterfaceFlags accepted) {
-	int dir = 0;
-	if ((accepted & PROPAGATE_FORWARDS) == PROPAGATE_FORWARDS)
-		dir |= PropagatingEitherWay::FORWARD;
-	if ((accepted & PROPAGATE_BACKWARDS) == PROPAGATE_BACKWARDS)
-		dir |= PropagatingEitherWay::BACKWARD;
-	initInterface(PropagatingEitherWay::Direction(dir));
-}
+void PropagatingEitherWayPrivate::resolveInterface(InterfaceFlags expected) {
+	if (expected == UNKNOWN)
+		throw InitStageException(*me(), "cannot initialize to unknown interface");
 
-void PropagatingEitherWayPrivate::validateConnectivity() const {
-	InterfaceFlags required = requiredInterface();
-	InterfaceFlags actual = interfaceFlags();
-	if (actual == UNKNOWN)
-		throw InitStageException(*me(), "not connected in any direction");
-
-	InitStageException errors;
-	if ((actual & READS_START) && !(actual & WRITES_NEXT_START))
-		errors.push_back(*me(), "Cannot push forwards");
-	if ((actual & READS_END) && !(actual & WRITES_PREV_END))
-		errors.push_back(*me(), "Cannot push backwards");
-
-	if (required_interface_dirs_ == PropagatingEitherWay::BOTHWAY && (required & actual) != required)
-		ROS_WARN_STREAM_NAMED("PropagatingEitherWay", "Cannot propagate "
-		                                                  << (actual & PROPAGATE_FORWARDS ? "backwards" : "forwards"));
-
-	if (errors)
-		throw errors;
+	auto dir = PropagatingEitherWay::AUTO;
+	if ((expected & START_IF_MASK) == READS_START || (expected & END_IF_MASK) == WRITES_NEXT_START)
+		dir = PropagatingEitherWay::FORWARD;
+	else if ((expected & START_IF_MASK) == WRITES_PREV_END || (expected & END_IF_MASK) == READS_END)
+		dir = PropagatingEitherWay::BACKWARD;
+	else {
+		boost::format desc("propagator cannot satisfy expected interface %1% %2%");
+		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
+		throw InitStageException(*me(), desc.str());
+	}
+	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_) {
+		boost::format desc("configured interface (%1% %2%) does not match expected one (%3% %4%)");
+		desc % flowSymbol<START_IF_MASK>(required_interface_) % flowSymbol<END_IF_MASK>(required_interface_);
+		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
+		throw InitStageException(*me(), desc.str());
+	}
+	initInterface(dir);
 }
 
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
-	InterfaceFlags f;
-	if (required_interface_dirs_ & PropagatingEitherWay::FORWARD)
-		f |= PROPAGATE_FORWARDS;
-	if (required_interface_dirs_ & PropagatingEitherWay::BACKWARD)
-		f |= PROPAGATE_BACKWARDS;
-	// if required_interface_dirs_ == AUTO, we don't require an interface
-	// but the parent container auto-derives the propagation direction
-	return f;
+	return required_interface_;
 }
 
 void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
@@ -512,26 +508,12 @@ PropagatingEitherWay::PropagatingEitherWay(PropagatingEitherWayPrivate* impl) : 
 
 void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir) {
 	auto impl = pimpl();
-	if (impl->required_interface_dirs_ == dir)
+	if (impl->configured_dir_ == dir)
 		return;
-	if (impl->prevEnds() || impl->nextStarts())
+	if (impl->configured_dir_ != AUTO)
 		throw std::runtime_error("Cannot change direction after being connected");
-	impl->required_interface_dirs_ = dir;
-	impl->initInterface(impl->required_interface_dirs_);
-}
-
-void PropagatingEitherWay::init(const moveit::core::RobotModelConstPtr& robot_model) {
-	Stage::init(robot_model);
-	auto impl = pimpl();
-
-	// In AUTO-mode, i.e. when auto-detecting direction of propagation from context,
-	// pretend that we offer both interface directions during init().
-	// This is needed due to a chicken-egg-problem: interface auto-detection requires
-	// the context (external pushing interfaces prevEnds, nextStarts) to be set,
-	// while they are ony set if we detected the correct interface...
-	if (impl->required_interface_dirs_ == AUTO)
-		impl->initInterface(BOTHWAY);
-	// otherwise the interface is already fixed and well-defined
+	impl->configured_dir_ = dir;
+	impl->initInterface(dir);
 }
 
 void PropagatingEitherWay::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
@@ -551,7 +533,7 @@ PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward* me, con
 PropagatingForward::PropagatingForward(const std::string& name)
   : PropagatingEitherWay(new PropagatingForwardPrivate(this, name)) {}
 
-void PropagatingForward::computeBackward(const InterfaceState& to) {
+void PropagatingForward::computeBackward(const InterfaceState& /* to */) {
 	assert(false);  // This should never be called
 }
 
@@ -564,14 +546,14 @@ PropagatingBackwardPrivate::PropagatingBackwardPrivate(PropagatingBackward* me, 
 PropagatingBackward::PropagatingBackward(const std::string& name)
   : PropagatingEitherWay(new PropagatingBackwardPrivate(this, name)) {}
 
-void PropagatingBackward::computeForward(const InterfaceState& from) {
+void PropagatingBackward::computeForward(const InterfaceState& /* from */) {
 	assert(false);  // This should never be called
 }
 
 GeneratorPrivate::GeneratorPrivate(Generator* me, const std::string& name) : ComputeBasePrivate(me, name) {}
 
 InterfaceFlags GeneratorPrivate::requiredInterface() const {
-	return InterfaceFlags({ WRITES_NEXT_START, WRITES_PREV_END });
+	return InterfaceFlags(GENERATE);
 }
 
 bool GeneratorPrivate::canCompute() const {
@@ -738,7 +720,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
 		                       [from_object](const moveit::core::AttachedBody* object) {
 			                       return object->getName() == from_object->getName();
-			                    });
+		                       });
 		if (it == to_attached.cend()) {
 			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object->getName());
 			return false;
@@ -766,7 +748,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	return true;
 }
 
-void Connecting::connect(const InterfaceState& from, const InterfaceState& to, SolutionBasePtr s) {
+void Connecting::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& s) {
 	pimpl()->connect(from, to, s);
 }
 
@@ -774,5 +756,5 @@ std::ostream& operator<<(std::ostream& os, const Stage& stage) {
 	os << *stage.pimpl();
 	return os;
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

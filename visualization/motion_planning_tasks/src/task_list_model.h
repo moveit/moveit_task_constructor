@@ -2,6 +2,7 @@
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2020, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -47,6 +48,7 @@
 
 #include <QAbstractItemModel>
 #include <QTreeView>
+#include <QTableView>
 #include <memory>
 #include <QPointer>
 
@@ -56,14 +58,14 @@ class ServiceClient;
 namespace rviz {
 class PropertyTreeModel;
 class DisplayContext;
-}
+}  // namespace rviz
 
 namespace moveit_rviz_plugin {
 
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 MOVEIT_CLASS_FORWARD(RemoteTaskModel)
-typedef PluginlibFactory<moveit::task_constructor::Stage> StageFactory;
-typedef std::shared_ptr<StageFactory> StageFactoryPtr;
+using StageFactory = PluginlibFactory<moveit::task_constructor::Stage>;
+using StageFactoryPtr = std::shared_ptr<StageFactory>;
 
 StageFactoryPtr getStageFactory();
 
@@ -89,12 +91,11 @@ public:
 	              QObject* parent = nullptr)
 	  : QAbstractItemModel(parent), scene_(scene), display_context_(display_context) {}
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;
 
 	virtual void setStageFactory(const StageFactoryPtr& factory) {}
-	Qt::ItemFlags flags(const QModelIndex& index) const override;
 	unsigned int taskFlags() const { return flags_; }
 	static QVariant flowIcon(moveit::task_constructor::InterfaceFlags f);
 
@@ -143,14 +144,14 @@ class TaskListModel : public utils::FlatMergeProxyModel
 
 public:
 	TaskListModel(QObject* parent = nullptr);
-	~TaskListModel();
+	~TaskListModel() override;
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 	void setDisplayContext(rviz::DisplayContext* display_context);
 	void setSolutionClient(ros::ServiceClient* client);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 3; }
+	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
 	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;
@@ -178,34 +179,34 @@ protected Q_SLOTS:
 	void highlightStage(size_t id);
 };
 
-class AutoAdjustingTreeView : public QTreeView
-{
-	Q_OBJECT
-	Q_PROPERTY(int stretchSection READ stretchSection WRITE setStretchSection)
-
-	mutable std::vector<int> size_hints_;  // size hints for sections
-	QList<int> auto_hide_cols_;  // auto-hiding sections
-	int stretch_section_ = -1;
-
-public:
-	AutoAdjustingTreeView(QWidget* parent = nullptr);
-
-	int stretchSection() const { return stretch_section_; }
-	void setStretchSection(int section);
-
-	void setAutoHideSections(const QList<int>& sections);
-
-	void setModel(QAbstractItemModel* model) override;
-	QSize viewportSizeHint() const override;
-	void resizeEvent(QResizeEvent* event) override;
-};
-
-class TaskListView : public AutoAdjustingTreeView
+class TaskListView : public QTreeView
 {
 	Q_OBJECT
 public:
 	TaskListView(QWidget* parent = nullptr);
 
 	void dropEvent(QDropEvent* event) override;
+
+	void setModel(QAbstractItemModel* model) override;
+	void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
+	                 const QVector<int>& roles = QVector<int>()) override;
+
+protected:
+	void updateColumnWidth();
 };
-}
+
+class SolutionListView : public QTreeView
+{
+	Q_OBJECT
+public:
+	SolutionListView(QWidget* parent = nullptr);
+
+	void setModel(QAbstractItemModel* model) override;
+	void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
+	                 const QVector<int>& roles = QVector<int>()) override;
+	void resizeEvent(QResizeEvent* event) override;
+
+protected:
+	void updateColumnWidth();
+};
+}  // namespace moveit_rviz_plugin

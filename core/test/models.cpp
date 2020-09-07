@@ -175,7 +175,7 @@ const std::string S_MODEL0 =
     "</group>"
     "<end_effector name=\"eef\" parent_link=\"link_b\" group=\"mim_joints\" parent_group=\"base_from_base_to_tip\"/>"
     "</robot>";
-}
+}  // namespace
 
 RobotModelPtr getModel() {
 	urdf::ModelInterfaceSharedPtr urdf_model = urdf::parseURDF(R_MODEL0);

@@ -25,7 +25,7 @@ protected:
 	}
 	void processAndValidate(RemoteSolutionModel& model, const std::vector<uint32_t>& success_ids,
 	                        const std::vector<uint32_t>& failure_ids) {
-		model.processSolutionIDs(success_ids, failure_ids, failure_ids.size());
+		model.processSolutionIDs(success_ids, failure_ids, failure_ids.size(), 0.0);
 
 		std::vector<uint32_t> cost_ordered_ids(success_ids.begin(), success_ids.end());
 		std::vector<uint32_t> sorted_failure_ids(failure_ids.begin(), failure_ids.end());

@@ -60,6 +60,6 @@ public:
 protected:
 	void onNewSolution(const SolutionBase& s) override;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

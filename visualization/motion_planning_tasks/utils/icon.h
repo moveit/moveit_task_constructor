@@ -36,7 +36,7 @@ class QString;
 namespace moveit_rviz_plugin {
 namespace utils {
 
-typedef QPair<QString, QColor> IconMaskAndColor;
+using IconMaskAndColor = QPair<QString, QColor>;
 
 // Returns a recolored icon with shadow and custom disabled state for a
 // series of grayscalemask|Theme::Color mask pairs
@@ -45,19 +45,19 @@ class Icon : public QVector<IconMaskAndColor>
 public:
 	enum IconStyleOption
 	{
-		None = 0,
-		Tint = 1,
-		DropShadow = 2,
-		PunchEdges = 4,
+		NONE = 0,
+		TINT = 1,
+		DROP_SHADOW = 2,
+		PUNCH_EDGES = 4,
 
-		ToolBarStyle = Tint | DropShadow | PunchEdges,
-		MenuTintedStyle = Tint | PunchEdges
+		TOOL_BAR_STYLE = TINT | DROP_SHADOW | PUNCH_EDGES,
+		MENU_TINTED_STYLE = TINT | PUNCH_EDGES
 	};
 
 	Q_DECLARE_FLAGS(IconStyleOptions, IconStyleOption)
 
 	Icon();
-	Icon(std::initializer_list<IconMaskAndColor> args, IconStyleOptions style = ToolBarStyle);
+	Icon(std::initializer_list<IconMaskAndColor> args, IconStyleOptions style = TOOL_BAR_STYLE);
 	Icon(const QString& imageFileName);
 	Icon(const Icon& other) = default;
 
@@ -79,9 +79,9 @@ public:
 	static QIcon combinedIcon(const QList<QIcon>& icons);
 
 private:
-	IconStyleOptions m_style = None;
+	IconStyleOptions m_style = NONE;
 };
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(moveit_rviz_plugin::utils::Icon::IconStyleOptions)

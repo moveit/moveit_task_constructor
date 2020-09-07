@@ -55,7 +55,7 @@ public:
 		QAbstractItemModel* model_;
 
 		// map of proxy=source QModelIndex's internal pointer to source parent's QModelIndex
-		typedef std::map<void*, QPersistentModelIndex> ProxyToSourceMap;
+		using ProxyToSourceMap = std::map<void*, QPersistentModelIndex>;
 		ProxyToSourceMap proxy_to_source_mapping_;
 		std::vector<ProxyToSourceMap::iterator> invalidated_mappings_;
 
@@ -194,19 +194,28 @@ public:
 	bool removeModel(std::vector<ModelData>::iterator it, bool call);
 
 private:
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceDestroyed(QObject* model);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsAboutToBeInserted(const QModelIndex& parent, int start, int end);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsInserted(const QModelIndex& parent, int start, int end);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsAboutToBeRemoved(const QModelIndex& parent, int start, int end);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsRemoved(const QModelIndex& parent, int start, int end);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsAboutToBeMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd,
 	                                 const QModelIndex& destParent, int dest);
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceRowsMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd,
 	                        const QModelIndex& destParent, int dest);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QVector<int>& roles);
 #else
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	void _q_sourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 #endif
 };
@@ -494,19 +503,23 @@ bool TreeMergeProxyModelPrivate::removeModel(std::vector<ModelData>::iterator it
 	return true;
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceDestroyed(QObject* model) {
 	removeModel(find(model), false);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsAboutToBeInserted(const QModelIndex& parent, int start, int end) {
 	q_ptr->beginInsertRows(mapFromSource(parent), start, end);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsAboutToBeMoved(const QModelIndex& sourceParent, int sourceStart,
                                                              int sourceEnd, const QModelIndex& destParent, int dest) {
 	q_ptr->beginMoveRows(mapFromSource(sourceParent), sourceStart, sourceEnd, mapFromSource(destParent), dest);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) {
 	auto it = find(q_ptr->sender());
 	Q_ASSERT(it != data_.end());
@@ -514,6 +527,7 @@ void TreeMergeProxyModelPrivate::_q_sourceRowsAboutToBeRemoved(const QModelIndex
 		q_ptr->beginRemoveRows(mapFromSource(parent), start, end);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsInserted(const QModelIndex& parent, int start, int end) {
 	Q_UNUSED(parent)
 	Q_UNUSED(start)
@@ -521,6 +535,7 @@ void TreeMergeProxyModelPrivate::_q_sourceRowsInserted(const QModelIndex& parent
 	q_ptr->endInsertRows();
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsMoved(const QModelIndex& sourceParent, int sourceStart, int sourceEnd,
                                                     const QModelIndex& destParent, int dest) {
 	Q_UNUSED(sourceParent)
@@ -531,6 +546,7 @@ void TreeMergeProxyModelPrivate::_q_sourceRowsMoved(const QModelIndex& sourcePar
 	q_ptr->endMoveRows();
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceRowsRemoved(const QModelIndex& parent, int start, int end) {
 	Q_UNUSED(parent)
 	Q_UNUSED(start)
@@ -543,16 +559,18 @@ void TreeMergeProxyModelPrivate::_q_sourceRowsRemoved(const QModelIndex& parent,
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight,
                                                       const QVector<int>& roles) {
 	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight), roles);
 }
 #else
+// NOLINTNEXTLINE(readability-identifier-naming)
 void TreeMergeProxyModelPrivate::_q_sourceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) {
 	q_ptr->dataChanged(mapFromSource(topLeft), mapFromSource(bottomRight));
 }
 #endif
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin
 
 #include "moc_tree_merge_proxy_model.cpp"

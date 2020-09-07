@@ -49,7 +49,8 @@ namespace mtc = ::moveit::task_constructor;
 namespace moveit_rviz_plugin {
 
 static rviz::StringProperty* stringFactory(const QString& name, mtc::Property& mtc_prop,
-                                           const planning_scene::PlanningScene*, rviz::DisplayContext*) {
+                                           const planning_scene::PlanningScene* /*unused*/,
+                                           rviz::DisplayContext* /*unused*/) {
 	std::string value;
 	if (!mtc_prop.value().empty())
 		value = boost::any_cast<std::string>(mtc_prop.value());
@@ -61,7 +62,8 @@ static rviz::StringProperty* stringFactory(const QString& name, mtc::Property& m
 }
 template <typename T>
 static rviz::FloatProperty* floatFactory(const QString& name, mtc::Property& mtc_prop,
-                                         const planning_scene::PlanningScene*, rviz::DisplayContext*) {
+                                         const planning_scene::PlanningScene* /*unused*/,
+                                         rviz::DisplayContext* /*unused*/) {
 	T value = !mtc_prop.value().empty() ? boost::any_cast<T>(mtc_prop.value()) : T();
 	rviz::FloatProperty* rviz_prop =
 	    new rviz::FloatProperty(name, value, QString::fromStdString(mtc_prop.description()));
@@ -78,8 +80,8 @@ PropertyFactory::PropertyFactory() {
 }
 
 PropertyFactory& PropertyFactory::instance() {
-	static PropertyFactory instance_;
-	return instance_;
+	static PropertyFactory instance;
+	return instance;
 }
 
 void PropertyFactory::registerType(const std::string& type_name, const PropertyFactoryFunction& f) {
@@ -162,4 +164,4 @@ rviz::Property* PropertyFactory::createDefault(const std::string& name, const st
 	}
 }
 #endif
-}
+}  // namespace moveit_rviz_plugin

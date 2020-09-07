@@ -66,7 +66,7 @@ std::string rosNormalizeName(const std::string& name) {
 	}
 	return n;
 }
-}
+}  // namespace
 
 namespace moveit {
 namespace task_constructor {
@@ -86,19 +86,25 @@ void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
 
 	// and redirect the parent pointers of children to new parents
 	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
-	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it)
-		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(lhs->me_), it);
+	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it) {
+		(*it)->pimpl()->unparent();
+		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(lhs->me_));
+		(*it)->pimpl()->setParentPosition(it);
+	}
 
 	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
-	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it)
-		(*it)->pimpl()->setHierarchy(static_cast<ContainerBase*>(rhs->me_), it);
+	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it) {
+		(*it)->pimpl()->unparent();
+		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(rhs->me_));
+		(*it)->pimpl()->setParentPosition(it);
+	}
 }
 
 const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
-Task::Task(const std::string& id, ContainerBase::pointer&& container)
+Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& container)
   : WrapperBase(new TaskPrivate(this, id), std::move(container)) {
 	if (!id.empty())
 		stages()->setName(id);
@@ -106,15 +112,16 @@ Task::Task(const std::string& id, ContainerBase::pointer&& container)
 	// monitor state on commandline
 	// addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default, but only if ros::init() was called
-	if (ros::isInitialized())
+	if (ros::isInitialized() && introspection)
 		enableIntrospection(true);
 }
 
-Task::Task(Task&& other) : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
+Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
+  : WrapperBase(new TaskPrivate(this, std::string()), std::make_unique<SerialContainer>()) {
 	*this = std::move(other);
 }
 
-Task& Task::operator=(Task&& other) {
+Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-constructor)
 	clear();  // remove all stages of current task
 	swap(this->pimpl_, other.pimpl_);
 	return *this;
@@ -122,12 +129,12 @@ Task& Task::operator=(Task&& other) {
 
 struct PlannerCache
 {
-	typedef std::tuple<std::string, std::string, std::string> PlannerID;
-	typedef std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline>> PlannerMap;
-	typedef std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap>> ModelList;
+	using PlannerID = std::tuple<std::string, std::string, std::string>;
+	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
 	ModelList cache_;
 
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, PlannerID id) {
+	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
 		// find model in cache_ and remove expired entries while doing so
 		ModelList::iterator model_it = cache_.begin();
 		while (model_it != cache_.end()) {
@@ -174,8 +181,13 @@ Task::~Task() {
 }
 
 void Task::setRobotModel(const core::RobotModelConstPtr& robot_model) {
+	if (!robot_model) {
+		ROS_ERROR_STREAM(name() << ": received invalid robot model");
+		return;
+	}
 	auto impl = pimpl();
-	reset();  // solutions, scenes, etc become invalid
+	if (impl->robot_model_ && impl->robot_model_ != robot_model)
+		reset();  // solutions, scenes, etc become invalid
 	impl->robot_model_ = robot_model;
 }
 
@@ -188,11 +200,11 @@ void Task::loadRobotModel(const std::string& robot_description) {
 }
 
 void Task::add(Stage::pointer&& stage) {
-	if (!stage)
-		throw std::runtime_error("stage insertion failed: invalid stage pointer");
+	stages()->add(std::move(stage));
+}
 
-	if (!stages()->insert(std::move(stage)))
-		throw std::runtime_error(std::string("insertion failed for stage: ") + stage->name());
+bool Task::insert(Stage::pointer&& stage, int before) {
+	return stages()->insert(std::move(stage), before);
 }
 
 void Task::clear() {
@@ -206,12 +218,12 @@ void Task::enableIntrospection(bool enable) {
 		impl->introspection_.reset(new Introspection(impl));
 	else if (!enable && impl->introspection_) {
 		// reset introspection instance of all stages
-		pimpl()->setIntrospection(nullptr);
-		pimpl()->traverseStages(
-		    [](Stage& stage, int) {
+		impl->setIntrospection(nullptr);
+		impl->traverseStages(
+		    [](Stage& stage, int /*depth*/) {
 			    stage.pimpl()->setIntrospection(nullptr);
 			    return true;
-			 },
+		    },
 		    1, UINT_MAX);
 		impl->introspection_.reset();
 	}
@@ -229,7 +241,7 @@ Task::TaskCallbackList::const_iterator Task::addTaskCallback(TaskCallback&& cb) 
 	return --(impl->task_cbs_.cend());
 }
 
-void Task::erase(TaskCallbackList::const_iterator which) {
+void Task::eraseTaskCallback(TaskCallbackList::const_iterator which) {
 	pimpl()->task_cbs_.erase(which);
 }
 
@@ -255,17 +267,15 @@ void Task::init() {
 	// and *afterwards* initialize all children recursively
 	stages()->init(impl->robot_model_);
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
-	stages()->pimpl()->pruneInterface(InterfaceFlags({ GENERATE }));
-	// and *finally* validate connectivity
-	stages()->pimpl()->validateConnectivity();
+	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
 	// provide introspection instance to all stages
 	impl->setIntrospection(impl->introspection_.get());
 	impl->traverseStages(
-	    [impl](Stage& stage, int) {
+	    [impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(impl->introspection_.get());
 		    return true;
-		 },
+	    },
 	    1, UINT_MAX);
 
 	// first time publish task
@@ -278,12 +288,11 @@ bool Task::canCompute() const {
 }
 
 void Task::compute() {
-	stages()->compute();
+	stages()->pimpl()->runCompute();
 }
 
 bool Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
-	reset();
 	init();
 
 	impl->preempt_requested_ = false;
@@ -303,14 +312,17 @@ void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-void Task::execute(const SolutionBase& s) {
+moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
 	ac.waitForServer();
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
 	s.fillMessage(goal.solution, pimpl()->introspection_.get());
+	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+
 	ac.sendGoal(goal);
 	ac.waitForResult();
+	return ac.getResult()->error_code;
 }
 
 void Task::publishAllSolutions(bool wait) {
@@ -355,5 +367,5 @@ const core::RobotModelConstPtr& Task::getRobotModel() const {
 void Task::printState(std::ostream& os) const {
 	os << *stages();
 }
-}
-}
+}  // namespace task_constructor
+}  // namespace moveit

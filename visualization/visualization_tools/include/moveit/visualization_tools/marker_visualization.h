@@ -14,7 +14,7 @@ class SceneNode;
 namespace rviz {
 class DisplayContext;
 class MarkerBase;
-}
+}  // namespace rviz
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -23,7 +23,7 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 }
-}
+}  // namespace moveit
 
 namespace moveit_rviz_plugin {
 
@@ -101,14 +101,14 @@ class MarkerVisualizationProperty : public rviz::BoolProperty
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
-	~MarkerVisualizationProperty();
+	~MarkerVisualizationProperty() override;
 
 	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
 
 	/// remove all hosted markers from display
 	void clearMarkers();
 	/// add markers in MarkerVisualization for display
-	void addMarkers(MarkerVisualizationPtr markers);
+	void addMarkers(const MarkerVisualizationPtr& markers);
 	/// update pose of all markers
 	void update(const planning_scene::PlanningScene& scene, const moveit::core::RobotState& robot_state);
 

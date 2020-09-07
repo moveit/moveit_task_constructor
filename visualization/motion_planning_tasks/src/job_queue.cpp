@@ -77,5 +77,5 @@ void JobQueue::executeJobs() {
 	}
 	idle_condition_.notify_all();
 }
-}
-}
+}  // namespace tools
+}  // namespace moveit

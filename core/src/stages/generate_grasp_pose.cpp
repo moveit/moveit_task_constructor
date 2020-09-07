@@ -128,11 +128,11 @@ void GenerateGraspPose::compute() {
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
 
-	double current_angle_ = 0.0;
-	while (current_angle_ < 2. * M_PI && current_angle_ > -2. * M_PI) {
+	double current_angle = 0.0;
+	while (current_angle < 2. * M_PI && current_angle > -2. * M_PI) {
 		// rotate object pose about z-axis
-		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle_, Eigen::Vector3d::UnitZ()));
-		current_angle_ += props.get<double>("angle_delta");
+		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle, Eigen::Vector3d::UnitZ()));
+		current_angle += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);
 		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
@@ -141,7 +141,7 @@ void GenerateGraspPose::compute() {
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
-		trajectory.setComment(std::to_string(current_angle_));
+		trajectory.setComment(std::to_string(current_angle));
 
 		// add frame at target pose
 		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose_msg, 0.1, "grasp frame");
@@ -149,6 +149,6 @@ void GenerateGraspPose::compute() {
 		spawn(std::move(state), std::move(trajectory));
 	}
 }
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

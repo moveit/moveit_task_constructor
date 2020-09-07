@@ -36,31 +36,31 @@
 namespace moveit_rviz_plugin {
 namespace utils {
 
-static const qreal PunchEdgeWidth = 0.5;
-static const qreal PunchEdgeIntensity = 0.6;
+static const qreal PUNCH_EDGE_WIDTH = 0.5;
+static const qreal PUNCH_EDGE_INTENSITY = 0.6;
 
 static QPixmap maskToColorAndAlpha(const QPixmap& mask, const QColor& color) {
 	QImage result(mask.toImage().convertToFormat(QImage::Format_ARGB32));
 	result.setDevicePixelRatio(mask.devicePixelRatio());
-	QRgb* bitsStart = reinterpret_cast<QRgb*>(result.bits());
-	const QRgb* bitsEnd = bitsStart + result.width() * result.height();
+	QRgb* bits_start = reinterpret_cast<QRgb*>(result.bits());
+	const QRgb* bits_end = bits_start + result.width() * result.height();
 	const QRgb tint = color.rgb() & 0x00ffffff;
 	const QRgb alpha = QRgb(color.alpha());
-	for (QRgb* pixel = bitsStart; pixel < bitsEnd; ++pixel) {
-		QRgb pixelAlpha = (((~*pixel) & 0xff) * alpha) >> 8;
-		*pixel = (pixelAlpha << 24) | tint;
+	for (QRgb* pixel = bits_start; pixel < bits_end; ++pixel) {
+		QRgb pixel_alpha = (((~*pixel) & 0xff) * alpha) >> 8;
+		*pixel = (pixel_alpha << 24) | tint;
 	}
 	return QPixmap::fromImage(result);
 }
 
-typedef QPair<QPixmap, QColor> MaskAndColor;
-typedef QList<MaskAndColor> MasksAndColors;
+using MaskAndColor = QPair<QPixmap, QColor>;
+using MasksAndColors = QList<MaskAndColor>;
 static MasksAndColors masksAndColors(const Icon& icon, int dpr) {
 	MasksAndColors result;
 	for (const IconMaskAndColor& i : icon) {
-		const QString& fileName = i.first;
+		const QString& file_name = i.first;
 		const QColor color = i.second;
-		result.append(qMakePair(QPixmap(fileName), color));
+		result.append(qMakePair(QPixmap(file_name), color));
 	}
 	return result;
 }
@@ -85,17 +85,17 @@ static QPixmap combinedMask(const MasksAndColors& masks, Icon::IconStyleOptions 
 	QPixmap result(masks.first().first);
 	QPainter p(&result);
 	p.setCompositionMode(QPainter::CompositionMode_Darken);
-	auto maskImage = masks.constBegin();
-	maskImage++;
-	for (; maskImage != masks.constEnd(); ++maskImage) {
-		if (style & Icon::PunchEdges) {
+	auto mask_image = masks.constBegin();
+	mask_image++;
+	for (; mask_image != masks.constEnd(); ++mask_image) {
+		if (style & Icon::PUNCH_EDGES) {
 			p.save();
-			p.setOpacity(PunchEdgeIntensity);
+			p.setOpacity(PUNCH_EDGE_INTENSITY);
 			p.setCompositionMode(QPainter::CompositionMode_Lighten);
-			smearPixmap(&p, maskToColorAndAlpha((*maskImage).first, Qt::white), PunchEdgeWidth);
+			smearPixmap(&p, maskToColorAndAlpha((*mask_image).first, Qt::white), PUNCH_EDGE_WIDTH);
 			p.restore();
 		}
-		p.drawPixmap(0, 0, (*maskImage).first);
+		p.drawPixmap(0, 0, (*mask_image).first);
 	}
 	p.end();
 	return result;
@@ -107,29 +107,29 @@ static QPixmap masksToIcon(const MasksAndColors& masks, const QPixmap& combinedM
 	result.fill(Qt::transparent);
 	QPainter p(&result);
 
-	for (MasksAndColors::const_iterator maskImage = masks.constBegin(); maskImage != masks.constEnd(); ++maskImage) {
-		if (style & Icon::PunchEdges && maskImage != masks.constBegin()) {
+	for (MasksAndColors::const_iterator mask_image = masks.constBegin(); mask_image != masks.constEnd(); ++mask_image) {
+		if (style & Icon::PUNCH_EDGES && mask_image != masks.constBegin()) {
 			// Punch a transparent outline around an overlay.
 			p.save();
-			p.setOpacity(PunchEdgeIntensity);
+			p.setOpacity(PUNCH_EDGE_INTENSITY);
 			p.setCompositionMode(QPainter::CompositionMode_DestinationOut);
-			smearPixmap(&p, maskToColorAndAlpha((*maskImage).first, Qt::white), PunchEdgeWidth);
+			smearPixmap(&p, maskToColorAndAlpha((*mask_image).first, Qt::white), PUNCH_EDGE_WIDTH);
 			p.restore();
 		}
-		p.drawPixmap(0, 0, maskToColorAndAlpha((*maskImage).first, (*maskImage).second));
+		p.drawPixmap(0, 0, maskToColorAndAlpha((*mask_image).first, (*mask_image).second));
 	}
 
-	if (style & Icon::DropShadow) {
-		const QPixmap shadowMask = maskToColorAndAlpha(combinedMask, Qt::black);
+	if (style & Icon::DROP_SHADOW) {
+		const QPixmap shadow_mask = maskToColorAndAlpha(combinedMask, Qt::black);
 		p.setCompositionMode(QPainter::CompositionMode_DestinationOver);
 		p.setOpacity(0.05);
-		p.drawPixmap(QPointF(0, -0.501), shadowMask);
-		p.drawPixmap(QPointF(-0.501, 0), shadowMask);
-		p.drawPixmap(QPointF(0.5, 0), shadowMask);
-		p.drawPixmap(QPointF(0.5, 0.5), shadowMask);
-		p.drawPixmap(QPointF(-0.501, 0.5), shadowMask);
+		p.drawPixmap(QPointF(0, -0.501), shadow_mask);
+		p.drawPixmap(QPointF(-0.501, 0), shadow_mask);
+		p.drawPixmap(QPointF(0.5, 0), shadow_mask);
+		p.drawPixmap(QPointF(0.5, 0.5), shadow_mask);
+		p.drawPixmap(QPointF(-0.501, 0.5), shadow_mask);
 		p.setOpacity(0.2);
-		p.drawPixmap(0, 1, shadowMask);
+		p.drawPixmap(0, 1, shadow_mask);
 	}
 
 	p.end();
@@ -153,25 +153,25 @@ Icon::Icon() {}
 Icon::Icon(std::initializer_list<IconMaskAndColor> args, Icon::IconStyleOptions style)
   : QVector<IconMaskAndColor>(args), m_style(style) {}
 
-Icon::Icon(const QString& imageFileName) : m_style(None) {
+Icon::Icon(const QString& imageFileName) : m_style(NONE) {
 	append({ imageFileName, QColor() });
 }
 
 QIcon Icon::icon() const {
 	if (isEmpty()) {
 		return QIcon();
-	} else if (m_style == None) {
+	} else if (m_style == NONE) {
 		return QIcon(combinedPlainPixmaps(*this));
 	} else {
 		QIcon result;
-		const int maxDpr = qRound(qApp->devicePixelRatio());
-		for (int dpr = 1; dpr <= maxDpr; dpr++) {
+		const int max_dpr = qRound(qApp->devicePixelRatio());
+		for (int dpr = 1; dpr <= max_dpr; dpr++) {
 			const MasksAndColors masks = masksAndColors(*this, dpr);
 			const QPixmap combined_mask = combinedMask(masks, m_style);
 			result.addPixmap(masksToIcon(masks, combined_mask, m_style));
 
-			const QColor disabledColor = QColor::fromRgba(0x60a4a6a8);
-			result.addPixmap(maskToColorAndAlpha(combined_mask, disabledColor), QIcon::Disabled);
+			const QColor disabled_color = QColor::fromRgba(0x60a4a6a8);
+			result.addPixmap(maskToColorAndAlpha(combined_mask, disabled_color), QIcon::Disabled);
 		}
 		return result;
 	}
@@ -180,7 +180,7 @@ QIcon Icon::icon() const {
 QPixmap Icon::pixmap() const {
 	if (isEmpty()) {
 		return QPixmap();
-	} else if (m_style == None) {
+	} else if (m_style == NONE) {
 		return combinedPlainPixmaps(*this);
 	} else {
 		const MasksAndColors masks = masksAndColors(*this, qRound(qApp->devicePixelRatio()));
@@ -212,5 +212,5 @@ QIcon Icon::combinedIcon(const QList<QIcon>& icons) {
 				result.addPixmap(icon.pixmap(window, size, mode), mode);
 	return result;
 }
-}
-}
+}  // namespace utils
+}  // namespace moveit_rviz_plugin

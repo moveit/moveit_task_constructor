@@ -64,16 +64,16 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	const moveit::core::RobotState& to_state = to->getCurrentState();
 	for (const moveit::core::JointModel* jm : from_state.getRobotModel()->getActiveJointModels())
 		d = std::max(d, jm->getDistanceFactor() * from_state.distance(to_state, jm));
-	if (d < 1e-6)
-		return true;  // return empty result trajectory: no motion needed
 
 	result = std::make_shared<robot_trajectory::RobotTrajectory>(from->getRobotModel(), jmg);
 
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
+	if (from->isStateColliding(from_state, jmg->getName()))
+		return false;
 
 	moveit::core::RobotState waypoint(from_state);
-	double delta = props.get<double>("max_step") / d;
+	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
 	for (double t = delta; t < 1.0; t += delta) {
 		from_state.interpolate(to_state, t, waypoint);
 		result->addSuffixWayPoint(waypoint, t);
@@ -83,7 +83,9 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	}
 
 	// add goal point
-	result->addSuffixWayPoint(to->getCurrentState(), 1.0);
+	result->addSuffixWayPoint(to_state, 1.0);
+	if (from->isStateColliding(to_state, jmg->getName()))
+		return false;
 
 	// add timing, TODO: use a generic method to add timing via plugins
 	trajectory_processing::IterativeParabolicTimeParameterization timing;
@@ -100,6 +102,6 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const moveit_msgs::Constraints& path_constraints) {
 	throw std::runtime_error("Not yet implemented");
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

@@ -55,7 +55,7 @@ class JobQueue : public QObject
 	boost::condition_variable idle_condition_;
 
 public:
-	explicit JobQueue(QObject* parent = 0);
+	explicit JobQueue(QObject* parent = nullptr);
 	void addJob(const std::function<void()>& job);
 	void clear();
 	size_t numPending();
@@ -63,5 +63,5 @@ public:
 	void waitForAllJobs();
 	void executeJobs();
 };
-}
-}
+}  // namespace tools
+}  // namespace moveit

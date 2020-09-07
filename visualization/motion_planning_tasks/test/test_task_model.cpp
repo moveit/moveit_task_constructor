@@ -78,7 +78,7 @@ protected:
 	void validate(QAbstractItemModel& model, const std::initializer_list<const char*>& expected) {
 		// validate root index
 		ASSERT_EQ(model.rowCount(), static_cast<int>(expected.size()));
-		EXPECT_EQ(model.columnCount(), 3);
+		EXPECT_EQ(model.columnCount(), 4);
 		EXPECT_EQ(model.parent(QModelIndex()), QModelIndex());
 
 		// validate first-level items
@@ -97,20 +97,20 @@ protected:
 
 			// validate children
 			ASSERT_EQ(model.rowCount(idx), children);
-			EXPECT_EQ(model.columnCount(idx), 3);
+			EXPECT_EQ(model.columnCount(idx), 4);
 			EXPECT_EQ(model.rowCount(model.index(row, 1)), 0);
 
 			// validate second-level items
 			for (int child = 0; child < children; ++child) {
-				QModelIndex childIdx = model.index(child, 0, idx);
-				EXPECT_EQ(childIdx.row(), child);
-				EXPECT_EQ(childIdx.column(), 0);
-				EXPECT_EQ(childIdx.model(), &model);
-				EXPECT_EQ(model.parent(childIdx), idx);
+				QModelIndex child_idx = model.index(child, 0, idx);
+				EXPECT_EQ(child_idx.row(), child);
+				EXPECT_EQ(child_idx.column(), 0);
+				EXPECT_EQ(child_idx.model(), &model);
+				EXPECT_EQ(model.parent(child_idx), idx);
 
-				EXPECT_EQ(model.data(childIdx).toString().toStdString(), std::to_string(child));
-				EXPECT_EQ(model.rowCount(childIdx), 0);
-				EXPECT_EQ(model.columnCount(childIdx), 3);
+				EXPECT_EQ(model.data(child_idx).toString().toStdString(), std::to_string(child));
+				EXPECT_EQ(model.rowCount(child_idx), 0);
+				EXPECT_EQ(model.columnCount(child_idx), 4);
 			}
 		}
 	}
@@ -153,11 +153,11 @@ protected:
 		}
 	}
 
-	void SetUp() {
+	void SetUp() override {
 		QObject::connect(&model, &QAbstractItemModel::rowsAboutToBeInserted, [this]() { ++num_inserts; });
 		QObject::connect(&model, &QAbstractItemModel::dataChanged, [this]() { ++num_updates; });
 	}
-	void TearDown() {}
+	void TearDown() override {}
 };
 
 TEST_F(TaskListModelTest, remoteTaskModel) {

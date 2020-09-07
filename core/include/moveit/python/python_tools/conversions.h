@@ -128,5 +128,5 @@ struct RosMsgConverter : RosMsgConverterBase
 	/// Conversion from C++ object to Python object
 	static PyObject* convert(const T& msg) { return toPython(serializeMsg(msg), typeid(T)); }
 };
-}
-}
+}  // namespace python
+}  // namespace moveit

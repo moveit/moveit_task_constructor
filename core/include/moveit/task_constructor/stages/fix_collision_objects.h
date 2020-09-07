@@ -61,6 +61,6 @@ public:
 private:
 	SubTrajectory fixCollisions(planning_scene::PlanningScene& scene) const;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

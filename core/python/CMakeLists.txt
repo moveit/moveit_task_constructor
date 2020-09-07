@@ -2,7 +2,6 @@
 add_subdirectory(wrapper)
 
 if(CATKIN_ENABLE_TESTING)
-	find_package(moveit_resources REQUIRED)
 	find_package(rostest REQUIRED)
 
 	# Add folders to be run by python nosetests

@@ -94,4 +94,4 @@ public:
 	GlobalSettingsWidget* q_ptr;
 	rviz::PropertyTreeModel* properties;
 };
-}
+}  // namespace moveit_rviz_plugin

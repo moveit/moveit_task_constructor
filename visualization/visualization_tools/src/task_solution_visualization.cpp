@@ -63,6 +63,8 @@
 #include <rviz/window_manager_interface.h>
 #include <rviz/panel_dock_widget.h>
 
+#include <OgreSceneNode.h>
+
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
@@ -70,10 +72,10 @@ namespace moveit_rviz_plugin {
 TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display)
   : display_(display) {
 	// trajectory properties
-	interrupt_display_property_ =
-	    new rviz::BoolProperty("Interrupt Display", false, "Immediately show newly planned trajectory, "
-	                                                       "interrupting the currently displayed one.",
-	                           parent);
+	interrupt_display_property_ = new rviz::BoolProperty("Interrupt Display", false,
+	                                                     "Immediately show newly planned trajectory, "
+	                                                     "interrupting the currently displayed one.",
+	                                                     parent);
 
 	loop_display_property_ = new rviz::BoolProperty(
 	    "Loop Animation", false, "Indicates whether the last received path is to be animated in a loop", parent,
@@ -82,10 +84,11 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 	trail_display_property_ =
 	    new rviz::BoolProperty("Show Trail", false, "Show a path trail", parent, SLOT(changedTrail()), this);
 
-	state_display_time_property_ = new rviz::EditableEnumProperty(
-	    "State Display Time", "0.05 s", "The amount of wall-time to wait in between displaying "
-	                                    "states along a received trajectory path",
-	    parent);
+	state_display_time_property_ =
+	    new rviz::EditableEnumProperty("State Display Time", "0.05 s",
+	                                   "The amount of wall-time to wait in between displaying "
+	                                   "states along a received trajectory path",
+	                                   parent);
 	state_display_time_property_->addOptionStd("REALTIME");
 	state_display_time_property_->addOptionStd("0.05 s");
 	state_display_time_property_->addOptionStd("0.1 s");
@@ -98,14 +101,15 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 
 	// robot properties
 	robot_property_ = new rviz::Property("Robot", QString(), QString(), parent);
-	robot_visual_enabled_property_ =
-	    new rviz::BoolProperty("Show Robot Visual", true, "Indicates whether the geometry of the robot as defined for "
-	                                                      "visualisation purposes should be displayed",
-	                           robot_property_, SLOT(changedRobotVisualEnabled()), this);
+	robot_visual_enabled_property_ = new rviz::BoolProperty("Show Robot Visual", true,
+	                                                        "Indicates whether the geometry of the robot as defined for "
+	                                                        "visualisation purposes should be displayed",
+	                                                        robot_property_, SLOT(changedRobotVisualEnabled()), this);
 
 	robot_collision_enabled_property_ =
-	    new rviz::BoolProperty("Show Robot Collision", false, "Indicates whether the geometry of the robot as defined "
-	                                                          "for collision detection purposes should be displayed",
+	    new rviz::BoolProperty("Show Robot Collision", false,
+	                           "Indicates whether the geometry of the robot as defined "
+	                           "for collision detection purposes should be displayed",
 	                           robot_property_, SLOT(changedRobotCollisionEnabled()), this);
 
 	robot_alpha_property_ = new rviz::FloatProperty("Robot Alpha", 0.5f, "Specifies the alpha for the robot links",
@@ -117,10 +121,10 @@ TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rvi
 	    new rviz::ColorProperty("Fixed Robot Color", QColor(150, 50, 150), "The color of the animated robot",
 	                            robot_property_, SLOT(changedRobotColor()), this);
 
-	enable_robot_color_property_ =
-	    new rviz::BoolProperty("Use Fixed Robot Color", false, "Specifies whether the fixed robot color should be used."
-	                                                           " If not, the original color is used.",
-	                           robot_property_, SLOT(enabledRobotColor()), this);
+	enable_robot_color_property_ = new rviz::BoolProperty("Use Fixed Robot Color", false,
+	                                                      "Specifies whether the fixed robot color should be used."
+	                                                      " If not, the original color is used.",
+	                                                      robot_property_, SLOT(enabledRobotColor()), this);
 
 	// planning scene properties
 	scene_enabled_property_ =
@@ -205,7 +209,7 @@ void TaskSolutionVisualization::setName(const QString& name) {
 		slider_dock_panel_->setWindowTitle(name + " - Slider");
 }
 
-void TaskSolutionVisualization::onRobotModelLoaded(robot_model::RobotModelConstPtr robot_model) {
+void TaskSolutionVisualization::onRobotModelLoaded(const robot_model::RobotModelConstPtr& robot_model) {
 	// Error check
 	if (!robot_model) {
 		ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot model found");
@@ -265,7 +269,7 @@ void TaskSolutionVisualization::changedTrail() {
 	for (std::size_t i = 0; i < trail_.size(); i++) {
 		int waypoint_i = std::min(i * stepsize, t->getWayPointCount() - 1);  // limit to last trajectory point
 		rviz::Robot* r =
-		    new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), NULL);
+		    new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), nullptr);
 		r->load(*scene_->getRobotModel()->getURDF());
 		r->setVisualVisible(robot_visual_enabled_property_->getBool());
 		r->setCollisionVisible(robot_collision_enabled_property_->getBool());
@@ -280,22 +284,22 @@ void TaskSolutionVisualization::changedTrail() {
 
 void TaskSolutionVisualization::changedRobotAlpha() {
 	robot_render_->setAlpha(robot_alpha_property_->getFloat());
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setAlpha(robot_alpha_property_->getFloat());
+	for (auto& waypoint : trail_)
+		waypoint->setAlpha(robot_alpha_property_->getFloat());
 }
 
 void TaskSolutionVisualization::changedRobotVisualEnabled() {
 	robot_render_->setVisualVisible(robot_visual_enabled_property_->getBool());
 	renderCurrentWayPoint();
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setVisualVisible(robot_visual_enabled_property_->getBool());
+	for (auto& waypoint : trail_)
+		waypoint->setVisualVisible(robot_visual_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::changedRobotCollisionEnabled() {
 	robot_render_->setCollisionVisible(robot_collision_enabled_property_->getBool());
 	renderCurrentWayPoint();
-	for (std::size_t i = 0; i < trail_.size(); ++i)
-		trail_[i]->setCollisionVisible(robot_collision_enabled_property_->getBool());
+	for (auto& waypoint : trail_)
+		waypoint->setCollisionVisible(robot_collision_enabled_property_->getBool());
 }
 
 void TaskSolutionVisualization::onEnable() {
@@ -402,9 +406,8 @@ void TaskSolutionVisualization::update(float wall_dt, float ros_dt) {
 			current_state_time_ = 0.0;
 			trail_scene_node_->setVisible(false);
 		} else if (tm < 0.0) {  // using realtime: skip to next waypoint based on elapsed display time
-			while (current_state_ < max_state_index &&
-			       (tm = displaying_solution_->getWayPointDurationFromPrevious(current_state_ + 1)) <
-			           current_state_time_) {
+			while (current_state_ < max_state_index && (tm = displaying_solution_->getWayPointDurationFromPrevious(
+			                                                current_state_ + 1)) < current_state_time_) {
 				++current_state_;
 				current_state_time_ -= tm;
 			}
@@ -616,9 +619,10 @@ void TaskSolutionVisualization::setVisibility(Ogre::SceneNode* node, Ogre::Scene
 
 void TaskSolutionVisualization::setVisibility() {
 	// main scene node is visible if animation, trail, or panel is shown, or if display is locked
-	setVisibility(main_scene_node_, parent_scene_node_, display_->isEnabled() && displaying_solution_ &&
-	                                                        (animating_ || locked_ || trail_scene_node_->getParent() ||
-	                                                         (slider_panel_ && slider_panel_->isVisible())));
+	setVisibility(
+	    main_scene_node_, parent_scene_node_,
+	    display_->isEnabled() && displaying_solution_ &&
+	        (animating_ || locked_ || trail_scene_node_->getParent() || (slider_panel_ && slider_panel_->isVisible())));
 }
 
 }  // namespace moveit_rviz_plugin

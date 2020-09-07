@@ -79,9 +79,9 @@ rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
 }
 
 // TaskPanel singleton
-static QPointer<TaskPanel> singleton_;
+static QPointer<TaskPanel> SINGLETON;
 // count active TaskDisplays
-static uint display_count_ = 0;
+static uint DISPLAY_COUNT = 0;
 
 TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this)) {
 	Q_D(TaskPanel);
@@ -105,8 +105,8 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 
 	// if still undefined, this becomes the global instance
-	if (singleton_.isNull())
-		singleton_ = this;
+	if (SINGLETON.isNull())
+		SINGLETON = this;
 }
 
 TaskPanel::~TaskPanel() {
@@ -131,22 +131,22 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
 }
 
 void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
-	++display_count_;
+	++DISPLAY_COUNT;
 
 	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
-	if (singleton_ || !vis_frame)
+	if (SINGLETON || !vis_frame)
 		return;  // already define, nothing to do
 
 	QDockWidget* dock =
 	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
 	                              Qt::LeftDockWidgetArea, true /* floating */);
-	assert(dock->widget() == singleton_);
+	assert(dock->widget() == SINGLETON);
 }
 
 void TaskPanel::decDisplayCount() {
-	Q_ASSERT(display_count_ > 0);
-	if (--display_count_ == 0 && singleton_)
-		singleton_->deleteLater();
+	Q_ASSERT(DISPLAY_COUNT > 0);
+	if (--DISPLAY_COUNT == 0 && SINGLETON)
+		SINGLETON->deleteLater();
 }
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel* q_ptr) : q_ptr(q_ptr) {
@@ -192,7 +192,7 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	// recursively expand all children
 	if (depth != 0) {
 		for (int row = 0, rows = index.model()->rowCount(index); row < rows; ++row)
-			setExpanded(view, index.child(row, 0), expand, depth - 1);
+			setExpanded(view, index.model()->index(row, 0, index), expand, depth - 1);
 	}
 
 	view->setExpanded(index, expand);
@@ -212,7 +212,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 		                 if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
 			                 int expand = this->q_ptr->initial_task_expand->getOptionInt();
 			                 for (int row = first; row <= last; ++row) {
-				                 QModelIndex child = parent.child(row, 0);
+				                 QModelIndex child = parent.model()->index(row, 0, parent);
 				                 if (expand != TaskView::EXPAND_NONE) {
 					                 // recursively expand all inserted items
 					                 setExpanded(tasks_view, child, true);
@@ -226,7 +226,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 			                 }
 			                 tasks_view->setExpanded(parent, true);  // expand parent group item
 		                 }
-		              });
+	                 });
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -234,11 +234,11 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	tasks_view->setDropIndicatorShown(true);
 	tasks_view->setDragEnabled(true);
 
-	solutions_view->setAutoHideSections({ 1, 2 });
-	solutions_view->setStretchSection(2);
+	actionShowTimeColumn->setChecked(true);
 
 	// init actions
-	tasks_view->addActions({ actionAddLocalTask, actionRemoveTaskTreeRows });
+	// TODO(v4hn): add actionAddLocalTask once there is something meaningful to add
+	tasks_view->addActions({ /*actionAddLocalTask,*/ actionRemoveTaskTreeRows, actionShowTimeColumn });
 }
 
 std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const QModelIndex& index) const {
@@ -263,9 +263,13 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new TaskViewPrivate(this)) {
 	Q_D(TaskView);
 
+	d_ptr->tasks_property_splitter->setStretchFactor(0, 3);
+	d_ptr->tasks_property_splitter->setStretchFactor(1, 1);
+
 	// connect signals
 	connect(d->actionRemoveTaskTreeRows, SIGNAL(triggered()), this, SLOT(removeSelectedStages()));
 	connect(d->actionAddLocalTask, SIGNAL(triggered()), this, SLOT(addTask()));
+	connect(d->actionShowTimeColumn, &QAction::triggered, [this](bool checked) { show_time_column->setValue(checked); });
 
 	connect(d->tasks_view->selectionModel(), SIGNAL(currentChanged(QModelIndex, QModelIndex)), this,
 	        SLOT(onCurrentStageChanged(QModelIndex, QModelIndex)));
@@ -287,6 +291,9 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
+
+	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
+	connect(show_time_column, SIGNAL(changed()), this, SLOT(onShowTimeChanged()));
 }
 
 TaskView::~TaskView() {
@@ -294,25 +301,25 @@ TaskView::~TaskView() {
 }
 
 void TaskView::save(rviz::Config config) {
-	auto writeSplitterSizes = [&config](QSplitter* splitter, const QString& key) {
+	auto write_splitter_sizes = [&config](QSplitter* splitter, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
 		for (int s : splitter->sizes()) {
 			rviz::Config item = group.listAppendNew();
 			item.setValue(s);
 		}
 	};
-	writeSplitterSizes(d_ptr->tasks_property_splitter, "property_splitter");
-	writeSplitterSizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
+	write_splitter_sizes(d_ptr->tasks_property_splitter, "property_splitter");
+	write_splitter_sizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
 
-	auto writeColumnSizes = [&config](QTreeView* view, const QString& key) {
+	auto write_column_sizes = [&config](QHeaderView* view, const QString& key) {
 		rviz::Config group = config.mapMakeChild(key);
-		for (int c = 0, end = view->header()->count(); c != end; ++c) {
+		for (int c = 0, end = view->count(); c != end; ++c) {
 			rviz::Config item = group.listAppendNew();
-			item.setValue(view->columnWidth(c));
+			item.setValue(view->sectionSize(c));
 		}
 	};
-	writeColumnSizes(d_ptr->tasks_view, "tasks_view_columns");
-	writeColumnSizes(d_ptr->solutions_view, "solutions_view_columns");
+	write_column_sizes(d_ptr->tasks_view->header(), "tasks_view_columns");
+	write_column_sizes(d_ptr->solutions_view->header(), "solutions_view_columns");
 
 	const QHeaderView* view = d_ptr->solutions_view->header();
 	rviz::Config group = config.mapMakeChild("solution_sorting");
@@ -324,7 +331,7 @@ void TaskView::load(const rviz::Config& config) {
 	if (!config.isValid())
 		return;
 
-	auto readSizes = [&config](const QString& key) {
+	auto read_sizes = [&config](const QString& key) {
 		rviz::Config group = config.mapGetChild(key);
 		QList<int> sizes, empty;
 		for (int i = 0; i < group.listLength(); ++i) {
@@ -340,19 +347,19 @@ void TaskView::load(const rviz::Config& config) {
 		}
 		return sizes;
 	};
-	d_ptr->tasks_property_splitter->setSizes(readSizes("property_splitter"));
-	d_ptr->tasks_solutions_splitter->setSizes(readSizes("solutions_splitter"));
+	d_ptr->tasks_property_splitter->setSizes(read_sizes("property_splitter"));
+	d_ptr->tasks_solutions_splitter->setSizes(read_sizes("solutions_splitter"));
 
 	int column = 0;
-	for (int w : readSizes("tasks_view_columns"))
+	for (int w : read_sizes("tasks_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
 	column = 0;
-	for (int w : readSizes("solutions_view_columns"))
+	for (int w : read_sizes("solutions_view_columns"))
 		d_ptr->tasks_view->setColumnWidth(++column, w);
 
 	QTreeView* view = d_ptr->solutions_view;
 	rviz::Config group = config.mapGetChild("solution_sorting");
-	int order;
+	int order = 0;
 	if (group.mapGetInt("column", &column) && group.mapGetInt("order", &order))
 		view->sortByColumn(column, static_cast<Qt::SortOrder>(order));
 }
@@ -413,10 +420,10 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 
 	// update the PropertyModel
-	view = d_ptr->property_view;
-	sm = view->selectionModel();
+	QTreeView* pview = d_ptr->property_view;
+	sm = pview->selectionModel();
 	m = task ? task->getPropertyModel(task_index) : nullptr;
-	view->setModel(m);
+	pview->setModel(m);
 	delete sm;  // we don't store the selection model
 }
 
@@ -474,6 +481,14 @@ void TaskView::onExecCurrentSolution() const {
 	d_ptr->exec_action_client_.sendGoal(goal);
 }
 
+void TaskView::onShowTimeChanged() {
+	auto* header = d_ptr->tasks_view->header();
+	bool show = show_time_column->getBool();
+	if (header->count() > 3)
+		d_ptr->tasks_view->header()->setSectionHidden(3, !show);
+	d_ptr->actionShowTimeColumn->setChecked(show);
+}
+
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
   : q_ptr(q_ptr) {
 	setupUi(q_ptr);
@@ -484,6 +499,8 @@ GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q
 GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
   : SubPanel(parent), d_ptr(new GlobalSettingsWidgetPrivate(this, root)) {
 	Q_D(GlobalSettingsWidget);
+
+	d->view->expandAll();
 	connect(d->properties, &rviz::PropertyTreeModel::configChanged, this, &GlobalSettingsWidget::configChanged);
 }
 
@@ -498,6 +515,6 @@ void GlobalSettingsWidget::save(rviz::Config config) {
 void GlobalSettingsWidget::load(const rviz::Config& config) {
 	d_ptr->properties->getRoot()->load(config);
 }
-}
+}  // namespace moveit_rviz_plugin
 
 #include "moc_task_panel.cpp"

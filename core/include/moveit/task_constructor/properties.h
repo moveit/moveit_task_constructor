@@ -75,7 +75,7 @@ class Property
 	         const boost::any& default_value);
 
 public:
-	typedef boost::typeindex::type_info type_info;
+	using type_info = boost::typeindex::type_info;
 
 	/// Construct a property holding a any value
 	Property();
@@ -89,9 +89,9 @@ public:
 	/// exception thrown when trying to set a value not matching the declared type
 	class type_error;
 
-	typedef uint SourceFlags;
+	using SourceFlags = uint;
 	/// function callback used to initialize property value from another PropertyMap
-	typedef std::function<boost::any(const PropertyMap& other)> InitializerFunction;
+	using InitializerFunction = std::function<boost::any(const PropertyMap&)>;
 
 	/// set current value and default value
 	void setValue(const boost::any& value);
@@ -191,11 +191,11 @@ struct hasDeserialize<T, decltype(std::declval<std::istream&>() >> std::declval<
 class PropertySerializerBase
 {
 public:
-	typedef std::string (*SerializeFunction)(const boost::any&);
-	typedef boost::any (*DeserializeFunction)(const std::string&);
+	using SerializeFunction = std::string (*)(const boost::any&);
+	using DeserializeFunction = boost::any (*)(const std::string&);
 
-	static std::string dummySerialize(const boost::any&) { return ""; }
-	static boost::any dummyDeserialize(const std::string&) { return boost::any(); }
+	static std::string dummySerialize(const boost::any& /*unused*/) { return ""; }
+	static boost::any dummyDeserialize(const std::string& /*unused*/) { return boost::any(); }
 
 protected:
 	static bool insert(const std::type_index& type_index, const std::string& type_name, SerializeFunction serialize,
@@ -288,8 +288,8 @@ public:
 	Property& property(const std::string& name);
 	const Property& property(const std::string& name) const { return const_cast<PropertyMap*>(this)->property(name); }
 
-	typedef std::map<std::string, Property>::iterator iterator;
-	typedef std::map<std::string, Property>::const_iterator const_iterator;
+	using iterator = std::map<std::string, Property>::iterator;
+	using const_iterator = std::map<std::string, Property>::const_iterator;
 
 	iterator begin() { return props_.begin(); }
 	iterator end() { return props_.end(); }

@@ -80,8 +80,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	kinematic_constraints::KinematicConstraintSet kcs(sandbox_scene->getRobotModel());
 	kcs.add(path_constraints, sandbox_scene->getTransforms());
 
-	auto isValid = [&sandbox_scene, &kcs](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
-	                                      const double* joint_positions) {
+	auto is_valid = [&sandbox_scene, &kcs](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
+	                                       const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
 		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) &&
@@ -93,11 +93,11 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
-	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), isValid);
+	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid);
 #else
 	double achieved_fraction = sandbox_scene->getCurrentStateNonConst().computeCartesianPath(
 	    jmg, trajectory, &link, target, true, props.get<double>("step_size"), props.get<double>("jump_threshold"),
-	    isValid);
+	    is_valid);
 #endif
 
 	if (!trajectory.empty()) {
@@ -112,6 +112,6 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }
-}
-}
-}
+}  // namespace solvers
+}  // namespace task_constructor
+}  // namespace moveit

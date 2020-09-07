@@ -45,5 +45,5 @@ void export_ros_init() {
 	    .value("NoRosout", ros::init_options::NoRosout)
 	    .export_values();
 }
-}
-}
+}  // namespace python
+}  // namespace moveit

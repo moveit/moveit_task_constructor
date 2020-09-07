@@ -103,8 +103,11 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	steps_ = 0;
 	size_t i = 0;
 	for (const auto& sub : msg.sub_trajectory) {
-		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), ""));
+		data_[i].trajectory_.reset(new robot_trajectory::RobotTrajectory(ref_scene->getRobotModel(), nullptr));
 		data_[i].trajectory_->setRobotTrajectoryMsg(ref_scene->getCurrentState(), sub.trajectory);
+		data_[i].joints_ = sub.trajectory.joint_trajectory.joint_names;
+		data_[i].joints_.insert(data_[i].joints_.end(), sub.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
+		                        sub.trajectory.multi_dof_joint_trajectory.joint_names.end());
 		data_[i].comment_ = sub.info.comment;
 		data_[i].creator_id_ = sub.info.stage_id;
 		steps_ += data_[i].trajectory_->getWayPointCount();
@@ -115,7 +118,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		// create new reference scene for next iteration
 		ref_scene = ref_scene->diff();
 
-		if (sub.info.markers.size())
+		if (!sub.info.markers.empty())
 			data_[i].markers_.reset(new MarkerVisualization(sub.info.markers, *ref_scene));
 		else
 			data_[i].markers_.reset();
@@ -129,7 +132,7 @@ void DisplaySolution::fillMessage(moveit_task_constructor_msgs::Solution& msg) c
 	auto traj_it = msg.sub_trajectory.begin();
 	for (const auto& sub : data_) {
 		sub.scene_->getPlanningSceneDiffMsg(traj_it->scene_diff);
-		sub.trajectory_->getRobotTrajectoryMsg(traj_it->trajectory);
+		sub.trajectory_->getRobotTrajectoryMsg(traj_it->trajectory, sub.joints_);
 		++traj_it;
 	}
 }

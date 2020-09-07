@@ -54,13 +54,13 @@
 namespace rviz {
 class StringProperty;
 class RosTopicProperty;
-}
+}  // namespace rviz
 
 namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotModel)
 }
-}
+}  // namespace moveit
 namespace rdf_loader {
 MOVEIT_CLASS_FORWARD(RDFLoader)
 }
@@ -76,16 +76,16 @@ class TaskDisplay : public rviz::Display
 
 public:
 	TaskDisplay();
-	~TaskDisplay();
+	~TaskDisplay() override;
 
 	void loadRobotModel();
 
 	void update(float wall_dt, float ros_dt) override;
 	void reset() override;
-	void save(rviz::Config config) const;
-	void load(const rviz::Config& config);
+	void save(rviz::Config config) const override;
+	void load(const rviz::Config& config) override;
 
-	void setName(const QString& name);
+	void setName(const QString& name) override;
 	void setSolutionStatus(bool ok);
 
 	TaskListModel& getTaskListModel() { return *task_list_model_; }
@@ -132,6 +132,11 @@ protected:
 	// Load robot model
 	rdf_loader::RDFLoaderPtr rdf_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
+
+	// topic namespace for ROS interfaces of task
+	std::string base_ns_;
+	// Indicates whether description was received for current task
+	bool received_task_description_;
 
 	// Properties
 	rviz::StringProperty* robot_description_property_;

@@ -45,8 +45,8 @@ namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(RobotState)
 MOVEIT_CLASS_FORWARD(JointModelGroup)
-}
-}
+}  // namespace core
+}  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
@@ -79,6 +79,7 @@ public:
 	void compute() override;
 
 	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
+	void setGroup(const std::string& group) { setProperty("group", group); }
 
 	/// setters for IK frame
 	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
@@ -91,7 +92,11 @@ public:
 	}
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
-	/// setters for target pose
+	/** setters for target pose property
+	 *
+	 * This property should almost always be set in the InterfaceState sent by the child.
+	 * If possible, avoid setting it manually.
+	 */
 	void setTargetPose(const geometry_msgs::PoseStamped& pose) { setProperty("target_pose", pose); }
 	void setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame = "");
 	template <typename T>
@@ -108,6 +113,6 @@ public:
 protected:
 	ordered<const SolutionBase*> upstream_solutions_;
 };
-}
-}
-}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit

@@ -58,7 +58,7 @@ protected:
 	}
 };
 // set of template types to test for
-typedef ::testing::Types<int, int*, mtc::SolutionBasePtr, mtc::SolutionBaseConstPtr> TypeInstances;
+using TypeInstances = ::testing::Types<int, int*, mtc::SolutionBasePtr, mtc::SolutionBaseConstPtr>;
 TYPED_TEST_CASE(ValueOrPointeeLessTest, TypeInstances);
 TYPED_TEST(ValueOrPointeeLessTest, less) {
 	EXPECT_TRUE(this->less(2, 3));
@@ -131,8 +131,8 @@ template <typename ValueType, typename CostType = int>
 class CostOrderedTest : public ::testing::Test
 {
 protected:
-	typedef std::deque<ValueType> container_type;
-	typedef cost_ordered<ValueType, std::deque<ValueType>, CostType> queue_type;
+	using container_type = std::deque<ValueType>;
+	using queue_type = cost_ordered<ValueType, std::deque<ValueType>, CostType>;
 
 	CostOrderedTest() {}
 
@@ -145,10 +145,10 @@ protected:
 
 	cost_ordered<ValueType, CostType> queue;
 
-	void SetUp() {}
-	void TearDown() {}
+	void SetUp() override {}
+	void TearDown() override {}
 };
-typedef CostOrderedTest<int, int> CostOrderedTestInt;
+using CostOrderedTestInt = CostOrderedTest<int, int>;
 
 TEST_F(CostOrderedTestInt, ordered_push) {
 	auto top = *insert(2, 2);
