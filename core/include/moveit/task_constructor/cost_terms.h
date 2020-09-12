@@ -139,12 +139,21 @@ protected:
 class Clearance : public CostTerm
 {
 public:
+	enum class Mode
+	{
+		AUTO /* TRAJECTORY, or START_INTERFACE if no trajectory is given */,
+		START_INTERFACE,
+		END_INTERFACE,
+		TRAJECTORY
+	};
+
 	Clearance(bool with_world = true, bool cumulative = false, std::string group_property = "group",
-	          Interface::Direction interface = Interface::NONE);
+	          Mode mode = Mode::AUTO);
 	bool with_world;
 	bool cumulative;
 	std::string group_property;
-	Interface::Direction interface;
+
+	Mode mode;
 
 	std::function<double(double)> distance_to_cost;
 

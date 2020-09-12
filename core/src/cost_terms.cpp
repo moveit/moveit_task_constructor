@@ -125,12 +125,12 @@ double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 	return distance;
 }
 
-Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Interface::Direction interface)
+Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Mode mode)
   : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }
   , with_world{ with_world }
   , cumulative{ cumulative }
   , group_property{ group_property }
-  , interface{ interface }
+  , mode{ mode }
   , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
 double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
@@ -140,7 +140,7 @@ double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
 	request.type =
 	    cumulative ? collision_detection::DistanceRequestType::SINGLE : collision_detection::DistanceRequestType::GLOBAL;
 
-	const auto& state{ (interface == Interface::END) ? s.end() : s.start() };
+	const auto& state{ (mode == Mode::END_INTERFACE) ? s.end() : s.start() };
 
 	// prefer interface state property over stage property to find group_name
 	// TODO: This pattern is general enough to justify its own interface (in the properties?).
@@ -186,8 +186,8 @@ double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
 
 	double distance{ 0.0 };
 
-	if (interface == Interface::START || interface == Interface::END ||
-	    (interface == Interface::NONE && s.trajectory() == nullptr)) {
+	if (mode == Mode::START_INTERFACE || mode == Mode::END_INTERFACE ||
+	    (mode == Mode::AUTO && s.trajectory() == nullptr)) {
 		auto distance_data{ check_distance(state, state->scene()->getCurrentState()) };
 		if (distance_data.distance < 0) {
 			comment = collision_comment(distance_data);

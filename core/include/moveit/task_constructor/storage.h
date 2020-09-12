@@ -163,7 +163,6 @@ public:
 
 	enum Direction
 	{
-		NONE = 0,
 		FORWARD,
 		BACKWARD,
 		START = FORWARD,
