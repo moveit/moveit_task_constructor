@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the copyright holders nor the names of its
+ *   * Neither the name of the copyright holders nor the names of their
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,31 +31,35 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-/* Authors: Michael 'v4hn' Goerner */
+/* Author: Michael 'v4hn' Goerner */
 
-#pragma once
+#include <moveit/task_constructor/stages/passthrough.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/marker_tools.h>
 
-#include <moveit/task_constructor/container.h>
-#include <moveit/task_constructor/cost_queue.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <moveit/task_constructor/container_p.h>
+
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
+#include <moveit/robot_state/robot_state.h>
+
 #include <Eigen/Geometry>
+#include <eigen_conversions/eigen_msg.h>
+#include <chrono>
+#include <functional>
+#include <iterator>
+#include <ros/console.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-/** Generic Wrapper that passes on a solution
- *
- * Useful to set a custom CostTransform via Stage::setCostTerm
- * to change a solution's cost without loosing the original value
- */
-class Forward : public WrapperBase
-{
-public:
-	Forward(const std::string& name = "Forward", Stage::pointer&& child = Stage::pointer());
+PassThrough::PassThrough(const std::string& name, Stage::pointer&& child) : WrapperBase(name, std::move(child)) {}
 
-	void onNewSolution(const SolutionBase& s) override;
-};
+void PassThrough::onNewSolution(const SolutionBase& s) {
+	this->liftSolution(s);
+}
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

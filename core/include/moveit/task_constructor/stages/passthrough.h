@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the copyright holders nor the names of their
+ *   * Neither the name of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,35 +31,31 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-/* Author: Michael 'v4hn' Goerner */
+/* Authors: Michael 'v4hn' Goerner */
 
-#include <moveit/task_constructor/stages/forward.h>
-#include <moveit/task_constructor/storage.h>
-#include <moveit/task_constructor/marker_tools.h>
+#pragma once
 
-#include <moveit/task_constructor/container_p.h>
-
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/robot_state/conversions.h>
-#include <moveit/robot_state/robot_state.h>
-
+#include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/cost_queue.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
-#include <chrono>
-#include <functional>
-#include <iterator>
-#include <ros/console.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-Forward::Forward(const std::string& name, Stage::pointer&& child) : WrapperBase(name, std::move(child)) {}
+/** Generic Wrapper that passes on a solution
+ *
+ * Useful to set a custom CostTransform via Stage::setCostTerm
+ * to change a solution's cost without loosing the original value
+ */
+class PassThrough : public WrapperBase
+{
+public:
+	PassThrough(const std::string& name = "PassThrough", Stage::pointer&& child = Stage::pointer());
 
-void Forward::onNewSolution(const SolutionBase& s) {
-	this->liftSolution(s);
-}
-
+	void onNewSolution(const SolutionBase& s) override;
+};
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

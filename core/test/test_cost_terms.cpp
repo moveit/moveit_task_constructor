@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
-#include <moveit/task_constructor/stages/forward.h>
+#include <moveit/task_constructor/stages/passthrough.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -238,10 +238,10 @@ TEST(CostTerm, StageTypes) {
 	EXPECT_EQ(container.solutions().front()->cost(), constant.cost) << "custom cost works for backward propagator";
 }
 
-TEST(CostTerm, ForwardUsesCost) {
+TEST(CostTerm, PassThroughUsesCost) {
 	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
-	Standalone<stages::Forward> container(robot);
+	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
 	cost::Constant constant_stage{ 84.0 };
@@ -250,32 +250,32 @@ TEST(CostTerm, ForwardUsesCost) {
 	container.computeWithStages({ std::move(stage) });
 
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_stage.cost) << "Forward forwards children's cost";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage.cost) << "Child cost equals Forward cost";
+	EXPECT_EQ(wrapped.cost(), constant_stage.cost) << "PassThrough forwards children's cost";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage.cost) << "Child cost equals PassThrough cost";
 }
 
-TEST(CostTerm, ForwardOverwritesCost) {
+TEST(CostTerm, PassThroughOverwritesCost) {
 	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
-	Standalone<stages::Forward> container(robot);
+	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
 	cost::Constant constant_stage{ 84.0 };
 	stage->setCostTerm(constant_stage);
 
-	cost::Constant constant_forward{ 72.0 };
-	container.setCostTerm(constant_forward);
+	cost::Constant constant_passthrough{ 72.0 };
+	container.setCostTerm(constant_passthrough);
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_forward.cost) << "Forward can apply custom cost";
+	EXPECT_EQ(wrapped.cost(), constant_passthrough.cost) << "PassThrough can apply custom cost";
 	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage.cost) << "child's cost is not affected";
 }
 
-TEST(CostTerm, ForwardCanModifyCost) {
+TEST(CostTerm, PassThroughCanModifyCost) {
 	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
-	Standalone<stages::Forward> container(robot);
+	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
 	cost::Constant constant{ 8.0 };
@@ -284,7 +284,7 @@ TEST(CostTerm, ForwardCanModifyCost) {
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant.cost * constant.cost) << "Forward can compute cost based on child";
+	EXPECT_EQ(wrapped.cost(), constant.cost * constant.cost) << "PassThrough can compute cost based on child";
 	EXPECT_EQ(wrapped.wrapped()->cost(), constant.cost) << "child's cost is not affected";
 }
 
