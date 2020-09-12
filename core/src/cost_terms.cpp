@@ -116,10 +116,10 @@ double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 	}
 
 	double distance{ 0.0 };
-	Eigen::Translation3d position{ traj->getWayPoint(0).getFrameTransform(link_name).translation() };
+	Eigen::Vector3d position{ traj->getWayPoint(0).getFrameTransform(link_name).translation() };
 	for (size_t i{ 1 }; i < traj->getWayPointCount(); ++i) {
-		Eigen::Translation3d new_position{ traj->getWayPoint(i).getFrameTransform(link_name).translation() };
-		distance += (new_position.vector() - position.vector()).norm();
+		const auto& new_position{ traj->getWayPoint(i).getFrameTransform(link_name).translation() };
+		distance += (new_position - position).norm();
 		position = new_position;
 	}
 	return distance;
