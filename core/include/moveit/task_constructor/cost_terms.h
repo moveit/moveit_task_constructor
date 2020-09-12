@@ -146,6 +146,8 @@ public:
 	std::string group_property;
 	Interface::Direction interface;
 
+	std::function<double(double)> distance_to_cost;
+
 protected:
 	double compute(const SubTrajectory& s, std::string& comment) const;
 };

@@ -127,10 +127,11 @@ double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 
 Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Interface::Direction interface)
   : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }
-  , with_world(with_world)
-  , cumulative(cumulative)
-  , group_property(group_property)
-  , interface(interface) {}
+  , with_world{ with_world }
+  , cumulative{ cumulative }
+  , group_property{ group_property }
+  , interface{ interface }
+  , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
 double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
 	const std::string PREFIX{ "Clearance: " };
@@ -216,7 +217,7 @@ double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
 		comment = desc.str();
 	}
 
-	return 1.0 / (distance + 1e-5);
+	return distance_to_cost(distance);
 }
 }  // namespace cost
 }  // namespace task_constructor
