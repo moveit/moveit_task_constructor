@@ -184,8 +184,6 @@ protected:
 	// validate that child's interface matches mine (considering start or end only as determined by mask)
 	template <unsigned int mask>
 	void validateInterface(const StagePrivate& child, InterfaceFlags required) const;
-
-	SolutionSequence::CostAggregator aggregator_;
 };
 PIMPL_FUNCTIONS(SerialContainer)
 

@@ -11,8 +11,6 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
-
 using namespace moveit::task_constructor;
 using namespace planning_scene;
 
@@ -351,47 +349,4 @@ TEST(CostTerm, CompositeSolutionsContainerCost) {
 	    << "container cost term overwrites stage costs";
 	EXPECT_EQ(s1_ptr->solutions().front()->cost(), STAGE_COST) << "child cost is not affected";
 }
-
-TEST(CostTerm, CompositeSolutionsContainerAggregator) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
-	Standalone<SerialContainer> container{ getModel() };
-
-	cost::Constant constant{ 17.0 };
-
-	{
-		auto s1{ std::make_unique<ForwardMockup>() };
-		auto s2{ std::make_unique<ForwardMockup>() };
-		auto s3{ std::make_unique<ForwardMockup>() };
-
-		container.computeWithStageCost({ std::move(s1), std::move(s2), std::move(s3) }, constant);
-		EXPECT_EQ(container.solutions().front()->cost(), 3 * constant.cost) << "default cost aggregates through stages";
-	}
-
-	{
-		container.setCostAggregator([](double a, double b) { return std::max(a, b); });
-		container.computeWithContainerCost(
-		    {
-		        std::make_unique<ForwardMockup>(),
-		        std::make_unique<ForwardMockup>(),
-		        std::make_unique<ForwardMockup>(),
-		    },
-		    constant);
-
-		EXPECT_EQ(container.solutions().front()->cost(), constant.cost)
-		    << "custom aggregator works with explicit cost term in container";
-	}
-
-	{
-		container.setCostAggregator([](auto a, auto b) { return std::max(a, b); });
-		container.computeWithStageCost(
-		    {
-		        std::make_unique<ForwardMockup>(),
-		        std::make_unique<ForwardMockup>(),
-		        std::make_unique<ForwardMockup>(),
-		    },
-		    constant);
-
-		EXPECT_EQ(container.solutions().front()->cost(), constant.cost)
-		    << "custom aggregator works without container cost term";
-	}
 }

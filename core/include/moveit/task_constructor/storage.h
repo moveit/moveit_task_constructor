@@ -318,17 +318,14 @@ class SolutionSequence : public SolutionBase
 public:
 	using container_type = std::vector<const SolutionBase*>;
 
-	explicit SolutionSequence();
-
-	SolutionSequence(container_type&& subsolutions, double cost = 0.0, Stage* creator = nullptr);
+	explicit SolutionSequence() : SolutionBase() {}
+	SolutionSequence(container_type&& subsolutions, double cost = 0.0, Stage* creator = nullptr)
+	  : SolutionBase(creator, cost), subsolutions_(std::move(subsolutions)) {}
 
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
-
-	using CostAggregator = std::function<double(double, double)>;
-	void setCostAggregator(const CostAggregator&);
 
 	/// aggregate costs along the sequence
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
@@ -339,7 +336,6 @@ public:
 	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
 
 private:
-	CostAggregator aggregator_;
 	/// series of sub solutions
 	container_type subsolutions_;
 };
