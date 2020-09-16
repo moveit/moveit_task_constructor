@@ -56,7 +56,7 @@ namespace stages {
 
 FixCollisionObjects::FixCollisionObjects(const std::string& name) : PropagatingEitherWay(name) {
 	// TODO: possibly weight solutions based on the required displacement?
-	setCostTerm(cost::Constant(0.0));
+	setCostTerm(std::make_unique<cost::Constant>(0.0));
 
 	auto& p = properties();
 	p.declare<double>("max_penetration", "maximally corrected penetration depth");

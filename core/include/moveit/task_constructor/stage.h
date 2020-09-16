@@ -138,7 +138,8 @@ private:
 };
 std::ostream& operator<<(std::ostream& os, const InitStageException& e);
 
-class CostTerm;
+MOVEIT_CLASS_FORWARD(CostTerm);
+class LambdaCostTerm;
 class ContainerBase;
 class StagePrivate;
 class Stage
@@ -214,11 +215,14 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
-	/* \brief set method to determine costs for solutions of this stage
-	 *
-	 * For composite stages, costs are computed for each SubTrajectory and aggregated
-	 */
-	void setCostTerm(const CostTerm& term);
+	/** set method to determine costs for solutions of this stage */
+
+	void setCostTerm(const CostTermConstPtr& term);
+	// overload to accept appropriate lambda expressions
+	template <typename T, typename = std::enable_if_t<std::is_constructible<LambdaCostTerm, T>::value>>
+	void setCostTerm(T term) {
+		setCostTerm(std::make_shared<LambdaCostTerm>(term));
+	}
 
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;

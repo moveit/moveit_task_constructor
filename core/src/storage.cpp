@@ -222,19 +222,7 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 }
 
 double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) const {
-	double cost{ 0.0 };
-	std::string subcomment;
-	for (auto& solution : subsolutions_) {
-		cost += solution->computeCost(f, subcomment);
-		if (!subcomment.empty()) {
-			if (!comment.empty())
-				comment.append(", ");
-			comment.append(subcomment);
-			subcomment.clear();
-		}
-	}
-
-	return cost;
+	return f(*this, comment);
 }
 
 void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
@@ -249,7 +237,7 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& soluti
 }
 
 double WrappedSolution::computeCost(const CostTerm& f, std::string& comment) const {
-	return wrapped_->computeCost(f, comment);
+	return f(*this, comment);
 }
 
 }  // namespace task_constructor

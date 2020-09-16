@@ -48,7 +48,7 @@ namespace stages {
 
 Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : Connecting(name), planner_(planners) {
 	setTimeout(1.0);
-	setCostTerm(cost::PathLength{});
+	setCostTerm(std::make_unique<cost::PathLength>());
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");

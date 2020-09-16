@@ -235,7 +235,7 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 
 void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
 	// no reason to compute costs for a failed solution
-	if (solution.isFailure() || !cost_term_)
+	if (solution.isFailure())
 		return;
 
 	// chicken-and-egg problem: we don't know whether/where we will store the solution yet,
@@ -246,7 +246,9 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 	solution.setEndState(tmp_to);
 
 	std::string comment;
-	solution.setCost(solution.computeCost(cost_term_, comment));
+	assert(cost_term_);
+	solution.setCost(solution.computeCost(*cost_term_, comment));
+
 	// If a comment was specified, add it to the solution
 	if (!comment.empty() && !solution.comment().empty()) {
 		solution.setComment(solution.comment() + " (" + comment + ")");
@@ -297,8 +299,13 @@ void Stage::reset() {
 }
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
-	// init properties once from parent
 	auto impl = pimpl();
+
+	// add a default cost term if none was given by the user
+	if (!impl->cost_term_)
+		impl->cost_term_ = std::make_unique<CostTerm>();
+
+	// init properties once from parent
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
@@ -351,8 +358,11 @@ void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 	pimpl()->solution_cbs_.erase(which);
 }
 
-void Stage::setCostTerm(const CostTerm& term) {
-	pimpl()->cost_term_ = term;
+void Stage::setCostTerm(const CostTermConstPtr& term) {
+	if (!term)
+		pimpl()->cost_term_ = std::make_unique<CostTerm>();
+	else
+		pimpl()->cost_term_ = std::move(term);
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

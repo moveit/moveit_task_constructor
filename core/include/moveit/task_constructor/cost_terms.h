@@ -44,51 +44,56 @@
 namespace moveit {
 namespace task_constructor {
 
+/** basic interface to compute costs for solutions
+ *
+ * If your cost term will only work on SubTrajectory solution objects,
+ * inherit from TrajectoryCostTerm instead.
+ */
+
+MOVEIT_CLASS_FORWARD(CostTerm);
 class CostTerm
 {
 public:
-	using SubTrajectorySig = std::function<double(const SubTrajectory&, std::string&)>;
-	using SubTrajectoryShortSig = std::function<double(const SubTrajectory&)>;
+	CostTerm() = default;
+	CostTerm(std::nullptr_t) : CostTerm{} {}
+
+	virtual double operator()(const SubTrajectory& s, std::string& comment) const;
+	virtual double operator()(const SolutionSequence& s, std::string& comment) const;
+	virtual double operator()(const WrappedSolution& s, std::string& comment) const;
+};
+
+/** base class for cost terms that only work on SubTrajectory solutions
+ *
+ */
+class TrajectoryCostTerm : public CostTerm
+{
+public:
+	double operator()(const WrappedSolution& s, std::string& comment) const override;
+};
+
+class LambdaCostTerm : public TrajectoryCostTerm
+{
+public:
+	using SubTrajectorySignature = std::function<double(const SubTrajectory&, std::string&)>;
+	using SubTrajectoryShortSignature = std::function<double(const SubTrajectory&)>;
 
 	// accept lambdas according to either signature above
-	template <typename Term>
-	CostTerm(const Term& t) : CostTerm{ decltype(sigMatcher(t)){ t } } {}
+	template <typename Term, typename Signature = decltype(signatureMatcher(std::declval<Term>()))>
+	LambdaCostTerm(const Term& t) : LambdaCostTerm{ Signature{ t } } {}
 
-	CostTerm(const SubTrajectorySig&);
-	CostTerm(const SubTrajectoryShortSig&);
-	CostTerm(std::nullptr_t);
-	CostTerm();
+	LambdaCostTerm(const SubTrajectorySignature&);
+	LambdaCostTerm(const SubTrajectoryShortSignature&);
 
-	// is this a valid CostTerm?
-	operator bool() const;
-
-	double operator()(const SolutionBase& s, std::string& comment) const;
-
-	/** describes the supported types of solutions that should be forwarded to this CostTerm
-	 *
-	 * CostTerms that support more than `SubTrajectory`s should inherit and overwrite the internal supports_ flag
-	 */
-	enum class SolutionType
-	{
-		NONE = 0,
-		TRAJECTORY = 1 << 0,
-		SEQUENCE = 1 << 1,
-		WRAPPER = 1 << 2,
-		ALL = TRAJECTORY | SEQUENCE | WRAPPER
-	};
-	Flags<SolutionType> supports() const;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
 protected:
-	CostTerm(const std::function<double(const SolutionBase&, std::string&)>&, Flags<SolutionType>);
-
-	std::function<double(const SolutionBase&, std::string&)> term_;
-	Flags<SolutionType> supports_;
+	SubTrajectorySignature term_;
 
 private:
 	template <typename T>
-	auto sigMatcher(const T& t) -> decltype(t(SubTrajectory{}), SubTrajectoryShortSig{});
+	static auto signatureMatcher(const T& t) -> decltype(t(SubTrajectory{}), SubTrajectoryShortSignature{});
 	template <typename T>
-	auto sigMatcher(const T& t) -> decltype(t(SubTrajectory{}, std::string{}), SubTrajectorySig{});
+	static auto signatureMatcher(const T& t) -> decltype(t(SubTrajectory{}, std::string{}), SubTrajectorySignature{});
 };
 
 namespace cost {
@@ -97,35 +102,39 @@ namespace cost {
 class Constant : public CostTerm
 {
 public:
-	Constant(double c);
+	Constant(double c) : cost{ c } {};
+
+	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SolutionSequence& s, std::string& comment) const override;
+	double operator()(const WrappedSolution& s, std::string& comment) const override;
 
 	double cost;
 };
 
 /// trajectory length (interpolated between waypoints)
-class PathLength : public CostTerm
+class PathLength : public TrajectoryCostTerm
 {
-public:
-	PathLength();
 	// TODO(v4hn): allow to consider specific joints only
+public:
+	double operator()(const SubTrajectory&, std::string&) const override;
 };
 
 /// execution duration of the whole trajectory
-class TrajectoryDuration : public CostTerm
+class TrajectoryDuration : public TrajectoryCostTerm
 {
 public:
-	TrajectoryDuration();
+	double operator()(const SubTrajectory&, std::string&) const override;
 };
 
-class LinkMotion : public CostTerm
+/** length of Cartesian trajection of a link */
+class LinkMotion : public TrajectoryCostTerm
 {
 public:
 	LinkMotion(std::string link_name);
 
 	std::string link_name;
 
-protected:
-	double compute(const SubTrajectory&, std::string&) const;
+	double operator()(const SubTrajectory&, std::string&) const override;
 };
 
 /** inverse distance to collision
@@ -136,7 +145,7 @@ protected:
  * \arg interface compute distances using START or END interface of solution *only*, instead of averaging over
  * trajectory
  * */
-class Clearance : public CostTerm
+class Clearance : public TrajectoryCostTerm
 {
 public:
 	enum class Mode
@@ -157,8 +166,7 @@ public:
 
 	std::function<double(double)> distance_to_cost;
 
-protected:
-	double compute(const SubTrajectory& s, std::string& comment) const;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 }  // namespace cost

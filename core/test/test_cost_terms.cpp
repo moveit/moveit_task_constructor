@@ -158,14 +158,14 @@ public:
 		runCompute();
 	}
 
-	void computeWithStageCost(std::initializer_list<StageUniquePtr> stages, const CostTerm& cost_term) {
+	void computeWithStageCost(std::initializer_list<StageUniquePtr> stages, const CostTermConstPtr& cost_term) {
 		this->setCostTerm(nullptr);
 		for (const auto& stage : stages)
 			const_cast<StageUniquePtr&&>(stage)->setCostTerm(cost_term);
 		computeWithStages(stages);
 	}
 
-	void computeWithContainerCost(std::initializer_list<StageUniquePtr> stages, const CostTerm& cost_term) {
+	void computeWithContainerCost(std::initializer_list<StageUniquePtr> stages, const CostTermPtr& cost_term) {
 		this->setCostTerm(cost_term);
 		computeWithStages(stages);
 	}
@@ -209,9 +209,9 @@ TEST(CostTerm, CostOverwrite) {
 	container.computeWithStageCost({ std::make_unique<GeneratorMockup>() }, nullptr);
 	EXPECT_EQ(container.solutions().front()->cost(), STAGE_COST) << "nullptr cost term forwards cost";
 
-	cost::Constant constant_cost{ 1.0 };
+	auto constant_cost{ std::make_shared<cost::Constant>(1.0) };
 	container.computeWithStageCost({ std::make_unique<GeneratorMockup>() }, constant_cost);
-	EXPECT_EQ(container.solutions().front()->cost(), constant_cost.cost) << "custom cost overwrites stage cost";
+	EXPECT_EQ(container.solutions().front()->cost(), constant_cost->cost) << "custom cost overwrites stage cost";
 }
 
 TEST(CostTerm, StageTypes) {
@@ -220,20 +220,20 @@ TEST(CostTerm, StageTypes) {
 
 	Standalone<SerialContainer> container(robot);
 
-	const cost::Constant constant{ 1.0 };
+	auto constant{ std::make_shared<cost::Constant>(1.0) };
 
 	// already tested above
 	// cont.computeWithStageCost(std::make_unique<GeneratorMockup>(), constant);
 	// EXPECT_EQ(cont.solutions().front()->cost(), constant.cost);
 
 	container.computeWithStageCost({ std::make_unique<ConnectMockup>() }, constant);
-	EXPECT_EQ(container.solutions().front()->cost(), constant.cost) << "custom cost works for connect";
+	EXPECT_EQ(container.solutions().front()->cost(), constant->cost) << "custom cost works for connect";
 
 	container.computeWithStageCost({ std::make_unique<ForwardMockup>() }, constant);
-	EXPECT_EQ(container.solutions().front()->cost(), constant.cost) << "custom cost works for forward propagator";
+	EXPECT_EQ(container.solutions().front()->cost(), constant->cost) << "custom cost works for forward propagator";
 
 	container.computeWithStageCost({ std::make_unique<BackwardMockup>() }, constant);
-	EXPECT_EQ(container.solutions().front()->cost(), constant.cost) << "custom cost works for backward propagator";
+	EXPECT_EQ(container.solutions().front()->cost(), constant->cost) << "custom cost works for backward propagator";
 }
 
 TEST(CostTerm, PassThroughUsesCost) {
@@ -242,14 +242,14 @@ TEST(CostTerm, PassThroughUsesCost) {
 	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
-	cost::Constant constant_stage{ 84.0 };
+	auto constant_stage{ std::make_shared<cost::Constant>(84.0) };
 	stage->setCostTerm(constant_stage);
 
 	container.computeWithStages({ std::move(stage) });
 
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_stage.cost) << "PassThrough forwards children's cost";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage.cost) << "Child cost equals PassThrough cost";
+	EXPECT_EQ(wrapped.cost(), constant_stage->cost) << "PassThrough forwards children's cost";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage->cost) << "Child cost equals PassThrough cost";
 }
 
 TEST(CostTerm, PassThroughOverwritesCost) {
@@ -258,16 +258,16 @@ TEST(CostTerm, PassThroughOverwritesCost) {
 	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
-	cost::Constant constant_stage{ 84.0 };
+	auto constant_stage{ std::make_shared<cost::Constant>(84.0) };
 	stage->setCostTerm(constant_stage);
 
-	cost::Constant constant_passthrough{ 72.0 };
+	auto constant_passthrough{ std::make_shared<cost::Constant>(72.0) };
 	container.setCostTerm(constant_passthrough);
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_passthrough.cost) << "PassThrough can apply custom cost";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage.cost) << "child's cost is not affected";
+	EXPECT_EQ(wrapped.cost(), constant_passthrough->cost) << "PassThrough can apply custom cost";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage->cost) << "child's cost is not affected";
 }
 
 TEST(CostTerm, PassThroughCanModifyCost) {
@@ -276,14 +276,14 @@ TEST(CostTerm, PassThroughCanModifyCost) {
 	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
-	cost::Constant constant{ 8.0 };
+	auto constant{ std::make_shared<cost::Constant>(8.0) };
 	stage->setCostTerm(constant);
 	container.setCostTerm([](auto&& s) { return s.cost() * s.cost(); });
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant.cost * constant.cost) << "PassThrough can compute cost based on child";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant.cost) << "child's cost is not affected";
+	EXPECT_EQ(wrapped.cost(), constant->cost * constant->cost) << "PassThrough can compute cost based on child";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant->cost) << "child's cost is not affected";
 }
 
 TEST(CostTerm, CompositeSolutions) {
@@ -300,12 +300,12 @@ TEST(CostTerm, CompositeSolutions) {
 
 	{
 		auto s1{ std::make_unique<ForwardMockup>() };
-		cost::Constant constant{ 1.0 };
+		auto constant{ std::make_shared<cost::Constant>(1.0) };
 		s1->setCostTerm(constant);
 		auto s2{ std::make_unique<ForwardMockup>() };
 
 		container.computeWithStages({ std::move(s1), std::move(s2) });
-		EXPECT_EQ(container.solutions().front()->cost(), STAGE_COST + constant.cost)
+		EXPECT_EQ(container.solutions().front()->cost(), STAGE_COST + constant->cost)
 		    << "mix of explicit and implicit cost terms works";
 	}
 
@@ -313,18 +313,18 @@ TEST(CostTerm, CompositeSolutions) {
 		auto s1{ std::make_unique<ForwardMockup>() };
 		auto s2{ std::make_unique<ForwardMockup>() };
 		auto c1{ std::make_unique<SerialContainer>() };
-		cost::Constant constant1{ 1.0 };
+		auto constant1{ std::make_shared<cost::Constant>(1.0) };
 		s1->setCostTerm(constant1);
 		s2->setCostTerm(constant1);
 		c1->add(std::move(s1));
 		c1->add(std::move(s2));
 
 		auto s3{ std::make_unique<ForwardMockup>() };
-		cost::Constant constant2{ 9.0 };
+		auto constant2{ std::make_shared<cost::Constant>(9.0) };
 		s3->setCostTerm(constant2);
 
 		container.computeWithStages({ std::move(c1), std::move(s3) });
-		EXPECT_EQ(container.solutions().front()->cost(), 2 * constant1.cost + constant2.cost)
+		EXPECT_EQ(container.solutions().front()->cost(), 2 * constant1->cost + constant2->cost)
 		    << "cost aggregation works across multiple levels";
 	}
 }
@@ -343,10 +343,9 @@ TEST(CostTerm, CompositeSolutionsContainerCost) {
 
 	auto s3{ std::make_unique<ForwardMockup>() };
 
-	container.setCostTerm(cost::TrajectoryDuration{});
+	container.setCostTerm(std::make_unique<cost::TrajectoryDuration>());
 	container.computeWithStages({ std::move(c1), std::move(s3) });
 	EXPECT_EQ(container.solutions().front()->cost(), 3 * TRAJECTORY_DURATION)
 	    << "container cost term overwrites stage costs";
 	EXPECT_EQ(s1_ptr->solutions().front()->cost(), STAGE_COST) << "child cost is not affected";
-}
 }

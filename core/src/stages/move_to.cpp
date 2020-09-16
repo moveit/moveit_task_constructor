@@ -50,7 +50,7 @@ namespace stages {
 
 MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
-	setCostTerm(cost::PathLength{});
+	setCostTerm(std::make_unique<cost::PathLength>());
 
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);

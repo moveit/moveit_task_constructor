@@ -49,38 +49,60 @@
 namespace moveit {
 namespace task_constructor {
 
-CostTerm::CostTerm() : term_{ nullptr }, supports_{ SolutionType::NONE } {}
-
-CostTerm::CostTerm(std::nullptr_t) : CostTerm{} {}
-
-CostTerm::CostTerm(const SubTrajectorySig& term)
-  : CostTerm{ [term](const SolutionBase& s, std::string& c) { return term(static_cast<const SubTrajectory&>(s), c); },
-	           SolutionType::TRAJECTORY } {}
-
-CostTerm::CostTerm(const SubTrajectoryShortSig& term)
-  : CostTerm{ [term](const SolutionBase& s, std::string&) { return term(static_cast<const SubTrajectory&>(s)); },
-	           SolutionType::TRAJECTORY } {}
-
-CostTerm::CostTerm(const std::function<double(const SolutionBase&, std::string&)>& term, Flags<SolutionType> flags)
-  : term_{ term }, supports_{ flags } {}
-
-CostTerm::operator bool() const {
-	return supports_ != Flags<SolutionType>{ SolutionType::NONE };
+double CostTerm::operator()(const SubTrajectory& s, std::string&) const {
+	return s.cost();
 }
 
-double CostTerm::operator()(const SolutionBase& s, std::string& comment) const {
+double CostTerm::operator()(const SolutionSequence& s, std::string& comment) const {
+	double cost{ 0.0 };
+	std::string subcomment;
+	for (auto& solution : s.solutions()) {
+		cost += solution->computeCost((*this), subcomment);
+		if (!subcomment.empty()) {
+			if (!comment.empty())
+				comment.append(", ");
+			comment.append(subcomment);
+			subcomment.clear();
+		}
+	}
+
+	return cost;
+}
+
+double CostTerm::operator()(const WrappedSolution& s, std::string& /*comment*/) const {
+	return s.cost();
+}
+
+double TrajectoryCostTerm::operator()(const WrappedSolution& s, std::string& comment) const {
+	return s.wrapped()->computeCost(*this, comment);
+}
+
+LambdaCostTerm::LambdaCostTerm(const SubTrajectorySignature& term)
+  : term_{ [term](const SolutionBase& s, std::string& c) { return term(static_cast<const SubTrajectory&>(s), c); } } {}
+
+LambdaCostTerm::LambdaCostTerm(const SubTrajectoryShortSignature& term)
+  : term_{ [term](const SolutionBase& s, std::string&) { return term(static_cast<const SubTrajectory&>(s)); } } {}
+
+double LambdaCostTerm::operator()(const SubTrajectory& s, std::string& comment) const {
 	assert(bool{ term_ });
 	return term_(s, comment);
 }
 
 namespace cost {
 
-Constant::Constant(double c)
-  : CostTerm{ [this](auto&&, auto&&) { return this->cost; }, SolutionType::ALL }, cost{ c } {}
+double Constant::operator()(const SubTrajectory&, std::string&) const {
+	return cost;
+}
 
-namespace {
+double Constant::operator()(const SolutionSequence&, std::string&) const {
+	return cost;
+}
 
-double pathLength(const SubTrajectory& s) {
+double Constant::operator()(const WrappedSolution&, std::string&) const {
+	return cost;
+}
+
+double PathLength::operator()(const SubTrajectory& s, std::string&) const {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr)
@@ -92,17 +114,13 @@ double pathLength(const SubTrajectory& s) {
 	return path_length;
 }
 
-}  // namespace
+double TrajectoryDuration::operator()(const SubTrajectory& s, std::string&) const {
+	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
+}
 
-PathLength::PathLength() : CostTerm{ pathLength } {}
+LinkMotion::LinkMotion(std::string link) : link_name{ std::move(link) } {}
 
-TrajectoryDuration::TrajectoryDuration()
-  : CostTerm{ [](auto&& s, auto&&) { return s.trajectory() ? s.trajectory()->getDuration() : 0.0; } } {}
-
-LinkMotion::LinkMotion(std::string link)
-  : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }, link_name{ std::move(link) } {}
-
-double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
+double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) const {
 	const auto& traj{ s.trajectory() };
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
@@ -126,14 +144,13 @@ double LinkMotion::compute(const SubTrajectory& s, std::string& comment) const {
 }
 
 Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Mode mode)
-  : CostTerm{ [this](auto&& s, auto&& c) { return this->compute(s, c); } }
-  , with_world{ with_world }
+  : with_world{ with_world }
   , cumulative{ cumulative }
   , group_property{ group_property }
   , mode{ mode }
   , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
-double Clearance::compute(const SubTrajectory& s, std::string& comment) const {
+double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
 	const std::string PREFIX{ "Clearance: " };
 
 	collision_detection::DistanceRequest request;
