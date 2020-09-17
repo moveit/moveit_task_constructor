@@ -97,7 +97,12 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
+  : me_{ me }
+  , name_{ name }
+  , cost_term_{ std::make_unique<CostTerm>() }
+  , total_compute_time_{}
+  , parent_{ nullptr }
+  , introspection_{ nullptr } {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -300,10 +305,6 @@ void Stage::reset() {
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	auto impl = pimpl();
-
-	// add a default cost term if none was given by the user
-	if (!impl->cost_term_)
-		impl->cost_term_ = std::make_unique<CostTerm>();
 
 	// init properties once from parent
 	impl->properties_.reset();
