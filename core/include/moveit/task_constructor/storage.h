@@ -248,7 +248,7 @@ public:
 	                         Introspection* introspection = nullptr) const = 0;
 	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
-	/// compute cost of this solution according to the specified CostTerm
+	/// required to dispatch to type-specific CostTerm methods via vtable
 	virtual double computeCost(const CostTerm& cost, std::string& comment) const = 0;
 
 	/// order solutions by their cost
@@ -327,7 +327,6 @@ public:
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
-	/// aggregate costs along the sequence
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
 	const container_type& solutions() const { return subsolutions_; }
@@ -359,7 +358,7 @@ public:
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
 	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
-	/// compute cost of wrapped child
+
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
 	const SolutionBase* wrapped() const { return wrapped_; }
