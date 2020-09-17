@@ -242,14 +242,14 @@ TEST(CostTerm, PassThroughUsesCost) {
 	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
-	auto constant_stage{ std::make_shared<cost::Constant>(84.0) };
-	stage->setCostTerm(constant_stage);
+	auto constant{ std::make_shared<cost::Constant>(84.0) };
+	stage->setCostTerm(constant);
 
 	container.computeWithStages({ std::move(stage) });
 
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_stage->cost) << "PassThrough forwards children's cost";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage->cost) << "Child cost equals PassThrough cost";
+	EXPECT_EQ(wrapped.cost(), constant->cost) << "PassThrough forwards children's cost";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant->cost) << "Child cost equals PassThrough cost";
 }
 
 TEST(CostTerm, PassThroughOverwritesCost) {
@@ -258,16 +258,16 @@ TEST(CostTerm, PassThroughOverwritesCost) {
 	Standalone<stages::PassThrough> container(robot);
 
 	auto stage{ std::make_unique<BackwardMockup>() };
-	auto constant_stage{ std::make_shared<cost::Constant>(84.0) };
-	stage->setCostTerm(constant_stage);
+	auto constant_inner{ std::make_shared<cost::Constant>(84.0) };
+	stage->setCostTerm(constant_inner);
 
-	auto constant_passthrough{ std::make_shared<cost::Constant>(72.0) };
-	container.setCostTerm(constant_passthrough);
+	auto constant_outer{ std::make_shared<cost::Constant>(72.0) };
+	container.setCostTerm(constant_outer);
 
 	container.computeWithStages({ std::move(stage) });
 	auto& wrapped{ dynamic_cast<const WrappedSolution&>(*container.solutions().front()) };
-	EXPECT_EQ(wrapped.cost(), constant_passthrough->cost) << "PassThrough can apply custom cost";
-	EXPECT_EQ(wrapped.wrapped()->cost(), constant_stage->cost) << "child's cost is not affected";
+	EXPECT_EQ(wrapped.cost(), constant_outer->cost) << "PassThrough can apply custom cost";
+	EXPECT_EQ(wrapped.wrapped()->cost(), constant_inner->cost) << "child's cost is not affected";
 }
 
 TEST(CostTerm, PassThroughCanModifyCost) {
