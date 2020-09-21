@@ -72,13 +72,8 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext* context, Ogre::Sce
 	Ogre::Vector3 pos;
 
 	try {
-		std::string error_msg;
 #ifdef RVIZ_TF1
 		tf::TransformListener* tf = context->getFrameManager()->getTFClient();
-		if (!tf->canTransform(planning_frame_, fixed_frame, ros::Time(), &error_msg)) {
-			ROS_WARN_STREAM_NAMED("MarkerVisualization", error_msg);
-			return false;  // frame transform not (yet) available
-		}
 		tf::StampedTransform tm;
 		tf->lookupTransform(planning_frame_, fixed_frame, ros::Time(), tm);
 		auto q = tm.getRotation();
