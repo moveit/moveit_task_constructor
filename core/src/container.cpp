@@ -864,14 +864,16 @@ void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 void MergerPrivate::sendForward(SubTrajectory&& t, const InterfaceState* from) {
 	// generate target state
 	planning_scene::PlanningScenePtr to = from->scene()->diff();
-	to->setCurrentState(t.trajectory()->getLastWayPoint());
+	if (t.trajectory() && !t.trajectory()->empty())
+		to->setCurrentState(t.trajectory()->getLastWayPoint());
 	StagePrivate::sendForward(*from, InterfaceState(to), std::make_shared<SubTrajectory>(std::move(t)));
 }
 
 void MergerPrivate::sendBackward(SubTrajectory&& t, const InterfaceState* to) {
 	// generate target state
 	planning_scene::PlanningScenePtr from = to->scene()->diff();
-	from->setCurrentState(t.trajectory()->getFirstWayPoint());
+	if (t.trajectory() && !t.trajectory()->empty())
+		from->setCurrentState(t.trajectory()->getFirstWayPoint());
 	StagePrivate::sendBackward(InterfaceState(from), *to, std::make_shared<SubTrajectory>(std::move(t)));
 }
 
@@ -929,14 +931,16 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	try {
 		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
 	} catch (const std::runtime_error& e) {
-		ROS_INFO_STREAM_NAMED("Merger", this->name() << "Merging failed: " << e.what());
+		SubTrajectory t;
+		t.markAsFailure();
+		t.setComment(e.what());
+		spawner(std::move(t));
 		return;
 	}
 	if (jmg_merged_.get() != jmg)
 		jmg_merged_.reset(jmg);
-	if (!merged)
-		return;
 
+	assert(merged);
 	SubTrajectory t(merged);
 
 	// check merged trajectory for collisions
