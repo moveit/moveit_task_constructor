@@ -141,6 +141,16 @@ void SolutionBase::setCreator(Stage* creator) {
 	creator_ = creator;
 }
 
+void SolutionBase::setStartStateUnsafe(const InterfaceState& state) {
+	start_ = &state;
+	const_cast<InterfaceState&>(state).addOutgoing(this);
+}
+
+void SolutionBase::setEndStateUnsafe(const InterfaceState& state) {
+	end_ = &state;
+	const_cast<InterfaceState&>(state).addIncoming(this);
+}
+
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
@@ -166,6 +176,10 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Int
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
+}
+
+double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const {
+	return f(*this, comment);
 }
 
 void SolutionSequence::push_back(const SolutionBase& solution) {
@@ -207,6 +221,10 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 	}
 }
 
+double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) const {
+	return f(*this, comment);
+}
+
 void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
                                   Introspection* introspection) const {
 	wrapped_->fillMessage(solution, introspection);
@@ -217,5 +235,10 @@ void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& soluti
 	sub_msg.sub_solution_id.push_back(introspection ? introspection->solutionId(*wrapped_) : 0);
 	solution.sub_solution.insert(solution.sub_solution.begin(), std::move(sub_msg));
 }
+
+double WrappedSolution::computeCost(const CostTerm& f, std::string& comment) const {
+	return f(*this, comment);
+}
+
 }  // namespace task_constructor
 }  // namespace moveit

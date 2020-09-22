@@ -120,6 +120,10 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to) {
+	solution->setCreator(me());
+
+	computeCost(*internal_from, *internal_to, *solution);
+
 	if (!storeSolution(solution))
 		return;
 
@@ -139,8 +143,8 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
 
 	// connect solution to start/end state
-	solution->setStartState(*external_from);
-	solution->setEndState(*external_to);
+	solution->setStartStateUnsafe(*external_from);
+	solution->setEndStateUnsafe(*external_to);
 
 	// spawn created states in external interfaces
 	if (created_from)

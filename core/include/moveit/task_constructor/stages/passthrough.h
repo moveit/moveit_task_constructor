@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2020, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,39 +31,31 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+/* Authors: Michael 'v4hn' Goerner */
 
-/* Authors: Robert Haschke */
+#pragma once
 
-#include <moveit/task_constructor/stages/fixed_state.h>
-#include <moveit/task_constructor/cost_terms.h>
-
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/cost_queue.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <Eigen/Geometry>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-FixedState::FixedState(const std::string& name) : Generator(name) {
-	setCostTerm(std::make_unique<cost::Constant>(0.0));
-}
+/** Generic Wrapper that passes on a solution
+ *
+ * Useful to set a custom CostTransform via Stage::setCostTerm
+ * to change a solution's cost without loosing the original value
+ */
+class PassThrough : public WrapperBase
+{
+public:
+	PassThrough(const std::string& name = "PassThrough", Stage::pointer&& child = Stage::pointer());
 
-void FixedState::setState(const planning_scene::PlanningScenePtr& scene) {
-	scene_ = scene;
-}
-
-void FixedState::reset() {
-	Generator::reset();
-	ran_ = false;
-}
-
-bool FixedState::canCompute() const {
-	return !ran_ && scene_;
-}
-
-void FixedState::compute() {
-	spawn(InterfaceState(scene_), 0.0);
-	ran_ = true;
-}
+	void onNewSolution(const SolutionBase& s) override;
+};
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
