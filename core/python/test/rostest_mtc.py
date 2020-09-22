@@ -5,8 +5,9 @@ import unittest
 import rostest
 from moveit.python_tools import roscpp_init
 from moveit.task_constructor import core, stages
-from geometry_msgs.msg import Pose
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import Vector3Stamped, Vector3
+from std_msgs.msg import Header
 import rospy
 
 
@@ -24,7 +25,7 @@ class Test(unittest.TestCase):
     def test_MoveRelative(self):
         task = core.Task()
         task.add(stages.CurrentState("current"))
-        move = stages.MoveRelative("move", core.PipelinePlanner())
+        move = stages.MoveRelative("move", core.JointInterpolationPlanner())
         move.group = self.PLANNING_GROUP
         move.setDirection({"joint_1" : 0.2, "joint_2" : 0.4})
         task.add(move)
@@ -38,6 +39,34 @@ class Test(unittest.TestCase):
             print s
         s = task.solutions[0]
         task.execute(s)
+
+    def test_Merger(self):
+        cartesian = core.CartesianPath()
+        def createDisplacement(group, displacement):
+            move = stages.MoveRelative("displace", cartesian)
+            move.group = group
+            move.ik_frame = PoseStamped(header = Header(frame_id = "tool0"))
+            dir = Vector3Stamped(
+                header = Header(frame_id = "base_link"),
+                vector = Vector3(*displacement)
+            )
+            move.setDirection(dir)
+            move.restrictDirection(core.PropagationDirection.FORWARD)
+            return move
+
+        task = core.Task()
+        task.add(stages.CurrentState("current"))
+        merger = core.Merger("merger")
+        merger.insert(createDisplacement(self.PLANNING_GROUP, [-0.2, 0, 0]))
+        merger.insert(createDisplacement(self.PLANNING_GROUP, [ 0.2, 0, 0]))
+        task.add(merger)
+
+        task.enableIntrospection()
+        task.init()
+        if task.plan():
+            task.publish(task.solutions[0])
+
+        rospy.sleep(100)
 
 
 if __name__ == '__main__':
