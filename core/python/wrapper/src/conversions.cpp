@@ -93,7 +93,7 @@ bool RosMsgConverterBase::insert(const boost::python::type_info& type_info, cons
 }
 
 void* RosMsgConverterBase::convertible(PyObject* object, const boost::python::type_info& type_info) {
-	/// object is convertible if the type of registered
+	/// object is convertible if the type is registered
 	return registry_singleton_.convertible(object, type_info);
 }
 
