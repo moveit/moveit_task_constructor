@@ -70,7 +70,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 	if (planner_.empty())
 		errors.push_back(*this, "empty set of groups");
 
-	size_t num_joints = 0;
 	std::vector<const moveit::core::JointModelGroup*> groups;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		if (!robot_model->hasJointModelGroup(pair.first))
@@ -82,7 +81,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 
 			auto jmg = robot_model->getJointModelGroup(pair.first);
 			groups.push_back(jmg);
-			num_joints += jmg->getJointModels().size();
 		}
 	}
 
