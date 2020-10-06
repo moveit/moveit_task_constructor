@@ -175,6 +175,7 @@ void export_stages() {
 	    .def<void (MoveTo::*)(const geometry_msgs::PoseStamped&)>("setGoal", &MoveTo::setGoal)
 	    .def<void (MoveTo::*)(const geometry_msgs::PointStamped&)>("setGoal", &MoveTo::setGoal)
 	    .def<void (MoveTo::*)(const moveit_msgs::RobotState&)>("setGoal", &MoveTo::setGoal)
+	    .def<void (MoveTo::*)(const std::map<std::string, double>&)>("setGoal", &MoveTo::setGoal)
 	    .def<void (MoveTo::*)(const std::string&)>("setGoal", &MoveTo::setGoal);
 	bp::implicitly_convertible<std::auto_ptr<MoveTo>, std::auto_ptr<PropagatingEitherWay>>();
 

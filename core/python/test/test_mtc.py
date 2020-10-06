@@ -174,9 +174,10 @@ class TestStages(unittest.TestCase):
         self._check(stage, "group", "group")
         self._check(stage, "ik_frame", PoseStamped())
         stage.setGoal(PoseStamped())
-        # TODO: fails
-        # stage.setGoal(PointStamped())
+        stage.setGoal(PointStamped())
         stage.setGoal(RobotState())
+        stage.setGoal("named pose")
+        stage.setGoal(dict(joint1 = 1.0, joint2 = 2.0))
         self._check(stage, "path_constraints", Constraints())
 
     def test_MoveRelative(self):
