@@ -84,6 +84,9 @@ public:
 	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	~Task() override;
 
+	const std::string& name() const { return stages()->name(); }
+	void setName(const std::string& name) { stages()->setName(name); }
+
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
