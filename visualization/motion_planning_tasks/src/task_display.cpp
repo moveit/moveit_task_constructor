@@ -61,7 +61,6 @@ namespace moveit_rviz_plugin {
 
 TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
 	task_list_model_.reset(new TaskListModel);
-	task_list_model_->setSolutionClient(&get_solution_client);
 
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
@@ -191,7 +190,8 @@ void TaskDisplay::changedRobotDescription() {
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
 	mainloop_jobs_.addJob([this, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskDescriptionMessage(*msg);
+		task_list_model_->processTaskDescriptionMessage(*msg, update_nh_,
+		                                                base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
 		// Start listening to other topics if this is the first description
 		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
@@ -229,7 +229,6 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	task_description_sub.shutdown();
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
-	get_solution_client.shutdown();
 
 	received_task_description_ = false;
 
@@ -245,10 +244,6 @@ void TaskDisplay::changedTaskSolutionTopic() {
 
 	// listen to task descriptions updates
 	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
-
-	// service to request solutions
-	get_solution_client =
-	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns_ + GET_SOLUTION_SERVICE);
 
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }

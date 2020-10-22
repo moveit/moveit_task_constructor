@@ -78,7 +78,8 @@ public:
 		    nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
 		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
 
-		get_solution_service_ = nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, self);
+		get_solution_service_ =
+		    nh_.advertiseService(std::string(GET_SOLUTION_SERVICE "_") + task_id_, &Introspection::getSolution, self);
 
 		resetMaps();
 	}
