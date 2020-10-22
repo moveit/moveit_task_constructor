@@ -78,6 +78,13 @@ public:
 	/// retrieve TaskModel corresponding to given index
 	inline std::pair<BaseTaskModel*, QModelIndex> getTaskModel(const QModelIndex& index) const;
 
+	/// configure a (new) TaskListModel
+	void configureTaskListModel(TaskListModel* model);
+	/// configure all TaskListModels that were already created when TaskView gets instantiated
+	void configureExistingModels();
+	/// configure newly inserted models
+	void _q_configureInsertedModels(const QModelIndex& parent, int first, int last);
+
 	/// unlock locked_display_ if given display is different
 	void lock(TaskDisplay* display);
 

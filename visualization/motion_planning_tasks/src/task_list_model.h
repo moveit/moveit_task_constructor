@@ -126,10 +126,12 @@ class TaskListModel : public utils::FlatMergeProxyModel
 	// rviz::DisplayContext used to show (interactive) markers by the property models
 	rviz::DisplayContext* display_context_ = nullptr;
 
-	// map from remote task IDs to tasks
+	// map from remote task IDs to (active) tasks
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
 	// if task is removed locally from tasks vector, it is marked with a nullptr
 	std::map<std::string, RemoteTaskModel*> remote_tasks_;
+	// mode reflecting the "Old task handling" setting
+	int old_task_handling_;
 
 	// factory used to create stages
 	StageFactoryPtr stage_factory_;
@@ -171,6 +173,9 @@ public:
 	                  const QModelIndex& parent) override;
 	Qt::DropActions supportedDropActions() const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
+
+public Q_SLOTS:
+	void setOldTaskHandling(int mode);
 
 protected Q_SLOTS:
 	void highlightStage(size_t id);

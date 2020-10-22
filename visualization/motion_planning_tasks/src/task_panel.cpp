@@ -206,27 +206,8 @@ TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_cl
 	if (factory)
 		meta_model->setMimeTypes({ factory->mimeType() });
 	tasks_view->setModel(meta_model);
-	// auto-expand newly-inserted top-level items
-	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted,
-	                 [this](const QModelIndex& parent, int first, int last) {
-		                 if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
-			                 int expand = this->q_ptr->initial_task_expand->getOptionInt();
-			                 for (int row = first; row <= last; ++row) {
-				                 QModelIndex child = parent.model()->index(row, 0, parent);
-				                 if (expand != TaskView::EXPAND_NONE) {
-					                 // recursively expand all inserted items
-					                 setExpanded(tasks_view, child, true);
-				                 }
-				                 if (expand == TaskView::EXPAND_TOP) {
-					                 // collapse up to first level
-					                 setExpanded(tasks_view, child, false, 1);
-					                 // expand inserted item
-					                 setExpanded(tasks_view, child, true, 0);
-				                 }
-			                 }
-			                 tasks_view->setExpanded(parent, true);  // expand parent group item
-		                 }
-	                 });
+	QObject::connect(meta_model, SIGNAL(rowsInserted(QModelIndex, int, int)), q_ptr,
+	                 SLOT(_q_configureInsertedModels(QModelIndex, int, int)));
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -249,6 +230,40 @@ std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const 
 std::pair<BaseTaskModel*, QModelIndex> TaskViewPrivate::getTaskModel(const QModelIndex& index) const {
 	auto* meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskModel(index);
+}
+
+void TaskViewPrivate::configureTaskListModel(TaskListModel* model) {
+	QObject::connect(q_ptr, &TaskView::oldTaskHandlingChanged, model, &TaskListModel::setOldTaskHandling);
+	model->setOldTaskHandling(q_ptr->old_task_handling->getOptionInt());
+}
+
+void TaskViewPrivate::configureExistingModels() {
+	auto* meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
+	for (int row = meta_model->rowCount() - 1; row >= 0; --row)
+		configureTaskListModel(meta_model->getTaskListModel(meta_model->index(row, 0)).first);
+}
+
+void TaskViewPrivate::_q_configureInsertedModels(const QModelIndex& parent, int first, int last) {
+	if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
+		int expand = q_ptr->initial_task_expand->getOptionInt();
+		for (int row = first; row <= last; ++row) {
+			// set expanded state of items
+			QModelIndex child = parent.model()->index(row, 0, parent);
+			if (expand != TaskView::EXPAND_NONE) {
+				// recursively expand all inserted items
+				setExpanded(tasks_view, child, true);
+			}
+			if (expand == TaskView::EXPAND_TOP) {
+				// collapse up to first level
+				setExpanded(tasks_view, child, false, 1);
+				// expand inserted item
+				setExpanded(tasks_view, child, true, 0);
+			}
+
+			configureTaskListModel(getTaskListModel(child).first);
+		}
+		tasks_view->setExpanded(parent, true);  // expand parent group item
+	}
 }
 
 void TaskViewPrivate::lock(TaskDisplay* display) {
@@ -292,8 +307,18 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
 
+	old_task_handling =
+	    new rviz::EnumProperty("Old task handling", "Keep",
+	                           "Configure what to do with old tasks whose solutions cannot be queried anymore", configs);
+	old_task_handling->addOption("Keep", OLD_TASK_KEEP);
+	old_task_handling->addOption("Replace", OLD_TASK_REPLACE);
+	old_task_handling->addOption("Remove", OLD_TASK_REMOVE);
+	connect(old_task_handling, &rviz::Property::changed, this, &TaskView::onOldTaskHandlingChanged);
+
 	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
-	connect(show_time_column, SIGNAL(changed()), this, SLOT(onShowTimeChanged()));
+	connect(show_time_column, &rviz::Property::changed, this, &TaskView::onShowTimeChanged);
+
+	d_ptr->configureExistingModels();
 }
 
 TaskView::~TaskView() {
@@ -489,6 +514,10 @@ void TaskView::onShowTimeChanged() {
 	if (header->count() > 3)
 		d_ptr->tasks_view->header()->setSectionHidden(3, !show);
 	d_ptr->actionShowTimeColumn->setChecked(show);
+}
+
+void TaskView::onOldTaskHandlingChanged() {
+	Q_EMIT oldTaskHandlingChanged(old_task_handling->getOptionInt());
 }
 
 GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
