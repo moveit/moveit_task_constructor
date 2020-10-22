@@ -157,11 +157,11 @@ public:
 	QVariant data(const QModelIndex& index, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskDescriptionMessage(const std::string& id, const moveit_task_constructor_msgs::TaskDescription& msg);
+	void processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg);
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskStatisticsMessage(const std::string& id, const moveit_task_constructor_msgs::TaskStatistics& msg);
+	void processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	DisplaySolutionPtr processSolutionMessage(const std::string& id, const moveit_task_constructor_msgs::Solution& msg);
+	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg);
 
 	/// insert a TaskModel, pos is relative to modelCount()
 	bool insertModel(BaseTaskModel* model, int pos = -1);

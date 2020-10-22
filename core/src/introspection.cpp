@@ -63,7 +63,7 @@ class IntrospectionPrivate
 {
 public:
 	IntrospectionPrivate(const TaskPrivate* task)
-	  : nh_(std::string("~/") + task->id())  // topics + services are advertised in private namespace
+	  : nh_(std::string("~/") + task->ns())  // topics + services are advertised in private namespace
 	  , task_(task)
 	  , process_id_(getProcessId()) {
 		task_description_publisher_ =
@@ -82,7 +82,6 @@ public:
 		// send empty task description message to indicate reset
 		::moveit_task_constructor_msgs::TaskDescription msg;
 		msg.process_id = process_id_;
-		msg.id = task_->id();
 		task_description_publisher_.publish(msg);
 	}
 
@@ -144,7 +143,6 @@ void Introspection::fillSolution(moveit_task_constructor_msgs::Solution& msg, co
 	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
 
 	msg.process_id = impl->process_id_;
-	msg.task_id = impl->task_->id();
 }
 
 void Introspection::publishSolution(const SolutionBase& s) {
@@ -242,7 +240,6 @@ Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription
 	msg.stages.clear();
 	impl->task_->stages()->traverseRecursively(stage_processor);
 
-	msg.id = impl->task_->id();
 	msg.process_id = impl->process_id_;
 	return msg;
 }
@@ -263,7 +260,6 @@ Introspection::fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& 
 	msg.stages.clear();
 	impl->task_->stages()->traverseRecursively(stage_processor);
 
-	msg.id = impl->task_->id();
 	msg.process_id = impl->process_id_;
 	return msg;
 }

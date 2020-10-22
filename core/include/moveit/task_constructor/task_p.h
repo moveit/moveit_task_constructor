@@ -53,15 +53,15 @@ class TaskPrivate : public WrapperBasePrivate
 	friend class Task;
 
 public:
-	TaskPrivate(Task* me, const std::string& id);
-	const std::string& id() const { return id_; }
+	TaskPrivate(Task* me, const std::string& ns);
+	const std::string& ns() const { return ns_; }
 	const ContainerBase* stages() const;
 
 protected:
 	static void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 private:
-	std::string id_;
+	std::string ns_;
 	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
 	bool preempt_requested_;

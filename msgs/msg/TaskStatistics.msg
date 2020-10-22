@@ -1,8 +1,5 @@
-# id of generating process
+# unique id of generating task
 string process_id
-
-# unique of this task
-string id
 
 # list of all stages, including the task stage itself
 StageStatistics[] stages

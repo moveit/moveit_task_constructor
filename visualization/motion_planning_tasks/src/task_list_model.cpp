@@ -240,10 +240,9 @@ QVariant TaskListModel::data(const QModelIndex& index, int role) const {
 
 // process a task description message:
 // update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
-void TaskListModel::processTaskDescriptionMessage(const std::string& id,
-                                                  const moveit_task_constructor_msgs::TaskDescription& msg) {
-	// retrieve existing or insert new remote task for given id
-	auto it_inserted = remote_tasks_.insert(std::make_pair(id, nullptr));
+void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg) {
+	// retrieve existing or insert new remote task for given task id
+	auto it_inserted = remote_tasks_.insert(std::make_pair(msg.process_id, nullptr));
 	bool created = it_inserted.second;
 	const auto& task_it = it_inserted.first;
 	RemoteTaskModel*& remote_task = task_it->second;
@@ -275,17 +274,16 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 
 	// insert newly created model into this' model instance
 	if (created) {
-		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s", msg.id.c_str());
+		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s", msg.process_id.c_str());
 		insertModel(remote_task, -1);
 	}
 }
 
 // process a task statistics message
-void TaskListModel::processTaskStatisticsMessage(const std::string& id,
-                                                 const moveit_task_constructor_msgs::TaskStatistics& msg) {
-	auto it = remote_tasks_.find(id);
+void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg) {
+	auto it = remote_tasks_.find(msg.process_id);
 	if (it == remote_tasks_.cend()) {
-		ROS_WARN("unknown task: %s", id.c_str());
+		ROS_WARN("unknown task: %s", msg.process_id.c_str());
 		return;
 	}
 
@@ -296,9 +294,8 @@ void TaskListModel::processTaskStatisticsMessage(const std::string& id,
 	remote_task->processStageStatistics(msg.stages);
 }
 
-DisplaySolutionPtr TaskListModel::processSolutionMessage(const std::string& id,
-                                                         const moveit_task_constructor_msgs::Solution& msg) {
-	auto it = remote_tasks_.find(id);
+DisplaySolutionPtr TaskListModel::processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg) {
+	auto it = remote_tasks_.find(msg.process_id);
 	if (it == remote_tasks_.cend())
 		return DisplaySolutionPtr();  // unkown task
 

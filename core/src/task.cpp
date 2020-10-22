@@ -71,8 +71,8 @@ std::string rosNormalizeName(const std::string& name) {
 namespace moveit {
 namespace task_constructor {
 
-TaskPrivate::TaskPrivate(Task* me, const std::string& id)
-  : WrapperBasePrivate(me, std::string()), id_(rosNormalizeName(id)), preempt_requested_(false) {}
+TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
+  : WrapperBasePrivate(me, std::string()), ns_(rosNormalizeName(ns)), preempt_requested_(false) {}
 
 void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
 	// It only makes sense to swap pimpl instances of a Task!
@@ -104,11 +104,8 @@ const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
-Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& container)
-  : WrapperBase(new TaskPrivate(this, id), std::move(container)) {
-	if (!id.empty())
-		stages()->setName(id);
-
+Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
+  : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
 	setTimeout(std::numeric_limits<double>::max());
 
 	// monitor state on commandline
@@ -358,10 +355,6 @@ PropertyMap& Task::properties() {
 void Task::setProperty(const std::string& name, const boost::any& value) {
 	// forward to wrapped() stage
 	wrapped()->setProperty(name, value);
-}
-
-const std::string& Task::id() const {
-	return pimpl()->id();
 }
 
 const core::RobotModelConstPtr& Task::getRobotModel() const {

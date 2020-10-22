@@ -55,10 +55,11 @@ protected:
 	int num_inserts = 0;
 	int num_updates = 0;
 
-	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name) {
+	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name,
+	                                                     const std::string& process_id = std::string()) {
 		moveit_task_constructor_msgs::TaskDescription t;
-		t.id = name;
 		uint id = 0, root_id;
+		t.process_id = process_id.empty() ? name : process_id;
 
 		moveit_task_constructor_msgs::StageDescription desc;
 		desc.parent_id = id;
@@ -127,7 +128,7 @@ protected:
 			SCOPED_TRACE("first i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage("1", genMsg("first"));
+			model.processTaskDescriptionMessage(genMsg("first"));
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
@@ -141,7 +142,7 @@ protected:
 			SCOPED_TRACE("second i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage("2", genMsg("second"));  // 1 notify for inserted task
+			model.processTaskDescriptionMessage(genMsg("second"));  // 1 notify for inserted task
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);
@@ -200,13 +201,13 @@ TEST_F(TaskListModelTest, threeChildren) {
 TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"));
 	validate(model, { "first" });  // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"));
 	validate(model, { "first" });
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
@@ -215,7 +216,7 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 
 TEST_F(TaskListModelTest, deletion) {
 	children = 3;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"));
 	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
 	QObject::connect(m, &QObject::destroyed, [&num_deletes]() { ++num_deletes; });

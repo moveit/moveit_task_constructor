@@ -188,20 +188,10 @@ void TaskDisplay::changedRobotDescription() {
 		loadRobotModel();
 }
 
-inline std::string getUniqueId(const std::string& process_id, const std::string& task_id) {
-	std::string id{ process_id };
-	if (!task_id.empty()) {
-		id += "/";
-		id += task_id;
-	}
-	return id;
-}
-
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
+	mainloop_jobs_.addJob([this, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskDescriptionMessage(id, *msg);
+		task_list_model_->processTaskDescriptionMessage(*msg);
 
 		// Start listening to other topics if this is the first description
 		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
@@ -215,18 +205,16 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 }
 
 void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
+	mainloop_jobs_.addJob([this, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskStatisticsMessage(id, *msg);
+		task_list_model_->processTaskStatisticsMessage(*msg);
 	});
 }
 
 void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->task_id);
-	mainloop_jobs_.addJob([this, id, msg]() {
+	mainloop_jobs_.addJob([this, msg]() {
 		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
+		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
 		if (s)
 			trajectory_visual_->showTrajectory(s, false);
 		return;
