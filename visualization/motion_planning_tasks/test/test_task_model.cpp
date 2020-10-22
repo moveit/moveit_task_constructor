@@ -56,10 +56,10 @@ protected:
 	int num_updates = 0;
 
 	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name,
-	                                                     const std::string& process_id = std::string()) {
+	                                                     const std::string& task_id = std::string()) {
 		moveit_task_constructor_msgs::TaskDescription t;
 		uint id = 0, root_id;
-		t.process_id = process_id.empty() ? name : process_id;
+		t.task_id = task_id.empty() ? name : task_id;
 
 		moveit_task_constructor_msgs::StageDescription desc;
 		desc.parent_id = id;

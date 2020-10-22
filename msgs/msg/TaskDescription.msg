@@ -1,5 +1,5 @@
 # unique id of this task
-string process_id
+string task_id
 
 # list of all stages, including the task stage itself
 StageDescription[] stages

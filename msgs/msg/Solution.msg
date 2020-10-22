@@ -1,5 +1,5 @@
 # id of generating task
-string process_id
+string task_id
 
 # planning scene of start state
 moveit_msgs/PlanningScene start_scene
