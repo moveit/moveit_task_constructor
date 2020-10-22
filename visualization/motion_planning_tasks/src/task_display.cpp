@@ -98,8 +98,8 @@ void TaskDisplay::onInitialize() {
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
 	// create a new TaskPanel by default
-	// by post-poning this to main loop, we can ensure that rviz has loaded everything before
-	mainloop_jobs_.addJob([this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
+	// by post-poning this to Qt's GUI loop, we can ensure that rviz has loaded everything before
+	QTimer::singleShot(0, [this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
 }
 
 void TaskDisplay::loadRobotModel() {

@@ -135,7 +135,7 @@ void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
 
 	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
 	if (SINGLETON || !vis_frame)
-		return;  // already define, nothing to do
+		return;  // already defined, nothing to do
 
 	QDockWidget* dock =
 	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
