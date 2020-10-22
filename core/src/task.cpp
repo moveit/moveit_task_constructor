@@ -173,6 +173,7 @@ planning_pipeline::PlanningPipelinePtr Task::createPlanner(const robot_model::Ro
 
 Task::~Task() {
 	auto impl = pimpl();
+	impl->introspection_.reset();  // stop introspection
 	clear();  // remove all stages
 	impl->robot_model_.reset();
 	// only destroy loader after all references to the model are gone!

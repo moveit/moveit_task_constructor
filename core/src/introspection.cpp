@@ -65,7 +65,7 @@ std::string getTaskId(const TaskPrivate* task) {
 class IntrospectionPrivate
 {
 public:
-	IntrospectionPrivate(const TaskPrivate* task)
+	IntrospectionPrivate(const TaskPrivate* task, Introspection* self)
 	  : nh_(std::string("~/") + task->ns())  // topics + services are advertised in private namespace
 	  , task_(task)
 	  , task_id_(getTaskId(task)) {
@@ -78,8 +78,11 @@ public:
 		    nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
 		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
 
+		get_solution_service_ = nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, self);
+
 		resetMaps();
 	}
+	~IntrospectionPrivate() { indicateReset(); }
 
 	void indicateReset() {
 		// send empty task description message to indicate reset
@@ -114,9 +117,7 @@ public:
 	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
 };
 
-Introspection::Introspection(const TaskPrivate* task) : impl(new IntrospectionPrivate(task)) {
-	impl->get_solution_service_ = impl->nh_.advertiseService(GET_SOLUTION_SERVICE, &Introspection::getSolution, this);
-}
+Introspection::Introspection(const TaskPrivate* task) : impl(new IntrospectionPrivate(task, this)) {}
 
 Introspection::~Introspection() {
 	delete impl;
