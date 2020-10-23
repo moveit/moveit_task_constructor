@@ -172,7 +172,6 @@ void TaskDisplay::calculateOffsetPosition() {
 
 void TaskDisplay::update(float wall_dt, float ros_dt) {
 	Display::update(wall_dt, ros_dt);
-	mainloop_jobs_.executeJobs();
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
 
@@ -199,38 +198,31 @@ inline std::string getUniqueId(const std::string& process_id, const std::string&
 
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskDescriptionMessage(id, *msg);
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	task_list_model_->processTaskDescriptionMessage(id, *msg);
 
-		// Start listening to other topics if this is the first description
-		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
-		if (!received_task_description_ && !msg->stages.empty()) {
-			received_task_description_ = true;
-			task_statistics_sub =
-			    update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
-			task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
-		}
-	});
+	// Start listening to other topics if this is the first description
+	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
+	if (!received_task_description_ && !msg->stages.empty()) {
+		received_task_description_ = true;
+		task_statistics_sub = update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
+		task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
+	}
 }
 
 void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskStatisticsMessage(id, *msg);
-	});
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	task_list_model_->processTaskStatisticsMessage(id, *msg);
 }
 
 void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
 	const std::string id = getUniqueId(msg->process_id, msg->task_id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		if (s)
-			trajectory_visual_->showTrajectory(s, false);
-		return;
-	});
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
+	if (s)
+		trajectory_visual_->showTrajectory(s, false);
+	return;
 }
 
 void TaskDisplay::changedTaskSolutionTopic() {
@@ -256,7 +248,7 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	base_ns_ = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
 	// listen to task descriptions updates
-	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
+	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 10, &TaskDisplay::taskDescriptionCB, this);
 
 	// service to request solutions
 	get_solution_client =

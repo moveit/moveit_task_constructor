@@ -121,9 +121,6 @@ protected:
 	ros::Subscriber task_statistics_sub;
 	ros::ServiceClient get_solution_client;
 
-	// handle processing of task+solution messages in Qt mainloop
-	moveit::tools::JobQueue mainloop_jobs_;
-
 	// The trajectory playback component
 	std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
 	// The TaskListModel storing actual task and solution data
