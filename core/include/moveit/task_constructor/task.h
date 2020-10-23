@@ -110,6 +110,7 @@ public:
 	/// expose SolutionCallback API
 	using WrapperBase::addSolutionCallback;
 	using WrapperBase::removeSolutionCallback;
+	using WrapperBase::setTimeout;
 	using WrapperBase::SolutionCallback;
 
 	/// reset all stages

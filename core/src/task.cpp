@@ -296,13 +296,20 @@ bool Task::plan(size_t max_solutions) {
 	init();
 
 	impl->preempt_requested_ = false;
+	double remaining_time = std::numeric_limits<double>::max();
+	if (!properties().get("timeout").empty())
+		remaining_time = timeout();
+	auto start_time = std::chrono::steady_clock::now();
 	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
-	       (max_solutions == 0 || numSolutions() < max_solutions)) {
+	       (max_solutions == 0 || numSolutions() < max_solutions) && remaining_time > 0) {
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
+		const auto now = std::chrono::steady_clock::now();
+		remaining_time -= std::chrono::duration<double>(now - start_time).count();
+		start_time = now;
 	}
 	printState();
 	return numSolutions() > 0;
