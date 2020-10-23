@@ -407,12 +407,12 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 
 	QItemSelectionModel* sm = view->selectionModel();
 	QAbstractItemModel* m = task ? task->getSolutionModel(task_index) : nullptr;
-	view->setModel(m);
-	view->sortByColumn(sort_column, sort_order);
-	delete sm;  // we don't store the selection model
-	sm = view->selectionModel();
+	if (view->model() != m) {
+		view->setModel(m);
+		view->sortByColumn(sort_column, sort_order);
+		delete sm;  // we don't store the selection model
 
-	if (sm) {
+		sm = view->selectionModel();
 		connect(sm, SIGNAL(currentChanged(QModelIndex, QModelIndex)), this,
 		        SLOT(onCurrentSolutionChanged(QModelIndex, QModelIndex)));
 		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this,
@@ -420,11 +420,13 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 
 	// update the PropertyModel
-	QTreeView* pview = d_ptr->property_view;
-	sm = pview->selectionModel();
+	view = d_ptr->property_view;
+	sm = view->selectionModel();
 	m = task ? task->getPropertyModel(task_index) : nullptr;
-	pview->setModel(m);
-	delete sm;  // we don't store the selection model
+	if (view->model() != m) {
+		view->setModel(m);
+		delete sm;  // we don't store the selection model
+	}
 }
 
 void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous) {
