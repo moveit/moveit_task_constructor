@@ -49,6 +49,17 @@ namespace mtc = ::moveit::task_constructor;
 
 namespace {
 
+class ScopedYamlEvent
+{
+public:
+	~ScopedYamlEvent() { yaml_event_delete(&event_); }
+	operator yaml_event_t const &() const { return event_; }
+	operator yaml_event_t&() { return event_; }
+
+private:
+	yaml_event_t event_;
+};
+
 // Event-based YAML parser, creating an rviz::Property tree
 // https://www.wpsoftware.net/andrew/pages/libyaml.html
 class Parser
@@ -60,10 +71,11 @@ public:
 	~Parser();
 
 	rviz::Property* process(const QString& name, const QString& description, rviz::Property* old) const;
+
+private:
 	static rviz::Property* createScalar(const QString& name, const QString& description, const QByteArray& value,
 	                                    rviz::Property* old);
 
-private:
 	// return true if there was no error so far
 	bool noError() const { return parser_.error == YAML_NO_ERROR; }
 	// parse a single event and return it's type, YAML_ERROR_EVENT on parsing error
@@ -98,7 +110,6 @@ Parser::~Parser() {
 
 int Parser::parse(yaml_event_t& event) const {
 	if (!yaml_parser_parse(&parser_, &event)) {
-		yaml_event_delete(&event);
 		return YAML_ERROR_EVENT;
 	}
 	return event.type;
@@ -108,7 +119,7 @@ int Parser::parse(yaml_event_t& event) const {
 rviz::Property* Parser::process(const QString& name, const QString& description, rviz::Property* old) const {
 	bool stop = false;
 	while (!stop) {
-		yaml_event_t event;
+		ScopedYamlEvent event;
 		switch (parse(event)) {
 			case YAML_ERROR_EVENT:
 				return Parser::createScalar(name, description, "YAML error", old);
@@ -205,7 +216,7 @@ rviz::Property* Parser::processMapping(const QString& name, const QString& descr
 	int index = 0;  // current child index in root
 	bool stop = false;
 	while (!stop && noError()) {  // parse all map items
-		yaml_event_t event;
+		ScopedYamlEvent event;
 		switch (parse(event)) {  // parse key
 			case YAML_MAPPING_END_EVENT:  // all fine, reached end of mapping
 				stop = true;
@@ -263,7 +274,7 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 	int index = 0;  // current child index in root
 	bool stop = false;
 	while (!stop && noError()) {  // parse all map items
-		yaml_event_t event;
+		ScopedYamlEvent event;
 		switch (parse(event)) {
 			case YAML_SEQUENCE_END_EVENT:  // all fine, reached end of sequence
 				stop = true;
