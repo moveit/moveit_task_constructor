@@ -86,9 +86,8 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 		}
 	}
 
-	if (!errors && groups.size() >= 2) {  // enable merging?
+	if (!errors && groups.size() >= 2 && !merged_jmg_) {  // enable merging?
 		try {
-			merged_jmg_.reset();
 			merged_jmg_.reset(task_constructor::merge(groups));
 		} catch (const std::runtime_error& e) {
 			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
