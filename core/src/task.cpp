@@ -300,8 +300,7 @@ bool Task::plan(size_t max_solutions) {
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
-	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
-	       (max_solutions == 0 || numSolutions() < max_solutions) &&
+	while (!impl->preempt_requested_ && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions) &&
 	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
 		compute();
 		for (const auto& cb : impl->task_cbs_)
