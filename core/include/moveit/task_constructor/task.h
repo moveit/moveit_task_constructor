@@ -111,6 +111,7 @@ public:
 	using WrapperBase::addSolutionCallback;
 	using WrapperBase::removeSolutionCallback;
 	using WrapperBase::SolutionCallback;
+
 	using WrapperBase::setTimeout;
 	using WrapperBase::timeout;
 
