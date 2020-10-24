@@ -112,6 +112,9 @@ public:
 	using WrapperBase::removeSolutionCallback;
 	using WrapperBase::SolutionCallback;
 
+	using WrapperBase::setTimeout;
+	using WrapperBase::timeout;
+
 	/// reset all stages
 	void reset() final;
 	/// initialize all stages with given scene

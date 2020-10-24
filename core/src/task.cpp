@@ -109,6 +109,8 @@ Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& c
 	if (!id.empty())
 		stages()->setName(id);
 
+	setTimeout(std::numeric_limits<double>::max());
+
 	// monitor state on commandline
 	// addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
 	// enable introspection by default, but only if ros::init() was called
@@ -296,8 +298,11 @@ bool Task::plan(size_t max_solutions) {
 	init();
 
 	impl->preempt_requested_ = false;
+	const double available_time = timeout();
+	const auto start_time = std::chrono::steady_clock::now();
 	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
-	       (max_solutions == 0 || numSolutions() < max_solutions)) {
+	       (max_solutions == 0 || numSolutions() < max_solutions) &&
+	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
