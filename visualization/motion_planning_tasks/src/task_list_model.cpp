@@ -42,7 +42,6 @@
 #include "icons.h"
 
 #include <ros/console.h>
-#include <ros/service_client.h>
 
 #include <QMimeData>
 #include <QHeaderView>
@@ -184,10 +183,6 @@ void TaskListModel::setDisplayContext(rviz::DisplayContext* display_context) {
 	display_context_ = display_context;
 }
 
-void TaskListModel::setSolutionClient(ros::ServiceClient* client) {
-	get_solution_client_ = client;
-}
-
 void TaskListModel::setStageFactory(const StageFactoryPtr& factory) {
 	stage_factory_ = factory;
 	if (stage_factory_)
@@ -240,10 +235,10 @@ QVariant TaskListModel::data(const QModelIndex& index, int role) const {
 
 // process a task description message:
 // update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
-void TaskListModel::processTaskDescriptionMessage(const std::string& id,
-                                                  const moveit_task_constructor_msgs::TaskDescription& msg) {
-	// retrieve existing or insert new remote task for given id
-	auto it_inserted = remote_tasks_.insert(std::make_pair(id, nullptr));
+void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg,
+                                                  ros::NodeHandle& nh, const std::string& service_name) {
+	// retrieve existing or insert new remote task for given task id
+	auto it_inserted = remote_tasks_.insert(std::make_pair(msg.task_id, nullptr));
 	bool created = it_inserted.second;
 	const auto& task_it = it_inserted.first;
 	RemoteTaskModel*& remote_task = task_it->second;
@@ -262,8 +257,7 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 		}
 	} else if (created) {  // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(scene_, display_context_, this);
-		remote_task->setSolutionClient(get_solution_client_);
+		remote_task = new RemoteTaskModel(nh, service_name, scene_, display_context_, this);
 
 		// HACK: always use the last created model as active
 		active_task_model_ = remote_task;
@@ -275,17 +269,16 @@ void TaskListModel::processTaskDescriptionMessage(const std::string& id,
 
 	// insert newly created model into this' model instance
 	if (created) {
-		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s", msg.id.c_str());
+		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s", msg.task_id.c_str());
 		insertModel(remote_task, -1);
 	}
 }
 
 // process a task statistics message
-void TaskListModel::processTaskStatisticsMessage(const std::string& id,
-                                                 const moveit_task_constructor_msgs::TaskStatistics& msg) {
-	auto it = remote_tasks_.find(id);
+void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg) {
+	auto it = remote_tasks_.find(msg.task_id);
 	if (it == remote_tasks_.cend()) {
-		ROS_WARN("unknown task: %s", id.c_str());
+		ROS_WARN("unknown task: %s", msg.task_id.c_str());
 		return;
 	}
 
@@ -296,9 +289,8 @@ void TaskListModel::processTaskStatisticsMessage(const std::string& id,
 	remote_task->processStageStatistics(msg.stages);
 }
 
-DisplaySolutionPtr TaskListModel::processSolutionMessage(const std::string& id,
-                                                         const moveit_task_constructor_msgs::Solution& msg) {
-	auto it = remote_tasks_.find(id);
+DisplaySolutionPtr TaskListModel::processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg) {
+	auto it = remote_tasks_.find(msg.task_id);
 	if (it == remote_tasks_.cend())
 		return DisplaySolutionPtr();  // unkown task
 

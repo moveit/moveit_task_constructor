@@ -38,12 +38,9 @@
 
 #include "task_list_model.h"
 #include <moveit/visualization_tools/display_solution.h>
+#include <ros/service_client.h>
 #include <memory>
 #include <limits>
-
-namespace ros {
-class ServiceClient;
-}
 
 namespace moveit_rviz_plugin {
 
@@ -57,7 +54,7 @@ class RemoteTaskModel : public BaseTaskModel
 	Q_OBJECT
 	struct Node;
 	Node* const root_;
-	ros::ServiceClient* get_solution_client_ = nullptr;
+	ros::ServiceClient get_solution_client_;
 
 	std::map<uint32_t, Node*> id_to_stage_;
 	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
@@ -70,11 +67,10 @@ class RemoteTaskModel : public BaseTaskModel
 	void setSolutionData(const moveit_task_constructor_msgs::SolutionInfo& info);
 
 public:
-	RemoteTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
+	RemoteTaskModel(ros::NodeHandle& nh, const std::string& service_name,
+	                const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
 	                QObject* parent = nullptr);
 	~RemoteTaskModel() override;
-
-	void setSolutionClient(ros::ServiceClient* client);
 
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 

@@ -61,7 +61,6 @@ namespace moveit_rviz_plugin {
 
 TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
 	task_list_model_.reset(new TaskListModel);
-	task_list_model_->setSolutionClient(&get_solution_client);
 
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
@@ -187,19 +186,10 @@ void TaskDisplay::changedRobotDescription() {
 		loadRobotModel();
 }
 
-inline std::string getUniqueId(const std::string& process_id, const std::string& task_id) {
-	std::string id{ process_id };
-	if (!task_id.empty()) {
-		id += "/";
-		id += task_id;
-	}
-	return id;
-}
-
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-	task_list_model_->processTaskDescriptionMessage(id, *msg);
+	task_list_model_->processTaskDescriptionMessage(*msg, update_nh_,
+	                                                base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
 	// Start listening to other topics if this is the first description
 	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
@@ -211,15 +201,13 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDesc
 }
 
 void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-	task_list_model_->processTaskStatisticsMessage(id, *msg);
+	task_list_model_->processTaskStatisticsMessage(*msg);
 }
 
 void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->task_id);
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-	const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
+	const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
 	if (s)
 		trajectory_visual_->showTrajectory(s, false);
 	return;
@@ -233,7 +221,6 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	task_description_sub.shutdown();
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
-	get_solution_client.shutdown();
 
 	received_task_description_ = false;
 
@@ -249,10 +236,6 @@ void TaskDisplay::changedTaskSolutionTopic() {
 
 	// listen to task descriptions updates
 	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 10, &TaskDisplay::taskDescriptionCB, this);
-
-	// service to request solutions
-	get_solution_client =
-	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns_ + GET_SOLUTION_SERVICE);
 
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
