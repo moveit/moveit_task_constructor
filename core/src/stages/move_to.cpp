@@ -252,6 +252,11 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	}
 
 	// store result
+	if (!robot_trajectory && storeFailures()) {
+		robot_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, jmg);
+		robot_trajectory->addSuffixWayPoint(state.scene()->getCurrentState(), 0.0);
+		robot_trajectory->addSuffixWayPoint(scene->getCurrentState(), 1.0);
+	}
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD)
