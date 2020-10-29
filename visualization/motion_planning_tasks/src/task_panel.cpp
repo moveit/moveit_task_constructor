@@ -149,9 +149,9 @@ void TaskPanel::decDisplayCount() {
 		SINGLETON->deleteLater();
 }
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel* q_ptr) : q_ptr(q_ptr) {
-	setupUi(q_ptr);
-	tool_buttons_group = new QButtonGroup(q_ptr);
+TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
+	setupUi(panel);
+	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
 	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
@@ -198,8 +198,8 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	view->setExpanded(index, expand);
 }
 
-TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_client_("execute_task_solution") {
-	setupUi(q_ptr);
+TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view), exec_action_client_("execute_task_solution") {
+	setupUi(view);
 
 	MetaTaskListModel* meta_model = &MetaTaskListModel::instance();
 	StageFactoryPtr factory = getStageFactory();
@@ -520,10 +520,10 @@ void TaskView::onOldTaskHandlingChanged() {
 	Q_EMIT oldTaskHandlingChanged(old_task_handling->getOptionInt());
 }
 
-GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
-  : q_ptr(q_ptr) {
-	setupUi(q_ptr);
-	properties = new rviz::PropertyTreeModel(root, q_ptr);
+GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* widget, rviz::Property* root)
+  : q_ptr(widget) {
+	setupUi(widget);
+	properties = new rviz::PropertyTreeModel(root, widget);
 	view->setModel(properties);
 }
 

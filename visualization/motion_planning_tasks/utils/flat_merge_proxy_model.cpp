@@ -107,7 +107,7 @@ public:
 	std::vector<ModelData> data_;
 
 public:
-	FlatMergeProxyModelPrivate(FlatMergeProxyModel* q_ptr) : q_ptr(q_ptr) {}
+	FlatMergeProxyModelPrivate(FlatMergeProxyModel* model) : q_ptr(model) {}
 
 	std::vector<ModelData>::iterator find(const QObject* model) {
 		Q_ASSERT(model);
