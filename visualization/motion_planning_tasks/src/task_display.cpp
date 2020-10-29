@@ -59,7 +59,7 @@
 
 namespace moveit_rviz_plugin {
 
-TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
+TaskDisplay::TaskDisplay() : Display(), panel_requested_(false), received_task_description_(false) {
 	task_list_model_.reset(new TaskListModel);
 
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
@@ -88,17 +88,24 @@ TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
 }
 
 TaskDisplay::~TaskDisplay() {
-	if (context_)
-		TaskPanel::decDisplayCount();
+	if (panel_requested_)
+		TaskPanel::release();  // Indicate that we don't need a TaskPanel anymore
 }
 
 void TaskDisplay::onInitialize() {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
-	// create a new TaskPanel by default
-	// by post-poning this to Qt's GUI loop, we can ensure that rviz has loaded everything before
-	QTimer::singleShot(0, [this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
+}
+
+inline void TaskDisplay::requestPanel() {
+	if (panel_requested_)
+		return;  // already done
+
+	// Create a new TaskPanel if not yet done.
+	// This cannot be done in initialize(), because Panel loading follows Display loading in rviz.
+	panel_requested_ = true;
+	TaskPanel::request(context_->getWindowManager());
 }
 
 void TaskDisplay::loadRobotModel() {
@@ -170,6 +177,7 @@ void TaskDisplay::calculateOffsetPosition() {
 }
 
 void TaskDisplay::update(float wall_dt, float ros_dt) {
+	requestPanel();
 	Display::update(wall_dt, ros_dt);
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
@@ -188,6 +196,7 @@ void TaskDisplay::changedRobotDescription() {
 
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	requestPanel();
 	task_list_model_->processTaskDescriptionMessage(*msg, update_nh_,
 	                                                base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 

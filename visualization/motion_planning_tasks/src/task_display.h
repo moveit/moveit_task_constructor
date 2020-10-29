@@ -100,6 +100,9 @@ protected:
 	void fixedFrameChanged() override;
 	void calculateOffsetPosition();
 
+private:
+	inline void requestPanel();
+
 private Q_SLOTS:
 	/**
 	 * \brief Slot Event Functions
@@ -123,6 +126,7 @@ protected:
 	std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
 	// The TaskListModel storing actual task and solution data
 	std::unique_ptr<TaskListModel> task_list_model_;
+	bool panel_requested_;
 
 	// Load robot model
 	rdf_loader::RDFLoaderPtr rdf_loader_;

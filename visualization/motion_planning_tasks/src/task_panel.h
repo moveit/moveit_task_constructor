@@ -91,8 +91,8 @@ public:
 	 * If not yet done, an instance is created. If use count drops to zero,
 	 * the global instance is destroyed.
 	 */
-	static void incDisplayCount(rviz::WindowManagerInterface* window_manager);
-	static void decDisplayCount();
+	static void request(rviz::WindowManagerInterface* window_manager);
+	static void release();
 
 	void onInitialize() override;
 	void load(const rviz::Config& config) override;

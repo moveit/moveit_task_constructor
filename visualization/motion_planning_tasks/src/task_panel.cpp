@@ -130,7 +130,25 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
 	connect(w, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
 }
 
-void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
+/* Realizing a singleton Panel is a nightmare with rviz...
+ * Formally, Panels (as a plugin class) cannot be singleton, because new instances are created on demand.
+ * Hence, we decided to use a true singleton for the underlying model only and a fake singleton for the panel.
+ * Thus, all panels (in case multiple were created) show the same content.
+ * The fake singleton shall ensure that only a single panel is created, even if several displays are created.
+ * To this end, the displays request() the need for a panel during their initialization and they release()
+ * this need during their destruction. This, in principle, allows to create a panel together with the first
+ * display and destroy it when the last display is gone.
+ * Obviously, the user can still decide to explicitly delete the panel (or create new ones).
+
+ * The nightmare arises from the order of loading of displays and panels: Displays are loaded first.
+ * However, directly creating a panel with the first loaded display doesn't work, because panel loading
+ * will create another panel instance later (because there is no singleton support).
+ * Hence, we need to postpone the actual panel creation from displays until panel loading is finished as well.
+ * This was initially done, by postponing panel creation to TaskDisplay::update(). However, update()
+ * will never be called if the display is disabled...
+ */
+
+void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
 	++DISPLAY_COUNT;
 
 	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
@@ -143,7 +161,7 @@ void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
 	assert(dock->widget() == SINGLETON);
 }
 
-void TaskPanel::decDisplayCount() {
+void TaskPanel::release() {
 	Q_ASSERT(DISPLAY_COUNT > 0);
 	if (--DISPLAY_COUNT == 0 && SINGLETON)
 		SINGLETON->deleteLater();
