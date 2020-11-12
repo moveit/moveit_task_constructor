@@ -231,6 +231,9 @@ void export_stages() {
 
 	    .def("__init__", bp::make_constructor(&Pick_init_2))
 	    .def("__init__", bp::make_constructor(&Pick_init_1))
+	    .def("setApproachMotion", &Pick::setApproachMotion)
+	    .def<void (Pick::*)(const geometry_msgs::TwistStamped&, double, double)>("setLiftMotion", &Pick::setLiftMotion)
+	    .def<void (Pick::*)(const std::map<std::string, double>&)>("setLiftMotion", &Pick::setLiftMotion)
 	    // .def("__init__", bp::make_constructor(&Pick_init_0))
 	    ;
 	bp::implicitly_convertible<std::auto_ptr<Pick>, std::auto_ptr<Stage>>();
@@ -254,6 +257,9 @@ void export_stages() {
 	    .property<std::string>("object")
 	    .def("__init__", bp::make_constructor(&SimpleGrasp_init_2))
 	    .def("__init__", bp::make_constructor(&SimpleGrasp_init_1))
+	    .def<void (SimpleGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleGrasp::setIKFrame)
+	    .def<void (SimpleGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame)
+	    .def<void (SimpleGrasp::*)(const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame)
 	    // .def("__init__", bp::make_constructor(&SimpleGrasp_init_0))
 	    ;
 	bp::implicitly_convertible<std::auto_ptr<SimpleGrasp>, std::auto_ptr<Stage>>();
