@@ -213,20 +213,22 @@ public:
 
 	/** set the solution's start_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must not be used with different states because it registers the solution with the state as well if
+	 * register_solution is true.
 	 */
-	inline void setStartState(const InterfaceState& state) {
+	inline void setStartState(const InterfaceState& state, bool register_solution = true) {
 		assert(start_ == nullptr || start_ == &state);
-		setStartStateUnsafe(state);
+		setStartStateUnsafe(state, register_solution);
 	}
 
 	/** set the solution's end_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must not be used with different states because it registers the solution with the state as well if
+	 * register_solution is true.
 	 */
-	inline void setEndState(const InterfaceState& state) {
+	inline void setEndState(const InterfaceState& state, bool register_solution = true) {
 		assert(end_ == nullptr || end_ == &state);
-		setEndStateUnsafe(state);
+		setEndStateUnsafe(state, register_solution);
 	}
 
 	inline const Stage* creator() const { return creator_; }
@@ -262,13 +264,13 @@ protected:
 	 *
 	 * must only be used if the previously set state removes its link to this solution
 	 */
-	void setStartStateUnsafe(const InterfaceState& state);
+	void setStartStateUnsafe(const InterfaceState& state, bool register_solution = true);
 
 	/** unsafe setter for end_state_
 	 *
 	 * must only be used if the previously set state removes its link to this solution
 	 */
-	void setEndStateUnsafe(const InterfaceState& state);
+	void setEndStateUnsafe(const InterfaceState& state, bool register_solution = true);
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
@@ -331,8 +333,14 @@ public:
 
 	const container_type& solutions() const { return subsolutions_; }
 
-	inline const InterfaceState* internalStart() const { return subsolutions_.front()->start(); }
-	inline const InterfaceState* internalEnd() const { return subsolutions_.back()->end(); }
+	inline const InterfaceState* internalStart() const {
+		assert(start() == nullptr || start() == subsolutions_.front()->start());
+		return subsolutions_.front()->start();
+	}
+	inline const InterfaceState* internalEnd() const {
+		assert(end() == nullptr || end() == subsolutions_.back()->end());
+		return subsolutions_.back()->end();
+	}
 
 private:
 	/// series of sub solutions

@@ -186,23 +186,29 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 	const InterfaceState* state = &from;
 
 	SolutionSequence::container_type sub_solutions;
-	for (const auto& sub : sub_trajectories) {
+	for (auto sub_trajectory_it = sub_trajectories.cbegin(); sub_trajectory_it != sub_trajectories.cend();
+	     ++sub_trajectory_it) {
 		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
 
-		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
+		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(*sub_trajectory_it));
 		inserted->setCreator(this);
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
 
 		// provide meaningful start/end states
-		subsolutions_.back().setStartState(*state);
-
+		// The start/end state of the first/last subsolution correspond to the start/end state of the main solution
+		// (SolutionSequence) i.e. the main solution need to be added to the main start state(from) and the main end
+		// state(to)
+		if (sub_trajectory_it == sub_trajectories.cbegin())
+			subsolutions_.back().setStartState(*state, false);
+		else
+			subsolutions_.back().setStartState(*state);
 		// for all but last scene, create a new state
 		if (sub_solutions.size() < sub_trajectories.size()) {
 			state = &*states_.insert(states_.end(), InterfaceState(end_ps));
 			subsolutions_.back().setEndState(*state);
 		} else
-			subsolutions_.back().setEndState(to);
+			subsolutions_.back().setEndState(to, false);
 
 		start_ps = end_ps;
 	}
