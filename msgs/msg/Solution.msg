@@ -1,7 +1,4 @@
-# id of generating process
-string process_id
-
-# id of associated task
+# id of generating task
 string task_id
 
 # planning scene of start state

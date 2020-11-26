@@ -42,6 +42,7 @@
 #include <utils/flat_merge_proxy_model.h>
 
 #include <moveit/macros/class_forward.h>
+#include <ros/node_handle.h>
 #include <moveit_task_constructor_msgs/TaskDescription.h>
 #include <moveit_task_constructor_msgs/TaskStatistics.h>
 #include <moveit_task_constructor_msgs/Solution.h>
@@ -52,9 +53,6 @@
 #include <memory>
 #include <QPointer>
 
-namespace ros {
-class ServiceClient;
-}
 namespace rviz {
 class PropertyTreeModel;
 class DisplayContext;
@@ -128,11 +126,12 @@ class TaskListModel : public utils::FlatMergeProxyModel
 	// rviz::DisplayContext used to show (interactive) markers by the property models
 	rviz::DisplayContext* display_context_ = nullptr;
 
-	// map from remote task IDs to tasks
+	// map from remote task IDs to (active) tasks
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
 	// if task is removed locally from tasks vector, it is marked with a nullptr
 	std::map<std::string, RemoteTaskModel*> remote_tasks_;
-	ros::ServiceClient* get_solution_client_ = nullptr;
+	// mode reflecting the "Old task handling" setting
+	int old_task_handling_;
 
 	// factory used to create stages
 	StageFactoryPtr stage_factory_;
@@ -148,7 +147,6 @@ public:
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
 	void setDisplayContext(rviz::DisplayContext* display_context);
-	void setSolutionClient(ros::ServiceClient* client);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
 	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
@@ -157,11 +155,12 @@ public:
 	QVariant data(const QModelIndex& index, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskDescriptionMessage(const std::string& id, const moveit_task_constructor_msgs::TaskDescription& msg);
+	void processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg, ros::NodeHandle& nh,
+	                                   const std::string& service_name);
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskStatisticsMessage(const std::string& id, const moveit_task_constructor_msgs::TaskStatistics& msg);
+	void processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	DisplaySolutionPtr processSolutionMessage(const std::string& id, const moveit_task_constructor_msgs::Solution& msg);
+	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg);
 
 	/// insert a TaskModel, pos is relative to modelCount()
 	bool insertModel(BaseTaskModel* model, int pos = -1);
@@ -174,6 +173,9 @@ public:
 	                  const QModelIndex& parent) override;
 	Qt::DropActions supportedDropActions() const override;
 	Qt::ItemFlags flags(const QModelIndex& index) const override;
+
+public Q_SLOTS:
+	void setOldTaskHandling(int mode);
 
 protected Q_SLOTS:
 	void highlightStage(size_t id);

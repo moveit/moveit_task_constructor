@@ -108,7 +108,7 @@ public:
 	std::vector<ModelData> data_;
 
 public:
-	TreeMergeProxyModelPrivate(TreeMergeProxyModel* q_ptr) : q_ptr(q_ptr) {}
+	TreeMergeProxyModelPrivate(TreeMergeProxyModel* model) : q_ptr(model) {}
 
 	std::vector<ModelData>::iterator find(const QObject* model) {
 		Q_ASSERT(model);

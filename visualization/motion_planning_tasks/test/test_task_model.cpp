@@ -50,15 +50,17 @@ using namespace moveit::task_constructor;
 class TaskListModelTest : public ::testing::Test
 {
 protected:
+	ros::NodeHandle nh;
 	moveit_rviz_plugin::TaskListModel model;
 	int children = 0;
 	int num_inserts = 0;
 	int num_updates = 0;
 
-	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name) {
+	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name,
+	                                                     const std::string& task_id = std::string()) {
 		moveit_task_constructor_msgs::TaskDescription t;
-		t.id = name;
 		uint id = 0, root_id;
+		t.task_id = task_id.empty() ? name : task_id;
 
 		moveit_task_constructor_msgs::StageDescription desc;
 		desc.parent_id = id;
@@ -127,7 +129,7 @@ protected:
 			SCOPED_TRACE("first i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage("1", genMsg("first"));
+			model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
@@ -141,7 +143,7 @@ protected:
 			SCOPED_TRACE("second i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage("2", genMsg("second"));  // 1 notify for inserted task
+			model.processTaskDescriptionMessage(genMsg("second"), nh, "get_solution");  // 1 notify for inserted task
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);
@@ -163,7 +165,7 @@ protected:
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
 	planning_scene::PlanningSceneConstPtr scene;
-	moveit_rviz_plugin::RemoteTaskModel m(scene, nullptr);
+	moveit_rviz_plugin::RemoteTaskModel m(nh, "get_solution", scene, nullptr);
 	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
 	validate(m, { "first" });
@@ -200,13 +202,13 @@ TEST_F(TaskListModelTest, threeChildren) {
 TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
 	validate(model, { "first" });  // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
 	validate(model, { "first" });
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
@@ -215,7 +217,7 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 
 TEST_F(TaskListModelTest, deletion) {
 	children = 3;
-	model.processTaskDescriptionMessage("1", genMsg("first"));
+	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
 	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
 	QObject::connect(m, &QObject::destroyed, [&num_deletes]() { ++num_deletes; });
@@ -226,4 +228,10 @@ TEST_F(TaskListModelTest, deletion) {
 	// as m is owned by model, m should be destroyed
 	// EXPECT_EQ(num_deletes, 1); // TODO: event is not processed, missing event loop?
 	EXPECT_EQ(model.rowCount(), 0);
+}
+
+int main(int argc, char** argv) {
+	testing::InitGoogleTest(&argc, argv);
+	ros::init(argc, argv, "test_task_model");
+	return RUN_ALL_TESTS();
 }

@@ -91,8 +91,8 @@ public:
 	 * If not yet done, an instance is created. If use count drops to zero,
 	 * the global instance is destroyed.
 	 */
-	static void incDisplayCount(rviz::WindowManagerInterface* window_manager);
-	static void decDisplayCount();
+	static void request(rviz::WindowManagerInterface* window_manager);
+	static void release();
 
 	void onInitialize() override;
 	void load(const rviz::Config& config) override;
@@ -124,11 +124,19 @@ protected:
 		EXPAND_ALL,
 		EXPAND_NONE
 	};
-	rviz::EnumProperty* initial_task_expand;
 
+	rviz::EnumProperty* initial_task_expand;
+	rviz::EnumProperty* old_task_handling;
 	rviz::BoolProperty* show_time_column;
 
 public:
+	enum OldTaskHandling
+	{
+		OLD_TASK_KEEP = 1,
+		OLD_TASK_REPLACE,
+		OLD_TASK_REMOVE
+	};
+
 	TaskView(TaskPanel* parent, rviz::Property* root);
 	~TaskView() override;
 
@@ -145,6 +153,13 @@ protected Q_SLOTS:
 	void onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected);
 	void onExecCurrentSolution() const;
 	void onShowTimeChanged();
+	void onOldTaskHandlingChanged();
+
+private:
+	Q_PRIVATE_SLOT(d_ptr, void _q_configureInsertedModels(QModelIndex, int, int));
+
+Q_SIGNALS:
+	void oldTaskHandlingChanged(int);
 };
 
 class GlobalSettingsWidgetPrivate;

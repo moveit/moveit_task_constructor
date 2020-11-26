@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2020, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,45 +31,31 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-
-/* Authors: Robert Haschke
-   Desc:   Private API of class Task
-*/
+/* Authors: Michael 'v4hn' Goerner */
 
 #pragma once
 
-#include <moveit/task_constructor/container_p.h>
-#include <moveit/task_constructor/task.h>
-
-namespace robot_model_loader {
-MOVEIT_CLASS_FORWARD(RobotModelLoader)
-}
+#include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/cost_queue.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <Eigen/Geometry>
 
 namespace moveit {
 namespace task_constructor {
+namespace stages {
 
-class TaskPrivate : public WrapperBasePrivate
+/** Generic Wrapper that passes on a solution
+ *
+ * Useful to set a custom CostTransform via Stage::setCostTerm
+ * to change a solution's cost without loosing the original value
+ */
+class PassThrough : public WrapperBase
 {
-	friend class Task;
-
 public:
-	TaskPrivate(Task* me, const std::string& ns);
-	const std::string& ns() const { return ns_; }
-	const ContainerBase* stages() const;
+	PassThrough(const std::string& name = "PassThrough", Stage::pointer&& child = Stage::pointer());
 
-protected:
-	static void swap(StagePrivate*& lhs, StagePrivate*& rhs);
-
-private:
-	std::string ns_;
-	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
-	moveit::core::RobotModelConstPtr robot_model_;
-	bool preempt_requested_;
-
-	// introspection and monitoring
-	std::unique_ptr<Introspection> introspection_;
-	std::list<Task::TaskCallback> task_cbs_;  // functions to monitor task's planning progress
+	void onNewSolution(const SolutionBase& s) override;
 };
-PIMPL_FUNCTIONS(Task)
+}  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

@@ -28,6 +28,7 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override {
 		ps.reset((new PlanningScene(robot_model)));
+		Generator::init(robot_model);
 	}
 
 	bool canCompute() const override { return true; }

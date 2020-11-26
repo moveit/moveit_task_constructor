@@ -40,12 +40,16 @@
 #include <moveit/task_constructor/merge.h>
 #include <moveit/planning_scene/planning_scene.h>
 
+#include <moveit/task_constructor/cost_terms.h>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
 Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : Connecting(name), planner_(planners) {
 	setTimeout(1.0);
+	setCostTerm(std::make_unique<cost::PathLength>());
+
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
@@ -82,9 +86,8 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 		}
 	}
 
-	if (!errors && groups.size() >= 2) {  // enable merging?
+	if (!errors && groups.size() >= 2 && !merged_jmg_) {  // enable merging?
 		try {
-			merged_jmg_.reset();
 			merged_jmg_.reset(task_constructor::merge(groups));
 		} catch (const std::runtime_error& e) {
 			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
@@ -181,15 +184,6 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 	planning_scene::PlanningSceneConstPtr start_ps = *scene_it;
 	const InterfaceState* state = &from;
 
-	// calculate cost
-	double cost = 0;
-	for (const auto& trajectory : sub_trajectories) {
-		if (!trajectory)
-			continue;
-		for (const double& distance : trajectory->getWayPointDurations())
-			cost += distance;
-	}
-
 	SolutionSequence::container_type sub_solutions;
 	for (const auto& sub : sub_trajectories) {
 		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
@@ -212,24 +206,15 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 		start_ps = end_ps;
 	}
 
-	return std::make_shared<SolutionSequence>(std::move(sub_solutions), cost);
+	return std::make_shared<SolutionSequence>(std::move(sub_solutions));
 }
 
 SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                                 const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                 const moveit::core::RobotState& state) {
-	// calculate cost
-	double cost = 0;
-	for (const auto& trajectory : sub_trajectories) {
-		if (!trajectory)
-			continue;
-		for (const double& distance : trajectory->getWayPointDurations())
-			cost += distance;
-	}
-
 	// no need to merge if there is only a single sub trajectory
 	if (sub_trajectories.size() == 1)
-		return std::make_shared<SubTrajectory>(sub_trajectories[0], cost);
+		return std::make_shared<SubTrajectory>(sub_trajectories[0]);
 
 	auto jmg = merged_jmg_.get();
 	assert(jmg);
@@ -242,7 +227,7 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 	                                              properties().get<moveit_msgs::Constraints>("path_constraints")))
 		return SubTrajectoryPtr();
 
-	return std::make_shared<SubTrajectory>(trajectory, cost);
+	return std::make_shared<SubTrajectory>(trajectory);
 }
 }  // namespace stages
 }  // namespace task_constructor

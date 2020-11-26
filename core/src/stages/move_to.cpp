@@ -37,6 +37,8 @@
 */
 
 #include <moveit/task_constructor/stages/move_to.h>
+#include <moveit/task_constructor/cost_terms.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -48,6 +50,8 @@ namespace stages {
 
 MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
+	setCostTerm(std::make_unique<cost::PathLength>());
+
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
@@ -248,18 +252,16 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	}
 
 	// store result
+	if (!robot_trajectory && storeFailures()) {
+		robot_trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, jmg);
+		robot_trajectory->addSuffixWayPoint(state.scene()->getCurrentState(), 0.0);
+		robot_trajectory->addSuffixWayPoint(scene->getCurrentState(), 1.0);
+	}
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
-
-		// set cost
-		double cost = 0;
-		for (const double& distance : robot_trajectory->getWayPointDurations()) {
-			cost += distance;
-		}
-		solution.setCost(cost);
 
 		if (!success)
 			solution.markAsFailure();

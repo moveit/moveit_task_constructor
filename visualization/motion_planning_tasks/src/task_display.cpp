@@ -59,9 +59,8 @@
 
 namespace moveit_rviz_plugin {
 
-TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
+TaskDisplay::TaskDisplay() : Display(), panel_requested_(false), received_task_description_(false) {
 	task_list_model_.reset(new TaskListModel);
-	task_list_model_->setSolutionClient(&get_solution_client);
 
 	MetaTaskListModel::instance().insertModel(task_list_model_.get(), this);
 
@@ -89,17 +88,24 @@ TaskDisplay::TaskDisplay() : Display(), received_task_description_(false) {
 }
 
 TaskDisplay::~TaskDisplay() {
-	if (context_)
-		TaskPanel::decDisplayCount();
+	if (panel_requested_)
+		TaskPanel::release();  // Indicate that we don't need a TaskPanel anymore
 }
 
 void TaskDisplay::onInitialize() {
 	Display::onInitialize();
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
-	// create a new TaskPanel by default
-	// by post-poning this to main loop, we can ensure that rviz has loaded everything before
-	mainloop_jobs_.addJob([this]() { TaskPanel::incDisplayCount(context_->getWindowManager()); });
+}
+
+inline void TaskDisplay::requestPanel() {
+	if (panel_requested_)
+		return;  // already done
+
+	// Create a new TaskPanel if not yet done.
+	// This cannot be done in initialize(), because Panel loading follows Display loading in rviz.
+	panel_requested_ = true;
+	TaskPanel::request(context_->getWindowManager());
 }
 
 void TaskDisplay::loadRobotModel() {
@@ -171,8 +177,8 @@ void TaskDisplay::calculateOffsetPosition() {
 }
 
 void TaskDisplay::update(float wall_dt, float ros_dt) {
+	requestPanel();
 	Display::update(wall_dt, ros_dt);
-	mainloop_jobs_.executeJobs();
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
 
@@ -188,49 +194,32 @@ void TaskDisplay::changedRobotDescription() {
 		loadRobotModel();
 }
 
-inline std::string getUniqueId(const std::string& process_id, const std::string& task_id) {
-	std::string id{ process_id };
-	if (!task_id.empty()) {
-		id += "/";
-		id += task_id;
-	}
-	return id;
-}
-
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskDescriptionMessage(id, *msg);
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	requestPanel();
+	task_list_model_->processTaskDescriptionMessage(*msg, update_nh_,
+	                                                base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
-		// Start listening to other topics if this is the first description
-		// Waiting for the description ensures we do not receive data that cannot be interpreted yet
-		if (!received_task_description_ && !msg->stages.empty()) {
-			received_task_description_ = true;
-			task_statistics_sub =
-			    update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
-			task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
-		}
-	});
+	// Start listening to other topics if this is the first description
+	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
+	if (!received_task_description_ && !msg->stages.empty()) {
+		received_task_description_ = true;
+		task_statistics_sub = update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
+		task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
+	}
 }
 
 void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		task_list_model_->processTaskStatisticsMessage(id, *msg);
-	});
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	task_list_model_->processTaskStatisticsMessage(*msg);
 }
 
 void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
-	const std::string id = getUniqueId(msg->process_id, msg->task_id);
-	mainloop_jobs_.addJob([this, id, msg]() {
-		setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(id, *msg);
-		if (s)
-			trajectory_visual_->showTrajectory(s, false);
-		return;
-	});
+	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+	const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
+	if (s)
+		trajectory_visual_->showTrajectory(s, false);
+	return;
 }
 
 void TaskDisplay::changedTaskSolutionTopic() {
@@ -241,7 +230,6 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	task_description_sub.shutdown();
 	task_statistics_sub.shutdown();
 	task_solution_sub.shutdown();
-	get_solution_client.shutdown();
 
 	received_task_description_ = false;
 
@@ -256,11 +244,7 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	base_ns_ = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
 	// listen to task descriptions updates
-	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 2, &TaskDisplay::taskDescriptionCB, this);
-
-	// service to request solutions
-	get_solution_client =
-	    update_nh_.serviceClient<moveit_task_constructor_msgs::GetSolution>(base_ns_ + GET_SOLUTION_SERVICE);
+	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 10, &TaskDisplay::taskDescriptionCB, this);
 
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }

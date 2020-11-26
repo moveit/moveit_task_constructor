@@ -130,12 +130,30 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
 	connect(w, SIGNAL(configChanged()), this, SIGNAL(configChanged()));
 }
 
-void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
+/* Realizing a singleton Panel is a nightmare with rviz...
+ * Formally, Panels (as a plugin class) cannot be singleton, because new instances are created on demand.
+ * Hence, we decided to use a true singleton for the underlying model only and a fake singleton for the panel.
+ * Thus, all panels (in case multiple were created) show the same content.
+ * The fake singleton shall ensure that only a single panel is created, even if several displays are created.
+ * To this end, the displays request() the need for a panel during their initialization and they release()
+ * this need during their destruction. This, in principle, allows to create a panel together with the first
+ * display and destroy it when the last display is gone.
+ * Obviously, the user can still decide to explicitly delete the panel (or create new ones).
+
+ * The nightmare arises from the order of loading of displays and panels: Displays are loaded first.
+ * However, directly creating a panel with the first loaded display doesn't work, because panel loading
+ * will create another panel instance later (because there is no singleton support).
+ * Hence, we need to postpone the actual panel creation from displays until panel loading is finished as well.
+ * This was initially done, by postponing panel creation to TaskDisplay::update(). However, update()
+ * will never be called if the display is disabled...
+ */
+
+void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
 	++DISPLAY_COUNT;
 
 	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
 	if (SINGLETON || !vis_frame)
-		return;  // already define, nothing to do
+		return;  // already defined, nothing to do
 
 	QDockWidget* dock =
 	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
@@ -143,15 +161,15 @@ void TaskPanel::incDisplayCount(rviz::WindowManagerInterface* window_manager) {
 	assert(dock->widget() == SINGLETON);
 }
 
-void TaskPanel::decDisplayCount() {
+void TaskPanel::release() {
 	Q_ASSERT(DISPLAY_COUNT > 0);
 	if (--DISPLAY_COUNT == 0 && SINGLETON)
 		SINGLETON->deleteLater();
 }
 
-TaskPanelPrivate::TaskPanelPrivate(TaskPanel* q_ptr) : q_ptr(q_ptr) {
-	setupUi(q_ptr);
-	tool_buttons_group = new QButtonGroup(q_ptr);
+TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
+	setupUi(panel);
+	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
 	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
@@ -198,35 +216,16 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	view->setExpanded(index, expand);
 }
 
-TaskViewPrivate::TaskViewPrivate(TaskView* q_ptr) : q_ptr(q_ptr), exec_action_client_("execute_task_solution") {
-	setupUi(q_ptr);
+TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view), exec_action_client_("execute_task_solution") {
+	setupUi(view);
 
 	MetaTaskListModel* meta_model = &MetaTaskListModel::instance();
 	StageFactoryPtr factory = getStageFactory();
 	if (factory)
 		meta_model->setMimeTypes({ factory->mimeType() });
 	tasks_view->setModel(meta_model);
-	// auto-expand newly-inserted top-level items
-	QObject::connect(meta_model, &QAbstractItemModel::rowsInserted,
-	                 [this](const QModelIndex& parent, int first, int last) {
-		                 if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
-			                 int expand = this->q_ptr->initial_task_expand->getOptionInt();
-			                 for (int row = first; row <= last; ++row) {
-				                 QModelIndex child = parent.model()->index(row, 0, parent);
-				                 if (expand != TaskView::EXPAND_NONE) {
-					                 // recursively expand all inserted items
-					                 setExpanded(tasks_view, child, true);
-				                 }
-				                 if (expand == TaskView::EXPAND_TOP) {
-					                 // collapse up to first level
-					                 setExpanded(tasks_view, child, false, 1);
-					                 // expand inserted item
-					                 setExpanded(tasks_view, child, true, 0);
-				                 }
-			                 }
-			                 tasks_view->setExpanded(parent, true);  // expand parent group item
-		                 }
-	                 });
+	QObject::connect(meta_model, SIGNAL(rowsInserted(QModelIndex, int, int)), q_ptr,
+	                 SLOT(_q_configureInsertedModels(QModelIndex, int, int)));
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -249,6 +248,40 @@ std::pair<TaskListModel*, TaskDisplay*> TaskViewPrivate::getTaskListModel(const 
 std::pair<BaseTaskModel*, QModelIndex> TaskViewPrivate::getTaskModel(const QModelIndex& index) const {
 	auto* meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
 	return meta_model->getTaskModel(index);
+}
+
+void TaskViewPrivate::configureTaskListModel(TaskListModel* model) {
+	QObject::connect(q_ptr, &TaskView::oldTaskHandlingChanged, model, &TaskListModel::setOldTaskHandling);
+	model->setOldTaskHandling(q_ptr->old_task_handling->getOptionInt());
+}
+
+void TaskViewPrivate::configureExistingModels() {
+	auto* meta_model = static_cast<MetaTaskListModel*>(tasks_view->model());
+	for (int row = meta_model->rowCount() - 1; row >= 0; --row)
+		configureTaskListModel(meta_model->getTaskListModel(meta_model->index(row, 0)).first);
+}
+
+void TaskViewPrivate::_q_configureInsertedModels(const QModelIndex& parent, int first, int last) {
+	if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
+		int expand = q_ptr->initial_task_expand->getOptionInt();
+		for (int row = first; row <= last; ++row) {
+			// set expanded state of items
+			QModelIndex child = parent.model()->index(row, 0, parent);
+			if (expand != TaskView::EXPAND_NONE) {
+				// recursively expand all inserted items
+				setExpanded(tasks_view, child, true);
+			}
+			if (expand == TaskView::EXPAND_TOP) {
+				// collapse up to first level
+				setExpanded(tasks_view, child, false, 1);
+				// expand inserted item
+				setExpanded(tasks_view, child, true, 0);
+			}
+
+			configureTaskListModel(getTaskListModel(child).first);
+		}
+		tasks_view->setExpanded(parent, true);  // expand parent group item
+	}
 }
 
 void TaskViewPrivate::lock(TaskDisplay* display) {
@@ -292,8 +325,18 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
 
+	old_task_handling =
+	    new rviz::EnumProperty("Old task handling", "Keep",
+	                           "Configure what to do with old tasks whose solutions cannot be queried anymore", configs);
+	old_task_handling->addOption("Keep", OLD_TASK_KEEP);
+	old_task_handling->addOption("Replace", OLD_TASK_REPLACE);
+	old_task_handling->addOption("Remove", OLD_TASK_REMOVE);
+	connect(old_task_handling, &rviz::Property::changed, this, &TaskView::onOldTaskHandlingChanged);
+
 	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
-	connect(show_time_column, SIGNAL(changed()), this, SLOT(onShowTimeChanged()));
+	connect(show_time_column, &rviz::Property::changed, this, &TaskView::onShowTimeChanged);
+
+	d_ptr->configureExistingModels();
 }
 
 TaskView::~TaskView() {
@@ -407,12 +450,12 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 
 	QItemSelectionModel* sm = view->selectionModel();
 	QAbstractItemModel* m = task ? task->getSolutionModel(task_index) : nullptr;
-	view->setModel(m);
-	view->sortByColumn(sort_column, sort_order);
-	delete sm;  // we don't store the selection model
-	sm = view->selectionModel();
+	if (view->model() != m) {
+		view->setModel(m);
+		view->sortByColumn(sort_column, sort_order);
+		delete sm;  // we don't store the selection model
 
-	if (sm) {
+		sm = view->selectionModel();
 		connect(sm, SIGNAL(currentChanged(QModelIndex, QModelIndex)), this,
 		        SLOT(onCurrentSolutionChanged(QModelIndex, QModelIndex)));
 		connect(sm, SIGNAL(selectionChanged(QItemSelection, QItemSelection)), this,
@@ -420,11 +463,13 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 
 	// update the PropertyModel
-	QTreeView* pview = d_ptr->property_view;
-	sm = pview->selectionModel();
+	view = d_ptr->property_view;
+	sm = view->selectionModel();
 	m = task ? task->getPropertyModel(task_index) : nullptr;
-	pview->setModel(m);
-	delete sm;  // we don't store the selection model
+	if (view->model() != m) {
+		view->setModel(m);
+		delete sm;  // we don't store the selection model
+	}
 }
 
 void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous) {
@@ -489,10 +534,14 @@ void TaskView::onShowTimeChanged() {
 	d_ptr->actionShowTimeColumn->setChecked(show);
 }
 
-GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root)
-  : q_ptr(q_ptr) {
-	setupUi(q_ptr);
-	properties = new rviz::PropertyTreeModel(root, q_ptr);
+void TaskView::onOldTaskHandlingChanged() {
+	Q_EMIT oldTaskHandlingChanged(old_task_handling->getOptionInt());
+}
+
+GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* widget, rviz::Property* root)
+  : q_ptr(widget) {
+	setupUi(widget);
+	properties = new rviz::PropertyTreeModel(root, widget);
 	view->setModel(properties);
 }
 

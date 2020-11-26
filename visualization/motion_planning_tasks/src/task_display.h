@@ -45,7 +45,6 @@
 #include "job_queue.h"
 #include <moveit/macros/class_forward.h>
 #include <ros/subscriber.h>
-#include <ros/service_client.h>
 #include <moveit_task_constructor_msgs/TaskDescription.h>
 #include <moveit_task_constructor_msgs/TaskStatistics.h>
 #include <moveit_task_constructor_msgs/Solution.h>
@@ -101,6 +100,9 @@ protected:
 	void fixedFrameChanged() override;
 	void calculateOffsetPosition();
 
+private:
+	inline void requestPanel();
+
 private Q_SLOTS:
 	/**
 	 * \brief Slot Event Functions
@@ -119,15 +121,12 @@ protected:
 	ros::Subscriber task_solution_sub;
 	ros::Subscriber task_description_sub;
 	ros::Subscriber task_statistics_sub;
-	ros::ServiceClient get_solution_client;
-
-	// handle processing of task+solution messages in Qt mainloop
-	moveit::tools::JobQueue mainloop_jobs_;
 
 	// The trajectory playback component
 	std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
 	// The TaskListModel storing actual task and solution data
 	std::unique_ptr<TaskListModel> task_list_model_;
+	bool panel_requested_;
 
 	// Load robot model
 	rdf_loader::RDFLoaderPtr rdf_loader_;

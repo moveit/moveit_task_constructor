@@ -45,7 +45,6 @@
 #include <rviz/properties/property_tree_model.h>
 #include <rviz/properties/string_property.h>
 #include <ros/console.h>
-#include <ros/service_client.h>
 
 #include <QApplication>
 #include <QPalette>
@@ -181,18 +180,17 @@ QModelIndex RemoteTaskModel::index(const Node* n) const {
 	return QModelIndex();
 }
 
-RemoteTaskModel::RemoteTaskModel(const planning_scene::PlanningSceneConstPtr& scene,
+RemoteTaskModel::RemoteTaskModel(ros::NodeHandle& nh, const std::string& service_name,
+                                 const planning_scene::PlanningSceneConstPtr& scene,
                                  rviz::DisplayContext* display_context, QObject* parent)
   : BaseTaskModel(scene, display_context, parent), root_(new Node(nullptr)) {
 	id_to_stage_[0] = root_;  // root node has ID 0
+	// service to request solutions
+	get_solution_client_ = nh.serviceClient<moveit_task_constructor_msgs::GetSolution>(service_name);
 }
 
 RemoteTaskModel::~RemoteTaskModel() {
 	delete root_;
-}
-
-void RemoteTaskModel::setSolutionClient(ros::ServiceClient* client) {
-	get_solution_client_ = client;
 }
 
 int RemoteTaskModel::rowCount(const QModelIndex& parent) const {
@@ -353,7 +351,7 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 		// emit notify about model changes when node was already visited
 		if (n->node_flags_ & WAS_VISITED) {
 			QModelIndex idx = index(n);
-			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 2));
+			dataChanged(idx.sibling(idx.row(), 1), idx.sibling(idx.row(), 3));
 		}
 	}
 }
@@ -420,15 +418,16 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 		// to avoid some communication overhead
 
 		DisplaySolutionPtr result;
-		if (!(flags_ & IS_DESTROYED) && get_solution_client_) {
+		if (!(flags_ & IS_DESTROYED)) {
 			// request solution via service
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;
 			try {
-				if (get_solution_client_->call(srv)) {
+				if (get_solution_client_.call(srv)) {
 					id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
 					return result;
 				} else {  // on failure mark remote task as destroyed: don't retrieve more solutions
+					get_solution_client_.shutdown();
 					flags_ |= IS_DESTROYED;
 				}
 			} catch (const std::exception& e) {

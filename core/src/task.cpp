@@ -71,8 +71,8 @@ std::string rosNormalizeName(const std::string& name) {
 namespace moveit {
 namespace task_constructor {
 
-TaskPrivate::TaskPrivate(Task* me, const std::string& id)
-  : WrapperBasePrivate(me, std::string()), id_(rosNormalizeName(id)), preempt_requested_(false) {}
+TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
+  : WrapperBasePrivate(me, std::string()), ns_(rosNormalizeName(ns)), preempt_requested_(false) {}
 
 void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
 	// It only makes sense to swap pimpl instances of a Task!
@@ -104,10 +104,9 @@ const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
-Task::Task(const std::string& id, bool introspection, ContainerBase::pointer&& container)
-  : WrapperBase(new TaskPrivate(this, id), std::move(container)) {
-	if (!id.empty())
-		stages()->setName(id);
+Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
+  : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
+	setTimeout(std::numeric_limits<double>::max());
 
 	// monitor state on commandline
 	// addTaskCallback(std::bind(&Task::printState, this, std::ref(std::cout)));
@@ -174,6 +173,7 @@ planning_pipeline::PlanningPipelinePtr Task::createPlanner(const robot_model::Ro
 
 Task::~Task() {
 	auto impl = pimpl();
+	impl->introspection_.reset();  // stop introspection
 	clear();  // remove all stages
 	impl->robot_model_.reset();
 	// only destroy loader after all references to the model are gone!
@@ -296,8 +296,10 @@ bool Task::plan(size_t max_solutions) {
 	init();
 
 	impl->preempt_requested_ = false;
-	while (ros::ok() && !impl->preempt_requested_ && canCompute() &&
-	       (max_solutions == 0 || numSolutions() < max_solutions)) {
+	const double available_time = timeout();
+	const auto start_time = std::chrono::steady_clock::now();
+	while (!impl->preempt_requested_ && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions) &&
+	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
@@ -353,10 +355,6 @@ PropertyMap& Task::properties() {
 void Task::setProperty(const std::string& name, const boost::any& value) {
 	// forward to wrapped() stage
 	wrapped()->setProperty(name, value);
-}
-
-std::string Task::id() const {
-	return pimpl()->id();
 }
 
 const core::RobotModelConstPtr& Task::getRobotModel() const {

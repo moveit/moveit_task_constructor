@@ -78,13 +78,14 @@ public:
 	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
 	              const std::string& planning_plugin_param_name = "planning_plugin",
 	              const std::string& adapter_plugins_param_name = "request_adapters");
-	Task(const std::string& id = "", bool introspection = true,
+	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	~Task() override;
 
-	std::string id() const;
+	const std::string& name() const { return stages()->name(); }
+	void setName(const std::string& name) { stages()->setName(name); }
 
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
@@ -111,6 +112,9 @@ public:
 	using WrapperBase::addSolutionCallback;
 	using WrapperBase::removeSolutionCallback;
 	using WrapperBase::SolutionCallback;
+
+	using WrapperBase::setTimeout;
+	using WrapperBase::timeout;
 
 	/// reset all stages
 	void reset() final;

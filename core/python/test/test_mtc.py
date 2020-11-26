@@ -272,12 +272,6 @@ class TestTask(unittest.TestCase):
 
     def test(self):
         task = core.Task()
-        self.assertEqual(task.id, "")
-        task = core.Task("foo", True, core.SerialContainer())
-        self.assertEqual(task.id, "foo")
-        task = core.Task("task")
-        self.assertEqual(task.id, "task")
-
         current = stages.CurrentState("current")
         self.assertEqual(current.name, "current")
         current.timeout = 1.23

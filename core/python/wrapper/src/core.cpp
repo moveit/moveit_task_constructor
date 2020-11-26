@@ -89,8 +89,8 @@ void ContainerBase_insert(ContainerBase& self, std::auto_ptr<Stage> stage, int b
 }
 BOOST_PYTHON_FUNCTION_OVERLOADS(ContainerBase_insert_overloads, ContainerBase_insert, 2, 3)
 
-Task* Task_init(const std::string& id, bool introspection, std::auto_ptr<ContainerBase> container) {
-	return new Task(id, introspection, std::unique_ptr<ContainerBase>{ container.release() });
+Task* Task_init(const std::string& ns, bool introspection, std::auto_ptr<ContainerBase> container) {
+	return new Task(ns, introspection, std::unique_ptr<ContainerBase>{ container.release() });
 }
 
 void Task_add(Task& self, std::auto_ptr<Stage> stage) {
@@ -209,7 +209,7 @@ void export_core() {
 
 	PropertyMap& (Task::*Task_getPropertyMap)() = &Task::properties;
 	bp::class_<Task, boost::noncopyable>("Task", bp::no_init)
-	    .add_property("id", &Task::id)
+	    .add_property("name", bp::make_function(&Task::name, bp::return_internal_reference<>()), &Task::setName)
 	    // read-only access to properties + solutions, reference returned directly as pointer
 	    .add_property("properties", bp::make_function(Task_getPropertyMap, bp::return_internal_reference<>()))
 	    .add_property("solutions", bp::make_function(&Task::solutions, bp::return_internal_reference<>()))

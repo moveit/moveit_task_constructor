@@ -97,7 +97,12 @@ std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
 }
 
 StagePrivate::StagePrivate(Stage* me, const std::string& name)
-  : me_(me), name_(name), total_compute_time_{}, parent_(nullptr), introspection_(nullptr) {}
+  : me_{ me }
+  , name_{ name }
+  , cost_term_{ std::make_unique<CostTerm>() }
+  , total_compute_time_{}
+  , parent_{ nullptr }
+  , introspection_{ nullptr } {}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -125,7 +130,6 @@ void StagePrivate::validateConnectivity() const {
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
-	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
@@ -142,14 +146,21 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
+
+	solution->setCreator(me());
+
+	computeCost(from, to, *solution);
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
+
 	me()->forwardProperties(from, to);
 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
-	solution->setStartState(from);
-	solution->setEndState(*to_it);
+	// register stored interfaces with solution
+	solution->setStartStateUnsafe(from);
+	solution->setEndStateUnsafe(*to_it);
 
 	if (!solution->isFailure())
 		nextStarts()->add(*to_it);
@@ -159,14 +170,20 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 
 void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
+
+	solution->setCreator(me());
+
+	computeCost(from, to, *solution);
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
+
 	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
-	solution->setStartState(*from_it);
-	solution->setEndState(to);
+	solution->setStartStateUnsafe(*from_it);
+	solution->setEndStateUnsafe(to);
 
 	if (!solution->isFailure())
 		prevEnds()->add(*from_it);
@@ -176,14 +193,19 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
+
+	solution->setCreator(me());
+
+	computeCost(state, state, *solution);
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
 	auto to = states_.insert(states_.end(), std::move(state));
 
-	solution->setStartState(*from);
-	solution->setEndState(*to);
+	solution->setStartStateUnsafe(*from);
+	solution->setEndStateUnsafe(*to);
 
 	if (!solution->isFailure()) {
 		prevEnds()->add(*from);
@@ -194,11 +216,15 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 }
 
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
+	solution->setCreator(me());
+
+	computeCost(from, to, *solution);
+
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
-	solution->setStartState(from);
-	solution->setEndState(to);
+	solution->setStartStateUnsafe(from);
+	solution->setEndStateUnsafe(to);
 
 	newSolution(solution);
 }
@@ -210,6 +236,30 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 
 	if (parent() && !solution->isFailure())
 		parent()->onNewSolution(*solution);
+}
+
+void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
+	// no reason to compute costs for a failed solution
+	if (solution.isFailure())
+		return;
+
+	// chicken-and-egg problem: we don't know whether/where we will store the solution yet,
+	// but need to store it properly to compute the cost with a clean interface:
+	// set state copies for solution before computing cost:
+	InterfaceState tmp_from{ from }, tmp_to{ to };
+	solution.setStartState(tmp_from);
+	solution.setEndState(tmp_to);
+
+	std::string comment;
+	assert(cost_term_);
+	solution.setCost(solution.computeCost(*cost_term_, comment));
+
+	// If a comment was specified, add it to the solution
+	if (!comment.empty() && !solution.comment().empty()) {
+		solution.setComment(solution.comment() + " (" + comment + ")");
+	} else if (!comment.empty()) {
+		solution.setComment(comment);
+	}
 }
 
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
@@ -254,8 +304,9 @@ void Stage::reset() {
 }
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
-	// init properties once from parent
 	auto impl = pimpl();
+
+	// init properties once from parent
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
@@ -306,6 +357,13 @@ Stage::SolutionCallbackList::const_iterator Stage::addSolutionCallback(SolutionC
 }
 void Stage::removeSolutionCallback(SolutionCallbackList::const_iterator which) {
 	pimpl()->solution_cbs_.erase(which);
+}
+
+void Stage::setCostTerm(const CostTermConstPtr& term) {
+	if (!term)
+		pimpl()->cost_term_ = std::make_unique<CostTerm>();
+	else
+		pimpl()->cost_term_ = std::move(term);
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

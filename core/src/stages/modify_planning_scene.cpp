@@ -38,13 +38,17 @@
 
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/cost_terms.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-ModifyPlanningScene::ModifyPlanningScene(const std::string& name) : PropagatingEitherWay(name) {}
+ModifyPlanningScene::ModifyPlanningScene(const std::string& name) : PropagatingEitherWay(name) {
+	setCostTerm(std::make_unique<cost::Constant>(0.0));
+}
 
 void ModifyPlanningScene::attachObjects(const Names& objects, const std::string& attach_link, bool attach) {
 	auto it_inserted = attach_objects_.insert(std::make_pair(attach_link, std::make_pair(Names(), attach)));

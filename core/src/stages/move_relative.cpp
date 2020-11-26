@@ -37,6 +37,8 @@
 */
 
 #include <moveit/task_constructor/stages/move_relative.h>
+#include <moveit/task_constructor/cost_terms.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -47,6 +49,8 @@ namespace stages {
 
 MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
+	setCostTerm(std::make_unique<cost::PathLength>());
+
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
@@ -290,13 +294,6 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (dir == BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
-
-		// set cost
-		double cost = 0;
-		for (const double& distance : robot_trajectory->getWayPointDurations()) {
-			cost += distance;
-		}
-		solution.setCost(cost);
 
 		if (!success)
 			solution.markAsFailure();

@@ -120,6 +120,10 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to) {
+	solution->setCreator(me());
+
+	computeCost(*internal_from, *internal_to, *solution);
+
 	if (!storeSolution(solution))
 		return;
 
@@ -139,8 +143,8 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
 
 	// connect solution to start/end state
-	solution->setStartState(*external_from);
-	solution->setEndState(*external_to);
+	solution->setStartStateUnsafe(*external_from);
+	solution->setEndStateUnsafe(*external_to);
 
 	// spawn created states in external interfaces
 	if (created_from)
@@ -200,20 +204,21 @@ bool ContainerBase::insert(Stage::pointer&& stage, int before) {
 	return true;
 }
 
-bool ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
+Stage::pointer ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
 	if (pos == children_.end())
-		return false;
+		return Stage::pointer();
 
 	(*pos)->pimpl()->unparent();
-	children_.erase(pos);
-	return true;
+	Stage::pointer result = std::move(*children_.erase(pos, pos));  // stage from non-const iterator to pos
+	children_.erase(pos);  // actually erase stage
+	return result;
 }
 
-bool ContainerBase::remove(int pos) {
+Stage::pointer ContainerBase::remove(int pos) {
 	return pimpl()->remove(pimpl()->childByIndex(pos, false));
 }
 
-bool ContainerBase::remove(Stage* child) {
+Stage::pointer ContainerBase::remove(Stage* child) {
 	auto it = pimpl()->children_.begin(), end = pimpl()->children_.end();
 	for (; it != end && it->get() != child; ++it)
 		;
@@ -752,8 +757,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
 void MergerPrivate::resolveInterface(InterfaceFlags expected) {
-	ContainerBasePrivate::resolveInterface(expected);
-	switch (interfaceFlags()) {
+	ParallelContainerBasePrivate::resolveInterface(expected);
+	switch (requiredInterface()) {
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:
 		case UNKNOWN:
@@ -801,6 +806,9 @@ void Merger::compute() {
 }
 
 void Merger::onNewSolution(const SolutionBase& s) {
+	if (s.isFailure())  // ignore failure solutions
+		return;
+
 	auto impl = pimpl();
 	switch (impl->interfaceFlags()) {
 		case PROPAGATE_FORWARDS:
@@ -817,8 +825,8 @@ void Merger::onNewSolution(const SolutionBase& s) {
 
 void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	const SubTrajectory* trajectory = dynamic_cast<const SubTrajectory*>(&s);
-	if (!trajectory) {
-		ROS_ERROR_NAMED("Merger", "Only simple trajectories are supported");
+	if (!trajectory || !trajectory->trajectory()) {
+		ROS_ERROR_NAMED("Merger", "Only simple, valid trajectories are supported");
 		return;
 	}
 
@@ -857,18 +865,20 @@ void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 void MergerPrivate::sendForward(SubTrajectory&& t, const InterfaceState* from) {
 	// generate target state
 	planning_scene::PlanningScenePtr to = from->scene()->diff();
-	to->setCurrentState(t.trajectory()->getLastWayPoint());
+	if (t.trajectory() && !t.trajectory()->empty())
+		to->setCurrentState(t.trajectory()->getLastWayPoint());
 	StagePrivate::sendForward(*from, InterfaceState(to), std::make_shared<SubTrajectory>(std::move(t)));
 }
 
 void MergerPrivate::sendBackward(SubTrajectory&& t, const InterfaceState* to) {
 	// generate target state
 	planning_scene::PlanningScenePtr from = to->scene()->diff();
-	from->setCurrentState(t.trajectory()->getFirstWayPoint());
+	if (t.trajectory() && !t.trajectory()->empty())
+		from->setCurrentState(t.trajectory()->getFirstWayPoint());
 	StagePrivate::sendBackward(InterfaceState(from), *to, std::make_shared<SubTrajectory>(std::move(t)));
 }
 
-void MergerPrivate::onNewGeneratorSolution(const SolutionBase& s) {
+void MergerPrivate::onNewGeneratorSolution(const SolutionBase& /* s */) {
 	// TODO: implement in similar fashion as onNewPropagateSolution(), but also merge start/end states
 }
 
@@ -914,39 +924,46 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	// transform vector of SubTrajectories into vector of RobotTrajectories
 	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
 	sub_trajectories.reserve(sub_solutions.size());
-	for (const auto& sub : sub_solutions) {
-		// TODO: directly skip failures in mergeAnyCombination() or even earlier
-		if (sub->isFailure())
-			return;
-		if (sub->trajectory())
-			sub_trajectories.push_back(sub->trajectory());
-	}
+	for (const auto& sub : sub_solutions)
+		sub_trajectories.push_back(sub->trajectory());
 
 	moveit::core::JointModelGroup* jmg = jmg_merged_.get();
 	robot_trajectory::RobotTrajectoryPtr merged;
 	try {
 		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
 	} catch (const std::runtime_error& e) {
-		ROS_INFO_STREAM_NAMED("Merger", this->name() << "Merging failed: " << e.what());
+		SubTrajectory t;
+		t.markAsFailure();
+		t.setComment(e.what());
+		spawner(std::move(t));
 		return;
 	}
 	if (jmg_merged_.get() != jmg)
 		jmg_merged_.reset(jmg);
-	if (!merged)
-		return;
+
+	assert(merged);
+	SubTrajectory t(merged);
 
 	// check merged trajectory for collisions
-	if (!start_scene->isPathValid(*merged))
-		return;
-
-	SubTrajectory t(merged);
-	// accumulate costs and markers
-	double costs = 0.0;
-	for (const auto& sub : sub_solutions) {
-		costs += sub->cost();
-		t.markers().insert(t.markers().end(), sub->markers().begin(), sub->markers().end());
+	std::vector<std::size_t> invalid_index;
+	if (!start_scene->isPathValid(*merged, "", true, &invalid_index)) {
+		t.markAsFailure();
+		std::ostringstream oss;
+		oss << "Invalid waypoint(s): ";
+		if (invalid_index.size() == merged->getWayPointCount())
+			oss << "all";
+		else for (size_t i : invalid_index)
+			oss << i << ", ";
+		t.setComment(oss.str());
+	} else {
+		// accumulate costs and markers
+		double costs = 0.0;
+		for (const auto& sub : sub_solutions) {
+			costs += sub->cost();
+			t.markers().insert(t.markers().end(), sub->markers().begin(), sub->markers().end());
+		}
+		t.setCost(costs);
 	}
-	t.setCost(costs);
 	spawner(std::move(t));
 }
 }  // namespace task_constructor

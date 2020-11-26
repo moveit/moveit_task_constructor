@@ -138,6 +138,8 @@ private:
 };
 std::ostream& operator<<(std::ostream& os, const InitStageException& e);
 
+MOVEIT_CLASS_FORWARD(CostTerm);
+class LambdaCostTerm;
 class ContainerBase;
 class StagePrivate;
 class Stage
@@ -159,6 +161,7 @@ public:
 		PARENT = 2,
 		INTERFACE = 4,
 	};
+
 	virtual ~Stage();
 
 	/// auto-convert Stage to StagePrivate* when needed
@@ -212,6 +215,15 @@ public:
 	/// remove function callback
 	void removeSolutionCallback(SolutionCallbackList::const_iterator which);
 
+	/** set method to determine costs for solutions of this stage */
+
+	void setCostTerm(const CostTermConstPtr& term);
+	// overload to accept appropriate lambda expressions
+	template <typename T, typename = std::enable_if_t<std::is_constructible<LambdaCostTerm, T>::value>>
+	void setCostTerm(T term) {
+		setCostTerm(std::make_shared<LambdaCostTerm>(term));
+	}
+
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
 	size_t numFailures() const;
@@ -227,8 +239,10 @@ public:
 	void setProperty(const std::string& name, const boost::any& value);
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
+
 	/// analyze source of error and report accordingly
 	[[noreturn]] void reportPropertyError(const Property::error& e);
+
 	double getTotalComputeTime() const;
 
 protected:
