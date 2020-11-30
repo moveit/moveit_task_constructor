@@ -20,6 +20,8 @@ jobs:
   - env: TEST=code-coverage
   - compiler: clang
     env: DOCKER_IMAGE=moveit/moveit:master-source
+  - env: DOCKER_IMAGE=moveit/moveit:noetic-source
+         UPSTREAM_WORKSPACE=.rosinstall,https://github.com/ros-planning/panda_moveit_config
 
 before_script:
   - git clone -q --depth=1 https://github.com/ros-planning/moveit_ci.git .moveit_ci
