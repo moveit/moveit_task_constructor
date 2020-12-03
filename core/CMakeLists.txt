@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_core)
 
 find_package(Boost REQUIRED)
@@ -27,16 +27,11 @@ catkin_package(
 		visualization_msgs
 )
 
-if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
-	add_compile_options(-std=c++14)
-else ()
-	set(CMAKE_CXX_STANDARD 14)
-endif ()
+set(CMAKE_CXX_STANDARD 14)
 
 # check for MOVEIT_MASTER
 include(CheckIncludeFileCXX)
 set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_FLAGS "-std=c++11")
 CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
 if(NOT MOVEIT_MASTER)
   set(MOVEIT_MASTER 0)

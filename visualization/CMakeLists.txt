@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_visualization)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -46,11 +46,7 @@ catkin_package(
 		rviz
 )
 
-if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
-	add_compile_options(-std=c++14)
-else ()
-	set(CMAKE_CXX_STANDARD 14)
-endif ()
+set(CMAKE_CXX_STANDARD 14)
 
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)

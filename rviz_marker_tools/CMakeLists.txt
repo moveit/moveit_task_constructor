@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1.3)
 project(rviz_marker_tools)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -20,11 +20,7 @@ catkin_package(
 		rviz
 )
 
-if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
-	add_compile_options(-std=c++14)
-else ()
-	set(CMAKE_CXX_STANDARD 14)
-endif ()
+set(CMAKE_CXX_STANDARD 14)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
 
