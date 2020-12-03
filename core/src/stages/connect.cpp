@@ -190,6 +190,8 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
 		inserted->setCreator(this);
+		if (!sub)  // a null RobotTrajectoryPtr indicates a failure
+			inserted->markAsFailure();
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
 
