@@ -98,7 +98,8 @@ protected:
 	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase& s) override;
 
-	using SolutionProcessor = std::function<void(const SolutionSequence::container_type&, double)>;
+	using SolutionProcessor =
+	    std::function<void(const SolutionSequence::container_type&, const InterfaceState::Priority&)>;
 
 	/// Traverse all solution pathes starting at start and going in given direction dir
 	/// until the end, i.e. until there are no more subsolutions in the given direction
@@ -106,7 +107,7 @@ protected:
 	/// the full trace (from start to end, but not including start) and its accumulated costs
 	template <Interface::Direction dir>
 	void traverse(const SolutionBase& start, const SolutionProcessor& cb, SolutionSequence::container_type& trace,
-	              double trace_cost = 0);
+	              const InterfaceState::Priority& = InterfaceState::Priority());
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);
