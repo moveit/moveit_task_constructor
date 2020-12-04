@@ -693,13 +693,8 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	// TODO: only consider interface states with priority depth > threshold
-	if (!std::isfinite(it->priority().cost())) {
-		// remove pending pairs, if cost updated to infinity
-		if (updated)
-			pending.remove_if([it](const StatePair& p) { return p.first == it; });
+	if (!std::isfinite(it->priority().cost()))
 		return;
-	}
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();
@@ -722,6 +717,7 @@ void ConnectingPrivate::compute() {
 	const StatePair& top = pending.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
+	assert(std::isfinite((from.priority() + to.priority()).cost()));
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
