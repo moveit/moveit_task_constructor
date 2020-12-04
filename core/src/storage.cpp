@@ -126,10 +126,9 @@ Interface::container_type Interface::remove(iterator it) {
 
 void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
 	if (priority != state->priority()) {
-		auto it = std::find_if(begin(), end(), [state](const InterfaceState* other) { return state == other; });
-		// state should be part of the interface
-		assert(it != end());
-		state->priority_ = priority;
+		auto it = std::find(begin(), end(), state);  // find iterator to state
+		assert(it != end());  // state should be part of this interface
+		state->priority_ = priority;  // update priority
 		update(it);
 		if (notify_)
 			notify_(it, true);

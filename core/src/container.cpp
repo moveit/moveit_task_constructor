@@ -314,21 +314,9 @@ struct SolutionCollector
 	const size_t max_depth;
 };
 
-void updateStateCosts(const SolutionSequence::container_type& partial_solution_path,
-                      const InterfaceState::Priority& prio) {
-	for (const SolutionBase* solution : partial_solution_path) {
-		// here it suffices to update the start state, because the end state is the start state
-		// of the next solution (they are all connected)
-		InterfaceState* state = const_cast<InterfaceState*>(solution->start());
-		if (state->owner())
-			state->owner()->updatePriority(state, prio);
-	}
-	// finally update the end state of the last solution
-	if (partial_solution_path.empty())
-		return;
-	InterfaceState* state = const_cast<InterfaceState*>(partial_solution_path.back()->end());
+inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
 	if (state->owner())
-		state->owner()->updatePriority(state, prio);
+		state->owner()->updatePriority(const_cast<InterfaceState*>(state), prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
@@ -377,10 +365,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				// store solution in sorted list
 				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
 			} else if (prio.depth() > 1) {
-				// update state priorities along the whole partial solution path
-				updateStateCosts(in.first, prio);
-				updateStateCosts({ &current }, prio);
-				updateStateCosts(out.first, prio);
+				// update state priorities at both ends of newly created partial solution
+				updateStatePrio((in.first.empty() ? current : *in.first.back()).start(), prio);
+				updateStatePrio((out.first.empty() ? current : *out.first.back()).end(), prio);
 			}
 		}
 	}
