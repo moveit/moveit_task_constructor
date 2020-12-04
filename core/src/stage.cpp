@@ -363,7 +363,7 @@ void Stage::setCostTerm(const CostTermConstPtr& term) {
 	if (!term)
 		pimpl()->cost_term_ = std::make_unique<CostTerm>();
 	else
-		pimpl()->cost_term_ = std::move(term);
+		pimpl()->cost_term_ = term;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {

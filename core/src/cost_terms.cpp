@@ -53,7 +53,15 @@ double CostTerm::operator()(const SubTrajectory& s, std::string&) const {
 	return s.cost();
 }
 
-double CostTerm::operator()(const SolutionSequence& s, std::string& comment) const {
+double CostTerm::operator()(const SolutionSequence& s, std::string& /*comment*/) const {
+	return s.cost();
+}
+
+double CostTerm::operator()(const WrappedSolution& s, std::string& /*comment*/) const {
+	return s.cost();
+}
+
+double TrajectoryCostTerm::operator()(const SolutionSequence& s, std::string& comment) const {
 	double cost{ 0.0 };
 	std::string subcomment;
 	for (auto& solution : s.solutions()) {
@@ -67,10 +75,6 @@ double CostTerm::operator()(const SolutionSequence& s, std::string& comment) con
 	}
 
 	return cost;
-}
-
-double CostTerm::operator()(const WrappedSolution& s, std::string& /*comment*/) const {
-	return s.cost();
 }
 
 double TrajectoryCostTerm::operator()(const WrappedSolution& s, std::string& comment) const {

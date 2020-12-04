@@ -68,6 +68,7 @@ public:
 class TrajectoryCostTerm : public CostTerm
 {
 public:
+	double operator()(const SolutionSequence& s, std::string& comment) const override;
 	double operator()(const WrappedSolution& s, std::string& comment) const override;
 };
 
