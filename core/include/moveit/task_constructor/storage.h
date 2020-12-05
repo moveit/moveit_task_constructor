@@ -83,7 +83,6 @@ public:
 	 */
 	struct Priority : public std::pair<unsigned int, double>
 	{
-		Priority() : Priority(0, 0.0) {}
 		Priority(unsigned int depth, double cost) : std::pair<unsigned int, double>(depth, cost) {}
 
 		inline unsigned int depth() const { return this->first; }

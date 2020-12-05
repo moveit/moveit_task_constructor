@@ -107,7 +107,7 @@ protected:
 	/// the full trace (from start to end, but not including start) and its accumulated costs
 	template <Interface::Direction dir>
 	void traverse(const SolutionBase& start, const SolutionProcessor& cb, SolutionSequence::container_type& trace,
-	              const InterfaceState::Priority& = InterfaceState::Priority());
+	              const InterfaceState::Priority& = InterfaceState::Priority(0, 0.0));
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);
