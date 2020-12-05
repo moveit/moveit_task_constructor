@@ -130,6 +130,7 @@ void StagePrivate::validateConnectivity() const {
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
+	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
@@ -147,8 +148,6 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
@@ -159,8 +158,8 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
 	// register stored interfaces with solution
-	solution->setStartStateUnsafe(from);
-	solution->setEndStateUnsafe(*to_it);
+	solution->setStartState(from);
+	solution->setEndState(*to_it);
 
 	if (!solution->isFailure())
 		nextStarts()->add(*to_it);
@@ -171,8 +170,6 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
 
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
@@ -182,8 +179,8 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
-	solution->setStartStateUnsafe(*from_it);
-	solution->setEndStateUnsafe(to);
+	solution->setStartState(*from_it);
+	solution->setEndState(to);
 
 	if (!solution->isFailure())
 		prevEnds()->add(*from_it);
@@ -194,8 +191,6 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
 
-	solution->setCreator(me());
-
 	computeCost(state, state, *solution);
 
 	if (!storeSolution(solution))
@@ -204,8 +199,8 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
 	auto to = states_.insert(states_.end(), std::move(state));
 
-	solution->setStartStateUnsafe(*from);
-	solution->setEndStateUnsafe(*to);
+	solution->setStartState(*from);
+	solution->setEndState(*to);
 
 	if (!solution->isFailure()) {
 		prevEnds()->add(*from);
@@ -216,15 +211,13 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 }
 
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution))
 		return;  // solution dropped
 
-	solution->setStartStateUnsafe(from);
-	solution->setEndStateUnsafe(to);
+	solution->setStartState(from);
+	solution->setEndState(to);
 
 	newSolution(solution);
 }
@@ -238,17 +231,32 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 		parent()->onNewSolution(*solution);
 }
 
+// To solve the chicken-egg problem in computeCost() and provide proper states at both ends of the solution,
+// this class temporarily sets the new interface states w/o registering the solution yet.
+// On destruction the start/end states are reset again.
+struct TmpInterfaceStateProvider
+{
+	SolutionBase* solution_;
+	TmpInterfaceStateProvider(SolutionBase& solution, const InterfaceState& from, const InterfaceState& to)
+	  : solution_(&solution) {
+		assert(solution_->start_ == nullptr);
+		assert(solution_->end_ == nullptr);
+		solution_->start_ = &from;
+		solution_->end_ = &to;
+	}
+	~TmpInterfaceStateProvider() {
+		solution_->start_ = nullptr;
+		solution_->end_ = nullptr;
+	}
+};
 void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
 	// no reason to compute costs for a failed solution
 	if (solution.isFailure())
 		return;
 
-	// chicken-and-egg problem: we don't know whether/where we will store the solution yet,
-	// but need to store it properly to compute the cost with a clean interface:
-	// set state copies for solution before computing cost:
-	InterfaceState tmp_from{ from }, tmp_to{ to };
-	solution.setStartState(tmp_from);
-	solution.setEndState(tmp_to);
+	// Temporarily set start/end states of the solution w/o actually registering the solution with them
+	// This allows CostTerms to compute costs based on the InterfaceState.
+	TmpInterfaceStateProvider tip(solution, from, to);
 
 	std::string comment;
 	assert(cost_term_);

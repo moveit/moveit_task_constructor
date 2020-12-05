@@ -195,11 +195,12 @@ private:
 class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
+struct TmpInterfaceStateProvider;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
-	friend StagePrivate;  // for set[Start|End]StateUnsafe
 	friend ContainerBasePrivate;
+	friend TmpInterfaceStateProvider;
 
 public:
 	virtual ~SolutionBase() = default;
@@ -207,22 +208,24 @@ public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 
-	/** set the solution's start_state_
+	/** Set the solution's start_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must be called only once, because it registers the solution with the state.
 	 */
 	inline void setStartState(const InterfaceState& state) {
-		assert(start_ == nullptr || start_ == &state);
-		setStartStateUnsafe(state);
+		assert(start_ == nullptr);
+		start_ = &state;
+		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
-	/** set the solution's end_state_
+	/** Set the solution's end_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must be called only once, because it registers the solution with the state.
 	 */
 	inline void setEndState(const InterfaceState& state) {
-		assert(end_ == nullptr || end_ == &state);
-		setEndStateUnsafe(state);
+		assert(end_ == nullptr);
+		end_ = &state;
+		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
 	inline const Stage* creator() const { return creator_; }
@@ -253,18 +256,6 @@ public:
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
-
-	/** unsafe setter for start_state_
-	 *
-	 * must only be used if the previously set state removes its link to this solution
-	 */
-	void setStartStateUnsafe(const InterfaceState& state);
-
-	/** unsafe setter for end_state_
-	 *
-	 * must only be used if the previously set state removes its link to this solution
-	 */
-	void setEndStateUnsafe(const InterfaceState& state);
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
