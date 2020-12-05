@@ -207,10 +207,6 @@ public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 
-	/// Retrieve following (FORWARD) or preceding (BACKWARD) solution segments
-	template <Interface::Direction dir>
-	inline const InterfaceState::Solutions& trajectories() const;
-
 	/** set the solution's start_state_
 	 *
 	 * Must not be used with different states because it registers the solution with the state as well.
@@ -367,13 +363,28 @@ private:
 	const SolutionBase* wrapped_;
 };
 
+/// Trait to retrieve the end (FORWARD) or start (BACKWARD) state of a given solution
+template <Interface::Direction dir>
+const InterfaceState* state(const SolutionBase& solution);
 template <>
-inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {
-	return end_->outgoingTrajectories();
+inline const InterfaceState* state<Interface::FORWARD>(const SolutionBase& solution) {
+	return solution.end();
 }
 template <>
-inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>() const {
-	return start_->incomingTrajectories();
+inline const InterfaceState* state<Interface::BACKWARD>(const SolutionBase& solution) {
+	return solution.start();
+}
+
+/// Trait to retrieve outgoing (FORWARD) or incoming (BACKWARD) solution segments of a given state
+template <Interface::Direction dir>
+const InterfaceState::Solutions& trajectories(const InterfaceState* state);
+template <>
+inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState* state) {
+	return state->outgoingTrajectories();
+}
+template <>
+inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState* state) {
+	return state->incomingTrajectories();
 }
 }  // namespace task_constructor
 }  // namespace moveit

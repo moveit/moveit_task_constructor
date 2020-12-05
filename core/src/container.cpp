@@ -288,19 +288,38 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
+/** Collect all potential solutions originating from start */
+template <Interface::Direction dir>
 struct SolutionCollector
 {
-	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
+	SolutionCollector(size_t max_depth, const SolutionBase& start) : max_depth(max_depth) {
+		trace.reserve(max_depth);
+		traverse(start, InterfaceState::Priority(0, 0.0));
+		assert(trace.empty());
+	}
 
-	void operator()(const SolutionSequence::container_type& trace, const InterfaceState::Priority& prio) {
-		assert(prio.depth() == trace.size());
-		assert(prio.depth() <= max_depth);
-		solutions.emplace_back(std::make_pair(trace, prio));
+	void traverse(const SolutionBase& start, const InterfaceState::Priority& prio) {
+		const InterfaceState::Solutions& next = trajectories<dir>(state<dir>(start));
+		if (next.empty()) {  // when reaching the end, add the trace to solutions
+			assert(prio.depth() == trace.size());
+			assert(prio.depth() <= max_depth);
+			solutions.emplace_back(std::make_pair(trace, prio));
+		} else {
+			for (SolutionBase* successor : next) {
+				if (successor->isFailure())
+					continue;
+
+				trace.push_back(successor);
+				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
+				trace.pop_back();
+			}
+		}
 	}
 
 	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, InterfaceState::Priority>>;
 	SolutionCostPairs solutions;
 	const size_t max_depth;
+	SolutionSequence::container_type trace;
 };
 
 inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
@@ -321,16 +340,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	assert(num_before < children.size());  // creator should be one of our children
 	num_after = children.size() - 1 - num_before;
 
-	SolutionSequence::container_type trace;
-	trace.reserve(children.size());
-
-	// find all incoming solution paths ending at current solution
-	SolutionCollector incoming(num_before);
-	traverse<Interface::BACKWARD>(current, std::ref(incoming), trace);
-
-	// find all outgoing solution paths starting at current solution
-	SolutionCollector outgoing(num_after);
-	traverse<Interface::FORWARD>(current, std::ref(outgoing), trace);
+	// find all incoming and outgoing solution paths originating from current solution
+	SolutionCollector<Interface::BACKWARD> incoming(num_before, current);
+	SolutionCollector<Interface::FORWARD> outgoing(num_after, current);
 
 	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SolutionSequencePtr> sorted;
@@ -513,23 +525,6 @@ void SerialContainer::compute() {
 			stage->reportPropertyError(e);
 		}
 	}
-}
-
-template <Interface::Direction dir>
-void SerialContainer::traverse(const SolutionBase& start, const SolutionProcessor& cb,
-                               SolutionSequence::container_type& trace, const InterfaceState::Priority& prio) {
-	const InterfaceState::Solutions& solutions = start.trajectories<dir>();
-	if (solutions.empty())  // if we reached the end, call the callback
-		cb(trace, prio);
-	else
-		for (SolutionBase* successor : solutions) {
-			if (successor->isFailure())
-				continue;
-
-			trace.push_back(successor);
-			traverse<dir>(*successor, cb, trace, prio + InterfaceState::Priority(1, successor->cost()));
-			trace.pop_back();
-		}
 }
 
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
