@@ -701,16 +701,12 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (!std::isfinite(it->priority().cost()))
-		return;
 	if (updated) {
 		// many pairs might be affected: sort
 		pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			if (!std::isfinite(oit->priority().cost()))
-				break;
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
 				pending.insert(make_pair<other>(it, oit));
 		}
@@ -725,7 +721,7 @@ void ConnectingPrivate::compute() {
 	const StatePair& top = pending.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
-	assert(std::isfinite((from.priority() + to.priority()).cost()));
+	assert(from.priority().enabled() && to.priority().enabled());
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 

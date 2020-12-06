@@ -81,18 +81,28 @@ public:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
-	struct Priority : public std::pair<unsigned int, double>
+	struct Priority : std::tuple<bool, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost) : std::pair<unsigned int, double>(depth, cost) {}
+		Priority(unsigned int depth, double cost, bool enabled = true)
+		  : std::tuple<bool, unsigned int, double>(enabled, depth, cost) {
+			assert(std::isfinite(cost));
+		}
+		// Constructor copying depth and cost, but modifying enabled status
+		Priority(const Priority& other, bool enabled) : Priority(other.depth(), other.cost(), enabled) {}
 
-		inline unsigned int depth() const { return this->first; }
-		inline double cost() const { return this->second; }
+		inline bool enabled() const { return std::get<0>(*this); }
+		inline unsigned int depth() const { return std::get<1>(*this); }
+		inline double cost() const { return std::get<2>(*this); }
 
 		// add priorities
 		Priority operator+(const Priority& other) const {
-			return Priority(this->depth() + other.depth(), this->cost() + other.cost());
+			return Priority(depth() + other.depth(), cost() + other.cost(), enabled() || other.enabled());
 		}
-		bool operator<(const Priority& other) const;
+		// comparison operators
+		bool operator<(const Priority& rhs) const;
+		inline bool operator>(const Priority& rhs) const { return rhs < *this; }
+		inline bool operator<=(const Priority& rhs) const { return !(rhs < *this); }
+		inline bool operator>=(const Priority& rhs) const { return !(*this < rhs); }
 	};
 	using Solutions = std::deque<SolutionBase*>;
 

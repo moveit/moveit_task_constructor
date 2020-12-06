@@ -298,7 +298,7 @@ struct SolutionCollector
 			solutions.emplace_back(std::make_pair(trace, prio));
 		} else {
 			for (SolutionBase* successor : next) {
-				if (successor->isFailure())
+				if (successor->isFailure())  // skip failure "solutions"
 					continue;
 
 				trace.push_back(successor);
@@ -345,7 +345,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				assert(std::isfinite(prio.cost()));
+				assert(prio.enabled());
 				assert(solution.empty());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());

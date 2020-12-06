@@ -70,18 +70,15 @@ InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
 bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
-	// infinite costs go always last
-	if (std::isinf(this->cost()) && std::isinf(other.cost()))
-		return this->depth() > other.depth();
-	else if (std::isinf(this->cost()))
-		return false;
-	else if (std::isinf(other.cost()))
-		return true;
+	// disabled states always after enabled ones
+	if (enabled() != other.enabled())
+		return enabled();
 
-	if (this->depth() == other.depth())
-		return this->cost() < other.cost();
+	// both prios have same enabled_ state
+	if (depth() == other.depth())
+		return cost() < other.cost();
 	else
-		return this->depth() > other.depth();
+		return depth() > other.depth();  // larger depth = smaller prio!
 }
 
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& p) {
@@ -113,7 +110,7 @@ void Interface::add(InterfaceState& state) {
 	else if (!state.outgoingTrajectories().empty())
 		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
 	else  // otherwise, assume priority was well defined before
-		assert(it->priority_ >= InterfaceState::Priority(1, 0.0));
+		assert(it->priority_.enabled() && it->priority_.depth() >= 1u);
 
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);

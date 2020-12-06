@@ -13,20 +13,26 @@
 using namespace moveit::task_constructor;
 TEST(InterfaceStatePriority, compare) {
 	using Prio = InterfaceState::Priority;
-	constexpr double inf = std::numeric_limits<double>::infinity();
-
 	EXPECT_TRUE(Prio(0, 0) == Prio(0, 0));
-	EXPECT_TRUE(Prio(0, inf) == Prio(0, inf));
-
 	EXPECT_TRUE(Prio(1, 0) < Prio(0, 0));  // higher depth is smaller
 	EXPECT_TRUE(Prio(1, 42) < Prio(0, 0));
-	EXPECT_TRUE(Prio(1, inf) > Prio(0, 0));  // infinite costs are always largest
-	EXPECT_TRUE(Prio(1, inf) < Prio(0, inf));
+	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // at same depth, higher cost is larger
 
-	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // higher cost is larger
-	EXPECT_TRUE(Prio(0, 0) < Prio(0, inf));
-	EXPECT_TRUE(Prio(0, 42) > Prio(0, 0));
-	EXPECT_TRUE(Prio(0, inf) > Prio(0, 0));
+	EXPECT_TRUE(Prio(0, 0, false) == Prio(0, 0, false));
+	EXPECT_TRUE(Prio(1, 0, false) < Prio(0, 0, false));
+	EXPECT_TRUE(Prio(1, 42, false) < Prio(0, 0, false));
+	EXPECT_TRUE(Prio(0, 0, false) < Prio(0, 42, false));
+
+	// disabled prios are always larger than enabled ones
+	EXPECT_TRUE(Prio(0, 42) < Prio(1, 0, false));
+	EXPECT_TRUE(Prio(1, 0) < Prio(0, 42, false));
+
+	// other comparison operators
+	EXPECT_TRUE(Prio(0, 0) <= Prio(0, 0));
+	EXPECT_TRUE(Prio(0, 0) <= Prio(0, 1));
+	EXPECT_TRUE(Prio(0, 0) > Prio(1, 10));
+	EXPECT_TRUE(Prio(0, 0) >= Prio(0, 0));
+	EXPECT_TRUE(Prio(0, 10) >= Prio(0, 0));
 }
 
 using Prio = InterfaceState::Priority;
@@ -60,6 +66,6 @@ TEST(Interface, update) {
 	i.updatePriority(*i.rbegin(), Prio(5, 0.0));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));
 
-	i.updatePriority(*i.begin(), Prio(6, std::numeric_limits<double>::infinity()));
+	i.updatePriority(*i.begin(), Prio(6, 0, false));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));  // larger priority is ignored
 }
