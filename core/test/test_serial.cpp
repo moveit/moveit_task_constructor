@@ -53,6 +53,43 @@ struct GeneratorMockup : Generator
 	void compute() override { spawn(InterfaceState(ps_), costs_.cost()); }
 };
 
+class PropagatorMockup : public PropagatingEitherWay
+{
+	PredefinedCosts costs_;
+
+public:
+	PropagatorMockup(std::initializer_list<double> costs = { 0.0 }) : PropagatingEitherWay(), costs_(false, costs) {}
+
+	void computeForward(const InterfaceState& from) override {
+		SubTrajectory solution(robot_trajectory::RobotTrajectoryConstPtr(), costs_.cost());
+		sendForward(from, InterfaceState(from.scene()->diff()), std::move(solution));
+	}
+	void computeBackward(const InterfaceState& to) override {
+		SubTrajectory solution(robot_trajectory::RobotTrajectoryConstPtr(), costs_.cost());
+		sendBackward(InterfaceState(to.scene()->diff()), to, std::move(solution));
+	}
+};
+class ForwardMockup : public PropagatorMockup
+{
+	static unsigned int id_;
+
+public:
+	ForwardMockup(std::initializer_list<double> costs = { 0.0 }) : PropagatorMockup(costs) {
+		restrictDirection(FORWARD);
+		setName("FW" + std::to_string(++id_));
+	}
+};
+class BackwardMockup : public PropagatorMockup
+{
+	static unsigned int id_;
+
+public:
+	BackwardMockup(std::initializer_list<double> costs = { 0.0 }) : PropagatorMockup(costs) {
+		restrictDirection(BACKWARD);
+		setName("BW" + std::to_string(++id_));
+	}
+};
+
 /* Forward propagator, contributing no solutions at all */
 struct ForwardDummy : PropagatingForward
 {
@@ -88,6 +125,8 @@ struct Connect : stages::Connect
 
 constexpr double inf = std::numeric_limits<double>::infinity();
 unsigned int GeneratorMockup::id_ = 0;
+unsigned int ForwardMockup::id_ = 0;
+unsigned int BackwardMockup::id_ = 0;
 unsigned int Connect::id_ = 0;
 
 moveit::core::RobotModelConstPtr getModel() {
@@ -127,6 +166,7 @@ TEST(ConnectConnect, Pruning) {
 	Connect *c1, *c2;
 	t.add(Stage::pointer(new GeneratorMockup({ 1, 2, 3 })));
 	t.add(Stage::pointer(c1 = new Connect()));
+	t.add(Stage::pointer(new BackwardMockup()));
 	t.add(Stage::pointer(new GeneratorMockup({ 0, inf, 10, 20 })));  // 2nd is a dummy to postpone creation of 3rd
 	t.add(Stage::pointer(c2 = new Connect({ inf, 0 })));  // 1st attempt is a failure
 	t.add(Stage::pointer(new GeneratorMockup()));

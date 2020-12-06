@@ -476,15 +476,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(
-				    new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedStarts(it); }));
+				starts_.reset(new Interface());
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedEnds(it); }));
+				ends_.reset(new Interface());
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -517,15 +516,6 @@ void PropagatingEitherWayPrivate::resolveInterface(InterfaceFlags expected) {
 
 InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
 	return required_interface_;
-}
-
-void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
-	if (std::isinf(state->priority().cost()))
-		starts_->remove(state);
-}
-void PropagatingEitherWayPrivate::dropFailedEnds(Interface::iterator state) {
-	if (std::isinf(state->priority().cost()))
-		ends_->remove(state);
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const {

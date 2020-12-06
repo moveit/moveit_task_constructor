@@ -236,11 +236,6 @@ public:
 
 	bool hasEndState() const;
 	const InterfaceState& fetchEndState();
-
-protected:
-	// drop states corresponding to failed (infinite-cost) trajectories
-	void dropFailedStarts(Interface::iterator state);
-	void dropFailedEnds(Interface::iterator state);
 };
 PIMPL_FUNCTIONS(PropagatingEitherWay)
 
