@@ -390,6 +390,18 @@ template <>
 inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState* state) {
 	return state->incomingTrajectories();
 }
+
+/// Trait to retrieve opposite direction (FORWARD <-> BACKWARD)
+template <Interface::Direction dir>
+constexpr Interface::Direction opposite();
+template <>
+inline constexpr Interface::Direction opposite<Interface::FORWARD>() {
+	return Interface::BACKWARD;
+}
+template <>
+inline constexpr Interface::Direction opposite<Interface::BACKWARD>() {
+	return Interface::FORWARD;
+}
 }  // namespace task_constructor
 }  // namespace moveit
 

@@ -68,7 +68,7 @@ TEST(Interface, update) {
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));
 
 	i.updatePriority(*i.begin(), Prio(6, 0, false));
-	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));  // larger priority is ignored
+	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 3, 6 }));
 }
 
 using PrioPair = std::pair<Prio, Prio>;

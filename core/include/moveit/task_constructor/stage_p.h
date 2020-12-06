@@ -144,7 +144,7 @@ public:
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
-	bool storeSolution(const SolutionBasePtr& solution);
+	bool storeSolution(const SolutionBasePtr& solution, const InterfaceState* from, const InterfaceState* to);
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {

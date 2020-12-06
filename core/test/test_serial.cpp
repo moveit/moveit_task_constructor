@@ -172,7 +172,7 @@ TEST(ConnectConnect, Pruning) {
 		++expected_cost;
 	}
 	EXPECT_EQ(c2->calls_, 3u);
-	// EXPECT_EQ(c1->calls_, 6u);  // TODO: avoid compute() calls on failure of remaining part
+	EXPECT_EQ(c1->calls_, 6u);  // TODO: avoid compute() calls on failure of remaining part
 }
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/218

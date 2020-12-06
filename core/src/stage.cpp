@@ -129,13 +129,16 @@ void StagePrivate::validateConnectivity() const {
 	}
 }
 
-bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
+bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const InterfaceState* from,
+                                 const InterfaceState* to) {
 	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
 	if (solution->isFailure()) {
 		++num_failures_;
+		if (parent())
+			parent()->onNewFailure(*me(), from, to);
 		if (!storeFailures())
 			return false;  // drop solution
 		failures_.push_back(solution);
@@ -150,7 +153,7 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, nullptr))
 		return;  // solution dropped
 
 	me()->forwardProperties(from, to);
@@ -172,7 +175,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, &to))
 		return;  // solution dropped
 
 	me()->forwardProperties(to, from);
@@ -193,7 +196,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 
 	computeCost(state, state, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, nullptr))
 		return;  // solution dropped
 
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
@@ -213,7 +216,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, &to))
 		return;  // solution dropped
 
 	solution->setStartState(from);
@@ -714,7 +717,9 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 }
 
 bool ConnectingPrivate::canCompute() const {
-	return !pending.empty();
+	// Do we still have feasible pending state pairs?
+	return !pending.empty() && pending.front().first->priority().enabled() &&
+	       pending.front().second->priority().enabled();
 }
 
 void ConnectingPrivate::compute() {

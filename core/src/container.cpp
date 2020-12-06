@@ -122,9 +122,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
                                         const InterfaceState* internal_to) {
 	computeCost(*internal_from, *internal_to, *solution);
 
-	if (!storeSolution(solution))
-		return;
-
+	// map internal to external states
 	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
 		auto it = internal_to_external_.find(internal);
 		if (it != internal_to_external_.end())
@@ -139,6 +137,9 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	bool created_to = false;
 	InterfaceState* external_from = find_or_create_external(internal_from, created_from);
 	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
+
+	if (!storeSolution(solution, external_from, external_to))
+		return;
 
 	// connect solution to start/end state
 	solution->setStartState(*external_from);
@@ -367,6 +368,8 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	for (const auto& solution : sorted)
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
+
+void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {}
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
 SerialContainer::SerialContainer(const std::string& name) : SerialContainer(new SerialContainerPrivate(this, name)) {}
@@ -601,6 +604,8 @@ void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
 ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
+
+void ParallelContainerBase::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
 	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),
