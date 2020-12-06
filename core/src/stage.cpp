@@ -681,12 +681,12 @@ InterfaceFlags ConnectingPrivate::requiredInterface() const {
 template <>
 ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::BACKWARD>(Interface::const_iterator first,
                                                                                Interface::const_iterator second) {
-	return std::make_pair(first, second);
+	return StatePair(first, second);
 }
 template <>
 ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(Interface::const_iterator first,
                                                                               Interface::const_iterator second) {
-	return std::make_pair(second, first);
+	return StatePair(second, first);
 }
 
 template <Interface::Direction other>

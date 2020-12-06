@@ -609,9 +609,8 @@ ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
-	auto impl = pimpl();
-	impl->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)), solution.start(),
-	                   solution.end());
+	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),
+	                      solution.start(), solution.end());
 }
 
 void ParallelContainerBase::spawn(InterfaceState&& state, SubTrajectory&& t) {

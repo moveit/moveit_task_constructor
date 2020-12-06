@@ -669,11 +669,13 @@ TEST_F(ParallelTest, init_any) {
 }
 
 TEST(Task, move) {
+	MOCK_ID = 0;
 	Task t1("foo");
 	t1.add(std::make_unique<GeneratorMockup>());
 	t1.add(std::make_unique<GeneratorMockup>());
 	EXPECT_EQ(t1.stages()->numChildren(), 2u);
 
+	MOCK_ID = 0;
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2u);
 	EXPECT_EQ(t1.stages()->numChildren(), 0u);
@@ -694,6 +696,7 @@ TEST(Task, reuse) {
 	t.setRobotModel(robot_model);
 
 	auto configure = [](Task& t) {
+		MOCK_ID = 0;
 		auto ref = new stages::FixedState("fixed");
 		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
 		ref->setState(scene);
@@ -721,6 +724,7 @@ TEST(Task, reuse) {
 }
 
 TEST(Task, timeout) {
+	MOCK_ID = 0;
 	// create dummy robot model
 	moveit::core::RobotModelBuilder builder("robot", "base");
 	builder.addChain("base->a->b->c", "continuous");

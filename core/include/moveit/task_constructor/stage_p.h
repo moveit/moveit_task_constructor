@@ -100,7 +100,7 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// templated access to pull/push interfaces
+	/// direction-based access to pull/push interfaces
 	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
 	inline InterfacePtr pushInterface(Interface::Direction dir) {
 		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();

@@ -227,20 +227,20 @@ public:
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
 	size_t numFailures() const;
-	/// call to increase number of failures w/o storing a (failure) trajectory
+	/// Call to increase number of failures w/o storing a (failure) trajectory
 	void silentFailure();
-	/// should we generate failure solutions?
+	/// Should we generate failure solutions? Note: Always report a failure!
 	bool storeFailures() const;
 
-	/// get the stage's property map
+	/// Get the stage's property map
 	PropertyMap& properties();
 	const PropertyMap& properties() const { return const_cast<Stage*>(this)->properties(); }
-	/// set a previously declared property to a new value
+	/// Set a previously declared property to a new value
 	void setProperty(const std::string& name, const boost::any& value);
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 
-	/// analyze source of error and report accordingly
+	/// Analyze source of error and report accordingly
 	[[noreturn]] void reportPropertyError(const Property::error& e);
 
 	double getTotalComputeTime() const;
@@ -373,9 +373,6 @@ protected:
 class ConnectingPrivate;
 class Connecting : public ComputeBase
 {
-protected:
-	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
-
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name = "connecting");
@@ -385,6 +382,8 @@ public:
 	virtual void compute(const InterfaceState& from, const InterfaceState& to) = 0;
 
 protected:
+	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
+
 	/// register solution as a solution connecting states from -> to
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
