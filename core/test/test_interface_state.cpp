@@ -11,8 +11,9 @@
 #include <gmock/gmock-matchers.h>
 
 using namespace moveit::task_constructor;
+using Prio = InterfaceState::Priority;
+
 TEST(InterfaceStatePriority, compare) {
-	using Prio = InterfaceState::Priority;
 	EXPECT_TRUE(Prio(0, 0) == Prio(0, 0));
 	EXPECT_TRUE(Prio(1, 0) < Prio(0, 0));  // higher depth is smaller
 	EXPECT_TRUE(Prio(1, 42) < Prio(0, 0));
@@ -68,4 +69,23 @@ TEST(Interface, update) {
 
 	i.updatePriority(*i.begin(), Prio(6, 0, false));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));  // larger priority is ignored
+}
+
+using PrioPair = std::pair<Prio, Prio>;
+inline bool operator<(const PrioPair& lhs, const PrioPair& rhs) {
+	return ConnectingPrivate::StatePair::less(lhs.first, lhs.second, rhs.first, rhs.second);
+}
+PrioPair pair(Prio&& p1, Prio&& p2) {
+	return std::make_pair(std::move(p1), std::move(p2));
+}
+PrioPair pair(bool e1, bool e2) {
+	return pair(Prio(0, 0, e1), Prio(0, 0, e2));
+}
+TEST(StatePairs, compare) {
+	EXPECT_TRUE(pair(Prio(1, 0), Prio(0, 1)) < pair(Prio(1, 1), Prio(0, 1)));
+	EXPECT_TRUE(pair(Prio(1, 1), Prio(1, 1)) < pair(Prio(1, 0), Prio(0, 0)));
+
+	EXPECT_TRUE(pair(true, true) < pair(true, false));
+	EXPECT_TRUE(pair(true, true) < pair(false, true));
+	EXPECT_TRUE(pair(false, true) < pair(true, false));
 }

@@ -157,19 +157,20 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
-		using base_type::iterator::iterator;  // inherit base constructors
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }
+
 		InterfaceState* operator->() const noexcept { return base_type::iterator::operator*(); }
 	};
 	class const_iterator : public base_type::const_iterator
 	{
 	public:
-		using base_type::const_iterator::const_iterator;  // inherit base constructors
 		const_iterator(base_type::const_iterator other) : base_type::const_iterator(other) {}
+		const_iterator(base_type::iterator other) : base_type::const_iterator(other) {}
 
 		const InterfaceState& operator*() const noexcept { return *base_type::const_iterator::operator*(); }
+
 		const InterfaceState* operator->() const noexcept { return base_type::const_iterator::operator*(); }
 	};
 

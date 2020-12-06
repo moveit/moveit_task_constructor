@@ -294,18 +294,30 @@ class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 
-	using StatePair = std::pair<Interface::const_iterator, Interface::const_iterator>;
-	struct StatePairLess
+public:
+	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
 	{
-		bool operator()(const StatePair& x, const StatePair& y) const {
-			return x.first->priority() + x.second->priority() < y.first->priority() + y.second->priority();
+		using std::pair<Interface::const_iterator, Interface::const_iterator>::pair;  // inherit base constructors
+		bool operator<(const StatePair& rhs) const {
+			return less(first->priority(), second->priority(), rhs.first->priority(), rhs.second->priority());
+		}
+		static inline bool less(const InterfaceState::Priority& lhsA, const InterfaceState::Priority& lhsB,
+		                        const InterfaceState::Priority& rhsA, const InterfaceState::Priority& rhsB) {
+			unsigned char lhs = (lhsA.enabled() << 1) | lhsB.enabled();  // combine bits into two-digit binary number
+			unsigned char rhs = (rhsA.enabled() << 1) | rhsB.enabled();
+			if (lhs == rhs)  // if enabled status is identical
+				return lhsA + lhsB < rhsA + rhsB;  // compare the sums of both contributions
+			// one of the states in each pair should be enabled
+			assert(lhs != 0b00 && rhs != 0b00);
+			// both states valid (b11)
+			if (lhs == 0b11)
+				return true;
+			if (rhs == 0b11)
+				return false;
+			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
 		}
 	};
 
-	template <Interface::Direction other>
-	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
-
-public:
 	inline ConnectingPrivate(Connecting* me, const std::string& name);
 
 	InterfaceFlags requiredInterface() const override;
@@ -313,12 +325,16 @@ public:
 	void compute() override;
 
 private:
+	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
+	template <Interface::Direction other>
+	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
+
 	// get informed when new start or end state becomes available
 	template <Interface::Direction other>
 	void newState(Interface::iterator it, bool updated);
 
 	// ordered list of pending state pairs
-	ordered<StatePair, StatePairLess> pending;
+	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
 }  // namespace task_constructor
