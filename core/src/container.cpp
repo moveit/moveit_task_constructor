@@ -292,24 +292,13 @@ struct SolutionCollector
 {
 	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
 
-	void operator()(const SolutionSequence::container_type& trace, double cost) {
-#ifndef NDEBUG
-		// Traced path should not extend past container boundaries, i.e. trace.size() <= max_depth
-		// However, as the Merging-Connect's solution may be composed of several subsolutions, we need to disregard those
-		size_t len = trace.size();
-		const Stage* prev_creator = nullptr;
-		for (const auto& s : trace) {
-			if (s->creator() == prev_creator)
-				--len;
-			else
-				prev_creator = s->creator();
-		}
-		assert(len <= max_depth);
-#endif
-		solutions.emplace_back(std::make_pair(trace, cost));
+	void operator()(const SolutionSequence::container_type& trace, const InterfaceState::Priority& prio) {
+		assert(prio.depth() == trace.size());
+		assert(prio.depth() <= max_depth);
+		solutions.emplace_back(std::make_pair(trace, prio));
 	}
 
-	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, double>>;
+	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, InterfaceState::Priority>>;
 	SolutionCostPairs solutions;
 	const size_t max_depth;
 };
@@ -349,12 +338,10 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			InterfaceState::Priority prio(static_cast<unsigned int>(in.first.size() + 1 + out.first.size()),
-			                              in.second + current.cost() + out.second);
+			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				if (std::isinf(prio.cost()))
-					continue;  // don't propagate failures
+				assert(std::isfinite(prio.cost()));
 				assert(solution.empty());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
@@ -530,18 +517,17 @@ void SerialContainer::compute() {
 
 template <Interface::Direction dir>
 void SerialContainer::traverse(const SolutionBase& start, const SolutionProcessor& cb,
-                               SolutionSequence::container_type& trace, double trace_cost) {
+                               SolutionSequence::container_type& trace, const InterfaceState::Priority& prio) {
 	const InterfaceState::Solutions& solutions = start.trajectories<dir>();
 	if (solutions.empty())  // if we reached the end, call the callback
-		cb(trace, trace_cost);
+		cb(trace, prio);
 	else
 		for (SolutionBase* successor : solutions) {
+			if (successor->isFailure())
+				continue;
+
 			trace.push_back(successor);
-			trace_cost += successor->cost();
-
-			traverse<dir>(*successor, cb, trace, trace_cost);
-
-			trace_cost -= successor->cost();
+			traverse<dir>(*successor, cb, trace, prio + InterfaceState::Priority(1, successor->cost()));
 			trace.pop_back();
 		}
 }
