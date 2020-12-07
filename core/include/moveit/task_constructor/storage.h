@@ -205,6 +205,9 @@ private:
 	using base_type::remove_if;
 };
 
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
+std::ostream& operator<<(std::ostream& os, const Interface& interface);
+
 class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;

@@ -81,10 +81,6 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 		return depth() > other.depth();  // larger depth = smaller prio!
 }
 
-std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& p) {
-	return os << "[depth: " << p.depth() << ", cost: " << p.cost() << "]";
-}
-
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
 
 // Announce a new InterfaceState
@@ -136,6 +132,21 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 	update(it);  // update position in ordered list
 	if (notify_)
 		notify_(it, true);  // notify callback
+}
+
+std::ostream& operator<<(std::ostream& os, const Interface& interface) {
+	if (interface.empty())
+		os << "---";
+	for (const auto& istate : interface)
+		os << istate->priority() << "  ";
+	return os;
+}
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {
+	static const char* red = "\033[31m";
+	static const char* green = "\033[32m";
+	static const char* color_reset = "\033[m";
+	os << (prio.enabled() ? green : red) << prio.depth() << ":" << prio.cost() << color_reset;
+	return os;
 }
 
 void SolutionBase::setCreator(Stage* creator) {
