@@ -77,26 +77,33 @@ class InterfaceState
 	friend class SolutionBase;  // addIncoming() / addOutgoing() should be called only by SolutionBase
 	friend class Interface;  // allow Interface to set owner_ and priority_
 public:
+	enum Status
+	{
+		ENABLED,
+		DISABLED_START,  // state that was the root cause for disabling due to failure
+		DISABLED_END  // state on the other end of a disabled solution sequence
+	};
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
-	struct Priority : std::tuple<bool, unsigned int, double>
+	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost, bool enabled = true)
-		  : std::tuple<bool, unsigned int, double>(enabled, depth, cost) {
+		Priority(unsigned int depth, double cost, Status status = ENABLED)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
 			assert(std::isfinite(cost));
 		}
-		// Constructor copying depth and cost, but modifying enabled status
-		Priority(const Priority& other, bool enabled) : Priority(other.depth(), other.cost(), enabled) {}
+		// Constructor copying depth and cost, but modifying its status
+		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 
-		inline bool enabled() const { return std::get<0>(*this); }
+		inline Status status() const { return std::get<0>(*this); }
+		inline bool enabled() const { return std::get<0>(*this) == ENABLED; }
 		inline unsigned int depth() const { return std::get<1>(*this); }
 		inline double cost() const { return std::get<2>(*this); }
 
 		// add priorities
 		Priority operator+(const Priority& other) const {
-			return Priority(depth() + other.depth(), cost() + other.cost(), enabled() || other.enabled());
+			return Priority(depth() + other.depth(), cost() + other.cost(), std::min(status(), other.status()));
 		}
 		// comparison operators
 		bool operator<(const Priority& rhs) const;

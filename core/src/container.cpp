@@ -341,8 +341,8 @@ struct SolutionCollector
 inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
 	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
 		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
-		                               // update depth + cost, but keep current enabled status
-		                               InterfaceState::Priority(prio, state->priority().enabled()));
+		                               // update depth + cost, but keep current status
+		                               InterfaceState::Priority(prio, state->priority().status()));
 }
 
 template <Interface::Direction dir>
@@ -406,20 +406,6 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
 
-template <Interface::Direction dir>
-void markAsEnabled(const InterfaceState* s, bool enabled) {
-	if (s->priority().enabled() == enabled)
-		return;  // nothing changing
-
-	// actually enable/disable the state
-	if (s->owner())
-		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), enabled));
-
-	// traverse solution tree
-	for (const SolutionBase* successor : trajectories<dir>(s))
-		markAsEnabled<dir>(state<dir>(*successor), enabled);
-}
-
 void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
@@ -427,19 +413,19 @@ void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* fro
 			// TODO: If child is a container, from and to might have associated solutions already!
 
 		case PROPAGATE_FORWARDS:  // mark from as dead (backwards)
-			markAsEnabled<Interface::BACKWARD>(from, false);
+			StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_START);
 			break;
 		case PROPAGATE_BACKWARDS:  // mark to as dead (forwards)
-			markAsEnabled<Interface::FORWARD>(to, false);
+			StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_START);
 			break;
 
 		case CONNECT:
 			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
 				auto cimpl = conn->pimpl();
 				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
-					markAsEnabled<Interface::BACKWARD>(from, false);
+					StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_START);
 				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
-					markAsEnabled<Interface::FORWARD>(to, false);
+					StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_START);
 			}
 			break;
 	}

@@ -148,6 +148,30 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const Interfac
 	return true;
 }
 
+template <Interface::Direction dir>
+void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
+	if (s->priority().status() == status)
+		return;  // nothing changing
+
+	// actually enable/disable the state
+	if (s->owner())
+		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
+
+	// To break symmetry between both ends of a partial solution sequence that gets disabled,
+	// we mark the start state with START and all other states down the tree with END.
+	// This allows us to re-enable the START side, while not (yet) consider the END side,
+	// when a new states arrives in a Connecting stage.
+	// The END side is only re-enabled if the START side actually was connected with a solution.
+	if (status == InterfaceState::Status::DISABLED_START)
+		status = InterfaceState::Status::DISABLED_END;  // ensure that only the first state is marked as START
+
+	// traverse solution tree
+	for (const SolutionBase* successor : trajectories<dir>(s))
+		setStatus<dir>(state<dir>(*successor), status);
+}
+template void StagePrivate::setStatus<Interface::FORWARD>(const InterfaceState* s, InterfaceState::Status status);
+template void StagePrivate::setStatus<Interface::BACKWARD>(const InterfaceState* s, InterfaceState::Status status);
+
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 
@@ -705,7 +729,8 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
-		if (!it->priority().enabled())  // remove all pending pairs involving this state
+		if (it->priority().status() == InterfaceState::Status::DISABLED_END)
+			// remove all pending pairs involving this state
 			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
 		else
 			pending.sort();
@@ -713,9 +738,11 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
+			// Don't re-enable states that are marked DISABLED_END
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// if needed, re-enable the opposing state oit
-				oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), true));
+				// re-enable the opposing state oit if its status is DISABLED_START
+				if (oit->priority().status() == InterfaceState::DISABLED_START)
+					oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), InterfaceState::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
 			}
 		}

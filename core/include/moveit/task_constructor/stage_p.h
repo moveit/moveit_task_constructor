@@ -157,6 +157,10 @@ public:
 	/** compute cost for solution through configured CostTerm */
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
+	/// Set ENABLED / DISABLED status of the solution tree starting from s into given direction
+	template <Interface::Direction dir>
+	static void setStatus(const InterfaceState* s, InterfaceState::Status status);
+
 protected:
 	// associated/owning Stage instance
 	Stage* me_;

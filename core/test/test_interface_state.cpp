@@ -19,14 +19,15 @@ TEST(InterfaceStatePriority, compare) {
 	EXPECT_TRUE(Prio(1, 42) < Prio(0, 0));
 	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // at same depth, higher cost is larger
 
-	EXPECT_TRUE(Prio(0, 0, false) == Prio(0, 0, false));
-	EXPECT_TRUE(Prio(1, 0, false) < Prio(0, 0, false));
-	EXPECT_TRUE(Prio(1, 42, false) < Prio(0, 0, false));
-	EXPECT_TRUE(Prio(0, 0, false) < Prio(0, 42, false));
+	auto dstart = InterfaceState::DISABLED_START;
+	EXPECT_TRUE(Prio(0, 0, dstart) == Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(1, 0, dstart) < Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(1, 42, dstart) < Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(0, 0, dstart) < Prio(0, 42, dstart));
 
 	// disabled prios are always larger than enabled ones
-	EXPECT_TRUE(Prio(0, 42) < Prio(1, 0, false));
-	EXPECT_TRUE(Prio(1, 0) < Prio(0, 42, false));
+	EXPECT_TRUE(Prio(0, 42) < Prio(1, 0, dstart));
+	EXPECT_TRUE(Prio(1, 0) < Prio(0, 42, dstart));
 
 	// other comparison operators
 	EXPECT_TRUE(Prio(0, 0) <= Prio(0, 0));
@@ -67,7 +68,7 @@ TEST(Interface, update) {
 	i.updatePriority(*i.rbegin(), Prio(5, 0.0));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));
 
-	i.updatePriority(*i.begin(), Prio(6, 0, false));
+	i.updatePriority(*i.begin(), Prio(6, 0, InterfaceState::DISABLED_START));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 3, 6 }));
 }
 
@@ -78,14 +79,16 @@ inline bool operator<(const PrioPair& lhs, const PrioPair& rhs) {
 PrioPair pair(Prio&& p1, Prio&& p2) {
 	return std::make_pair(std::move(p1), std::move(p2));
 }
-PrioPair pair(bool e1, bool e2) {
-	return pair(Prio(0, 0, e1), Prio(0, 0, e2));
+PrioPair pair(InterfaceState::Status s1, InterfaceState::Status s2) {
+	return pair(Prio(0, 0, s1), Prio(0, 0, s2));
 }
 TEST(StatePairs, compare) {
 	EXPECT_TRUE(pair(Prio(1, 0), Prio(0, 1)) < pair(Prio(1, 1), Prio(0, 1)));
 	EXPECT_TRUE(pair(Prio(1, 1), Prio(1, 1)) < pair(Prio(1, 0), Prio(0, 0)));
 
-	EXPECT_TRUE(pair(true, true) < pair(true, false));
-	EXPECT_TRUE(pair(true, true) < pair(false, true));
-	EXPECT_TRUE(pair(false, true) < pair(true, false));
+	auto good = InterfaceState::ENABLED;
+	auto bad = InterfaceState::DISABLED_START;
+	EXPECT_TRUE(pair(good, good) < pair(good, bad));
+	EXPECT_TRUE(pair(good, good) < pair(bad, good));
+	EXPECT_TRUE(pair(bad, good) < pair(good, bad));
 }

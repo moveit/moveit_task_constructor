@@ -70,15 +70,16 @@ InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
 bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
-	// disabled states always after enabled ones
-	if (enabled() != other.enabled())
-		return enabled();
+	// first order by status if that differs
+	if (status() != other.status())
+		return status() < other.status();
 
-	// both prios have same enabled_ state
-	if (depth() == other.depth())
-		return cost() < other.cost();
-	else
+	// then by depth if that differs
+	if (depth() != other.depth())
 		return depth() > other.depth();  // larger depth = smaller prio!
+
+	// finally by cost
+	return cost() < other.cost();
 }
 
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
@@ -142,10 +143,14 @@ std::ostream& operator<<(std::ostream& os, const Interface& interface) {
 	return os;
 }
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {
-	static const char* red = "\033[31m";
-	static const char* green = "\033[32m";
+	// maps InterfaceState::Status values to output (color-changing) prefix
+	static const char* prefix[] = {
+		"\033[32me:",  // ENABLED - green
+		"\033[33md:",  // DISABLED - yellow
+		"\033[31mf:",  // DISABLED_FAILED - red
+	};
 	static const char* color_reset = "\033[m";
-	os << (prio.enabled() ? green : red) << prio.depth() << ":" << prio.cost() << color_reset;
+	os << prefix[prio.status()] << prio.depth() << ":" << prio.cost() << color_reset;
 	return os;
 }
 
