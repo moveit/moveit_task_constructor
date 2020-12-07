@@ -151,7 +151,32 @@ TEST(ConnectConnect, SuccSucc) {
 	}
 }
 
-TEST(ConnectConnect, Pruning) {
+TEST(ConnectConnect, PruningForward) {
+	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
+	Task t;
+	t.setRobotModel(getModel());
+	Connect *c1, *c2;
+	t.add(Stage::pointer(new GeneratorMockup()));
+	t.add(Stage::pointer(c1 = new Connect({ inf, 0 })));  // 1st attempt is a failure
+	t.add(Stage::pointer(new GeneratorMockup({ 0, 10, 20 })));
+	t.add(Stage::pointer(new ForwardMockup()));
+	t.add(Stage::pointer(c2 = new Connect()));
+	t.add(Stage::pointer(new GeneratorMockup({ 1, 2, 3 })));
+
+	t.plan();
+
+	ASSERT_EQ(t.solutions().size(), 3u * 2u);
+	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
+	auto expected_cost = expected_costs.begin();
+	for (const auto& s : t.solutions()) {
+		EXPECT_EQ(s->cost(), *expected_cost);
+		++expected_cost;
+	}
+	EXPECT_EQ(c1->calls_, 3u);
+	EXPECT_EQ(c2->calls_, 6u);
+}
+
+TEST(ConnectConnect, PruningBackward) {
 	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
 	Task t;
 	t.setRobotModel(getModel());
@@ -163,7 +188,8 @@ TEST(ConnectConnect, Pruning) {
 	t.add(Stage::pointer(c2 = new Connect({ inf, 0 })));  // 1st attempt is a failure
 	t.add(Stage::pointer(new GeneratorMockup()));
 
-	EXPECT_TRUE(t.plan());
+	t.plan();
+
 	ASSERT_EQ(t.solutions().size(), 3u * 2u);
 	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
 	auto expected_cost = expected_costs.begin();
@@ -172,7 +198,7 @@ TEST(ConnectConnect, Pruning) {
 		++expected_cost;
 	}
 	EXPECT_EQ(c2->calls_, 3u);
-	EXPECT_EQ(c1->calls_, 6u);  // TODO: avoid compute() calls on failure of remaining part
+	EXPECT_EQ(c1->calls_, 6u);
 }
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/218
