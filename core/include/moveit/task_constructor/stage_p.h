@@ -324,6 +324,10 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
+	// Check whether there are pending feasible states that could connect to source
+	template <Interface::Direction dir>
+	bool hasPendingOpposites(const InterfaceState* source) const;
+
 private:
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
 	template <Interface::Direction other>

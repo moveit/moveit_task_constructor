@@ -281,7 +281,7 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
-/** Collect all potential solutions originating from start */
+/** Collect all partial solution sequences originating from start into given direction */
 template <Interface::Direction dir>
 struct SolutionCollector
 {
@@ -299,9 +299,7 @@ struct SolutionCollector
 			solutions.emplace_back(std::make_pair(trace, prio));
 		} else {
 			for (SolutionBase* successor : next) {
-				if (successor->isFailure())  // skip failure "solutions"
-					continue;
-
+				assert(!successor->isFailure());  // We shouldn't have invalid solutions
 				trace.push_back(successor);
 				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
 				trace.pop_back();
@@ -316,11 +314,21 @@ struct SolutionCollector
 };
 
 inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
-	if (state->owner())
-		state->owner()->updatePriority(const_cast<InterfaceState*>(state), prio);
+	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
+		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
+		                               // update depth + cost, but keep current enabled status
+		                               InterfaceState::Priority(prio, state->priority().enabled()));
+}
+
+template <Interface::Direction dir>
+inline void updateStatePrios(const SolutionSequence::container_type& partial_solution_path,
+                             const InterfaceState::Priority& prio) {
+	for (const SolutionBase* solution : partial_solution_path)
+		updateStatePrio(state<dir>(*solution), prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
+	assert(!current.isFailure());
 	auto impl = pimpl();
 	const Stage* creator = current.creator();
 	auto& children = impl->children();
@@ -344,9 +352,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
 			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
+			assert(prio.enabled());
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				assert(prio.enabled());
 				assert(solution.empty());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
@@ -356,20 +364,60 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
 				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
-			} else if (prio.depth() > 1) {
-				// update state priorities at both ends of newly created partial solution
-				updateStatePrio((in.first.empty() ? current : *in.first.back()).start(), prio);
-				updateStatePrio((out.first.empty() ? current : *out.first.back()).end(), prio);
+			}
+			if (prio.depth() > 1) {
+				// update state priorities along the whole partial solution path
+				updateStatePrio(current.start(), prio);
+				updateStatePrio(current.end(), prio);
+				updateStatePrios<Interface::BACKWARD>(in.first, prio);
+				updateStatePrios<Interface::FORWARD>(out.first, prio);
 			}
 		}
 	}
 
-	// finally store + announce new solutions to external interface
+	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
 
-void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {}
+template <Interface::Direction dir>
+void markAsEnabled(const InterfaceState* s, bool enabled) {
+	if (s->priority().enabled() == enabled)
+		return;  // nothing changing
+
+	// actually enable/disable the state
+	if (s->owner())
+		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), enabled));
+
+	// traverse solution tree
+	for (const SolutionBase* successor : trajectories<dir>(s))
+		markAsEnabled<dir>(state<dir>(*successor), enabled);
+}
+
+void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			break;  // just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+
+		case PROPAGATE_FORWARDS:  // mark from as dead (backwards)
+			markAsEnabled<Interface::BACKWARD>(from, false);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as dead (forwards)
+			markAsEnabled<Interface::FORWARD>(to, false);
+			break;
+
+		case CONNECT:
+			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
+				auto cimpl = conn->pimpl();
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
+					markAsEnabled<Interface::BACKWARD>(from, false);
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
+					markAsEnabled<Interface::FORWARD>(to, false);
+			}
+			break;
+	}
+}
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
 SerialContainer::SerialContainer(const std::string& name) : SerialContainer(new SerialContainerPrivate(this, name)) {}

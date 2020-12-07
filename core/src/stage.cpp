@@ -704,17 +704,46 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (updated) {
-		// many pairs might be affected: sort
-		pending.sort();
+	if (updated) {  // many pairs might be affected: resort
+		if (!it->priority().enabled())  // remove all pending pairs involving this state
+			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
+		else
+			pending.sort();
 	} else {  // new state: insert all pairs with other interface
+		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
+			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
+				// if needed, re-enable the opposing state oit
+				oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), true));
 				pending.insert(make_pair<other>(it, oit));
+			}
 		}
 	}
 }
+
+// Check whether there are pending feasible states that could connect to source.
+// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+template <Interface::Direction dir>
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+	for (const auto& candidate : this->pending) {
+		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto src = std::get<dir>(candidate);
+		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto tgt = std::get<opposite<dir>()>(candidate);
+
+		if (&*src == source && tgt->priority().enabled())
+			return true;
+
+		// early stopping when only infeasible pairs are to come
+		if (!std::get<0>(candidate)->priority().enabled())
+			break;
+	}
+	return false;
+}
+// explicitly instantiate templates for both directions
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
 
 bool ConnectingPrivate::canCompute() const {
 	// Do we still have feasible pending state pairs?
