@@ -328,6 +328,8 @@ public:
 	template <Interface::Direction dir>
 	bool hasPendingOpposites(const InterfaceState* source) const;
 
+	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
+
 private:
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
 	template <Interface::Direction other>

@@ -281,6 +281,31 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
+// for debugging of how children interfaces evolve over time
+static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr) {
+	static unsigned int id = 0;
+	const unsigned int width = 10;  // indentation of name
+	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	if (success)
+		os << ++id << ' ';
+	if (const Connecting* conn = dynamic_cast<const Connecting*>(&creator))
+		conn->pimpl()->printPendingPairs(os);
+	os << std::endl;
+
+	for (const auto& child : container.pimpl()->children()) {
+		auto cimpl = child->pimpl();
+		if (!cimpl->starts() && !cimpl->ends())
+			continue;  // skip generator
+		os << std::setw(width) << std::left << child->name();
+		if (cimpl->starts())
+			os << "↓ " << *child->pimpl()->starts() << std::endl;
+		if (cimpl->starts() && cimpl->ends())
+			os << std::setw(width) << "  ";
+		if (cimpl->ends())
+			os << "↑ " << *child->pimpl()->ends() << std::endl;
+	}
+}
 /** Collect all partial solution sequences originating from start into given direction */
 template <Interface::Direction dir>
 struct SolutionCollector
@@ -374,6 +399,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 		}
 	}
+	printChildrenInterfaces(*this, true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -417,6 +443,7 @@ void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* fro
 			}
 			break;
 	}
+	printChildrenInterfaces(*this, false, child);
 }
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}

@@ -720,6 +720,8 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 			}
 		}
 	}
+	std::cerr << name_ << ": ";
+	printPendingPairs(std::cerr);
 }
 
 // Check whether there are pending feasible states that could connect to source.
@@ -757,6 +759,28 @@ void ConnectingPrivate::compute() {
 	const InterfaceState& to = *top.second;
 	assert(from.priority().enabled() && to.priority().enabled());
 	static_cast<Connecting*>(me_)->compute(from, to);
+}
+
+std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+	static const char* red = "\033[31m";
+	static const char* reset = "\033[m";
+	for (const auto& candidate : pending) {
+		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
+			os << " " << red;
+		// find indeces of InterfaceState pointers in start/end Interfaces
+		unsigned int first = 0, second = 0;
+		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
+			++first;
+			return &*candidate.first == s;
+		});
+		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
+			++second;
+			return &*candidate.second == s;
+		});
+		os << first << ":" << second << " ";
+	}
+	os << reset;
+	return os;
 }
 
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}
