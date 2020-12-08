@@ -399,7 +399,6 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 		}
 	}
-	printChildrenInterfaces(*this, true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -429,7 +428,6 @@ void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* fro
 			}
 			break;
 	}
-	printChildrenInterfaces(*this, false, child);
 }
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
