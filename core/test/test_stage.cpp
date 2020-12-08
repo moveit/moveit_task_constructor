@@ -93,7 +93,7 @@ TEST(ComputeIK, init) {
 	EXPECT_THROW(ik.init(robot_model), InitStageException);
 
 	// valid group should not throw
-	props.set("group", std::string("base_from_base_to_tip"));
+	props.set("group", std::string("group"));
 	EXPECT_NO_THROW(ik.init(robot_model));
 }
 
@@ -168,13 +168,13 @@ TEST(Connect, compatible) {
 
 	// attached objects
 	other = scene->diff();
-	attachObject(*scene, "object", "base_link", true);
+	attachObject(*scene, "object", "tip", true);
 	EXPECT_FALSE(connect.compatible(scene, other)) << "detached and attached object";
 
 	other = scene->diff();
 	EXPECT_TRUE(connect.compatible(scene, other)) << "identical scenes, attached object";
 
 	spawnObject(*other, "object", shape_msgs::SolidPrimitive::CYLINDER, { 0.1, 0, 0 });
-	attachObject(*other, "object", "base_link", true);
+	attachObject(*other, "object", "tip", true);
 	EXPECT_FALSE(connect.compatible(scene, other)) << "different pose";
 }

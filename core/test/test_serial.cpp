@@ -5,6 +5,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/utils/robot_model_test_utils.h>
 
+#include "models.h"
 #include <list>
 #include <memory>
 #include <gtest/gtest.h>
@@ -107,7 +108,7 @@ struct Connect : stages::Connect
 
 	static GroupPlannerVector getPlanners() {
 		auto planner = std::make_shared<solvers::JointInterpolationPlanner>();
-		return { { "group1", planner }, { "group2", planner } };
+		return { { "group", planner }, { "eef_group", planner } };
 	}
 
 	Connect(std::initializer_list<double> costs = {}, bool enforce_sequential = false)
@@ -128,15 +129,6 @@ unsigned int GeneratorMockup::id_ = 0;
 unsigned int ForwardMockup::id_ = 0;
 unsigned int BackwardMockup::id_ = 0;
 unsigned int Connect::id_ = 0;
-
-moveit::core::RobotModelConstPtr getModel() {
-	ros::console::set_logger_level("ros.moveit_core.robot_model", ros::console::levels::Error);
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->a->b->c", "continuous");
-	builder.addGroupChain("base", "b", "group1");
-	builder.addGroupChain("b", "c", "group2");
-	return builder.build();
-}
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/182
 TEST(ConnectConnect, SuccSucc) {

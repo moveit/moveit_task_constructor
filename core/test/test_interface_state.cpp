@@ -1,7 +1,8 @@
 #include <moveit/task_constructor/storage.h>
-#include <moveit/utils/robot_model_test_utils.h>
+#include <moveit/task_constructor/stage_p.h>
 #include <moveit/planning_scene/planning_scene.h>
 
+#include "models.h"
 #include <memory>
 #include <algorithm>
 #include <iterator>
@@ -26,13 +27,6 @@ TEST(InterfaceStatePriority, compare) {
 	EXPECT_TRUE(Prio(0, 0) < Prio(0, inf));
 	EXPECT_TRUE(Prio(0, 42) > Prio(0, 0));
 	EXPECT_TRUE(Prio(0, inf) > Prio(0, 0));
-}
-
-moveit::core::RobotModelConstPtr getModel() {
-	ros::console::set_logger_level("ros.moveit_core.robot_model", ros::console::levels::Error);
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->tip", "continuous");
-	return builder.build();
 }
 
 using Prio = InterfaceState::Priority;
