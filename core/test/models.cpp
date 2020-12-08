@@ -5,6 +5,9 @@
 using namespace moveit::core;
 
 RobotModelPtr getModel() {
+	// suppress RobotModel errors and warnings
+	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME ".moveit_core.robot_model", ros::console::levels::Fatal);
+
 	// create dummy robot model
 	moveit::core::RobotModelBuilder builder("robot", "base");
 	builder.addChain("base->link1->link2->tip", "continuous");

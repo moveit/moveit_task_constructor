@@ -47,8 +47,6 @@ public:
 };
 
 TEST(Stage, registerCallbacks) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
-
 	GeneratorMockup g;
 	g.init(getModel());
 
@@ -68,8 +66,6 @@ TEST(Stage, registerCallbacks) {
 }
 
 TEST(ComputeIK, init) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
-
 	auto g = std::make_unique<GeneratorMockup>();
 	stages::ComputeIK ik("ik", std::move(g));
 	moveit::core::RobotModelPtr robot_model = getModel();
@@ -98,8 +94,6 @@ TEST(ComputeIK, init) {
 }
 
 TEST(ModifyPlanningScene, allowCollisions) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
-
 	auto s = std::make_unique<stages::ModifyPlanningScene>();
 	std::string first = "foo", second = "boom";
 	s->allowCollisions(first, second, true);
