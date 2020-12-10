@@ -67,4 +67,4 @@ class Test(unittest.TestCase):
 
 if __name__ == "__main__":
     roscpp_init("test_mtc")
-    rostest.rosrun("", "", Test)
+    rostest.rosrun("mtc", "base", Test)

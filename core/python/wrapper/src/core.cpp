@@ -1,9 +1,7 @@
+#include "core.h"
 #include <moveit/python/task_constructor/properties.h>
-#include <moveit/task_constructor/stage.h>
-#include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task.h>
-#include <moveit_task_constructor_msgs/Solution.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
@@ -87,6 +85,9 @@ void export_core(pybind11::module& m) {
 			return msg;
 		})
 		;
+	py::class_<SubTrajectory, SubTrajectoryPtr, SolutionBase>(m, "SubTrajectory")
+		.def(py::init<>())
+		;
 
 	typedef ordered<SolutionBaseConstPtr> Solutions;
 	py::class_<Solutions>(m, "Solutions")
@@ -96,7 +97,10 @@ void export_core(pybind11::module& m) {
 		     py::keep_alive<0, 1>())
 		;
 
-	auto stage = properties::class_<Stage>(m, "Stage")
+	py::class_<InterfaceState>(m, "InterfaceState")
+		;
+
+	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage")
 		.property<double>("timeout")
 		.property<std::string>("marker_ns")
 		.def_property("forwarded_properties", getForwardedProperties, setForwardedProperties)
@@ -115,20 +119,43 @@ void export_core(pybind11::module& m) {
 		;
 
 
-	auto either_way = py::class_<PropagatingEitherWay, Stage>(m, "PropagatingEitherWay")
-		.def("restrictDirection", &PropagatingEitherWay::restrictDirection);
+	auto either_way = py::class_<PropagatingEitherWay, Stage, PyPropagatingEitherWay<>>(m, "PropagatingEitherWay")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingEitherWay"))
+		.def("restrictDirection", &PropagatingEitherWay::restrictDirection)
+		.def("computeForward", &PropagatingEitherWay::computeForward)
+		.def("computeBackward", &PropagatingEitherWay::computeBackward)
+		//.def("sendForward", &PropagatingEitherWay::sendForward)
+		//.def("sendBackward", &PropagatingEitherWay::sendBackward)
+		;
 
 	py::enum_<PropagatingEitherWay::Direction>(either_way, "Direction")
 		.value("AUTO", PropagatingEitherWay::AUTO)
 		.value("FORWARD", PropagatingEitherWay::FORWARD)
 		.value("BACKWARD", PropagatingEitherWay::BACKWARD);
 
-	py::class_<MonitoringGenerator, Stage>(m, "MonitoringGenerator")
-		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage);
+	py::class_<PropagatingForward, Stage, PyPropagatingEitherWay<PropagatingForward>>(m, "PropagatingForward")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingForward"))
+		;
+	py::class_<PropagatingBackward, Stage, PyPropagatingEitherWay<PropagatingBackward>>(m, "PropagatingBackward")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingBackward"))
+		;
+
+	properties::class_<Generator, Stage, PyGenerator<>>(m, "Generator")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
+		.def("canCompute", &Generator::canCompute)
+		.def("compute", &Generator::compute)
+		;
+
+	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
+		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage)
+		.def("_onNewSolution", &PubMonitoringGenerator::onNewSolution)
+		;
 
 	py::class_<ContainerBase, Stage>(m, "ContainerBase")
 		.def("add", &ContainerBase::add)
 		.def("insert", &ContainerBase::insert, py::arg("stage"), py::arg("before") = -1)
+		.def("remove", static_cast<Stage::pointer (ContainerBase::*)(int)>(&ContainerBase::remove))
 		.def("clear", &ContainerBase::clear)
 		.def("__len__", &ContainerBase::numChildren)
 		.def("__getitem__", [](const ContainerBase &c, const std::string &name) -> Stage* {
@@ -187,10 +214,10 @@ void export_core(pybind11::module& m) {
 		.def("init", &Task::init)
 		.def("plan", &Task::plan, py::arg("max_solutions") = 0)
 		.def("preempt", &Task::preempt)
-		.def("publish", [](Task& self, SolutionBasePtr& solution) {
+		.def("publish", [](Task& self, const SolutionBasePtr& solution) {
 			self.introspection().publishSolution(*solution);
 		})
-		.def("execute", [](const Task& self, SolutionBasePtr& solution) {
+		.def("execute", [](const Task& self, const SolutionBasePtr& solution) {
 			moveit::planning_interface::PlanningSceneInterface psi;
 			moveit::planning_interface::MoveGroupInterface
 				mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);

@@ -1,3 +1,4 @@
+#include "stages.h"
 #include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/stages/pick.h>
@@ -50,7 +51,7 @@ void export_stages(pybind11::module& m) {
 
 	properties::class_<FixedState, Stage>(m, "FixedState")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("fixed state"))
-      #if 0
+#if 0
 		.def("setState", [](FixedState& stage, const moveit_msg::PlanningScene& scene_msg) {
 			// TODO: How to initialize the PlanningScene?
 			planning_scene::PlanningScenePtr scene;
@@ -71,7 +72,7 @@ void export_stages(pybind11::module& m) {
 		// methods of base class boost::python::class_ need to be called last!
 		.def(py::init<const std::string&, Stage::pointer&&>());
 
-	properties::class_<MoveTo, PropagatingEitherWay>(m, "MoveTo")
+	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo")
 		.property<std::string>("group")
 		.property<geometry_msgs::PoseStamped>("ik_frame")
 		.property<moveit_msgs::Constraints>("path_constraints")
@@ -82,7 +83,7 @@ void export_stages(pybind11::module& m) {
 		.def<void (MoveTo::*)(const std::map<std::string, double>&)>("setGoal", &MoveTo::setGoal)
 		.def<void (MoveTo::*)(const std::string&)>("setGoal", &MoveTo::setGoal);
 
-	properties::class_<MoveRelative, PropagatingEitherWay>(m, "MoveRelative")
+	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative")
 		.property<std::string>("group")
 		.property<geometry_msgs::PoseStamped>("ik_frame")
 		.property<double>("min_distance")
