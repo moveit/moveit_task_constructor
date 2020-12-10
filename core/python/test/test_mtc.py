@@ -271,6 +271,35 @@ class TestStages(unittest.TestCase):
                 raise
 
 
+class TestContainer(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestContainer, self).__init__(*args, **kwargs)
+
+    def test_move(self):
+        container = core.SerialContainer()
+        stage = stages.CurrentState()
+        container.add(stage)
+        with self.assertRaises(TypeError):
+            stage.name
+
+    def check(self, container):
+        container = core.SerialContainer()
+        container.add(stages.CurrentState("1"))
+        container.add(stages.CurrentState("2"))
+        container.add(stages.CurrentState("3"))
+        with self.assertRaises(IndexError):
+            container["unknown"]
+        child = container["2"]
+        self.assertEqual(child.name, "2")
+        self.assertEqual([child.name for child in container], ["1", "2", "3"])
+
+    def test_serial(self):
+        self.check(core.SerialContainer())
+
+    def test_task(self):
+        self.check(core.Task())
+
+
 class TestTask(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestTask, self).__init__(*args, **kwargs)

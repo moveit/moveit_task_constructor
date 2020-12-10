@@ -1,6 +1,7 @@
 #include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 
@@ -128,7 +129,19 @@ void export_core(pybind11::module& m) {
 	py::class_<ContainerBase, Stage>(m, "ContainerBase")
 		.def("add", &ContainerBase::add)
 		.def("insert", &ContainerBase::insert, py::arg("stage"), py::arg("before") = -1)
-		.def("clear", &ContainerBase::clear);
+		.def("clear", &ContainerBase::clear)
+		.def("__len__", &ContainerBase::numChildren)
+		.def("__getitem__", [](const ContainerBase &c, const std::string &name) -> Stage* {
+			Stage* child = c.findChild(name);
+			if (!child)
+				throw py::index_error();
+			return child;
+		}, py::return_value_policy::reference_internal)
+		.def("__iter__", [](const ContainerBase &c) {
+			const auto& children = c.pimpl()->children();
+			return py::make_iterator(children.begin(), children.end());
+		}, py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
+		;
 
 	py::class_<SerialContainer, ContainerBase>(m, "SerialContainer")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("serial container"));
@@ -159,6 +172,17 @@ void export_core(pybind11::module& m) {
 		.def("enableIntrospection", &Task::enableIntrospection, py::arg("enabled") = true)
 		.def("clear", &Task::clear)
 		.def("add", &Task::add)
+		.def("__len__", [](const Task& t) { t.stages()->numChildren(); })
+		.def("__getitem__", [](const Task& t, const std::string &name) -> Stage* {
+			Stage* child = t.stages()->findChild(name);
+			if (!child)
+				throw py::index_error();
+			return child;
+		}, py::return_value_policy::reference_internal)
+		.def("__iter__", [](const Task &t) {
+			const auto& children = t.stages()->pimpl()->children();
+			return py::make_iterator(children.begin(), children.end());
+		}, py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
 		.def("reset", &Task::reset)
 		.def("init", &Task::init)
 		.def("plan", &Task::plan, py::arg("max_solutions") = 0)
