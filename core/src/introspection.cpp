@@ -57,6 +57,8 @@ std::string getTaskId(const TaskPrivate* task) {
 	std::ostringstream oss;
 	char our_hostname[256] = { 0 };
 	gethostname(our_hostname, sizeof(our_hostname) - 1);
+	// Hostname could have `-` as a character but this is an invalid character in ROS so we replace it with `_`
+	std::replace(std::begin(our_hostname), std::end(our_hostname), '-', '_');
 	oss << our_hostname << "_" << getpid() << "_" << reinterpret_cast<std::size_t>(task);
 	return oss.str();
 }
