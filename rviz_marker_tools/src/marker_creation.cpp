@@ -1,13 +1,15 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <urdf_model/link.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <ros/console.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <rclcpp/logging.hpp>
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("rviz_marker_tools");
 
 namespace vm = visualization_msgs;
 
 namespace rviz_marker_tools {
 
-std_msgs::ColorRGBA& setColor(std_msgs::ColorRGBA& color, Color color_id, double alpha) {
+std_msgs::msg::ColorRGBA& setColor(std_msgs::msg::ColorRGBA& color, Color color_id, double alpha) {
 	switch (color_id) {
 		case RED:
 			color.r = 0.8;
@@ -108,7 +110,8 @@ double interpolate(double start, double end, double fraction) {
 	return start * (1.0 - fraction) + end * fraction;
 }
 
-std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::ColorRGBA& other, double fraction) {
+std_msgs::msg::ColorRGBA& interpolate(std_msgs::msg::ColorRGBA& color, const std_msgs::msg::ColorRGBA& other,
+                                      double fraction) {
 	if (fraction < 0.0)
 		fraction = 0.0;
 	if (fraction > 1.0)
@@ -120,44 +123,44 @@ std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::Col
 	return color;
 }
 
-std_msgs::ColorRGBA& brighten(std_msgs::ColorRGBA& color, double fraction) {
-	static std_msgs::ColorRGBA white;
+std_msgs::msg::ColorRGBA& brighten(std_msgs::msg::ColorRGBA& color, double fraction) {
+	static std_msgs::msg::ColorRGBA white;
 	if (white.r == 0.0)
 		setColor(white, WHITE);
 	return interpolate(color, white, fraction);
 }
 
-std_msgs::ColorRGBA& darken(std_msgs::ColorRGBA& color, double fraction) {
-	static std_msgs::ColorRGBA black;
+std_msgs::msg::ColorRGBA& darken(std_msgs::msg::ColorRGBA& color, double fraction) {
+	static std_msgs::msg::ColorRGBA black;
 	return interpolate(color, black, fraction);
 }
 
-std_msgs::ColorRGBA getColor(Color color, double alpha) {
-	std_msgs::ColorRGBA result;
+std_msgs::msg::ColorRGBA getColor(Color color, double alpha) {
+	std_msgs::msg::ColorRGBA result;
 	setColor(result, color, alpha);
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
-	geometry_msgs::Pose result;
+geometry_msgs::msg::Pose composePoses(const geometry_msgs::msg::Pose& first, const Eigen::Isometry3d& second) {
+	geometry_msgs::msg::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(first, result_eigen);
+	tf2::convert(first, result_eigen);
 	result_eigen = result_eigen * second;
-	tf::poseEigenToMsg(result_eigen, result);
+	tf2::convert(result_eigen, result);
 	return result;
 }
 
-geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
-	geometry_msgs::Pose result;
+geometry_msgs::msg::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::msg::Pose& second) {
+	geometry_msgs::msg::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(second, result_eigen);
+	tf2::convert(second, result_eigen);
 	result_eigen = first * result_eigen;
-	tf::poseEigenToMsg(result_eigen, result);
+	tf2::convert(result_eigen, result);
 	return result;
 }
 
-void prepareMarker(vm::Marker& m, int marker_type) {
-	m.action = vm::Marker::ADD;
+void prepareMarker(vm::msg::Marker& m, int marker_type) {
+	m.action = vm::msg::Marker::ADD;
 	m.type = marker_type;
 	m.points.clear();
 	m.colors.clear();
@@ -173,8 +176,8 @@ void prepareMarker(vm::Marker& m, int marker_type) {
 		m.pose.orientation.w = 1.0;
 }
 
-vm::Marker& makeXYPlane(vm::Marker& m) {
-	geometry_msgs::Point p[4];
+vm::msg::Marker& makeXYPlane(vm::msg::Marker& m) {
+	geometry_msgs::msg::Point p[4];
 
 	p[0].x = 1.0;
 	p[0].y = 1.0;
@@ -192,7 +195,7 @@ vm::Marker& makeXYPlane(vm::Marker& m) {
 	p[3].y = -1.0;
 	p[3].z = 0.0;
 
-	prepareMarker(m, vm::Marker::TRIANGLE_LIST);
+	prepareMarker(m, vm::msg::Marker::TRIANGLE_LIST);
 	m.points.push_back(p[0]);
 	m.points.push_back(p[1]);
 	m.points.push_back(p[2]);
@@ -203,7 +206,7 @@ vm::Marker& makeXYPlane(vm::Marker& m) {
 	return m;
 }
 
-vm::Marker& makeXZPlane(vm::Marker& m) {
+vm::msg::Marker& makeXZPlane(vm::msg::Marker& m) {
 	makeXYPlane(m);
 	// swap y and z components of points
 	for (auto& p : m.points)
@@ -211,7 +214,7 @@ vm::Marker& makeXZPlane(vm::Marker& m) {
 	return m;
 }
 
-vm::Marker& makeYZPlane(vm::Marker& m) {
+vm::msg::Marker& makeYZPlane(vm::msg::Marker& m) {
 	makeXZPlane(m);
 	// (additionally) swap x and y components of points
 	for (auto& p : m.points)
@@ -220,9 +223,9 @@ vm::Marker& makeYZPlane(vm::Marker& m) {
 }
 
 /// create a cone of given angle along the x-axis
-vm::Marker makeCone(double angle, vm::Marker& m) {
-	prepareMarker(m, vm::Marker::TRIANGLE_LIST);
-	geometry_msgs::Point p[3];
+vm::msg::Marker makeCone(double angle, vm::msg::Marker& m) {
+	prepareMarker(m, vm::msg::Marker::TRIANGLE_LIST);
+	geometry_msgs::msg::Point p[3];
 	p[0].x = p[0].y = p[0].z = 0.0;
 	p[1].x = p[2].x = 1.0;
 
@@ -245,53 +248,53 @@ vm::Marker makeCone(double angle, vm::Marker& m) {
 	return m;
 }
 
-vm::Marker& makeSphere(vm::Marker& m, double radius) {
+vm::msg::Marker& makeSphere(vm::msg::Marker& m, double radius) {
 	m.scale.x = m.scale.y = m.scale.z = radius;
-	prepareMarker(m, vm::Marker::SPHERE);
+	prepareMarker(m, vm::msg::Marker::SPHERE);
 	return m;
 }
 
-vm::Marker& makeBox(vm::Marker& m, double x, double y, double z) {
+vm::msg::Marker& makeBox(vm::msg::Marker& m, double x, double y, double z) {
 	m.scale.x = x;
 	m.scale.y = y;
 	m.scale.z = z;
-	prepareMarker(m, vm::Marker::CUBE);
+	prepareMarker(m, vm::msg::Marker::CUBE);
 	return m;
 }
 
-vm::Marker& makeCylinder(vm::Marker& m, double diameter, double height) {
+vm::msg::Marker& makeCylinder(vm::msg::Marker& m, double diameter, double height) {
 	m.scale.x = m.scale.y = diameter;
 	m.scale.z = height;
-	prepareMarker(m, vm::Marker::CYLINDER);
+	prepareMarker(m, vm::msg::Marker::CYLINDER);
 	return m;
 }
 
-vm::Marker& makeMesh(vm::Marker& m, const std::string& filename, double sx, double sy, double sz) {
+vm::msg::Marker& makeMesh(vm::msg::Marker& m, const std::string& filename, double sx, double sy, double sz) {
 	m.scale.x = sx;
 	m.scale.y = sy;
 	m.scale.z = sz;
-	prepareMarker(m, vm::Marker::MESH_RESOURCE);
+	prepareMarker(m, vm::msg::Marker::MESH_RESOURCE);
 	m.mesh_resource = filename;
 	m.mesh_use_embedded_materials = 1u;
 	return m;
 }
 
-vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
+vm::msg::Marker& makeArrow(vm::msg::Marker& m, double scale, bool tip_at_origin) {
 	m.scale.y = m.scale.z = 0.1 * scale;
 	m.scale.x = scale;
-	prepareMarker(m, vm::Marker::ARROW);
+	prepareMarker(m, vm::msg::Marker::ARROW);
 	if (tip_at_origin)
 		m.pose = composePoses(m.pose, Eigen::Translation3d(-scale, 0, 0) * Eigen::Isometry3d::Identity());
 	return m;
 }
 
-vm::Marker& makeText(vm::Marker& m, const std::string& text) {
-	prepareMarker(m, vm::Marker::TEXT_VIEW_FACING);
+vm::msg::Marker& makeText(vm::msg::Marker& m, const std::string& text) {
+	prepareMarker(m, vm::msg::Marker::TEXT_VIEW_FACING);
 	m.text = text;
 	return m;
 }
 
-vm::Marker& makeFromGeometry(vm::Marker& m, const urdf::Geometry& geom) {
+vm::msg::Marker& makeFromGeometry(vm::msg::Marker& m, const urdf::Geometry& geom) {
 	switch (geom.type) {
 		case urdf::Geometry::SPHERE: {
 			const urdf::Sphere& sphere = static_cast<const urdf::Sphere&>(geom);
@@ -314,7 +317,7 @@ vm::Marker& makeFromGeometry(vm::Marker& m, const urdf::Geometry& geom) {
 			break;
 		}
 		default:
-			ROS_WARN("Unsupported geometry type: %d", geom.type);
+			RCLCPP_WARN(LOGGER, "Unsupported geometry type: %d", geom.type);
 			break;
 	}
 
