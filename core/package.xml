@@ -9,7 +9,6 @@
 
 	<buildtool_depend>ament_cmake</buildtool_depend>
 
-	<depend>eigen_conversions</depend>
 	<depend>geometry_msgs</depend>
 	<depend>rclcpp</depend>
 	<depend>moveit_core</depend>
