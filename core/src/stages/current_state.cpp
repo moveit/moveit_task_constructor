@@ -69,26 +69,28 @@ bool CurrentState::canCompute() const {
 void CurrentState::compute() {
 	scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
-	ros::NodeHandle h;
-	ros::ServiceClient client = h.serviceClient<moveit_msgs::srv::GetPlanningScene>("get_planning_scene");
+	auto node = rclcpp::Node::make_shared("current_state");
+	auto client = node->create_client<moveit_msgs::srv::GetPlanningScene>("get_planning_scene");
 
-	ros::Duration timeout(this->timeout());
-	if (client.waitForExistence(timeout)) {
-		moveit_msgs::srv::GetPlanningScene::Request req;
-		moveit_msgs::srv::GetPlanningScene::Response res;
+	auto timeout = std::chrono::duration<double>(this->timeout());
+	if (client->wait_for_service(timeout)) {
+		auto req = std::make_shared<moveit_msgs::srv::GetPlanningScene::Request>();
 
-		req.components.components =
-		    moveit_msgs::msg::PlanningSceneComponents::SCENE_SETTINGS | moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE |
-		    moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
-		    moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_NAMES |
-		    moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY | moveit_msgs::msg::PlanningSceneComponents::OCTOMAP |
-		    moveit_msgs::msg::PlanningSceneComponents::TRANSFORMS |
-		    moveit_msgs::msg::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
-		    moveit_msgs::msg::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
-		    moveit_msgs::msg::PlanningSceneComponents::OBJECT_COLORS;
+		req->components.components = moveit_msgs::msg::PlanningSceneComponents::SCENE_SETTINGS |
+		                             moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE |
+		                             moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
+		                             moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_NAMES |
+		                             moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY |
+		                             moveit_msgs::msg::PlanningSceneComponents::OCTOMAP |
+		                             moveit_msgs::msg::PlanningSceneComponents::TRANSFORMS |
+		                             moveit_msgs::msg::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
+		                             moveit_msgs::msg::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
+		                             moveit_msgs::msg::PlanningSceneComponents::OBJECT_COLORS;
 
-		if (client.call(req, res)) {
-			scene_->setPlanningSceneMsg(res.scene);
+		auto res_future = client->async_send_request(req);
+		if (rclcpp::spin_until_future_complete(node, res_future) == rclcpp::FutureReturnCode::SUCCESS) {
+			auto res = res_future.get();
+			scene_->setPlanningSceneMsg(res->scene);
 			spawn(InterfaceState(scene_), 0.0);
 			return;
 		}

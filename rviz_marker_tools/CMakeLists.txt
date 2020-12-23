@@ -17,7 +17,7 @@ set(HEADERS
 	${PROJECT_INCLUDE}/marker_creation.h
 )
 
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
 	${HEADERS}
 	src/marker_creation.cpp
 )
@@ -39,6 +39,6 @@ ament_export_dependencies(Eigen3)
 ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(visualization_msgs)
 ament_export_dependencies(rclcpp)
-ament_export_dependencies(rviz)
+ament_export_dependencies(rviz2)
 ament_export_dependencies(tf2_eigen)
 ament_package()

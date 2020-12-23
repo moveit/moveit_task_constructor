@@ -43,7 +43,7 @@
 #include <moveit/robot_state/robot_state.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <chrono>
 #include <functional>
 #include <iterator>
@@ -73,14 +73,14 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 void ComputeIK::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	tf2::convert(pose, pose_msg.pose);
 	setIKFrame(pose_msg);
 }
 
 void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame) {
 	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = frame;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	tf2::convert(pose, pose_msg.pose);
 	setTargetPose(pose_msg);
 }
 
@@ -92,12 +92,12 @@ namespace {
 // ??? TODO: provide callback methods in PlanningScene class / probably not very useful here though...
 // TODO: move into MoveIt! core, lift active_components_only_ from fcl to common interface
 bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d pose,
-                           const robot_model::LinkModel* link,
+                           const moveit::core::LinkModel* link,
                            collision_detection::CollisionResult* collision_result = nullptr) {
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+	moveit::core::RobotState& robot_state = scene->getCurrentStateNonConst();
 
 	// consider all rigidly connected parent links as well
-	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
+	const moveit::core::LinkModel* parent = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link);
 	if (parent != link)  // transform pose into pose suitable to place parent
 		pose = pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
 
@@ -111,10 +111,10 @@ bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen:
 	while (parent) {
 		pending_links.push_back(&parent->getName());
 		link = parent;
-		const robot_model::JointModel* joint = link->getParentJointModel();
+		const moveit::core::JointModel* joint = link->getParentJointModel();
 		parent = joint->getParentLinkModel();
 
-		if (joint->getType() != robot_model::JointModel::FIXED) {
+		if (joint->getType() != moveit::core::JointModel::FIXED) {
 			for (const std::string* name : pending_links)
 				acm.setDefaultEntry(*name, true);
 			pending_links.clear();
@@ -261,7 +261,7 @@ void ComputeIK::compute() {
 		target_pose_msg.header.frame_id = sandbox_scene->getPlanningFrame();
 
 	Eigen::Isometry3d target_pose;
-	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
+	tf2::convert(target_pose_msg.pose, target_pose);
 	if (target_pose_msg.header.frame_id != sandbox_scene->getPlanningFrame()) {
 		if (!sandbox_scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
 			RCLCPP_WARN_STREAM(LOGGER, "Unknown reference frame for target pose: " << target_pose_msg.header.frame_id);
@@ -272,7 +272,7 @@ void ComputeIK::compute() {
 	}
 
 	// determine IK link from ik_frame
-	const robot_model::LinkModel* link = nullptr;
+	const moveit::core::LinkModel* link = nullptr;
 	geometry_msgs::msg::PoseStamped ik_pose_msg;
 	const boost::any& value = props.get("ik_frame");
 	if (value.empty()) {  // property undefined
@@ -287,11 +287,11 @@ void ComputeIK::compute() {
 	} else {
 		ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(value);
 		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		tf2::convert(ik_pose_msg.pose, ik_pose);
 		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
 			link = robot_model->getLinkModel(ik_pose_msg.header.frame_id);
 		} else {
-			const robot_state::AttachedBody* attached =
+			const moveit::core::AttachedBody* attached =
 			    sandbox_scene->getCurrentState().getAttachedBody(ik_pose_msg.header.frame_id);
 			if (!attached) {
 				RCLCPP_WARN_STREAM(LOGGER, "Unknown frame: " << ik_pose_msg.header.frame_id);
@@ -314,7 +314,7 @@ void ComputeIK::compute() {
 	collision_detection::CollisionResult collisions;
 	bool colliding = !ignore_collisions && isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
 
-	robot_state::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
+	moveit::core::RobotState& sandbox_state = sandbox_scene->getCurrentStateNonConst();
 
 	// markers used for failures
 	std::deque<visualization_msgs::msg::Marker> failure_markers;
@@ -346,7 +346,7 @@ void ComputeIK::compute() {
 	std::vector<double> compare_pose;
 	const std::string& compare_pose_name = props.get<std::string>("default_pose");
 	if (!compare_pose_name.empty()) {
-		robot_state::RobotState compare_state(robot_model);
+		moveit::core::RobotState compare_state(robot_model);
 		compare_state.setToDefaultValues(jmg, compare_pose_name);
 		compare_state.copyJointGroupPositions(jmg, compare_pose);
 	} else
@@ -356,7 +356,7 @@ void ComputeIK::compute() {
 
 	IKSolutions ik_solutions;
 	auto is_valid = [sandbox_scene, ignore_collisions, min_solution_distance,
-	                 &ik_solutions](robot_state::RobotState* state, const robot_model::JointModelGroup* jmg,
+	                 &ik_solutions](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
 			if (jmg->distance(joint_positions, sol.data()) < min_solution_distance)
@@ -404,7 +404,7 @@ void ComputeIK::compute() {
 				solution.markAsFailure();
 
 			// set scene's robot state
-			robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+			moveit::core::RobotState& robot_state = scene->getCurrentStateNonConst();
 			robot_state.setJointGroupPositions(jmg, ik_solutions.back().data());
 			robot_state.update();
 

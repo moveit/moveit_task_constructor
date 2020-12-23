@@ -218,12 +218,12 @@ double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) co
 	return f(*this, comment);
 }
 
-void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
+void WrappedSolution::fillMessage(moveit_task_constructor_msgs::msg::Solution& solution,
                                   Introspection* introspection) const {
 	wrapped_->fillMessage(solution, introspection);
 
 	// prepend this solutions info as a SubSolution msg
-	moveit_task_constructor_msgs::SubSolution sub_msg;
+	moveit_task_constructor_msgs::msg::SubSolution sub_msg;
 	SolutionBase::fillInfo(sub_msg.info, introspection);
 	sub_msg.sub_solution_id.push_back(introspection ? introspection->solutionId(*wrapped_) : 0);
 	solution.sub_solution.insert(solution.sub_solution.begin(), std::move(sub_msg));

@@ -42,7 +42,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -124,7 +124,7 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+	moveit::core::RobotState& robot_state = scene->getCurrentStateNonConst();
 	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
 
 	geometry_msgs::msg::PoseStamped target_pose_msg;
@@ -137,7 +137,7 @@ void GenerateGraspPose::compute() {
 		current_angle += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);
-		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+		tf2::convert(target_pose, target_pose_msg.pose);
 		state.properties().set("target_pose", target_pose_msg);
 		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 

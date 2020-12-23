@@ -40,6 +40,7 @@ ament_target_dependencies(${PROJECT_NAME}
     moveit_ros_planning_interface
     moveit_task_constructor_msgs
     rclcpp
+    rviz_marker_tools
     visualization_msgs
 )
 target_include_directories(${PROJECT_NAME}

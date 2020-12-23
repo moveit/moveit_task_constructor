@@ -37,7 +37,7 @@
 
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/cost_queue.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <Eigen/Geometry>
 
 namespace moveit {

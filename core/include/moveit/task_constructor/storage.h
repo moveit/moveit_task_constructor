@@ -50,6 +50,7 @@
 #include <deque>
 #include <cassert>
 #include <functional>
+#include <cmath>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene)
@@ -343,7 +344,7 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
-	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
+	void fillMessage(moveit_task_constructor_msgs::msg::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;

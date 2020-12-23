@@ -41,7 +41,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <moveit/robot_state/conversions.h>
 
 namespace moveit {
@@ -72,7 +72,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	tf2::convert(pose, pose_msg.pose);
 	setIKFrame(pose_msg);
 }
 
@@ -148,7 +148,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::msg::PoseS
                          decltype(std::declval<SolutionBase>().markers())& markers) {
 	try {
 		const geometry_msgs::msg::PoseStamped& target = boost::any_cast<geometry_msgs::msg::PoseStamped>(goal);
-		tf::poseMsgToEigen(target.pose, target_eigen);
+		tf2::convert(target.pose, target_eigen);
 
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
@@ -171,7 +171,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 	try {
 		const geometry_msgs::msg::PointStamped& target = boost::any_cast<geometry_msgs::msg::PointStamped>(goal);
 		Eigen::Vector3d target_point;
-		tf::pointMsgToEigen(target.point, target_point);
+		tf2::convert(target.point, target_point);
 
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
@@ -191,7 +191,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& solution,
                      Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -246,7 +246,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		tf2::convert(ik_pose_msg.pose, ik_pose);
 		target_eigen = target_eigen * ik_pose.inverse();
 
 		// plan to Cartesian target

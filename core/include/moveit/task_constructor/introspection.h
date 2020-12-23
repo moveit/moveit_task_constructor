@@ -78,7 +78,8 @@ public:
 	void publishTaskDescription();
 
 	/// fill task state message for publishing the current task state
-	moveit_task_constructor_msgs::msg::TaskStatistics& fillTaskStatistics(moveit_task_constructor_msgs::msg::TaskStatistics& msg);
+	moveit_task_constructor_msgs::msg::TaskStatistics&
+	fillTaskStatistics(moveit_task_constructor_msgs::msg::TaskStatistics& msg);
 	/// publish the current state of task
 	void publishTaskState();
 
@@ -95,8 +96,8 @@ public:
 	void publishAllSolutions(bool wait = true);
 
 	/// get solution
-	bool getSolution(moveit_task_constructor_msgs::srv::GetSolution::Request& req,
-	                 moveit_task_constructor_msgs::srv::GetSolution::Response& res);
+	bool getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr req,
+	                 const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr res);
 
 	/// retrieve id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage* const s) const;

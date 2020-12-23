@@ -43,8 +43,8 @@
 #include <moveit/task_constructor/cost_terms.h>
 
 #include <rviz_marker_tools/marker_creation.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
 #include <rclcpp/logging.hpp>
 
 namespace vm = visualization_msgs;
@@ -109,7 +109,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	req.verbose = false;
 	req.distance = false;
 
-	vm::Marker m;
+	vm::msg::Marker m;
 	m.header.frame_id = scene.getPlanningFrame();
 	m.ns = "collisions";
 
@@ -137,9 +137,9 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 			// marker indicating correction
 			const cd::Contact& c = info.second.front();
 			rviz_marker_tools::setColor(m.color, failure ? rviz_marker_tools::RED : rviz_marker_tools::GREEN);
-			tf::poseEigenToMsg(Eigen::Translation3d(c.pos) *
-			                       Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction),
-			                   m.pose);
+			tf2::convert(Eigen::Translation3d(c.pos) *
+			                 Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction),
+			             m.pose);
 			rviz_marker_tools::makeArrow(m, depth, true);
 			result.markers().push_back(m);
 			if (failure)
@@ -147,7 +147,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 
 			// fix collision by shifting object along correction direction
 			if (!dir.empty())  // if explicitly given, use this correction direction
-				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::msg::Vector3>(dir), correction);
+				tf2::fromMsg(boost::any_cast<geometry_msgs::msg::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
 			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));

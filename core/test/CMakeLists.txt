@@ -6,7 +6,7 @@
 if (CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
 
-	add_library(gtest_utils gtest_value_printers.cpp models.cpp)
+	add_library(gtest_utils SHARED gtest_value_printers.cpp models.cpp)
 	target_link_libraries(gtest_utils ${PROJECT_NAME})
 
 	catkin_add_gtest(${PROJECT_NAME}-test-stage test_stage.cpp)
