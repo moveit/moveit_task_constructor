@@ -22,6 +22,7 @@
 	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
 
 	<export>
+		<build_type>ament_cmake</build_type>
 		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>
 	</export>
 </package>

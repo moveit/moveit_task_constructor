@@ -37,5 +37,17 @@ install(DIRECTORY include/ DESTINATION include
 install(FILES
 	motion_planning_stages_plugin_description.xml
         DESTINATION share)
-
+ament_export_targets(${PROJECT_NAME}
+                     ${PROJECT_NAME}_stages
+)
+ament_export_dependencies(Boost)
+ament_export_dependencies(geometry_msgs)
+ament_export_dependencies(moveit_core)
+ament_export_dependencies(moveit_ros_planning)
+ament_export_dependencies(moveit_ros_planning_interface)
+ament_export_dependencies(moveit_task_constructor_msgs)
+ament_export_dependencies(rclcpp)
+ament_export_dependencies(rviz_marker_tools)
+ament_export_dependencies(tf2_eigen)
+ament_export_dependencies(visualization_msgs)
 ament_package()

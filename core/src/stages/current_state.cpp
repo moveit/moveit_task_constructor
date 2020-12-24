@@ -102,5 +102,5 @@ void CurrentState::compute() {
 }  // namespace moveit
 
 /// register plugin
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::CurrentState, moveit::task_constructor::Stage)

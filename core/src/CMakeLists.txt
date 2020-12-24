@@ -51,5 +51,6 @@ target_include_directories(${PROJECT_NAME}
 add_subdirectory(stages)
 
 install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)

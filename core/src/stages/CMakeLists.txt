@@ -52,5 +52,6 @@ ament_target_dependencies(${PROJECT_NAME}_stages
 )
 
 install(TARGETS ${PROJECT_NAME}_stages
+        EXPORT ${PROJECT_NAME}_stages
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
