@@ -38,7 +38,9 @@
 #include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.display_solution");
 
 namespace moveit_rviz_plugin {
 
@@ -64,7 +66,7 @@ float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair& idx_pair
 	return data_[idx_pair.first].trajectory_->getWayPointDurationFromPrevious(idx_pair.second);
 }
 
-const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair& idx_pair) const {
+const moveit::core::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair& idx_pair) const {
 	return data_[idx_pair.first].trajectory_->getWayPointPtr(idx_pair.second);
 }
 
@@ -86,10 +88,10 @@ const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::Ind
 }
 
 void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
-                                     const moveit_task_constructor_msgs::Solution& msg) {
+                                     const moveit_task_constructor_msgs::msg::Solution& msg) {
 	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName()) {
-		ROS_ERROR("Solution for model '%s' but model '%s' was expected", msg.start_scene.robot_model_name.c_str(),
-		          start_scene->getRobotModel()->getName().c_str());
+		RCLCPP_ERROR(LOGGER, "Solution for model '%s' but model '%s' was expected",
+		             msg.start_scene.robot_model_name.c_str(), start_scene->getRobotModel()->getName().c_str());
 		throw std::runtime_error("invalid robot model");
 	}
 
@@ -126,7 +128,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 	}
 }
 
-void DisplaySolution::fillMessage(moveit_task_constructor_msgs::Solution& msg) const {
+void DisplaySolution::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg) const {
 	start_scene_->getPlanningSceneMsg(msg.start_scene);
 	msg.sub_trajectory.resize(data_.size());
 	auto traj_it = msg.sub_trajectory.begin();

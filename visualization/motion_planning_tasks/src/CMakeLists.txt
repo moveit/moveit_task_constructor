@@ -6,7 +6,7 @@ qt_wrap_ui(UIC_FILES
 	global_settings.ui
 )
 
-add_library(${MOVEIT_LIB_NAME}
+add_library(${MOVEIT_LIB_NAME} SHARED
 	factory_model.cpp
 	icons.cpp
 	job_queue.cpp

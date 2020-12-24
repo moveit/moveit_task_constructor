@@ -2,11 +2,6 @@ set(MOVEIT_LIB_NAME moveit_task_visualization_tools)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/visualization_tools)
 
-# TODO: Remove when Kinetic support is dropped
-if(rviz_VERSION VERSION_LESS 1.13.1) # Does rviz supports TF2?
-  add_definitions(-DRVIZ_TF1)
-endif()
-
 set(HEADERS
 	${PROJECT_INCLUDE}/display_solution.h
 	${PROJECT_INCLUDE}/marker_visualization.h
@@ -14,7 +9,7 @@ set(HEADERS
 	${PROJECT_INCLUDE}/task_solution_visualization.h
 )
 
-add_library(${MOVEIT_LIB_NAME}
+add_library(${MOVEIT_LIB_NAME} SHARED
 	${HEADERS}
 
 	src/display_solution.cpp
@@ -23,22 +18,26 @@ add_library(${MOVEIT_LIB_NAME}
 	src/task_solution_visualization.cpp
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
-
 target_link_libraries(${MOVEIT_LIB_NAME}
-	${catkin_LIBRARIES}
-	${rviz_DEFAULT_PLUGIN_LIBRARIES}
-	${OGRE_LIBRARIES}
-	${QT_LIBRARIES}
-	${Boost_LIBRARIES}
+											${QT_LIBRARIES}
+											rviz_ogre_vendor::OgreMain
+											rviz_common::rviz_common
+											rviz_default_plugins::rviz_default_plugins
 )
 target_include_directories(${MOVEIT_LIB_NAME}
   PUBLIC include
-  PRIVATE ${catkin_INCLUDE_DIRS}
 )
-add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
+ament_target_dependencies(${MOVEIT_LIB_NAME}
+													Boost
+													pluginlib
+													moveit_task_constructor_msgs
+													moveit_ros_visualization
+													moveit_core
+													rclcpp
+)
 
-install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})
+install(DIRECTORY include/ DESTINATION include)
 
 install(TARGETS ${MOVEIT_LIB_NAME}
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib)
