@@ -24,8 +24,9 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scen
 	*/
 }
 
-visualization_msgs::msg::Marker& createGeometryMarker(visualization_msgs::msg::Marker& marker, const urdf::Geometry& geom,
-                                                 const urdf::Pose& pose, const urdf::Color& color) {
+visualization_msgs::msg::Marker& createGeometryMarker(visualization_msgs::msg::Marker& marker,
+                                                      const urdf::Geometry& geom, const urdf::Pose& pose,
+                                                      const urdf::Color& color) {
 	rviz_marker_tools::makeFromGeometry(marker, geom);
 	marker.pose.position.x = pose.position.x;
 	marker.pose.position.y = pose.position.y;

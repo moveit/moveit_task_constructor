@@ -87,7 +87,8 @@ void PickPlaceBase::setApproachRetract(const geometry_msgs::msg::TwistStamped& m
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftPlace(const geometry_msgs::msg::TwistStamped& motion, double min_distance, double max_distance) {
+void PickPlaceBase::setLiftPlace(const geometry_msgs::msg::TwistStamped& motion, double min_distance,
+                                 double max_distance) {
 	auto& p = lift_stage_->properties();
 	p.set("direction", motion);
 	p.set("min_distance", min_distance);

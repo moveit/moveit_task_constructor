@@ -55,7 +55,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::msg::Constraints>("path_constraints", moveit_msgs::msg::Constraints(),
-	                                    "constraints to maintain during trajectory");
+	                                         "constraints to maintain during trajectory");
 }
 
 void Connect::reset() {

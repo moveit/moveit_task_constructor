@@ -11,6 +11,7 @@ find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rviz_marker_tools REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -29,7 +30,7 @@ add_compile_options(-fvisibility-inlines-hidden)
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
 add_subdirectory(src)
-# add_subdirectory(test)
+add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION include
 	PATTERN "*_p.h" EXCLUDE)

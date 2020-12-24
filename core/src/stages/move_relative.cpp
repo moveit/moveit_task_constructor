@@ -66,7 +66,7 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
 	p.declare<moveit_msgs::msg::Constraints>("path_constraints", moveit_msgs::msg::Constraints(),
-	                                    "constraints to maintain during trajectory");
+	                                         "constraints to maintain during trajectory");
 }
 
 void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
@@ -210,7 +210,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 		try {  // try to extract Vector
-			const geometry_msgs::msg::Vector3Stamped& target = boost::any_cast<geometry_msgs::msg::Vector3Stamped>(direction);
+			const geometry_msgs::msg::Vector3Stamped& target =
+			    boost::any_cast<geometry_msgs::msg::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf2::fromMsg(target.vector, linear);
 
@@ -283,7 +284,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 					// arrow tip at goal pose
 					pos += quat * Eigen::Vector3d(-linear_norm, 0, 0);
 				}
-				tf2::fromMsg(pos, m.pose.position);
+				tf2::convert(pos, m.pose.position);
 				tf2::convert(quat, m.pose.orientation);
 				solution.markers().push_back(m);
 			}

@@ -286,7 +286,8 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
-	void fillMessage(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection = nullptr) const override;
+	void fillMessage(moveit_task_constructor_msgs::msg::Solution& msg,
+	                 Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 

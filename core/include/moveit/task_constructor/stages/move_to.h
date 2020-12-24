@@ -53,7 +53,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-class MoveTo : public PropagatingEitherWay{
+class MoveTo : public PropagatingEitherWay
+{
 public:
 	MoveTo(const std::string& name = "move to",
 	       const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());

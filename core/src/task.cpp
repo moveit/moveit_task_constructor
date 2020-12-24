@@ -106,9 +106,8 @@ const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
-Task::Task(const rclcpp::Node::SharedPtr& node, const std::string& ns, bool introspection,
-           ContainerBase::pointer&& container)
-  : WrapperBase(new TaskPrivate(this, ns), std::move(container)), node_(node) {
+Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
+  : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
 	setTimeout(std::numeric_limits<double>::max());
 
 	// monitor state on commandline
@@ -197,7 +196,8 @@ void Task::setRobotModel(const core::RobotModelConstPtr& robot_model) {
 
 void Task::loadRobotModel(const std::string& robot_description) {
 	auto impl = pimpl();
-	impl->robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(node_, robot_description);
+	impl->robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(
+	    rclcpp::Node::make_shared("dummy_node"), robot_description);
 	setRobotModel(impl->robot_model_loader_->getModel());
 	if (!impl->robot_model_)
 		throw Exception("Task failed to construct RobotModel");
@@ -337,24 +337,20 @@ moveit_msgs::msg::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 	}
 
 	auto goal_handle = goal_handle_future.get();
-	if(!goal_handle)
-   {
+	if (!goal_handle) {
 		RCLCPP_ERROR(node->get_logger(), "Goal was rejected by server");
 		return error_code;
 	}
 
-   auto result_future = ac->async_get_result(goal_handle);
-   if (rclcpp::spin_until_future_complete(node, result_future) !=
-       rclcpp::FutureReturnCode::SUCCESS)
-   {
-      RCLCPP_ERROR(node->get_logger(), "Get result call failed");
-      return error_code;
-   }
+	auto result_future = ac->async_get_result(goal_handle);
+	if (rclcpp::spin_until_future_complete(node, result_future) != rclcpp::FutureReturnCode::SUCCESS) {
+		RCLCPP_ERROR(node->get_logger(), "Get result call failed");
+		return error_code;
+	}
 
 	auto result = result_future.get();
-	if(result.code != rclcpp_action::ResultCode::SUCCEEDED)
-   {
-      RCLCPP_ERROR(node->get_logger(), "Goal was aborted or canceled");
+	if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
+		RCLCPP_ERROR(node->get_logger(), "Goal was aborted or canceled");
 		return error_code;
 	}
 

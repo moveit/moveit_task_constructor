@@ -47,6 +47,7 @@ ament_target_dependencies(${PROJECT_NAME}_stages
     moveit_ros_planning_interface
     moveit_task_constructor_msgs
     rclcpp
+    tf2_eigen
     visualization_msgs
 )
 

@@ -6,7 +6,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
 #include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;

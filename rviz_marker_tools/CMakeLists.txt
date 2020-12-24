@@ -24,17 +24,20 @@ add_library(${PROJECT_NAME} SHARED
 
 ament_target_dependencies(${PROJECT_NAME} visualization_msgs geometry_msgs Eigen3)
 target_include_directories(${PROJECT_NAME}
-  PUBLIC include
+  PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>
 )
 
 install(DIRECTORY include/ DESTINATION include)
 
 install(TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}
 	ARCHIVE DESTINATION lib
 	LIBRARY DESTINATION lib)
 
-ament_export_include_directories(include)
-ament_export_libraries(${PROJECT_NAME})
+# ament_export_include_directories(include)
+ament_export_targets(${PROJECT_NAME})
 ament_export_dependencies(Eigen3)
 ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(visualization_msgs)

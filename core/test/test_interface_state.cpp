@@ -10,6 +10,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
+rclcpp::Logger LOGGER = rclcpp::get_logger("tets_interface_state");
+
 using namespace moveit::task_constructor;
 TEST(InterfaceStatePriority, compare) {
 	using Prio = InterfaceState::Priority;

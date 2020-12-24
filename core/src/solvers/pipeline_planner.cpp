@@ -55,7 +55,7 @@ PipelinePlanner::PipelinePlanner() {
 
 	p.declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
 	p.declare<moveit_msgs::msg::WorkspaceParameters>("workspace_parameters", moveit_msgs::msg::WorkspaceParameters(),
-	                                            "allowed workspace of mobile base?");
+	                                                 "allowed workspace of mobile base?");
 
 	p.declare<double>("goal_joint_tolerance", 1e-4, "tolerance for reaching joint goals");
 	p.declare<double>("goal_position_tolerance", 1e-4, "tolerance for reaching position goals");

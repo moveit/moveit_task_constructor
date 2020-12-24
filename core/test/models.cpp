@@ -17,7 +17,7 @@ RobotModelPtr getModel() {
 	return builder.build();
 }
 
-moveit::core::RobotModelPtr loadModel() {
-	robot_model_loader::RobotModelLoader loader;
-	return loader.getModel();
-}
+// moveit::core::RobotModelPtr loadModel() {
+//	robot_model_loader::RobotModelLoader loader;
+//	return loader.getModel();
+//}

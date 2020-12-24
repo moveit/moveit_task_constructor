@@ -80,7 +80,7 @@ public:
 	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
 	              const std::string& planning_plugin_param_name = "planning_plugin",
 	              const std::string& adapter_plugins_param_name = "request_adapters");
-	Task(const rclcpp::Node::SharedPtr& node, const std::string& ns = "", bool introspection = true,
+	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
 	Task& operator=(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
@@ -158,7 +158,6 @@ protected:
 	void onNewSolution(const SolutionBase& s) override;
 
 private:
-	rclcpp::Node::SharedPtr node_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {
