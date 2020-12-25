@@ -19,7 +19,7 @@ jobs:
   - env: TEST=clang-format
   - env: TEST=code-coverage
   - compiler: clang
-    env: DOCKER_IMAGE=moveit/moveit2:master-source
+    env: DOCKER_IMAGE=moveit/moveit2:foxy-source
 
 before_script:
   - git clone -q -b ros2 --depth=1 https://github.com/ros-planning/moveit_ci.git .moveit_ci
