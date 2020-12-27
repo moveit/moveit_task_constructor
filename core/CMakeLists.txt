@@ -37,9 +37,10 @@ install(DIRECTORY include/ DESTINATION include
 install(FILES
 	motion_planning_stages_plugin_description.xml
         DESTINATION share)
-ament_export_targets(${PROJECT_NAME}
-                     ${PROJECT_NAME}_stages
-)
+
+ament_export_include_directories(include)
+ament_export_libraries(${PROJECT_NAME}
+                     ${PROJECT_NAME}_stages)
 ament_export_dependencies(Boost)
 ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(moveit_core)
