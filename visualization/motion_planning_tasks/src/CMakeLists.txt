@@ -28,7 +28,7 @@ add_library(${MOVEIT_LIB_NAME} SHARED
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
 target_link_libraries(${MOVEIT_LIB_NAME}
 	motion_planning_tasks_utils motion_planning_tasks_properties moveit_task_visualization_tools
-	${catkin_LIBRARIES} ${QT_LIBRARIES}
+	${QT_LIBRARIES}
 )
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -37,9 +37,8 @@ target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<TARGET_PROPERTY:motion_planning_tasks_utils,INTERFACE_INCLUDE_DIRECTORIES>
 	PUBLIC $<TARGET_PROPERTY:motion_planning_tasks_properties,INTERFACE_INCLUDE_DIRECTORIES>
 	PUBLIC $<TARGET_PROPERTY:moveit_task_visualization_tools,INTERFACE_INCLUDE_DIRECTORIES>
-	PUBLIC ${catkin_INCLUDE_DIRS}
 )
 
 install(TARGETS ${MOVEIT_LIB_NAME}
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib)

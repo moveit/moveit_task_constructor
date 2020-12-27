@@ -45,12 +45,13 @@
 #include <vector>
 
 #ifndef Q_MOC_RUN
-#include <pluginlib/class_loader.h>
-#include <rviz/load_resource.h>
+#include <pluginlib/class_loader.hpp>
+#include <rviz_common/load_resource.hpp>
 #include <functional>
 #endif
 
-#include <rviz/factory.h>
+#include <rclcpp/logging.hpp>
+#include <rviz_common/factory/factory.hpp>
 
 namespace moveit_rviz_plugin {
 
@@ -58,7 +59,7 @@ namespace moveit_rviz_plugin {
  *  This is a slightly modified version of rviz::PluginlibFactory, providing a custom mime type.
  */
 template <class Type>
-class PluginlibFactory : public rviz::Factory
+class PluginlibFactory : public rviz_common::Factory
 {
 private:
 	struct BuiltInClassRecord
@@ -80,41 +81,39 @@ public:
 	/// retrieve mime type used for given factory
 	QString mimeType() const { return mime_type_; }
 
-	QStringList getDeclaredClassIds() override {
-		QStringList ids;
-		for (const auto& record : built_ins_)
-			ids.push_back(record.class_id_);
+	std::vector<rviz_common::PluginInfo> getDeclaredPlugins() override {
+		std::vector<rviz_common::PluginInfo> plugins;
+		for (auto iter = built_ins_.cbegin(); iter != built_ins_.cend(); ++iter)
+			plugins.emplace_back(getPluginInfo(iter.key()));
 		for (const auto& id : class_loader_->getDeclaredClasses()) {
-			QString sid = QString::fromStdString(id);
-			if (ids.contains(sid))
+			auto sid = QString::fromStdString(id);
+			if (std::find_if(plugins.cbegin(), plugins.cend(), [&sid](const rviz_common::PluginInfo& plugin_info) {
+				    return plugin_info.id == sid;
+			    }) != plugins.cend())
 				continue;  // built_in take precedence
-			ids.push_back(sid);
+			plugins.emplace_back(getPluginInfo(QString::fromStdString(id)));
 		}
-		return ids;
+		return plugins;
 	}
 
-	QString getClassDescription(const QString& class_id) const override {
-		auto it = built_ins_.find(class_id);
-		if (it != built_ins_.end()) {
-			return it->description_;
+	rviz_common::PluginInfo getPluginInfo(const QString& class_id) const override {
+		rviz_common::PluginInfo info;
+		const auto iter = built_ins_.find(class_id);
+		if (iter != built_ins_.end()) {
+			info.id = iter->class_id_;
+			info.name = iter->name_;
+			info.package = iter->package_;
+			info.description = iter->description_;
+			info.icon = getIcon(info);
+			return info;
 		}
-		return QString::fromStdString(class_loader_->getClassDescription(class_id.toStdString()));
-	}
-
-	QString getClassName(const QString& class_id) const override {
-		auto it = built_ins_.find(class_id);
-		if (it != built_ins_.end()) {
-			return it->name_;
-		}
-		return QString::fromStdString(class_loader_->getName(class_id.toStdString()));
-	}
-
-	QString getClassPackage(const QString& class_id) const override {
-		auto it = built_ins_.find(class_id);
-		if (it != built_ins_.end()) {
-			return it->package_;
-		}
-		return QString::fromStdString(class_loader_->getClassPackage(class_id.toStdString()));
+		auto class_id_std = class_id.toStdString();
+		info.id = class_id;
+		info.name = QString::fromStdString(class_loader_->getName(class_id_std));
+		info.package = QString::fromStdString(class_loader_->getClassPackage(class_id_std));
+		info.description = QString::fromStdString(class_loader_->getClassDescription(class_id_std));
+		info.icon = getIcon(info);
+		return info;
 	}
 
 	virtual QString getPluginManifestPath(const QString& class_id) const {
@@ -125,14 +124,12 @@ public:
 		return QString::fromStdString(class_loader_->getPluginManifestPath(class_id.toStdString()));
 	}
 
-	QIcon getIcon(const QString& class_id) const override {
-		QString package = getClassPackage(class_id);
-		QString class_name = getClassName(class_id);
-		QIcon icon = rviz::loadPixmap("package://" + package + "/icons/classes/" + class_name + ".svg");
+	QIcon getIcon(const rviz_common::PluginInfo& info) const {
+		QIcon icon = rviz_common::loadPixmap("package://" + info.package + "/icons/classes/" + info.name + ".svg");
 		if (icon.isNull()) {
-			icon = rviz::loadPixmap("package://" + package + "/icons/classes/" + class_name + ".png");
+			icon = rviz_common::loadPixmap("package://" + info.package + "/icons/classes/" + info.name + ".png");
 			if (icon.isNull()) {
-				icon = rviz::loadPixmap("package://rviz/icons/default_class_icon.png");
+				icon = rviz_common::loadPixmap("package://rviz/icons/default_class_icon.png");
 			}
 		}
 		return icon;
@@ -175,8 +172,9 @@ public:
 		try {
 			return class_loader_->createUnmanagedInstance(class_id.toStdString());
 		} catch (pluginlib::PluginlibException& ex) {
-			ROS_ERROR("PluginlibFactory: The plugin for class '%s' failed to load.  Error: %s", qPrintable(class_id),
-			          ex.what());
+			RCLCPP_ERROR(rclcpp::get_logger("moveit_task_constructor_visualization.pluginlib_factory"),
+			             "PluginlibFactory: The plugin for class '%s' failed to load.  Error: %s", qPrintable(class_id),
+			             ex.what());
 			if (error_return) {
 				*error_return = QString::fromStdString(ex.what());
 			}

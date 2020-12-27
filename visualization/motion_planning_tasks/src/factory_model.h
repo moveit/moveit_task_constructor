@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <rviz/factory.h>
+#include <rviz_common/factory/factory.hpp>
 #include <QStandardItemModel>
 
 namespace moveit_rviz_plugin {
@@ -47,10 +47,10 @@ namespace moveit_rviz_plugin {
 class FactoryModel : public QStandardItemModel
 {
 	QString mime_type_;
-	void fillTree(rviz::Factory& factory);
+	void fillTree(rviz_common::Factory& factory);
 
 public:
-	FactoryModel(rviz::Factory& factory, const QString& mime_type, QObject* parent = nullptr);
+	FactoryModel(rviz_common::Factory& factory, const QString& mime_type, QObject* parent = nullptr);
 
 	QStringList mimeTypes() const override;
 	QMimeData* mimeData(const QModelIndexList& indexes) const override;

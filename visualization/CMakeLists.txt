@@ -30,10 +30,28 @@ add_definitions(-DQT_NO_KEYWORDS)
 set(CMAKE_CXX_STANDARD 14)
 
 add_subdirectory(visualization_tools)
-# add_subdirectory(motion_planning_tasks)
+add_subdirectory(motion_planning_tasks)
 
 install(FILES
 	motion_planning_tasks_rviz_plugin_description.xml
 	DESTINATION include)
 
 install(DIRECTORY icons DESTINATION share)
+
+ament_export_include_directories(include)
+ament_export_libraries(motion_planning_tasks_utils
+											 motion_planning_tasks_properties
+											 motion_planning_tasks_rviz_plugin
+											 moveit_task_visualization_tools
+)
+ament_export_dependencies(ament_cmake)
+ament_export_dependencies(Boost)
+ament_export_dependencies(moveit_core)
+ament_export_dependencies(moveit_ros_visualization)
+ament_export_dependencies(moveit_task_constructor_core)
+ament_export_dependencies(moveit_task_constructor_msgs)
+ament_export_dependencies(rclcpp)
+ament_export_dependencies(rviz_common)
+ament_export_dependencies(rviz_default_plugins)
+ament_export_dependencies(rviz_ogre_vendor)
+ament_package()

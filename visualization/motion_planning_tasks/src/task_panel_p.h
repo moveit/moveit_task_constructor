@@ -42,11 +42,11 @@
 #include "ui_task_panel.h"
 #include "ui_task_view.h"
 #include "ui_global_settings.h"
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
-#include <actionlib/client/simple_action_client.h>
+#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
+#include <rclcpp_action/client.hpp>
 
-#include <rviz/panel.h>
-#include <rviz/properties/property_tree_model.h>
+#include <rviz_common/panel.hpp>
+#include <rviz_common/properties/property_tree_model.hpp>
 #include <QPointer>
 
 namespace moveit_rviz_plugin {
@@ -62,9 +62,9 @@ public:
 
 	TaskPanel* q_ptr;
 	QButtonGroup* tool_buttons_group;
-	rviz::Property* property_root;
+	rviz_common::properties::Property* property_root;
 
-	rviz::WindowManagerInterface* window_manager_;
+	rviz_common::WindowManagerInterface* window_manager_;
 };
 
 class TaskViewPrivate : public Ui_TaskView
@@ -90,15 +90,16 @@ public:
 
 	TaskView* q_ptr;
 	QPointer<TaskDisplay> locked_display_;
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> exec_action_client_;
+	rclcpp::Node::SharedPtr node_;
+	rclcpp_action::Client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>::SharedPtr exec_action_client_;
 };
 
 class GlobalSettingsWidgetPrivate : public Ui_GlobalSettingsWidget
 {
 public:
-	GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz::Property* root);
+	GlobalSettingsWidgetPrivate(GlobalSettingsWidget* q_ptr, rviz_common::properties::Property* root);
 
 	GlobalSettingsWidget* q_ptr;
-	rviz::PropertyTreeModel* properties;
+	rviz_common::properties::PropertyTreeModel* properties;
 };
 }  // namespace moveit_rviz_plugin

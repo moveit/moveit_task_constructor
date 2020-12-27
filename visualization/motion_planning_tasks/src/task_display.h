@@ -38,22 +38,26 @@
 
 #pragma once
 
-#include <rviz/display.h>
+#include <rviz_common/display.hpp>
+#include <rviz_common/ros_integration/ros_client_abstraction_iface.hpp>
 #include <moveit/visualization_tools/task_solution_visualization.h>
 
 #ifndef Q_MOC_RUN
 #include "job_queue.h"
+#include "local_task_model.h"
 #include <moveit/macros/class_forward.h>
-#include <ros/subscriber.h>
-#include <moveit_task_constructor_msgs/TaskDescription.h>
-#include <moveit_task_constructor_msgs/TaskStatistics.h>
-#include <moveit_task_constructor_msgs/Solution.h>
+#include <rclcpp/subscription.hpp>
+#include <moveit_task_constructor_msgs/msg/task_description.hpp>
+#include <moveit_task_constructor_msgs/msg/task_statistics.hpp>
+#include <moveit_task_constructor_msgs/msg/solution.hpp>
 #endif
 
-namespace rviz {
+namespace rviz_common {
+namespace properties {
 class StringProperty;
 class RosTopicProperty;
-}  // namespace rviz
+}  // namespace properties
+}  // namespace rviz_common
 
 namespace moveit {
 namespace core {
@@ -69,7 +73,7 @@ namespace moveit_rviz_plugin {
 MOVEIT_CLASS_FORWARD(DisplaySolution)
 class TaskListModel;
 
-class TaskDisplay : public rviz::Display
+class TaskDisplay : public rviz_common::Display
 {
 	Q_OBJECT
 
@@ -81,10 +85,9 @@ public:
 
 	void update(float wall_dt, float ros_dt) override;
 	void reset() override;
-	void save(rviz::Config config) const override;
-	void load(const rviz::Config& config) override;
+	void save(rviz_common::Config config) const override;
+	void load(const rviz_common::Config& config) override;
 
-	void setName(const QString& name) override;
 	void setSolutionStatus(bool ok);
 
 	TaskListModel& getTaskListModel() { return *task_list_model_; }
@@ -113,14 +116,19 @@ private Q_SLOTS:
 	void onTasksRemoved(const QModelIndex& parent, int first, int last);
 	void onTaskDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 
-	void taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg);
-	void taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg);
-	void taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg);
+	void taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr msg);
+	void taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr msg);
+	void taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr msg);
 
 protected:
-	ros::Subscriber task_solution_sub;
-	ros::Subscriber task_description_sub;
-	ros::Subscriber task_statistics_sub;
+	/** @brief A Node which is registered with the main executor (used in the "update" thread).
+	 *
+	 * This is configured after the constructor within the initialize() method of Display. */
+	rviz_common::ros_integration::RosNodeAbstractionIface::WeakPtr rviz_ros_node_;
+
+	rclcpp::Subscription<moveit_task_constructor_msgs::msg::Solution>::SharedPtr task_solution_sub;
+	rclcpp::Subscription<moveit_task_constructor_msgs::msg::TaskDescription>::SharedPtr task_description_sub;
+	rclcpp::Subscription<moveit_task_constructor_msgs::msg::TaskStatistics>::SharedPtr task_statistics_sub;
 
 	// The trajectory playback component
 	std::unique_ptr<TaskSolutionVisualization> trajectory_visual_;
@@ -138,9 +146,9 @@ protected:
 	bool received_task_description_;
 
 	// Properties
-	rviz::StringProperty* robot_description_property_;
-	rviz::RosTopicProperty* task_solution_topic_property_;
-	rviz::Property* tasks_property_;
+	rviz_common::properties::StringProperty* robot_description_property_;
+	rviz_common::properties::RosTopicProperty* task_solution_topic_property_;
+	rviz_common::properties::Property* tasks_property_;
 };
 
 }  // namespace moveit_rviz_plugin
