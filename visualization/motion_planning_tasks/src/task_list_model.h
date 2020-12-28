@@ -158,8 +158,7 @@ public:
 
 	/// process an incoming task description message - only call in Qt's main loop
 	void processTaskDescriptionMessage(const moveit_task_constructor_msgs::msg::TaskDescription& msg,
-	                                   const rclcpp::Node::SharedPtr& nh,
-	                                   const std::string& service_name);
+	                                   const rclcpp::Node::SharedPtr& nh, const std::string& service_name);
 	/// process an incoming task description message - only call in Qt's main loop
 	void processTaskStatisticsMessage(const moveit_task_constructor_msgs::msg::TaskStatistics& msg);
 	/// process an incoming solution message - only call in Qt's main loop
