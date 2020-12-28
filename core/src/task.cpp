@@ -154,7 +154,8 @@ struct PlannerCache
 	}
 };
 
-planning_pipeline::PlanningPipelinePtr Task::createPlanner(const moveit::core::RobotModelConstPtr& model,
+planning_pipeline::PlanningPipelinePtr Task::createPlanner(const rclcpp::Node::SharedPtr node,
+                                                           const moveit::core::RobotModelConstPtr& model,
                                                            const std::string& ns,
                                                            const std::string& planning_plugin_param_name,
                                                            const std::string& adapter_plugins_param_name) {
@@ -165,9 +166,8 @@ planning_pipeline::PlanningPipelinePtr Task::createPlanner(const moveit::core::R
 	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
 	if (!planner) {
 		// create new entry
-		throw std::invalid_argument("Use custom planning pipeline");
-		//		planner = std::make_shared<planning_pipeline::PlanningPipeline>(
-		//		    model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>(model, node, planning_plugin_param_name,
+		                                                                adapter_plugins_param_name);
 		// store in cache
 		entry = planner;
 	}
@@ -194,10 +194,9 @@ void Task::setRobotModel(const core::RobotModelConstPtr& robot_model) {
 	impl->robot_model_ = robot_model;
 }
 
-void Task::loadRobotModel(const std::string& robot_description) {
+void Task::loadRobotModel(const rclcpp::Node::SharedPtr& node, const std::string& robot_description) {
 	auto impl = pimpl();
-	impl->robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(
-	    rclcpp::Node::make_shared("dummy_node"), robot_description);
+	impl->robot_model_loader_ = std::make_shared<robot_model_loader::RobotModelLoader>(node, robot_description);
 	setRobotModel(impl->robot_model_loader_->getModel());
 	if (!impl->robot_model_)
 		throw Exception("Task failed to construct RobotModel");
@@ -261,7 +260,7 @@ void Task::reset() {
 void Task::init() {
 	auto impl = pimpl();
 	if (!impl->robot_model_)
-		loadRobotModel();
+		throw std::runtime_error("You need to call loadRobotModel or setRobotModel before initializing the task");
 
 	// initialize push connections of wrapped child
 	StagePrivate* child = wrapped()->pimpl();

@@ -49,7 +49,7 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-PipelinePlanner::PipelinePlanner() {
+PipelinePlanner::PipelinePlanner(const rclcpp::Node::SharedPtr& node) : node_(node) {
 	auto& p = properties();
 	p.declare<std::string>("planner", "", "planner id");
 
@@ -68,13 +68,14 @@ PipelinePlanner::PipelinePlanner() {
 	                    planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
-PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline) : PipelinePlanner() {
+PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline)
+  : PipelinePlanner(rclcpp::Node::SharedPtr()) {
 	planner_ = planning_pipeline;
 }
 
 void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	if (!planner_) {
-		planner_ = Task::createPlanner(robot_model);
+		planner_ = Task::createPlanner(node_, robot_model);
 	} else if (robot_model != planner_->getRobotModel()) {
 		throw std::runtime_error(
 		    "The robot model of the planning pipeline isn't the same as the task's robot model -- "

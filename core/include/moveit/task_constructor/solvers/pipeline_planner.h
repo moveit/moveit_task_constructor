@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <rclcpp/node.hpp>
 #include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
@@ -55,7 +56,11 @@ MOVEIT_CLASS_FORWARD(PipelinePlanner)
 class PipelinePlanner : public PlannerInterface
 {
 public:
-	PipelinePlanner();
+	/**
+	 *
+	 * @param node used to load the parameters for the planning pipeline
+	 */
+	PipelinePlanner(const rclcpp::Node::SharedPtr& node);
 
 	PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline);
 
@@ -74,6 +79,7 @@ public:
 
 protected:
 	planning_pipeline::PlanningPipelinePtr planner_;
+	rclcpp::Node::SharedPtr node_;
 };
 }  // namespace solvers
 }  // namespace task_constructor

@@ -565,8 +565,7 @@ TEST_F(SerialTest, nested_parallel) {
 }
 
 class ParallelTest : public InitTest<Alternatives>
-{
-};
+{};
 
 TEST_F(ParallelTest, init_matching) {
 	EXPECT_INIT_SUCCESS(true, true, GEN, GEN);
