@@ -39,13 +39,15 @@ void spawnObject(const planning_scene::PlanningScenePtr& scene) {
 TEST(PA10, pick) {
 	Task t;
 	t.stages()->setName("pick");
-	t.loadRobotModel();
+
+	auto node = rclcpp::Node::make_shared("pa10");
+	t.loadRobotModel(node);
 	// define global properties used by most stages
 	t.setProperty("group", std::string("left_arm"));
 	t.setProperty("eef", std::string("la_tool_mount"));
 	t.setProperty("gripper", std::string("left_hand"));
 
-	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>(node);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 
@@ -189,9 +191,7 @@ TEST(PA10, pick) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "pa10");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	rclcpp::init(argc, argv);
 
 	return RUN_ALL_TESTS();
 }

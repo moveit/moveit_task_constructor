@@ -38,8 +38,9 @@ TEST(PR2, pick) {
 	Stage* initial_stage = new stages::CurrentState("current state");
 	t.add(std::unique_ptr<Stage>(initial_stage));
 
+	auto node = rclcpp::Node::make_shared("pr2");
 	// planner used for connect
-	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>(node);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
 	stages::Connect::GroupPlannerVector planners = { { "left_arm", pipeline }, { "left_gripper", pipeline } };
@@ -87,12 +88,10 @@ TEST(PR2, pick) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "pr2");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	rclcpp::init(argc, argv);
 
 	// wait some time for move_group to come up
-	ros::WallDuration(5.0).sleep();
+	rclcpp::sleep_for(std::chrono::seconds(5));
 
 	return RUN_ALL_TESTS();
 }
