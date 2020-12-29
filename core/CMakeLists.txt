@@ -16,15 +16,6 @@ find_package(visualization_msgs REQUIRED)
 
 set(CMAKE_CXX_STANDARD 14)
 
-# check for MOVEIT_MASTER
-include(CheckIncludeFileCXX)
-set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
-CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
-if(NOT MOVEIT_MASTER)
-  set(MOVEIT_MASTER 0)
-endif()
-add_definitions(-DMOVEIT_MASTER=${MOVEIT_MASTER})
-
 add_compile_options(-fvisibility-inlines-hidden)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
