@@ -34,9 +34,8 @@ add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION include
 	PATTERN "*_p.h" EXCLUDE)
-install(FILES
-	motion_planning_stages_plugin_description.xml
-        DESTINATION share)
+
+pluginlib_export_plugin_description_file(${PROJECT_NAME} motion_planning_stages_plugin_description.xml)
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}
