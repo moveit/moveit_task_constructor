@@ -172,7 +172,6 @@ public:
 };
 
 TEST(CostTerm, SetLambdaCostTerm) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	const moveit::core::RobotModelConstPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
@@ -198,7 +197,6 @@ TEST(CostTerm, SetLambdaCostTerm) {
 }
 
 TEST(CostTerm, CostOverwrite) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	const moveit::core::RobotModelConstPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
@@ -215,7 +213,6 @@ TEST(CostTerm, CostOverwrite) {
 }
 
 TEST(CostTerm, StageTypes) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
@@ -237,7 +234,6 @@ TEST(CostTerm, StageTypes) {
 }
 
 TEST(CostTerm, PassThroughUsesCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -253,7 +249,6 @@ TEST(CostTerm, PassThroughUsesCost) {
 }
 
 TEST(CostTerm, PassThroughOverwritesCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -271,7 +266,6 @@ TEST(CostTerm, PassThroughOverwritesCost) {
 }
 
 TEST(CostTerm, PassThroughCanModifyCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -287,7 +281,6 @@ TEST(CostTerm, PassThroughCanModifyCost) {
 }
 
 TEST(CostTerm, CompositeSolutions) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	Standalone<SerialContainer> container{ getModel() };
 
 	{
@@ -330,7 +323,6 @@ TEST(CostTerm, CompositeSolutions) {
 }
 
 TEST(CostTerm, CompositeSolutionsContainerCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	Standalone<SerialContainer> container{ getModel() };
 
 	auto s1{ std::make_unique<ForwardMockup>() };

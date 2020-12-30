@@ -3,8 +3,8 @@
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit/utils/robot_model_test_utils.h>
 
+#include "models.h"
 #include "gtest_value_printers.h"
 #include <gtest/gtest.h>
 #include <initializer_list>
@@ -686,11 +686,7 @@ TEST(Task, move) {
 }
 
 TEST(Task, reuse) {
-	// create dummy robot model
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->a->b->c", "continuous");
-	builder.addGroupChain("base", "c", "group");
-	moveit::core::RobotModelConstPtr robot_model = builder.build();
+	moveit::core::RobotModelConstPtr robot_model = getModel();
 
 	Task t("first");
 	t.setRobotModel(robot_model);
@@ -725,13 +721,8 @@ TEST(Task, reuse) {
 
 TEST(Task, timeout) {
 	MOCK_ID = 0;
-	// create dummy robot model
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->a->b->c", "continuous");
-	builder.addGroupChain("base", "c", "group");
-
 	Task t;
-	t.setRobotModel(builder.build());
+	t.setRobotModel(getModel());
 
 	auto timeout = std::chrono::milliseconds(10);
 	t.add(std::make_unique<GeneratorMockup>(100));  // allow up to 100 solutions spawned
