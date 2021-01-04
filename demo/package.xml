@@ -14,7 +14,7 @@
   <depend>moveit_task_constructor_core</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>moveit_core</depend>
-  <!-- <depend>rosparam_shortcuts</depend> -->
+  <depend>rosparam_shortcuts</depend>
   <exec_depend version_gte="0.7.4">panda_moveit_config</exec_depend>
 
   <export>
