@@ -99,6 +99,7 @@ TaskDisplay::~TaskDisplay() {
 void TaskDisplay::onInitialize() {
 	Display::onInitialize();
 	rviz_ros_node_ = context_->getRosNodeAbstraction();
+	task_solution_topic_property_->initialize(rviz_ros_node_);
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
 }
@@ -176,7 +177,8 @@ void TaskDisplay::calculateOffsetPosition() {
 	Ogre::Vector3 position;
 	Ogre::Quaternion orientation;
 
-	context_->getFrameManager()->getTransform(robot_model_->getModelFrame(), rclcpp::Time(0), position, orientation);
+	context_->getFrameManager()->getTransform(robot_model_->getModelFrame(), rclcpp::Time(0, 0, RCL_ROS_TIME), position,
+	                                          orientation);
 
 	scene_node_->setPosition(position);
 	scene_node_->setOrientation(orientation);
@@ -204,7 +206,7 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::Tas
 		return;
 	}
 	auto node = ros_node_abstraction->get_raw_node();
-	task_list_model_->processTaskDescriptionMessage(*msg, node, base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
+	task_list_model_->processTaskDescriptionMessage(*msg, base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
 	// Start listening to other topics if this is the first description
 	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
@@ -258,7 +260,7 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	}
 	// listen to task descriptions updates
 	task_description_sub =
-	    ros_node_abstraction->get_raw_node()->create_subscription<moveit_task_constructor_msgs::msg::TaskStatistics>(
+	    ros_node_abstraction->get_raw_node()->create_subscription<moveit_task_constructor_msgs::msg::TaskDescription>(
 	        base_ns_ + DESCRIPTION_TOPIC, 10, std::bind(&TaskDisplay::taskDescriptionCB, this, std::placeholders::_1));
 
 	setStatus(rviz_common::properties::StatusProperty::Warn, "Task Monitor", "No messages received");

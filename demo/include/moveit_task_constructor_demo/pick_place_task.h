@@ -35,7 +35,7 @@
 */
 
 // ROS
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 // MoveIt
 #include <moveit/planning_scene/planning_scene.h>
@@ -56,12 +56,11 @@
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/server/simple_action_server.h>
+#include <rclcpp_action/rclcpp_action.hpp>
 
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 #pragma once
 
@@ -71,7 +70,7 @@ using namespace moveit::task_constructor;
 class PickPlaceTask
 {
 public:
-	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
+	PickPlaceTask(const std::string& task_name, const rclcpp::Node::SharedPtr& node);
 	~PickPlaceTask() = default;
 
 	void loadParameters();
@@ -83,7 +82,7 @@ public:
 	bool execute();
 
 private:
-	ros::NodeHandle nh_;
+	rclcpp::Node::SharedPtr node_;
 
 	std::string task_name_;
 	moveit::task_constructor::TaskPtr task_;
@@ -108,8 +107,7 @@ private:
 	std::string arm_home_pose_;
 
 	// Execution
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
-
+	rclcpp_action::Client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>::SharedPtr execute_;
 	// Pick metrics
 	Eigen::Isometry3d grasp_frame_transform_;
 	double approach_object_min_dist_;
@@ -118,7 +116,7 @@ private:
 	double lift_object_max_dist_;
 
 	// Place metrics
-	geometry_msgs::Pose place_pose_;
+	geometry_msgs::msg::Pose place_pose_;
 	double place_surface_offset_;
 };
 }  // namespace moveit_task_constructor_demo

@@ -184,13 +184,13 @@ QModelIndex RemoteTaskModel::index(const Node* n) const {
 	return QModelIndex();
 }
 
-RemoteTaskModel::RemoteTaskModel(const rclcpp::Node::SharedPtr& nh, const std::string& service_name,
-                                 const planning_scene::PlanningSceneConstPtr& scene,
+RemoteTaskModel::RemoteTaskModel(const std::string& service_name, const planning_scene::PlanningSceneConstPtr& scene,
                                  rviz_common::DisplayContext* display_context, QObject* parent)
   : BaseTaskModel(scene, display_context, parent), root_(new Node(nullptr)) {
 	id_to_stage_[0] = root_;  // root node has ID 0
 	// service to request solutions
-	get_solution_client_ = nh->create_client<moveit_task_constructor_msgs::srv::GetSolution>(service_name);
+	node_ = rclcpp::Node::make_shared("get_solution_node", "/moveit_task_constructor/remote_task_model");
+	get_solution_client_ = node_->create_client<moveit_task_constructor_msgs::srv::GetSolution>(service_name);
 }
 
 RemoteTaskModel::~RemoteTaskModel() {
@@ -422,25 +422,26 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 	if (it == id_to_solution_.cend()) {
 		// TODO: try to assemble (and cache) the solution from known leaves
 		// to avoid some communication overhead
-
 		DisplaySolutionPtr result;
 		if (!(flags_ & IS_DESTROYED)) {
-			// request solution via service
-			auto request = std::make_shared<moveit_task_constructor_msgs::srv::GetSolution::Request>();
-			request->solution_id = id;
-			try {
-				// TODO(JafarAbdi): We can't spin here since the node is already added to an executor, should we use
-				// CallbackGroups? or a private node?
-				auto result_future = get_solution_client_->async_send_request(request);
-				if (result_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
-					id_to_solution_[id] = result = processSolutionMessage(result_future.get()->solution);
-					return result;
-				} else {  // on failure mark remote task as destroyed: don't retrieve more solutions
-					get_solution_client_.reset();
-					flags_ |= IS_DESTROYED;
+			if (get_solution_client_->service_is_ready()) {
+				// request solution via service
+				auto request = std::make_shared<moveit_task_constructor_msgs::srv::GetSolution::Request>();
+				request->solution_id = id;
+				// setFromMessage inside processSolutionMessage may throw an exception
+				try {
+					auto result_future = get_solution_client_->async_send_request(request);
+					if (rclcpp::spin_until_future_complete(node_, result_future) == rclcpp::FutureReturnCode::SUCCESS) {
+						id_to_solution_[id] = result = processSolutionMessage(result_future.get()->solution);
+						return result;
+					}
+				} catch (const std::exception& e) {
+					RCLCPP_ERROR(LOGGER, "exception: %s", e.what());
 				}
-			} catch (const std::exception& e) {
-				RCLCPP_ERROR(LOGGER, "exception: %s", e.what());
+				// If the server is destroyed or on failure mark remote task as destroyed: don't retrieve more solutions
+				get_solution_client_.reset();
+				node_.reset();
+				flags_ |= IS_DESTROYED;
 			}
 		}
 		return result;

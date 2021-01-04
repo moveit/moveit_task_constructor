@@ -240,7 +240,7 @@ QVariant TaskListModel::data(const QModelIndex& index, int role) const {
 // process a task description message:
 // update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
 void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_msgs::msg::TaskDescription& msg,
-                                                  const rclcpp::Node::SharedPtr& nh, const std::string& service_name) {
+                                                  const std::string& service_name) {
 	// retrieve existing or insert new remote task for given task id
 	auto it_inserted = remote_tasks_.insert(std::make_pair(msg.task_id, nullptr));
 	const auto& task_it = it_inserted.first;
@@ -265,7 +265,7 @@ void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_
 			remote_task->processStageDescriptions(msg.stages);
 	} else if (!remote_task) {  // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(nh, service_name, scene_, display_context_, this);
+		remote_task = new RemoteTaskModel(service_name, scene_, display_context_, this);
 		remote_task->processStageDescriptions(msg.stages);
 		RCLCPP_DEBUG(LOGGER, "received new task: %s (%s)", msg.stages[0].name.c_str(), msg.task_id.c_str());
 		// insert newly created model into this' model instance

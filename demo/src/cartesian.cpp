@@ -47,7 +47,7 @@
 using namespace moveit::task_constructor;
 
 Task createTask(const rclcpp::Node::SharedPtr& node) {
-	Task t("", false);
+	Task t;
 	t.stages()->setName("Cartesian Path");
 
 	const std::string group = "panda_arm";
@@ -108,16 +108,8 @@ Task createTask(const rclcpp::Node::SharedPtr& node) {
 		t.add(std::move(stage));
 	}
 
-	{  // move gripper into predefined open state
-		auto stage = std::make_unique<stages::MoveTo>("open gripper", joint_interpolation);
-		stage->setGroup(eef);
-		stage->setGoal("open");
-		t.add(std::move(stage));
-	}
-
 	{  // move from reached state back to the original state, using joint interpolation
-		// specifying two groups (arm and hand) will try to merge both trajectories
-		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation }, { eef, joint_interpolation } };
+		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation } };
 		auto connect = std::make_unique<stages::Connect>("connect", planners);
 		t.add(std::move(connect));
 	}
@@ -138,8 +130,7 @@ int main(int argc, char** argv) {
 	auto task = createTask(node);
 	try {
 		if (task.plan())
-			RCLCPP_ERROR_STREAM(node->get_logger(), "Found a solution");
-		// task.introspection().publishSolution(*task.solutions().front());
+			task.introspection().publishSolution(*task.solutions().front());
 	} catch (const InitStageException& ex) {
 		std::cerr << "planning failed with exception" << std::endl << ex << task;
 	}

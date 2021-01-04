@@ -68,9 +68,14 @@ class IntrospectionPrivate
 {
 public:
 	IntrospectionPrivate(const TaskPrivate* task, Introspection* self)
-	  : node_(rclcpp::Node::make_shared(task->ns()))  // topics + services are advertised in private namespace
-	  , task_(task)
-	  , task_id_(getTaskId(task)) {
+	  : task_(task)
+	  , task_id_(getTaskId(task))
+	  , node_(rclcpp::Node::make_shared(task_id_ + "_introspection", task_->ns())) {
+		std::call_once(once_flag, [] {
+			executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+			executor_thread_ = std::thread([] { executor_->spin(); });
+		});
+		executor_->add_node(node_);
 		task_description_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskDescription>(
 		    DESCRIPTION_TOPIC, rclcpp::QoS(2).transient_local());
 		// send reset message as early as possible to give subscribers time to see it
@@ -84,10 +89,12 @@ public:
 		get_solution_service_ = node_->create_service<moveit_task_constructor_msgs::srv::GetSolution>(
 		    std::string(GET_SOLUTION_SERVICE "_") + task_id_,
 		    std::bind(&Introspection::getSolution, self, std::placeholders::_1, std::placeholders::_2));
-
 		resetMaps();
 	}
-	~IntrospectionPrivate() { indicateReset(); }
+	~IntrospectionPrivate() {
+		indicateReset();
+		executor_->remove_node(node_);
+	}
 
 	void indicateReset() {
 		// send empty task description message to indicate reset
@@ -104,7 +111,6 @@ public:
 		id_solution_bimap_.clear();
 	}
 
-	rclcpp::Node::SharedPtr node_;
 	/// associated task
 	const TaskPrivate* task_;
 	const std::string task_id_;
@@ -116,6 +122,12 @@ public:
 	rclcpp::Publisher<moveit_task_constructor_msgs::msg::Solution>::SharedPtr solution_publisher_;
 	/// services to provide an individual Solution
 	rclcpp::Service<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_service_;
+	/// TODO(JafarAbdi): 1- Should we have just one node for all tasks .?
+	///                  2- Should we destruct the executor when there's no task .?
+	rclcpp::Node::SharedPtr node_;
+	inline static rclcpp::executors::SingleThreadedExecutor::UniquePtr executor_;
+	inline static std::once_flag once_flag;
+	inline static std::thread executor_thread_;
 
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;

@@ -21,6 +21,6 @@
 	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
 
 	<export>
-		<rviz plugin="${prefix}/motion_planning_tasks_rviz_plugin_description.xml"/>
-	</export>
+		<build_type>ament_cmake</build_type>
+		</export>
 </package>

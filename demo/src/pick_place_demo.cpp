@@ -35,101 +35,97 @@
 */
 
 // ROS
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 // MTC pick/place demo implementation
 #include <moveit_task_constructor_demo/pick_place_task.h>
 
-#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/msg/pose.hpp>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
 #include <tf2_ros/transform_broadcaster.h>
 
-constexpr char LOGNAME[] = "moveit_task_constructor_demo";
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_demo");
 
-void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
+void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi,
+                 const moveit_msgs::msg::CollisionObject& object) {
 	if (!psi.applyCollisionObject(object))
 		throw std::runtime_error("Failed to spawn object: " + object.id);
 }
 
-moveit_msgs::CollisionObject createTable() {
-	ros::NodeHandle pnh("~");
+moveit_msgs::msg::CollisionObject createTable(const rclcpp::Node::SharedPtr& node) {
 	std::string table_name, table_reference_frame;
 	std::vector<double> table_dimensions;
-	geometry_msgs::Pose pose;
+	geometry_msgs::msg::Pose pose;
 	std::size_t errors = 0;
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
+	errors += !rosparam_shortcuts::get(node, "table_name", table_name);
+	errors += !rosparam_shortcuts::get(node, "table_reference_frame", table_reference_frame);
+	errors += !rosparam_shortcuts::get(node, "table_dimensions", table_dimensions);
+	errors += !rosparam_shortcuts::get(node, "table_pose", pose);
+	rosparam_shortcuts::shutdownIfError(errors);
 
-	moveit_msgs::CollisionObject object;
+	moveit_msgs::msg::CollisionObject object;
 	object.id = table_name;
 	object.header.frame_id = table_reference_frame;
 	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
-	object.primitives[0].dimensions = table_dimensions;
+	object.primitives[0].type = shape_msgs::msg::SolidPrimitive::BOX;
+	object.primitives[0].dimensions = { table_dimensions.at(0), table_dimensions.at(1), table_dimensions.at(2) };
 	pose.position.z -= 0.5 * table_dimensions[2];  // align surface with world
 	object.primitive_poses.push_back(pose);
 	return object;
 }
 
-moveit_msgs::CollisionObject createObject() {
-	ros::NodeHandle pnh("~");
+moveit_msgs::msg::CollisionObject createObject(const rclcpp::Node::SharedPtr& node) {
 	std::string object_name, object_reference_frame;
 	std::vector<double> object_dimensions;
-	geometry_msgs::Pose pose;
+	geometry_msgs::msg::Pose pose;
 	std::size_t error = 0;
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
+	error += !rosparam_shortcuts::get(node, "object_name", object_name);
+	error += !rosparam_shortcuts::get(node, "object_reference_frame", object_reference_frame);
+	error += !rosparam_shortcuts::get(node, "object_dimensions", object_dimensions);
+	error += !rosparam_shortcuts::get(node, "object_pose", pose);
+	rosparam_shortcuts::shutdownIfError(error);
 
-	moveit_msgs::CollisionObject object;
+	moveit_msgs::msg::CollisionObject object;
 	object.id = object_name;
 	object.header.frame_id = object_reference_frame;
 	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
-	object.primitives[0].dimensions = object_dimensions;
+	object.primitives[0].type = shape_msgs::msg::SolidPrimitive::CYLINDER;
+	object.primitives[0].dimensions = { object_dimensions.at(0), object_dimensions.at(1) };
 	pose.position.z += 0.5 * object_dimensions[0];
 	object.primitive_poses.push_back(pose);
 	return object;
 }
 
 int main(int argc, char** argv) {
-	ROS_INFO_NAMED(LOGNAME, "Init moveit_task_constructor_demo");
-	ros::init(argc, argv, "moveit_task_constructor_demo");
-	ros::NodeHandle nh;
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	RCLCPP_INFO(LOGGER, "Init moveit_task_constructor_demo");
+	rclcpp::init(argc, argv);
+	auto node = rclcpp::Node::make_shared("moveit_task_constructor_demo");
 
 	// Add table and object to planning scene
-	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
+	rclcpp::sleep_for(std::chrono::microseconds(100));  // Wait for ApplyPlanningScene service
 	moveit::planning_interface::PlanningSceneInterface psi;
-	ros::NodeHandle pnh("~");
-	if (pnh.param("spawn_table", true))
-		spawnObject(psi, createTable());
-	spawnObject(psi, createObject());
+	if (bool spawn_table = true; rosparam_shortcuts::get(node, "spawn_table", spawn_table) && spawn_table)
+		spawnObject(psi, createTable(node));
+	spawnObject(psi, createObject(node));
 
 	// Construct and run pick/place task
-	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
+	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", node);
 	pick_place_task.loadParameters();
 	pick_place_task.init();
 	if (pick_place_task.plan()) {
-		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
-		if (pnh.param("execute", false)) {
+		RCLCPP_INFO(LOGGER, "Planning succeeded");
+		if (bool execute = false; rosparam_shortcuts::get(node, "execute", execute) && execute) {
 			pick_place_task.execute();
-			ROS_INFO_NAMED(LOGNAME, "Execution complete");
+			RCLCPP_INFO(LOGGER, "Execution complete");
 		} else {
-			ROS_INFO_NAMED(LOGNAME, "Execution disabled");
+			RCLCPP_INFO(LOGGER, "Execution disabled");
 		}
 	} else {
-		ROS_INFO_NAMED(LOGNAME, "Planning failed");
+		RCLCPP_INFO(LOGGER, "Planning failed");
 	}
 
 	// Keep introspection alive
-	ros::waitForShutdown();
+	rclcpp::spin(node);
 	return 0;
 }

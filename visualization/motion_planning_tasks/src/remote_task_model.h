@@ -56,6 +56,10 @@ class RemoteTaskModel : public BaseTaskModel
 	struct Node;
 	Node* const root_;
 	rclcpp::Client<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_client_;
+	// TODO(JafarAbdi): We shouldn't need this, replace with callback groups
+	// RViz have a single threaded executor which is causing the get_solution_client_ to timeout without getting the
+	// result
+	rclcpp::Node::SharedPtr node_;
 
 	std::map<uint32_t, Node*> id_to_stage_;
 	std::map<uint32_t, DisplaySolutionPtr> id_to_solution_;
@@ -68,9 +72,8 @@ class RemoteTaskModel : public BaseTaskModel
 	void setSolutionData(const moveit_task_constructor_msgs::msg::SolutionInfo& info);
 
 public:
-	RemoteTaskModel(const rclcpp::Node::SharedPtr& nh, const std::string& service_name,
-	                const planning_scene::PlanningSceneConstPtr& scene, rviz_common::DisplayContext* display_context,
-	                QObject* parent = nullptr);
+	RemoteTaskModel(const std::string& service_name, const planning_scene::PlanningSceneConstPtr& scene,
+	                rviz_common::DisplayContext* display_context, QObject* parent = nullptr);
 	~RemoteTaskModel() override;
 
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;

@@ -77,7 +77,7 @@ def generate_launch_description():
                                            move_group_capabilities])
 
     # RViz
-    rviz_config_file = get_package_share_directory('run_move_group') + "/launch/run_move_group.rviz"
+    rviz_config_file = get_package_share_directory('moveit_task_constructor_demo') + "/config/mtc.rviz"
     rviz_node = Node(package='rviz2',
                      executable='rviz2',
                      name='rviz2',

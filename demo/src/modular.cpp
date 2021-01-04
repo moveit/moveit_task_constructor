@@ -96,7 +96,7 @@ std::unique_ptr<SerialContainer> createModule(const std::string& group) {
 }
 
 Task createTask(const rclcpp::Node::SharedPtr& node) {
-	Task t("", false);
+	Task t;
 	t.loadRobotModel(node);
 	t.stages()->setName("Reusable Containers");
 	t.add(std::make_unique<stages::CurrentState>("current"));
@@ -118,10 +118,7 @@ int main(int argc, char** argv) {
 	auto task = createTask(node);
 	try {
 		if (task.plan())
-			RCLCPP_ERROR(node->get_logger(), "Found a solution");
-		else
-			RCLCPP_ERROR(node->get_logger(), "Failed");
-		// task.introspection().publishSolution(*task.solutions().front());
+			task.introspection().publishSolution(*task.solutions().front());
 	} catch (const InitStageException& ex) {
 		std::cerr << "planning failed with exception" << std::endl << ex << task;
 	}

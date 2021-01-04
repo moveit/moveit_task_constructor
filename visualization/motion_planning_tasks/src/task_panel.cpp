@@ -153,22 +153,21 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
  */
 
 void TaskPanel::request(rviz_common::WindowManagerInterface* window_manager) {
-	++DISPLAY_COUNT;
-
-	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
-	if (SINGLETON || !vis_frame)
-		return;  // already defined, nothing to do
-
-	QDockWidget* dock =
-	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
-	                              Qt::LeftDockWidgetArea, true /* floating */);
-	assert(dock->widget() == SINGLETON);
+	//	++DISPLAY_COUNT;
+	//	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
+	//	if (SINGLETON || !vis_frame)
+	//		return;  // already defined, nothing to do
+	//
+	//	QDockWidget* dock =
+	//	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
+	//	                              Qt::LeftDockWidgetArea, true /* floating */);
+	//	assert(dock->widget() == SINGLETON);
 }
 
 void TaskPanel::release() {
-	Q_ASSERT(DISPLAY_COUNT > 0);
-	if (--DISPLAY_COUNT == 0 && SINGLETON)
-		SINGLETON->deleteLater();
+	//	Q_ASSERT(DISPLAY_COUNT > 0);
+	//	if (--DISPLAY_COUNT == 0 && SINGLETON)
+	//		SINGLETON->deleteLater();
 }
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
