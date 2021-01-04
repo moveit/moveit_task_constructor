@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(moveit_task_constructor_capabilities)
 
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++17)
 
 find_package(ament_cmake REQUIRED)
 
