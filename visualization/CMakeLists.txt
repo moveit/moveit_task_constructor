@@ -38,9 +38,9 @@ pluginlib_export_plugin_description_file(rviz_common motion_planning_tasks_rviz_
 
 ament_export_include_directories(include)
 ament_export_libraries(motion_planning_tasks_utils
-											 motion_planning_tasks_properties
-											 motion_planning_tasks_rviz_plugin
-											 moveit_task_visualization_tools
+	motion_planning_tasks_properties
+	motion_planning_tasks_rviz_plugin
+	moveit_task_visualization_tools
 )
 ament_export_dependencies(ament_cmake)
 ament_export_dependencies(Boost)
