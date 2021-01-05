@@ -64,6 +64,41 @@ std::string getTaskId(const TaskPrivate* task) {
 }
 }  // namespace
 
+/**
+ * A shared executor between all tasks' introspection, this class will keep track of the number of the added nodes and
+ * will only create a spinning thread when we have nodes in the executor, once all the nodes are removed from the
+ * executor it will stop the spinning thread, later on if a new node is added a spinning thread will be started again
+ */
+class IntrospectionExecutor
+{
+public:
+	void add_node(const rclcpp::Node::SharedPtr& node) {
+		std::call_once(once_flag_, [this] { executor_ = rclcpp::executors::SingleThreadedExecutor::make_unique(); });
+		std::lock_guard<std::mutex> lock(mutex_);
+		executor_->add_node(node);
+		if (nodes_count_ == 0)
+			executor_thread_ = std::thread([this] { executor_->spin(); });
+		++nodes_count_;
+	}
+
+	void remove_node(const rclcpp::Node::SharedPtr& node) {
+		std::lock_guard<std::mutex> lock(mutex_);
+		executor_->remove_node(node);
+		if (--nodes_count_ == 0) {
+			executor_->cancel();
+			if (executor_thread_.joinable())
+				executor_thread_.join();
+		}
+	}
+
+private:
+	rclcpp::executors::SingleThreadedExecutor::UniquePtr executor_;
+	std::thread executor_thread_;
+	size_t nodes_count_ = 0;
+	std::mutex mutex_;
+	std::once_flag once_flag_;
+};
+
 class IntrospectionPrivate
 {
 public:
@@ -71,11 +106,7 @@ public:
 	  : task_(task)
 	  , task_id_(getTaskId(task))
 	  , node_(rclcpp::Node::make_shared(task_id_ + "_introspection", task_->ns())) {
-		std::call_once(once_flag, [] {
-			executor_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
-			executor_thread_ = std::thread([] { executor_->spin(); });
-		});
-		executor_->add_node(node_);
+		executor_.add_node(node_);
 		task_description_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskDescription>(
 		    DESCRIPTION_TOPIC, rclcpp::QoS(2).transient_local());
 		// send reset message as early as possible to give subscribers time to see it
@@ -93,7 +124,7 @@ public:
 	}
 	~IntrospectionPrivate() {
 		indicateReset();
-		executor_->remove_node(node_);
+		executor_.remove_node(node_);
 	}
 
 	void indicateReset() {
@@ -122,12 +153,8 @@ public:
 	rclcpp::Publisher<moveit_task_constructor_msgs::msg::Solution>::SharedPtr solution_publisher_;
 	/// services to provide an individual Solution
 	rclcpp::Service<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_service_;
-	/// TODO(JafarAbdi): 1- Should we have just one node for all tasks .?
-	///                  2- Should we destruct the executor when there's no task .?
 	rclcpp::Node::SharedPtr node_;
-	inline static rclcpp::executors::SingleThreadedExecutor::UniquePtr executor_;
-	inline static std::once_flag once_flag;
-	inline static std::thread executor_thread_;
+	inline static IntrospectionExecutor executor_;
 
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;
