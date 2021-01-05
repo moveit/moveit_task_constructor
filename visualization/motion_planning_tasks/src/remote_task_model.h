@@ -56,9 +56,9 @@ class RemoteTaskModel : public BaseTaskModel
 	struct Node;
 	Node* const root_;
 	rclcpp::Client<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_client_;
-	// TODO(JafarAbdi): We shouldn't need this, replace with callback groups
-	// RViz have a single threaded executor which is causing the get_solution_client_ to timeout without getting the
-	// result
+	// TODO(JafarAbdi): We shouldn't need this, replace with callback groups (should be fully available in Galactic)
+	// RViz have a single threaded executor which is causing the get_solution_client_ to timeout without
+	// getting the result
 	rclcpp::Node::SharedPtr node_;
 
 	std::map<uint32_t, Node*> id_to_stage_;
