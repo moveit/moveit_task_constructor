@@ -219,9 +219,12 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	view->setExpanded(index, expand);
 }
 
-TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view), node_(rclcpp::Node::make_shared("task_view_private")) {
+TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 	setupUi(view);
 
+	rclcpp::NodeOptions options;
+	options.arguments({ "--ros-args", "-r", "__node:=task_view_private" });
+	node_ = rclcpp::Node::make_shared("_", "/moveit_task_constructor", options);
 	exec_action_client_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node_, "execute_task_solution");
 

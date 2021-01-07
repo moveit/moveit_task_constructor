@@ -188,8 +188,10 @@ RemoteTaskModel::RemoteTaskModel(const std::string& service_name, const planning
                                  rviz_common::DisplayContext* display_context, QObject* parent)
   : BaseTaskModel(scene, display_context, parent), root_(new Node(nullptr)) {
 	id_to_stage_[0] = root_;  // root node has ID 0
+	rclcpp::NodeOptions options;
+	options.arguments({ "--ros-args", "-r", "__node:=get_solution_node" });
+	node_ = rclcpp::Node::make_shared("_", "/moveit_task_constructor/remote_task_model", options);
 	// service to request solutions
-	node_ = rclcpp::Node::make_shared("get_solution_node", "/moveit_task_constructor/remote_task_model");
 	get_solution_client_ = node_->create_client<moveit_task_constructor_msgs::srv::GetSolution>(service_name);
 }
 
