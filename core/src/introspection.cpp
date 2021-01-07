@@ -76,9 +76,8 @@ public:
 		std::call_once(once_flag_, [this] { executor_ = rclcpp::executors::SingleThreadedExecutor::make_unique(); });
 		std::lock_guard<std::mutex> lock(mutex_);
 		executor_->add_node(node);
-		if (nodes_count_ == 0)
+		if (nodes_count_++ == 0)
 			executor_thread_ = std::thread([this] { executor_->spin(); });
-		++nodes_count_;
 	}
 
 	void remove_node(const rclcpp::Node::SharedPtr& node) {
