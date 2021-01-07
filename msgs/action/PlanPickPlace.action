@@ -1,7 +1,23 @@
 # goal
-string object_id
-string end_effector
 
+# planning group properties
+string arm_group_name
+string hand_group_name
+
+# robot model and links
+string eef_name
+string hand_frame
+
+# object and surfaces
+string object_id
+string[] support_surfaces
+
+# picking
+string grasp_provider_plugin_name
+moveit_msgs/Grasp grasp
+geometry_msgs/Pose grasp_frame_transform
+
+# placing
 moveit_msgs/PlaceLocation place_location
 
 ---

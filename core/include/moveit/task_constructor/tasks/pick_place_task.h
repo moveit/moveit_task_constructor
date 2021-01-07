@@ -53,6 +53,7 @@
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/move_to.h>
+#include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
@@ -62,6 +63,7 @@
 #include <actionlib/server/simple_action_server.h>
 
 #include <eigen_conversions/eigen_msg.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #pragma once
 
@@ -83,22 +85,27 @@ public:
 
     // object + surface
     std::vector<std::string> support_surfaces_;
-    std::string object_reference_frame_;
-    std::string surface_link_;
+    // std::string object_reference_frame_;
+    // std::string surface_link_;
     std::string object_name_;
-    std::string world_frame_;
-    std::string grasp_frame_;
-    std::vector<double> object_dimensions_;
+    // std::string world_frame_;
+    // std::string grasp_frame_;
+    // std::vector<double> object_dimensions_;
 
     // Predefined pose targets
     std::string hand_open_pose_;
     std::string hand_close_pose_;
-    std::string arm_home_pose_;
+    // std::string arm_home_pose_;
+
+    // Plugins
+    std::string grasp_provider_plugin_name_;
 
     // Pick metrics
     Eigen::Isometry3d grasp_frame_transform_;
+    geometry_msgs::Vector3Stamped approach_object_direction_;
     double approach_object_min_dist_;
     double approach_object_max_dist_;
+    geometry_msgs::Vector3Stamped lift_object_direction_;
     double lift_object_min_dist_;
     double lift_object_max_dist_;
     double place_object_min_dist_;

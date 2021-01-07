@@ -60,12 +60,31 @@ void PlanPickPlaceCapability::goalCallback(
 
   // TODO: fill parameters
   PickPlaceTask::Parameters parameters;
+  parameters.arm_group_name_ = goal->arm_group_name;
+  parameters.hand_group_name_ = goal->hand_group_name;
+  parameters.eef_name_ = goal->eef_name;
+  parameters.hand_frame_ = goal->hand_frame;
+  parameters.object_name_ = goal->object_id;
+  parameters.support_surfaces_ = goal->support_surfaces;
+  parameters.grasp_provider_plugin_name_ = goal->grasp_provider_plugin_name;
+  tf::poseMsgToEigen(goal->grasp_frame_transform, parameters.grasp_frame_transform_);
+  parameters.hand_open_pose_ = "open";
+  parameters.hand_close_pose_ = "close";
+  parameters.approach_object_direction_ = goal->grasp.pre_grasp_approach.direction;
+  parameters.approach_object_min_dist_ = goal->grasp.pre_grasp_approach.min_distance;
+  parameters.approach_object_max_dist_ = goal->grasp.pre_grasp_approach.desired_distance;
+  parameters.lift_object_direction_ = goal->grasp.post_grasp_retreat.direction;
+  parameters.lift_object_min_dist_ = goal->grasp.post_grasp_retreat.min_distance;
+  parameters.lift_object_max_dist_ = goal->grasp.post_grasp_retreat.desired_distance;
 
   // initialize task
   pick_place_task_->init(parameters);
+
   // run plan
   pick_place_task_->plan();
+
   // retrieve and return result
+  as_->setSucceeded(result);
 }
 
 void PlanPickPlaceCapability::preemptCallback() {
