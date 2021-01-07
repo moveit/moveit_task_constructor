@@ -19,10 +19,10 @@ add_library(${MOVEIT_LIB_NAME} SHARED
 )
 set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_VERSION}")
 target_link_libraries(${MOVEIT_LIB_NAME}
-											${QT_LIBRARIES}
-											rviz_ogre_vendor::OgreMain
-											rviz_common::rviz_common
-											rviz_default_plugins::rviz_default_plugins
+	${QT_LIBRARIES}
+	rviz_ogre_vendor::OgreMain
+	rviz_common::rviz_common
+	rviz_default_plugins::rviz_default_plugins
 )
 target_include_directories(${MOVEIT_LIB_NAME}
   PUBLIC include
