@@ -28,12 +28,12 @@ target_include_directories(${MOVEIT_LIB_NAME}
   PUBLIC include
 )
 ament_target_dependencies(${MOVEIT_LIB_NAME}
-													Boost
-													pluginlib
-													moveit_task_constructor_msgs
-													moveit_ros_visualization
-													moveit_core
-													rclcpp
+	Boost
+	pluginlib
+	moveit_task_constructor_msgs
+	moveit_ros_visualization
+	moveit_core
+	rclcpp
 )
 
 install(DIRECTORY include/ DESTINATION include)
