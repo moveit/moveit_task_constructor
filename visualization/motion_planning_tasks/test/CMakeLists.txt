@@ -7,7 +7,6 @@ if (BUILD_TESTING)
 	find_package(ament_cmake_gtest REQUIRED)
 	find_package(ament_cmake_gmock REQUIRED)
 	find_package(launch_testing_ament_cmake REQUIRED)
-	find_package(ros_testing REQUIRED)
 
 	ament_add_gtest(${PROJECT_NAME}-test-merge-models test_merge_models.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-merge-models
