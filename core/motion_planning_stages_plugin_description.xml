@@ -6,4 +6,20 @@
       Use the current state of the robot (when starting planning) as a target.
     </description>
   </class>
+
+  <class name="moveit_task_constructor/GraspProviderDefault"
+         type="moveit::task_constructor::stages::GraspProviderDefault"
+         base_class_type="moveit::task_constructor::stages::GraspProviderBase">
+    <description>
+      Default Grasp provider stage plugin implementing the functionality of the GenerateGraspPose stage
+    </description>
+  </class>
+
+  <class name="moveit_task_constructor/PlaceProviderDefault"
+         type="moveit::task_constructor::stages::PlaceProviderDefault"
+         base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
+    <description>
+      Default Place provider stage plugin implementing the functionality of the GeneratePlacePose stage
+    </description>
+  </class>
 </library>
