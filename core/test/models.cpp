@@ -17,8 +17,3 @@ RobotModelPtr getModel() {
 	builder.addEndEffector("eef", "link2", "group", "eef_group");
 	return builder.build();
 }
-
-// moveit::core::RobotModelPtr loadModel() {
-//	robot_model_loader::RobotModelLoader loader;
-//	return loader.getModel();
-//}
