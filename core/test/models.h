@@ -12,4 +12,3 @@ MOVEIT_CLASS_FORWARD(RobotModel)
 moveit::core::RobotModelPtr getModel();
 
 // load a model from robot_description
-// moveit::core::RobotModelPtr loadModel();
