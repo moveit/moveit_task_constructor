@@ -6,7 +6,6 @@
 if (BUILD_TESTING)
 	find_package(ament_cmake_gtest REQUIRED)
 	find_package(ament_cmake_gmock REQUIRED)
-	find_package(ros_testing REQUIRED)
 
 	add_library(gtest_utils SHARED gtest_value_printers.cpp models.cpp)
 	target_link_libraries(gtest_utils ${PROJECT_NAME})
