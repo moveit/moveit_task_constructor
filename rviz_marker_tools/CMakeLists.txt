@@ -36,7 +36,6 @@ install(TARGETS ${PROJECT_NAME}
 	ARCHIVE DESTINATION lib
 	LIBRARY DESTINATION lib)
 
-# ament_export_include_directories(include)
 ament_export_targets(${PROJECT_NAME})
 ament_export_dependencies(Eigen3)
 ament_export_dependencies(geometry_msgs)
