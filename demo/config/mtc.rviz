@@ -104,9 +104,10 @@ Visualization Manager:
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
         Robot Alpha: 1
+        Robot Alpha: 0.5
         Show Robot Collision: false
         Show Robot Visual: true
-        Use Fixed Robot Color: false
+        Use Fixed Robot Color: true
         Value: ""
       Robot Description: robot_description
       Scene:
