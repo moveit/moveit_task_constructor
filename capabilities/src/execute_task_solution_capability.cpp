@@ -96,7 +96,7 @@ void ExecuteTaskSolutionCapability::initialize() {
 }
 
 void ExecuteTaskSolutionCapability::goalCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionType>> goal_handle) {
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
 	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
 
 	const auto& goal = goal_handle->get_goal();
@@ -123,7 +123,7 @@ void ExecuteTaskSolutionCapability::goalCallback(
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ActionType>> goal_handle) {
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
 	if (context_->plan_execution_)
 		context_->plan_execution_->stop();
 	return rclcpp_action::CancelResponse::ACCEPT;
