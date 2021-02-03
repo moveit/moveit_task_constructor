@@ -6,7 +6,7 @@ using namespace moveit::core;
 
 RobotModelPtr getModel() {
 	// suppress RobotModel errors and warnings
-	if (rcutils_logging_set_logger_level("moveit_robot_model.robot_model", RCUTILS_LOG_SEVERITY_ERROR) != RCUTILS_RET_OK)
+	if (rcutils_logging_set_logger_level("moveit_robot_model.robot_model", RCUTILS_LOG_SEVERITY_FATAL) != RCUTILS_RET_OK)
 		throw std::runtime_error("Failed to set logger level to RCUTILS_LOG_SEVERITY_ERROR");
 
 	// create dummy robot model
