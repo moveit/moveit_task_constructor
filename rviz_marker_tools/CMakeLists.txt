@@ -38,6 +38,7 @@ install(TARGETS ${PROJECT_NAME}
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
+ament_export_dependencies(eigen3_cmake_module)
 ament_export_dependencies(Eigen3)
 ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(visualization_msgs)
