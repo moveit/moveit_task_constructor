@@ -200,22 +200,24 @@ void TaskDisplay::changedRobotDescription() {
 void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr msg) {
 	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	requestPanel();
-	auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
-	if (!ros_node_abstraction) {
-		RCLCPP_INFO(LOGGER, "Unable to lock weak_ptr from DisplayContext in taskDescriptionCB");
-		return;
-	}
-	auto node = ros_node_abstraction->get_raw_node();
 	task_list_model_->processTaskDescriptionMessage(*msg, base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
 	// Start listening to other topics if this is the first description
 	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
 	if (!received_task_description_ && !msg->stages.empty()) {
+		auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+		if (!ros_node_abstraction) {
+			RCLCPP_INFO(LOGGER, "Unable to lock weak_ptr from DisplayContext in taskDescriptionCB");
+			return;
+		}
+		auto node = ros_node_abstraction->get_raw_node();
 		received_task_description_ = true;
 		task_statistics_sub = node->create_subscription<moveit_task_constructor_msgs::msg::TaskStatistics>(
-		    base_ns_ + STATISTICS_TOPIC, 2, std::bind(&TaskDisplay::taskStatisticsCB, this, std::placeholders::_1));
+		    base_ns_ + STATISTICS_TOPIC, rclcpp::QoS(2).transient_local(),
+		    std::bind(&TaskDisplay::taskStatisticsCB, this, std::placeholders::_1));
 		task_solution_sub = node->create_subscription<moveit_task_constructor_msgs::msg::Solution>(
-		    base_ns_ + SOLUTION_TOPIC, 2, std::bind(&TaskDisplay::taskSolutionCB, this, std::placeholders::_1));
+		    base_ns_ + SOLUTION_TOPIC, rclcpp::QoS(2).transient_local(),
+		    std::bind(&TaskDisplay::taskSolutionCB, this, std::placeholders::_1));
 	}
 }
 
@@ -261,7 +263,8 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	// listen to task descriptions updates
 	task_description_sub =
 	    ros_node_abstraction->get_raw_node()->create_subscription<moveit_task_constructor_msgs::msg::TaskDescription>(
-	        base_ns_ + DESCRIPTION_TOPIC, 10, std::bind(&TaskDisplay::taskDescriptionCB, this, std::placeholders::_1));
+	        base_ns_ + DESCRIPTION_TOPIC, rclcpp::QoS(10).transient_local(),
+	        std::bind(&TaskDisplay::taskDescriptionCB, this, std::placeholders::_1));
 
 	setStatus(rviz_common::properties::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
