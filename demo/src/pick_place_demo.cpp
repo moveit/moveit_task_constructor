@@ -101,6 +101,7 @@ int main(int argc, char** argv) {
 	RCLCPP_INFO(LOGGER, "Init moveit_task_constructor_demo");
 	rclcpp::init(argc, argv);
 	auto node = rclcpp::Node::make_shared("moveit_task_constructor_demo");
+	std::thread spinning_thread([node] { rclcpp::spin(node); });
 
 	// Add table and object to planning scene
 	rclcpp::sleep_for(std::chrono::microseconds(100));  // Wait for ApplyPlanningScene service
@@ -126,6 +127,6 @@ int main(int argc, char** argv) {
 	}
 
 	// Keep introspection alive
-	rclcpp::spin(node);
+	spinning_thread.join();
 	return 0;
 }

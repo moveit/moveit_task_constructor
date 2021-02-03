@@ -114,6 +114,7 @@ Task createTask(const rclcpp::Node::SharedPtr& node) {
 int main(int argc, char** argv) {
 	rclcpp::init(argc, argv);
 	auto node = rclcpp::Node::make_shared("mtc_tutorial");
+	std::thread spinning_thread([node] { rclcpp::spin(node); });
 
 	auto task = createTask(node);
 	try {
@@ -123,6 +124,7 @@ int main(int argc, char** argv) {
 		std::cerr << "planning failed with exception" << std::endl << ex << task;
 	}
 
-	rclcpp::spin(node);  // keep alive for interactive inspection in rviz
+	// keep alive for interactive inspection in rviz
+	spinning_thread.join();
 	return 0;
 }
