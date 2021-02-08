@@ -166,7 +166,7 @@ planning_pipeline::PlanningPipelinePtr Task::createPlanner(const rclcpp::Node::S
 	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
 	if (!planner) {
 		// create new entry
-		planner = std::make_shared<planning_pipeline::PlanningPipeline>(model, node, planning_plugin_param_name,
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>(model, node, ns, planning_plugin_param_name,
 		                                                                adapter_plugins_param_name);
 		// store in cache
 		entry = planner;
