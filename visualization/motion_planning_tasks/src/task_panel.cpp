@@ -224,7 +224,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 
 	rclcpp::NodeOptions options;
 	options.arguments({ "--ros-args", "-r", "__node:=task_view_private" });
-	node_ = rclcpp::Node::make_shared("_", "/moveit_task_constructor", options);
+	node_ = rclcpp::Node::make_shared("_", "", options);
 	exec_action_client_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node_, "execute_task_solution");
 
