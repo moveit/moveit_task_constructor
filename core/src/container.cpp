@@ -699,7 +699,10 @@ bool Fallbacks::canCompute() const {
 		// active child failed, continue with next
 		auto next = child->it();
 		++next;
-		active_child_ = next->get();
+		if (next == pimpl()->children().end())
+			active_child_ = nullptr;
+		else
+			active_child_ = next->get();
 	}
 	return false;
 }

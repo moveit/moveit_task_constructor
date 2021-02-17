@@ -749,3 +749,19 @@ TEST(Task, timeout) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.solutions().size(), 2u);
 }
+
+TEST(Fallback, failing) {
+	MOCK_ID = 0;
+	Task t;
+	t.setRobotModel(getModel());
+
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>());
+	fallback->add(std::make_unique<ForwardMockup>());
+	t.add(std::move(fallback));
+
+	EXPECT_FALSE(t.plan());
+	EXPECT_EQ(t.solutions().size(), 0u);
+}
