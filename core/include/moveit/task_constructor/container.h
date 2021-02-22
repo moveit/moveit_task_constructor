@@ -64,7 +64,7 @@ public:
 
 	void add(Stage::pointer&& stage);
 
-	virtual bool insert(Stage::pointer&& stage, int before = -1);
+	virtual void insert(Stage::pointer&& stage, int before = -1);
 	virtual Stage::pointer remove(int pos);
 	virtual Stage::pointer remove(Stage* child);
 	virtual void clear();
@@ -205,7 +205,7 @@ public:
 	WrapperBase(const std::string& name = "wrapper", Stage::pointer&& child = Stage::pointer());
 
 	/// insertion is only allowed if children() is empty
-	bool insert(Stage::pointer&& stage, int before = -1) override;
+	void insert(Stage::pointer&& stage, int before = -1) override;
 
 	/// access the single wrapped child, NULL if still empty
 	Stage* wrapped();

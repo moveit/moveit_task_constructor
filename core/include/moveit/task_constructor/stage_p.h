@@ -112,13 +112,12 @@ public:
 
 	/// set parent of stage
 	/// enforce only one parent exists
-	inline bool setParent(ContainerBase* parent) {
+	inline void setParent(ContainerBase* parent) {
 		if (parent_) {
 			// it's not allowed to add a stage to a parent if it already has one
 			throw std::runtime_error("Tried to add stage '" + name() + "' to two parents");
 		}
 		parent_ = parent;
-		return true;
 	}
 
 	/// explicitly orphan stage

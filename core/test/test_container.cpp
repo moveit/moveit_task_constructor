@@ -298,28 +298,28 @@ TEST_F(SerialTest, insertion_order) {
 	/*****  inserting first stage  *****/
 	auto g = std::make_unique<GeneratorMockup>();
 	StagePrivate* gp = g->pimpl();
-	ASSERT_TRUE(container.insert(std::move(g)));
+	container.insert(std::move(g));
 	EXPECT_FALSE(g);  // ownership transferred to container
 	VALIDATE(gp);
 
 	/*****  inserting second stage  *****/
 	auto f = std::make_unique<ForwardMockup>();
 	StagePrivate* fp = f->pimpl();
-	ASSERT_TRUE(container.insert(std::move(f)));
+	container.insert(std::move(f));
 	EXPECT_FALSE(f);  // ownership transferred to container
 	VALIDATE(gp, fp);
 
 	/*****  inserting third stage  *****/
 	auto f2 = std::make_unique<ForwardMockup>();
 	StagePrivate* fp2 = f2->pimpl();
-	ASSERT_TRUE(container.insert(std::move(f2), 1));
+	container.insert(std::move(f2), 1);
 	EXPECT_FALSE(f2);  // ownership transferred to container
 	VALIDATE(gp, fp2, fp);
 
 	/*****  inserting another generator stage  *****/
 	auto g2 = std::make_unique<GeneratorMockup>();
 	StagePrivate* gp2 = g2->pimpl();
-	ASSERT_TRUE(container.insert(std::move(g2)));
+	container.insert(std::move(g2));
 	VALIDATE(gp, fp2, fp, gp2);
 }
 
