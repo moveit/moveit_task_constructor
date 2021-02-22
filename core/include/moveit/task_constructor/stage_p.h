@@ -43,8 +43,6 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/cost_queue.h>
 
-#include <ros/ros.h>
-
 #include <ostream>
 #include <chrono>
 
@@ -116,8 +114,8 @@ public:
 	/// enforce only one parent exists
 	inline bool setParent(ContainerBase* parent) {
 		if (parent_) {
-			ROS_ERROR_STREAM("Tried to add stage '" << name() << "' to two parents");
-			return false;  // it's not allowed to add a stage to a parent if it already has one
+			// it's not allowed to add a stage to a parent if it already has one
+			throw std::runtime_error("Tried to add stage '" + name() + "' to two parents");
 		}
 		parent_ = parent;
 		return true;
@@ -181,7 +179,7 @@ protected:
 	std::list<InterfaceState> states_;  // storage for created states
 	ordered<SolutionBaseConstPtr> solutions_;
 	std::list<SolutionBaseConstPtr> failures_;
-	size_t num_failures_ = 0;  // num of failures if not stored
+	std::size_t num_failures_ = 0;  // num of failures if not stored
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
