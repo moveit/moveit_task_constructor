@@ -94,7 +94,7 @@ public:
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
 	void add(Stage::pointer&& stage);
-	bool insert(Stage::pointer&& stage, int before = -1) override;
+	void insert(Stage::pointer&& stage, int before = -1) override;
 	void clear() final;
 
 	/// enable introspection publishing for use with rviz
