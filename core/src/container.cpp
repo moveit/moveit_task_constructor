@@ -182,24 +182,18 @@ bool ContainerBase::traverseRecursively(const ContainerBase::StageCallback& proc
 }
 
 void ContainerBase::add(Stage::pointer&& stage) {
-	if (!insert(std::move(stage))) {
-		throw std::runtime_error(name() + ": Could not insert stage");
-	}
+	insert(std::move(stage), -1);
 }
 
-bool ContainerBase::insert(Stage::pointer&& stage, int before) {
-	if (!stage) {
-		ROS_ERROR_STREAM(name() << ": received invalid stage pointer");
-		return false;
-	}
+void ContainerBase::insert(Stage::pointer&& stage, int before) {
+	if (!stage)
+		throw std::runtime_error(name() + ": received invalid stage pointer");
 
 	StagePrivate* impl = stage->pimpl();
-	if (!impl->setParent(this))
-		return false;
+	impl->setParent(this);
 	ContainerBasePrivate::const_iterator where = pimpl()->childByIndex(before, true);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
 	impl->setParentPosition(it);
-	return true;
 }
 
 Stage::pointer ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
@@ -636,10 +630,10 @@ WrapperBase::WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child) : Par
 		WrapperBase::insert(std::move(child));
 }
 
-bool WrapperBase::insert(Stage::pointer&& stage, int before) {
+void WrapperBase::insert(Stage::pointer&& stage, int before) {
 	// restrict num of children to one
 	if (numChildren() > 0)
-		return false;
+		throw std::runtime_error(name() + ": Wrapper only allows a single child");
 	return ParallelContainerBase::insert(std::move(stage), before);
 }
 

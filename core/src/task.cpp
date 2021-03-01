@@ -203,8 +203,8 @@ void Task::add(Stage::pointer&& stage) {
 	stages()->add(std::move(stage));
 }
 
-bool Task::insert(Stage::pointer&& stage, int before) {
-	return stages()->insert(std::move(stage), before);
+void Task::insert(Stage::pointer&& stage, int before) {
+	stages()->insert(std::move(stage), before);
 }
 
 void Task::clear() {
