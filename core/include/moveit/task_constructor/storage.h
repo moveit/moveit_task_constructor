@@ -197,12 +197,12 @@ private:
 class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
-struct TmpInterfaceStateProvider;
+struct TmpSolutionContext;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
 	friend ContainerBasePrivate;
-	friend TmpInterfaceStateProvider;
+	friend TmpSolutionContext;
 
 public:
 	virtual ~SolutionBase() = default;

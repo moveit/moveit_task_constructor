@@ -234,19 +234,21 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 // To solve the chicken-egg problem in computeCost() and provide proper states at both ends of the solution,
 // this class temporarily sets the new interface states w/o registering the solution yet.
 // On destruction the start/end states are reset again.
-struct TmpInterfaceStateProvider
+struct TmpSolutionContext
 {
-	SolutionBase* solution_;
-	TmpInterfaceStateProvider(SolutionBase& solution, const InterfaceState& from, const InterfaceState& to)
-	  : solution_(&solution) {
-		assert(solution_->start_ == nullptr);
-		assert(solution_->end_ == nullptr);
-		solution_->start_ = &from;
-		solution_->end_ = &to;
+	SolutionBase& solution_;
+	TmpSolutionContext(SolutionBase& solution, Stage* creator, const InterfaceState& from, const InterfaceState& to)
+	  : solution_(solution) {
+		assert(solution_.start_ == nullptr);
+		assert(solution_.end_ == nullptr);
+		solution_.start_ = &from;
+		solution_.end_ = &to;
+		solution_.creator_ = creator;
 	}
-	~TmpInterfaceStateProvider() {
-		solution_->start_ = nullptr;
-		solution_->end_ = nullptr;
+	~TmpSolutionContext() {
+		solution_.start_ = nullptr;
+		solution_.end_ = nullptr;
+		solution_.creator_ = nullptr;
 	}
 };
 void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
@@ -256,7 +258,7 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 
 	// Temporarily set start/end states of the solution w/o actually registering the solution with them
 	// This allows CostTerms to compute costs based on the InterfaceState.
-	TmpInterfaceStateProvider tip(solution, from, to);
+	TmpSolutionContext tip(solution, me(), from, to);
 
 	std::string comment;
 	assert(cost_term_);
