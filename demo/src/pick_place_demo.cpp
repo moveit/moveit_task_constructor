@@ -99,8 +99,8 @@ moveit_msgs::CollisionObject createObject() {
 }
 
 int main(int argc, char** argv) {
-	ROS_INFO_NAMED(LOGNAME, "Init moveit_task_constructor_demo");
-	ros::init(argc, argv, "moveit_task_constructor_demo");
+	ROS_INFO_NAMED(LOGNAME, "Init node");
+	ros::init(argc, argv, "mtc_tutorial");
 	ros::NodeHandle nh;
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
