@@ -113,8 +113,12 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
+	// internal interface for first/last child to push to if required
 	InterfacePtr pendingBackward() const { return pending_backward_; }
 	InterfacePtr pendingForward() const { return pending_forward_; }
+
+	// map InterfaceStates from children to external InterfaceStates of the container
+	const auto& internalToExternalMap() const { return internal_to_external_; }
 
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
@@ -138,7 +142,6 @@ protected:
 	                  const InterfaceState* internal_to);
 
 	auto& internalToExternalMap() { return internal_to_external_; }
-	const auto& internalToExternalMap() const { return internal_to_external_; }
 
 	// set in resolveInterface()
 	InterfaceFlags required_interface_;
