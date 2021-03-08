@@ -152,6 +152,7 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
  * will never be called if the display is disabled...
  */
 
+// TODO(JafarAbdi): Uncomment once https://github.com/ros2/rviz/pull/660 is merged
 void TaskPanel::request(rviz_common::WindowManagerInterface* window_manager) {
 	//	++DISPLAY_COUNT;
 	//	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
