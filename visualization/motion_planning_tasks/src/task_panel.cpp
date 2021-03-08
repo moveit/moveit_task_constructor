@@ -52,9 +52,9 @@
 #include <rviz_common/properties/enum_property.hpp>
 #include <rviz_common/properties/property_tree_model.hpp>
 #include <rviz_common/display_group.hpp>
-// #include <rviz_common/visualization_manager.h>
+#include <rviz_common/display_context.hpp>
 #include <rviz_common/window_manager_interface.hpp>
-// #include <rviz_common/visualization_frame.h>
+#include <rviz_common/visualization_frame.hpp>
 #include <rviz_common/panel_dock_widget.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -152,23 +152,22 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
  * will never be called if the display is disabled...
  */
 
-// TODO(JafarAbdi): Uncomment once https://github.com/ros2/rviz/pull/660 is merged
 void TaskPanel::request(rviz_common::WindowManagerInterface* window_manager) {
-	//	++DISPLAY_COUNT;
-	//	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
-	//	if (SINGLETON || !vis_frame)
-	//		return;  // already defined, nothing to do
-	//
-	//	QDockWidget* dock =
-	//	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
-	//	                              Qt::LeftDockWidgetArea, true /* floating */);
-	//	assert(dock->widget() == SINGLETON);
+	++DISPLAY_COUNT;
+	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz_common::VisualizationFrame*>(window_manager);
+	if (SINGLETON || !vis_frame)
+		return;  // already defined, nothing to do
+
+	QDockWidget* dock =
+	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
+	                              Qt::LeftDockWidgetArea, true /* floating */);
+	assert(dock->widget() == SINGLETON);
 }
 
 void TaskPanel::release() {
-	//	Q_ASSERT(DISPLAY_COUNT > 0);
-	//	if (--DISPLAY_COUNT == 0 && SINGLETON)
-	//		SINGLETON->deleteLater();
+	Q_ASSERT(DISPLAY_COUNT > 0);
+	if (--DISPLAY_COUNT == 0 && SINGLETON)
+		SINGLETON->deleteLater();
 }
 
 TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
@@ -181,7 +180,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 }
 
 void TaskPanel::onInitialize() {
-	// d_ptr->window_manager_;
+	d_ptr->window_manager_ = getDisplayContext()->getWindowManager();
 }
 
 void TaskPanel::save(rviz_common::Config config) const {
