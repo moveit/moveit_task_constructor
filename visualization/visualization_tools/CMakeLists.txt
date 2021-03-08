@@ -21,8 +21,6 @@ set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_V
 target_link_libraries(${MOVEIT_LIB_NAME}
 	${QT_LIBRARIES}
 	rviz_ogre_vendor::OgreMain
-	rviz_common::rviz_common
-	rviz_default_plugins::rviz_default_plugins
 )
 target_include_directories(${MOVEIT_LIB_NAME}
   PUBLIC include
@@ -34,6 +32,8 @@ ament_target_dependencies(${MOVEIT_LIB_NAME}
 	moveit_ros_visualization
 	moveit_core
 	rclcpp
+	rviz_common
+	rviz_default_plugins
 )
 
 install(DIRECTORY include/ DESTINATION include)
