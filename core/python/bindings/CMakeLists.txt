@@ -18,6 +18,8 @@ install(TARGETS ${TOOLS_LIB_NAME}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
+add_definitions(-DPYBIND11_USE_SMART_HOLDER_AS_DEFAULT)
+
 # catkin_lint cannot detect target declarations in functions, here in pybind11_add_module
 #catkin_lint: ignore undefined_target
 

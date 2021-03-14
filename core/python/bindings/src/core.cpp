@@ -110,7 +110,7 @@ void export_core(pybind11::module& m) {
 	});
 
 	// clang-format off
-	py::class_<SolutionBase, SolutionBasePtr>(m, "Solution")
+	py::class_<SolutionBase>(m, "Solution")
 		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost)
 		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment)
 		.def("toMsg", [](const SolutionBasePtr& s) {
@@ -119,7 +119,7 @@ void export_core(pybind11::module& m) {
 			return msg;
 		})
 		;
-	py::class_<SubTrajectory, SubTrajectoryPtr, SolutionBase>(m, "SubTrajectory")
+	py::class_<SubTrajectory, SolutionBase>(m, "SubTrajectory")
 		.def(py::init<>())
 		;
 

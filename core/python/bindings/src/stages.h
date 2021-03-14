@@ -51,10 +51,14 @@ class PyMoveTo : public PyPropagatingEitherWay<T>
 public:
 	using PyPropagatingEitherWay<T>::PyPropagatingEitherWay;
 	void computeForward(const InterfaceState& from_state) override {
-		PYBIND11_OVERRIDE(void, T, computeForward, from_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_IMPL(void, T, "computeForward", &from_state);
+		return T::computeForward(from_state);
 	}
 	void computeBackward(const InterfaceState& to_state) override {
-		PYBIND11_OVERRIDE(void, T, computeBackward, to_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_IMPL(void, T, "computeBackward", &to_state);
+		return T::computeBackward(to_state);
 	}
 };
 
@@ -64,10 +68,14 @@ class PyMoveRelative : public PyPropagatingEitherWay<T>
 public:
 	using PyPropagatingEitherWay<T>::PyPropagatingEitherWay;
 	void computeForward(const InterfaceState& from_state) override {
-		PYBIND11_OVERRIDE(void, T, computeForward, from_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_IMPL(void, T, "computeForward", &from_state);
+		return T::computeForward(from_state);
 	}
 	void computeBackward(const InterfaceState& to_state) override {
-		PYBIND11_OVERRIDE(void, T, computeBackward, to_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_IMPL(void, T, "computeBackward", &to_state);
+		return T::computeBackward(to_state);
 	}
 };
 

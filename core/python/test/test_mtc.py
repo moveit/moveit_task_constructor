@@ -91,9 +91,9 @@ class TestModifyPlanningScene(unittest.TestCase):
 
     def test_attach_objects_invalid_args(self):
         for value in [None, 1, 1.5, {}]:
-            self.assertRaises(TypeError, self.mps.attachObjects, value, "link")
-            self.assertRaises(TypeError, self.mps.attachObjects, value, "link", True)
-            self.assertRaises(TypeError, self.mps.attachObjects, value, "link", False)
+            self.assertRaises(RuntimeError, self.mps.attachObjects, value, "link")
+            self.assertRaises(RuntimeError, self.mps.attachObjects, value, "link", True)
+            self.assertRaises(RuntimeError, self.mps.attachObjects, value, "link", False)
 
     def test_attach_objects_valid_args(self):
         self.mps.attachObject("object", "link")
@@ -281,7 +281,7 @@ class TestContainer(unittest.TestCase):
         container = core.SerialContainer()
         stage = stages.CurrentState()
         container.add(stage)
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             stage.name
 
     def check(self, container):
@@ -316,7 +316,7 @@ class TestTask(unittest.TestCase):
         task.add(current)
 
         # ownership of current was passed to task
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             current.name
 
         task.add(stages.Connect("connect", []))

@@ -44,7 +44,7 @@ namespace moveit {
 namespace task_constructor {
 
 template <class T = Stage>
-class PyStage : public T
+class PyStage : public T, public pybind11::trampoline_self_life_support
 {
 public:
 	using T::T;
@@ -69,7 +69,10 @@ class PyMonitoringGenerator : public PyGenerator<T>
 {
 public:
 	using PyGenerator<T>::PyGenerator;
-	void onNewSolution(const SolutionBase& s) override { PYBIND11_OVERRIDE_PURE(void, T, onNewSolution, s); }
+	void onNewSolution(const SolutionBase& s) override {
+		// pass solution as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_PURE(void, T, onNewSolution, &s);
+	}
 };
 
 class PubMonitoringGenerator : public MonitoringGenerator
@@ -84,10 +87,12 @@ class PyPropagatingEitherWay : public PyStage<T>
 public:
 	using PyStage<T>::PyStage;
 	void computeForward(const InterfaceState& from_state) override {
-		PYBIND11_OVERRIDE_PURE(void, T, computeForward, from_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_PURE(void, T, computeForward, &from_state);
 	}
 	void computeBackward(const InterfaceState& to_state) override {
-		PYBIND11_OVERRIDE_PURE(void, T, computeBackward, to_state);
+		// pass InterfaceState as pointer to trigger passing by reference
+		PYBIND11_OVERRIDE_PURE(void, T, computeBackward, &to_state);
 	}
 };
 

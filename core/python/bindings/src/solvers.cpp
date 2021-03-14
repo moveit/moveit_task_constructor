@@ -46,13 +46,13 @@ namespace moveit {
 namespace python {
 
 void export_solvers(py::module& m) {
-	properties::class_<PlannerInterface, PlannerInterfacePtr>(m, "PlannerInterface")
+	properties::class_<PlannerInterface>(m, "PlannerInterface")
 	    .property<double>("max_velocity_scaling_factor")
 	    .property<double>("max_acceleration_scaling_factor")
 	    .def_property_readonly("properties", py::overload_cast<>(&PlannerInterface::properties),
 	                           py::return_value_policy::reference_internal);
 
-	properties::class_<PipelinePlanner, PipelinePlannerPtr, PlannerInterface>(m, "PipelinePlanner")
+	properties::class_<PipelinePlanner, PlannerInterface>(m, "PipelinePlanner")
 	    .property<std::string>("planner")
 	    .property<uint>("num_planning_attempts")
 	    .property<moveit_msgs::WorkspaceParameters>("workspace_parameters")
@@ -63,12 +63,11 @@ void export_solvers(py::module& m) {
 	    .property<bool>("publish_planning_requests")
 	    .def(py::init<>());
 
-	properties::class_<JointInterpolationPlanner, JointInterpolationPlannerPtr, PlannerInterface>(
-	    m, "JointInterpolationPlanner")
+	properties::class_<JointInterpolationPlanner, PlannerInterface>(m, "JointInterpolationPlanner")
 	    .property<double>("max_step")
 	    .def(py::init<>());
 
-	properties::class_<CartesianPath, CartesianPathPtr, PlannerInterface>(m, "CartesianPath")
+	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath")
 	    .property<double>("step_size")
 	    .property<double>("jump_threshold")
 	    .property<double>("min_fraction")
