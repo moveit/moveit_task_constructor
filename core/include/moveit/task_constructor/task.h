@@ -73,7 +73,7 @@ class Task : protected WrapperBase
 public:
 	PRIVATE_CLASS(Task)
 
-	// +1 TODO: move into MoveIt! core
+	// +1 TODO: move into MoveIt core
 	static planning_pipeline::PlanningPipelinePtr
 	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
 	              const std::string& planning_plugin_param_name = "planning_plugin",

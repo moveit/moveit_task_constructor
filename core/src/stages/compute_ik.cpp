@@ -88,7 +88,7 @@ using IKSolutions = std::vector<std::vector<double>>;
 namespace {
 
 // ??? TODO: provide callback methods in PlanningScene class / probably not very useful here though...
-// TODO: move into MoveIt! core, lift active_components_only_ from fcl to common interface
+// TODO: move into MoveIt core, lift active_components_only_ from fcl to common interface
 bool isTargetPoseColliding(const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d pose,
                            const robot_model::LinkModel* link,
                            collision_detection::CollisionResult* collision_result = nullptr) {
@@ -277,7 +277,7 @@ void ComputeIK::compute() {
 	if (value.empty()) {  // property undefined
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
-		                       jmg->getOnlyOneEndEffectorTip())) {
+                             jmg->getOnlyOneEndEffectorTip())) {
 			ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
 			return;
 		}
