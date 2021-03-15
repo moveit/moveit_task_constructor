@@ -456,7 +456,6 @@ void TaskSolutionVisualization::renderCurrentWayPoint() {
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index) {
-	assert(index >= 0);
 	size_t waypoint_count = displaying_solution_->getWayPointCount();
 	moveit::core::RobotStateConstPtr robot_state;
 	planning_scene::PlanningSceneConstPtr scene;
