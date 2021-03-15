@@ -108,16 +108,8 @@ void export_stages(pybind11::module& m) {
 	PropertyConverter<stages::Connect::MergeMode>();
 
 	properties::class_<Connect, Stage>(m, "Connect")
-		.def(py::init([](const std::string& name, const py::list& list) {
-			Connect::GroupPlannerVector planners;
-			for (const auto& item : list) {
-				auto t = item.cast<py::tuple>();
-				std::string group = t[0].cast<std::string>();
-				solvers::PlannerInterfacePtr solver = t[1].cast<solvers::PlannerInterfacePtr>();
-				planners.push_back(std::make_pair(group, solver));
-			}
-			return std::make_unique<Connect>(name, planners);
-		}), py::arg("name") = std::string("connect"), py::arg("planners"));
+		.def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
+			py::arg("name") = std::string("connect"), py::arg("planners"));
 
 	properties::class_<FixCollisionObjects, Stage>(m, "FixCollisionObjects")
 		.property<double>("max_penetration")
