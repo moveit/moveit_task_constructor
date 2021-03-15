@@ -16,7 +16,6 @@ env:
     - UPSTREAM_WORKSPACE=.rosinstall
 
 jobs:
-  - env: TEST=clang-format
   - env: TEST=code-coverage
   - compiler: clang
     env: DOCKER_IMAGE=moveit/moveit:master-source
