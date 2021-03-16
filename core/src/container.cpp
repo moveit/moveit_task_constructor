@@ -317,7 +317,7 @@ struct SolutionCollector
 	}
 
 	void traverse(const SolutionBase& start, const InterfaceState::Priority& prio) {
-		const InterfaceState::Solutions& next = trajectories<dir>(state<dir>(start));
+		const InterfaceState::Solutions& next = trajectories<dir>(*state<dir>(start));
 		if (next.empty()) {  // when reaching the end, add the trace to solutions
 			assert(prio.depth() == trace.size());
 			assert(prio.depth() <= max_depth);

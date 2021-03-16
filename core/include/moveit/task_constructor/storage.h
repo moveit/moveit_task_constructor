@@ -391,14 +391,14 @@ inline const InterfaceState* state<Interface::BACKWARD>(const SolutionBase& solu
 
 /// Trait to retrieve outgoing (FORWARD) or incoming (BACKWARD) solution segments of a given state
 template <Interface::Direction dir>
-const InterfaceState::Solutions& trajectories(const InterfaceState* state);
+const InterfaceState::Solutions& trajectories(const InterfaceState& state);
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState* state) {
-	return state->outgoingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState& state) {
+	return state.outgoingTrajectories();
 }
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState* state) {
-	return state->incomingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState& state) {
+	return state.incomingTrajectories();
 }
 
 /// Trait to retrieve opposite direction (FORWARD <-> BACKWARD)

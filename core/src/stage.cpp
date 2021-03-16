@@ -166,7 +166,7 @@ void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status sta
 		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
 
 	// traverse solution tree
-	for (const SolutionBase* successor : trajectories<dir>(s))
+	for (const SolutionBase* successor : trajectories<dir>(*s))
 		setStatus<dir>(state<dir>(*successor), status);
 }
 template void StagePrivate::setStatus<Interface::FORWARD>(const InterfaceState* s, InterfaceState::Status status);
