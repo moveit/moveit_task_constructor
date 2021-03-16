@@ -153,9 +153,23 @@ void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status sta
 	if (s->priority().status() == status)
 		return;  // nothing changing
 
-	// actually enable/disable the state
-	if (s->owner())
+	// if we should disable the state, only do so when there is no enabled alternative path
+	if (status == InterfaceState::DISABLED) {
+		auto solution_is_enabled = [](auto&& solution) {
+			return state<opposite<dir>()>(*solution)->priority().enabled();
+		};
+		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
+		if (alternative_path != alternatives.cend())
+			return;
+	}
+
+	if (s->owner()) {
+		// actually enable/disable the state
 		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
+	} else {
+		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
+	}
 
 	// To break symmetry between both ends of a partial solution sequence that gets disabled,
 	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
