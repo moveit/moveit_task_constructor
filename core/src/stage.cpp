@@ -158,12 +158,12 @@ void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status sta
 		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
 
 	// To break symmetry between both ends of a partial solution sequence that gets disabled,
-	// we mark the start state with START and all other states down the tree with END.
-	// This allows us to re-enable the START side, while not (yet) consider the END side,
-	// when a new states arrives in a Connecting stage.
-	// The END side is only re-enabled if the START side actually was connected with a solution.
-	if (status == InterfaceState::Status::DISABLED_START)
-		status = InterfaceState::Status::DISABLED_END;  // ensure that only the first state is marked as START
+	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
+	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
+	// when new states arrive in a Connecting stage.
+	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	if (status == InterfaceState::DISABLED_FAILED)
+		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
 
 	// traverse solution tree
 	for (const SolutionBase* successor : trajectories<dir>(s))
@@ -729,7 +729,7 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
-		if (it->priority().status() == InterfaceState::Status::DISABLED_END)
+		if (it->priority().status() == InterfaceState::DISABLED)
 			// remove all pending pairs involving this state
 			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
 		else
@@ -738,10 +738,10 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			// Don't re-enable states that are marked DISABLED_END
+			// Don't re-enable states that are marked DISABLED
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is DISABLED_START
-				if (oit->priority().status() == InterfaceState::DISABLED_START)
+				// re-enable the opposing state oit if its status is DISABLED_FAILED
+				if (oit->priority().status() == InterfaceState::DISABLED_FAILED)
 					oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), InterfaceState::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
 			}

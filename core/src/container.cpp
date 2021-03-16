@@ -408,23 +408,24 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
-			break;  // just ignore: the pair of (new) states isn't known to us anyway
+			// just ignore: the pair of (new) states isn't known to us anyway
 			// TODO: If child is a container, from and to might have associated solutions already!
-
-		case PROPAGATE_FORWARDS:  // mark from as dead (backwards)
-			StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_START);
 			break;
-		case PROPAGATE_BACKWARDS:  // mark to as dead (forwards)
-			StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_START);
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
 			break;
 
 		case CONNECT:
 			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
 				auto cimpl = conn->pimpl();
 				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
-					StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_START);
+					StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
 				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
-					StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_START);
+					StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
 			}
 			break;
 	}

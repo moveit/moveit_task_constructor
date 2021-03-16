@@ -79,9 +79,9 @@ class InterfaceState
 public:
 	enum Status
 	{
-		ENABLED,
-		DISABLED_START,  // state that was the root cause for disabling due to failure
-		DISABLED_END  // state on the other end of a disabled solution sequence
+		ENABLED,  // state is actively considered during planning
+		DISABLED,  // state is disabled because a required connected state failed
+		DISABLED_FAILED,  // state that failed, causing the whole partial solution to be disabled
 	};
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
