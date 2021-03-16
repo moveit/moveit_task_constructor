@@ -3,6 +3,9 @@
 	<version>0.0.0</version>
 	<description>MoveIt Task Pipeline</description>
 
+	<url type="bugtracker">https://github.com/ros-planning/moveit_task_constructor/issues</url>
+	<url type="repository">https://github.com/ros-planning/moveit_task_constructor</url>
+
 	<license>BSD</license>
 	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
@@ -26,6 +29,6 @@
 	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
 
 	<export>
-		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml"/>
+		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml" />
 	</export>
 </package>
