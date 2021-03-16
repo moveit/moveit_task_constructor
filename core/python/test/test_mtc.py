@@ -143,9 +143,11 @@ class TestStages(unittest.TestCase):
             except TypeError as e:
                 pass
             except:
-                self.fail("Assigning {} did raise wrong exception: {}".format(value, sys.exc_info()[0]))
+                msg = "Assigning {} did raise wrong exception: {}"
+                self.fail(msg.format(value, sys.exc_info()[0]))
             else:
-                self.fail("Assigning {} did not raise an exception, result: {}".format(value, getattr(stage, name)))
+                msg = "Assigning {} did not raise an exception, result: {}"
+                self.fail(msg.format(value, getattr(stage, name)))
 
     def test_CurrentState(self):
         stage = stages.CurrentState("current")
@@ -181,7 +183,7 @@ class TestStages(unittest.TestCase):
         stage.setGoal(PointStamped())
         stage.setGoal(RobotState())
         stage.setGoal("named pose")
-        stage.setGoal(dict(joint1 = 1.0, joint2 = 2.0))
+        stage.setGoal(dict(joint1=1.0, joint2=2.0))
         self._check(stage, "path_constraints", Constraints())
 
     def test_MoveRelative(self):
@@ -194,7 +196,7 @@ class TestStages(unittest.TestCase):
         self._check(stage, "path_constraints", Constraints())
         stage.setDirection(TwistStamped())
         stage.setDirection(Vector3Stamped())
-        stage.setDirection({'joint': 0.1})
+        stage.setDirection({"joint": 0.1})
 
     def test_Connect(self):
         planner = core.PipelinePlanner()
@@ -290,5 +292,5 @@ class TestTask(unittest.TestCase):
         task.add(stages.FixedState())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

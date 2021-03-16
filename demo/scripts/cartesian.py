@@ -8,6 +8,7 @@ from math import pi
 import time
 
 from moveit.python_tools import roscpp_init
+
 roscpp_init("mtc_tutorial")
 
 group = "panda_arm"
@@ -25,26 +26,26 @@ task.add(stages.CurrentState("current state"))
 # move along x
 move = stages.MoveRelative("x +0.2", cartesian)
 move.group = group
-header = Header(frame_id = "world")
-move.setDirection(Vector3Stamped(header=header, vector=Vector3(0.2,0,0)))
+header = Header(frame_id="world")
+move.setDirection(Vector3Stamped(header=header, vector=Vector3(0.2, 0, 0)))
 task.add(move)
 
 # move along y
 move = stages.MoveRelative("y -0.3", cartesian)
 move.group = group
-move.setDirection(Vector3Stamped(header=header, vector=Vector3(0,-0.3,0)))
+move.setDirection(Vector3Stamped(header=header, vector=Vector3(0, -0.3, 0)))
 task.add(move)
 
 # rotate about z
 move = stages.MoveRelative("rz +45°", cartesian)
 move.group = group
-move.setDirection(TwistStamped(header=header, twist=Twist(angular=Vector3(0,0,pi/4.))))
+move.setDirection(TwistStamped(header=header, twist=Twist(angular=Vector3(0, 0, pi / 4.0))))
 task.add(move)
 
 # Cartesian motion, defined as joint-space offset
 move = stages.MoveRelative("joint offset", cartesian)
 move.group = group
-move.setDirection(dict(panda_joint1=pi/6, panda_joint3=-pi/6))
+move.setDirection(dict(panda_joint1=pi / 6, panda_joint3=-pi / 6))
 task.add(move)
 
 # moveTo named posture, using joint-space interplation

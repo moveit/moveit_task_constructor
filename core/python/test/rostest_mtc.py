@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
         task.add(stages.CurrentState("current"))
         move = stages.MoveRelative("move", core.JointInterpolationPlanner())
         move.group = self.PLANNING_GROUP
-        move.setDirection({"joint_1" : 0.2, "joint_2" : 0.4})
+        move.setDirection({"joint_1": 0.2, "joint_2": 0.4})
         task.add(move)
 
         task.enableIntrospection()
@@ -42,14 +42,12 @@ class Test(unittest.TestCase):
 
     def test_Merger(self):
         cartesian = core.CartesianPath()
+
         def createDisplacement(group, displacement):
             move = stages.MoveRelative("displace", cartesian)
             move.group = group
-            move.ik_frame = PoseStamped(header = Header(frame_id = "tool0"))
-            dir = Vector3Stamped(
-                header = Header(frame_id = "base_link"),
-                vector = Vector3(*displacement)
-            )
+            move.ik_frame = PoseStamped(header=Header(frame_id="tool0"))
+            dir = Vector3Stamped(header=Header(frame_id="base_link"), vector=Vector3(*displacement))
             move.setDirection(dir)
             move.restrictDirection(stages.MoveRelative.Direction.FORWARD)
             return move
@@ -58,7 +56,7 @@ class Test(unittest.TestCase):
         task.add(stages.CurrentState("current"))
         merger = core.Merger("merger")
         merger.insert(createDisplacement(self.PLANNING_GROUP, [-0.2, 0, 0]))
-        merger.insert(createDisplacement(self.PLANNING_GROUP, [ 0.2, 0, 0]))
+        merger.insert(createDisplacement(self.PLANNING_GROUP, [0.2, 0, 0]))
         task.add(merger)
 
         task.enableIntrospection()
@@ -67,6 +65,6 @@ class Test(unittest.TestCase):
             task.publish(task.solutions[0])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     roscpp_init("test_mtc")
     rostest.rosrun("", "", Test)
