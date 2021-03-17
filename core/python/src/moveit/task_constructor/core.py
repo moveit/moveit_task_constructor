@@ -1,1 +1,1 @@
-from ._core import *
+from pymoveit_mtc.core import *

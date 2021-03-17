@@ -1,2 +1,1 @@
-from ._core import Stage
-from ._stages import *
+from pymoveit_mtc.stages import *

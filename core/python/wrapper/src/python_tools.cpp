@@ -6,7 +6,7 @@
 namespace py = pybind11;
 using namespace moveit::python;
 
-PYBIND11_MODULE(@TOOLS_LIB_NAME@, m) {
+PYBIND11_MODULE(pymoveit_python_tools, m) {
 	m.doc() = "MoveIt python tools";
 
 	m.def("roscpp_init", &InitProxy::init, "Initialize C++ ROS", py::arg("node_name") = "moveit_python_wrapper",
