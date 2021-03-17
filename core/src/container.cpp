@@ -295,9 +295,9 @@ static void printChildrenInterfaces(const ContainerBase& container, bool success
 
 	for (const auto& child : container.pimpl()->children()) {
 		auto cimpl = child->pimpl();
-		if (!cimpl->starts() && !cimpl->ends())
-			continue;  // skip generator
 		os << std::setw(width) << std::left << child->name();
+		if (!cimpl->starts() && !cimpl->ends())
+			os << "↕ " << std::endl;
 		if (cimpl->starts())
 			os << "↓ " << *child->pimpl()->starts() << std::endl;
 		if (cimpl->starts() && cimpl->ends())
@@ -399,6 +399,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 		}
 	}
+	// printChildrenInterfaces(*this, true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -429,6 +430,7 @@ void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* fro
 			}
 			break;
 	}
+	// printChildrenInterfaces(*this, false, child);
 }
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}

@@ -761,6 +761,9 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 			}
 		}
 	}
+	// std::cerr << name_ << ": ";
+	// printPendingPairs(std::cerr);
+	// std::cerr << std::endl;
 }
 
 // Check whether there are pending feasible states that could connect to source.
