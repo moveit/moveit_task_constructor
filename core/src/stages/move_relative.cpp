@@ -115,12 +115,12 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
+		solution.markAsFailure("invalid joint model group: " + group);
 		return false;
 	}
 	boost::any direction = props.get("direction");
 	if (direction.empty()) {
-		ROS_WARN_NAMED("MoveRelative", "direction undefined");
+		solution.markAsFailure("undefined direction");
 		return false;
 	}
 
@@ -142,7 +142,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (value.empty()) {  // property undefined
 			//  determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
+				solution.markAsFailure("missing ik_frame");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
@@ -150,7 +150,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		} else {
 			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
+				solution.markAsFailure("unknown link for ik_frame: " + ik_pose_msg.header.frame_id);
 				return false;
 			}
 		}
@@ -228,7 +228,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			target_eigen = link_pose;
 			target_eigen.translation() += linear;
 		} catch (const boost::bad_any_cast&) {
-			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for direction: " << direction.type().name());
+			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
 			return false;
 		}
 
@@ -306,20 +306,20 @@ void MoveRelative::computeForward(const InterfaceState& from) {
 	planning_scene::PlanningScenePtr to;
 	SubTrajectory trajectory;
 
-	if (compute(from, to, trajectory, FORWARD))
-		sendForward(from, InterfaceState(to), std::move(trajectory));
+	if (!compute(from, to, trajectory, FORWARD) && trajectory.comment().empty())
+		silentFailure();  // there is nothing to report (comment is empty)
 	else
-		silentFailure();
+		sendForward(from, InterfaceState(to), std::move(trajectory));
 }
 
 void MoveRelative::computeBackward(const InterfaceState& to) {
 	planning_scene::PlanningScenePtr from;
 	SubTrajectory trajectory;
 
-	if (compute(to, from, trajectory, BACKWARD))
-		sendBackward(InterfaceState(from), to, std::move(trajectory));
-	else
+	if (!compute(to, from, trajectory, BACKWARD) && trajectory.comment().empty())
 		silentFailure();
+	else
+		sendBackward(InterfaceState(from), to, std::move(trajectory));
 }
 }  // namespace stages
 }  // namespace task_constructor

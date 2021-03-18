@@ -149,6 +149,12 @@ void SolutionBase::setCost(double cost) {
 	cost_ = cost;
 }
 
+void SolutionBase::markAsFailure(const std::string& msg) {
+	setCost(std::numeric_limits<double>::infinity());
+	if (!msg.empty())
+		setComment(msg + "\n" + comment());
+}
+
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
 	info.id = introspection ? introspection->solutionId(*this) : 0;
 	info.cost = this->cost();
