@@ -187,7 +187,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 }
 
 bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& solution,
-                     Direction dir) {
+                     Interface::Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
@@ -259,7 +259,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	}
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD)
+		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
@@ -271,25 +271,6 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	return false;
 }
 
-void MoveTo::computeForward(const InterfaceState& from) {
-	planning_scene::PlanningScenePtr to;
-	SubTrajectory trajectory;
-
-	if (!compute(from, to, trajectory, FORWARD) && trajectory.comment().empty())
-		silentFailure();  // there is nothing to report (comment is empty)
-	else
-		sendForward(from, InterfaceState(to), std::move(trajectory));
-}
-
-void MoveTo::computeBackward(const InterfaceState& to) {
-	planning_scene::PlanningScenePtr from;
-	SubTrajectory trajectory;
-
-	if (!compute(to, from, trajectory, BACKWARD) && trajectory.comment().empty())
-		silentFailure();
-	else
-		sendBackward(InterfaceState(from), to, std::move(trajectory));
-}
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

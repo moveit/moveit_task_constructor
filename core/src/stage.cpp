@@ -574,12 +574,20 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	impl->initInterface(dir);
 }
 
-void PropagatingEitherWay::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
-	pimpl()->sendForward(from, std::move(to), std::make_shared<SubTrajectory>(std::move(t)));
+template <Interface::Direction dir>
+void PropagatingEitherWay::send(const InterfaceState& start, InterfaceState&& end, SubTrajectory&& trajectory) {
+	pimpl()->send<dir>(start, std::move(end), std::make_shared<SubTrajectory>(std::move(trajectory)));
 }
 
-void PropagatingEitherWay::sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t) {
-	pimpl()->sendBackward(std::move(from), to, std::make_shared<SubTrajectory>(std::move(t)));
+template <Interface::Direction dir>
+void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
+	planning_scene::PlanningScenePtr end;
+	SubTrajectory trajectory;
+
+	if (!compute(start, end, trajectory, dir) && trajectory.comment().empty())
+		silentFailure();  // there is nothing to report (comment is empty)
+	else
+		send<dir>(start, InterfaceState(end), std::move(trajectory));
 }
 
 PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward* me, const std::string& name)

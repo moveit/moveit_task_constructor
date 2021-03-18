@@ -105,7 +105,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 }
 
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
-                           SubTrajectory& solution, Direction dir) {
+                           SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
@@ -191,7 +191,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			}
 
 			// invert direction?
-			if (dir == BACKWARD) {
+			if (dir == Interface::BACKWARD) {
 				linear *= -1.0;
 				angular *= -1.0;
 			}
@@ -220,7 +220,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			linear_norm = linear.norm();
 
 			// invert direction?
-			if (dir == BACKWARD)
+			if (dir == Interface::BACKWARD)
 				linear *= -1.0;
 
 			// compute absolute transform for link
@@ -275,7 +275,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 				rviz_marker_tools::makeArrow(m, linear_norm);
 				auto quat = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), linear);
 				Eigen::Vector3d pos(link_pose.translation());
-				if (dir == BACKWARD) {
+				if (dir == Interface::BACKWARD) {
 					// flip arrow direction
 					quat = quat * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
 					// arrow tip at goal pose
@@ -291,7 +291,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	// store result
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD)
+		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
@@ -302,25 +302,6 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	return false;
 }
 
-void MoveRelative::computeForward(const InterfaceState& from) {
-	planning_scene::PlanningScenePtr to;
-	SubTrajectory trajectory;
-
-	if (!compute(from, to, trajectory, FORWARD) && trajectory.comment().empty())
-		silentFailure();  // there is nothing to report (comment is empty)
-	else
-		sendForward(from, InterfaceState(to), std::move(trajectory));
-}
-
-void MoveRelative::computeBackward(const InterfaceState& to) {
-	planning_scene::PlanningScenePtr from;
-	SubTrajectory trajectory;
-
-	if (!compute(to, from, trajectory, BACKWARD) && trajectory.comment().empty())
-		silentFailure();
-	else
-		sendBackward(InterfaceState(from), to, std::move(trajectory));
-}
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

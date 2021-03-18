@@ -139,6 +139,8 @@ public:
 	// methods to spawn new solutions
 	void sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution);
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
+	template <Interface::Direction>
+	inline void send(const InterfaceState& start, InterfaceState&& end, const SolutionBasePtr& solution);
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
@@ -194,6 +196,17 @@ private:
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+
+template <>
+inline void StagePrivate::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                   const SolutionBasePtr& solution) {
+	sendForward(start, std::move(end), solution);
+}
+template <>
+inline void StagePrivate::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                    const SolutionBasePtr& solution) {
+	sendBackward(std::move(end), start, solution);
+}
 
 // ComputeBasePrivate is the base class for all computing stages, i.e. non-containers.
 // It adds the trajectories_ variable.

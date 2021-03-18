@@ -61,8 +61,6 @@ public:
 	             const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void computeForward(const InterfaceState& from) override;
-	void computeBackward(const InterfaceState& to) override;
 
 	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
@@ -98,7 +96,7 @@ public:
 protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
-	             Direction dir);
+	             Interface::Direction dir) override;
 
 protected:
 	solvers::PlannerInterfacePtr planner_;

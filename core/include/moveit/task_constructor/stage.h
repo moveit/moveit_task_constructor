@@ -289,15 +289,33 @@ public:
 	};
 	void restrictDirection(Direction dir);
 
-	virtual void computeForward(const InterfaceState& from) = 0;
-	virtual void computeBackward(const InterfaceState& to) = 0;
-
-	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
-	void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory);
+	// Default implementations, using generic compute().
+	// Override if you want to use different code for FORWARD and BACKWARD directions.
+	virtual void computeForward(const InterfaceState& from) { computeGeneric<Interface::FORWARD>(from); }
+	virtual void computeBackward(const InterfaceState& to) { computeGeneric<Interface::BACKWARD>(to); }
 
 protected:
 	// constructor for use in derived classes
 	PropagatingEitherWay(PropagatingEitherWayPrivate* impl);
+
+	template <Interface::Direction dir>
+	void send(const InterfaceState& start, InterfaceState&& end, SubTrajectory&& trajectory);
+
+	inline void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory) {
+		send<Interface::FORWARD>(from, std::move(to), std::move(trajectory));
+	}
+	inline void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory) {
+		send<Interface::BACKWARD>(to, std::move(from), std::move(trajectory));
+	}
+
+private:
+	virtual bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
+	                     Interface::Direction dir) {
+		throw std::runtime_error("PropagatingEitherWay: Override compute() or compute[Forward|Backward]()");
+	}
+
+	template <Interface::Direction dir>
+	void computeGeneric(const InterfaceState& start);
 };
 
 class PropagatingForwardPrivate;
