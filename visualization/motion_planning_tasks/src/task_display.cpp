@@ -216,10 +216,16 @@ void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStati
 
 void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
 	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
-	const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
-	if (s)
-		trajectory_visual_->showTrajectory(s, false);
-	return;
+	try {
+		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
+		if (s)
+			trajectory_visual_->showTrajectory(s, false);
+		else
+			setSolutionStatus(false);
+	} catch (const std::invalid_argument& e) {
+		ROS_ERROR_STREAM(e.what());
+		setSolutionStatus(false, e.what());
+	}
 }
 
 void TaskDisplay::changedTaskSolutionTopic() {
@@ -249,11 +255,11 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
 
-void TaskDisplay::setSolutionStatus(bool ok) {
+void TaskDisplay::setSolutionStatus(bool ok, const char* msg) {
 	if (ok)
 		setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
 	else
-		setStatus(rviz::StatusProperty::Warn, "Solution", "Retrieval failed");
+		setStatus(rviz::StatusProperty::Warn, "Solution", msg ? msg : "Retrieval failed");
 }
 
 void TaskDisplay::onTasksInserted(const QModelIndex& parent, int first, int last) {

@@ -483,8 +483,14 @@ void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModel
 	Q_ASSERT(task);
 
 	TaskSolutionVisualization* vis = display->visualization();
-	const DisplaySolutionPtr& solution = task->getSolution(current);
-	display->setSolutionStatus(bool(solution));
+	DisplaySolutionPtr solution;
+	try {
+		solution = task->getSolution(current);
+		display->setSolutionStatus(bool(solution));
+	} catch (const std::invalid_argument& e) {
+		ROS_ERROR_STREAM(e.what());
+		display->setSolutionStatus(false, e.what());
+	}
 	vis->interruptCurrentDisplay();
 	vis->showTrajectory(solution, true);
 }
@@ -500,8 +506,14 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const 
 
 	display->clearMarkers();
 	for (const auto& index : selected_rows) {
-		const DisplaySolutionPtr& solution = task->getSolution(index);
-		display->setSolutionStatus(bool(solution));
+		DisplaySolutionPtr solution;
+		try {
+			solution = task->getSolution(index);
+			display->setSolutionStatus(bool(solution));
+		} catch (const std::invalid_argument& e) {
+			ROS_ERROR_STREAM(e.what());
+			display->setSolutionStatus(false, e.what());
+		}
 		display->addMarkers(solution);
 	}
 }

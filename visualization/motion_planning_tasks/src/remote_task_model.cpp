@@ -422,17 +422,13 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 			// request solution via service
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;
-			try {
-				if (get_solution_client_.call(srv)) {
-					id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
-					return result;
-				} else {  // on failure mark remote task as destroyed: don't retrieve more solutions
-					get_solution_client_.shutdown();
-					flags_ |= IS_DESTROYED;
-				}
-			} catch (const std::exception& e) {
-				ROS_ERROR("exception: %s", e.what());
+			if (get_solution_client_.call(srv)) {
+				id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
+				return result;
 			}
+			// on failure mark remote task as destroyed: don't retrieve more solutions
+			get_solution_client_.shutdown();
+			flags_ |= IS_DESTROYED;
 		}
 		return result;
 	}
