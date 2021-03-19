@@ -182,6 +182,22 @@ TEST(ConnectConnect, FailSucc) {
 	EXPECT_FALSE(t.plan());
 }
 
+TEST(Pruning, PropagatorFailure) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+	BackwardMockup* b;
+	t.add(Stage::pointer(b = new BackwardMockup()));
+	t.add(Stage::pointer(new GeneratorMockup({ 0 })));
+	t.add(Stage::pointer(new ForwardMockup({ inf })));
+
+	t.plan();
+
+	ASSERT_EQ(t.solutions().size(), 0);
+	// ForwardMockup fails, so the backward stage should never compute
+	EXPECT_EQ(b->calls_, 0);
+}
+
 TEST(Pruning, PruningMultiForward) {
 	resetIds();
 	Task t;
