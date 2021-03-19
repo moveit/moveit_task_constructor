@@ -54,44 +54,45 @@ struct GeneratorMockup : Generator
 	void compute() override { spawn(InterfaceState(ps_), costs_.cost()); }
 };
 
-class PropagatorMockup : public PropagatingEitherWay
+struct PropagatorMockup : public PropagatingEitherWay
 {
 	PredefinedCosts costs_;
 	std::size_t solutions_per_compute_;
 
-public:
+	unsigned int calls_ = 0;
+
 	PropagatorMockup(std::initializer_list<double> costs = { 0.0 }, std::size_t solutions_per_compute = 1)
 	  : PropagatingEitherWay(), costs_(false, costs), solutions_per_compute_(solutions_per_compute) {}
 
 	void computeForward(const InterfaceState& from) override {
+		++calls_;
 		for (std::size_t i = 0; i < solutions_per_compute_; ++i) {
 			SubTrajectory solution(robot_trajectory::RobotTrajectoryConstPtr(), costs_.cost());
 			sendForward(from, InterfaceState(from.scene()->diff()), std::move(solution));
 		}
 	}
 	void computeBackward(const InterfaceState& to) override {
+		++calls_;
 		for (std::size_t i = 0; i < solutions_per_compute_; ++i) {
 			SubTrajectory solution(robot_trajectory::RobotTrajectoryConstPtr(), costs_.cost());
 			sendBackward(InterfaceState(to.scene()->diff()), to, std::move(solution));
 		}
 	}
 };
-class ForwardMockup : public PropagatorMockup
+struct ForwardMockup : public PropagatorMockup
 {
 	static unsigned int id_;
 
-public:
 	ForwardMockup(std::initializer_list<double> costs = { 0.0 }, std::size_t solutions_per_compute = 1)
 	  : PropagatorMockup(costs, solutions_per_compute) {
 		restrictDirection(FORWARD);
 		setName("FW" + std::to_string(++id_));
 	}
 };
-class BackwardMockup : public PropagatorMockup
+struct BackwardMockup : public PropagatorMockup
 {
 	static unsigned int id_;
 
-public:
 	BackwardMockup(std::initializer_list<double> costs = { 0.0 }) : PropagatorMockup(costs) {
 		restrictDirection(BACKWARD);
 		setName("BW" + std::to_string(++id_));
@@ -137,9 +138,17 @@ unsigned int ForwardMockup::id_ = 0;
 unsigned int BackwardMockup::id_ = 0;
 unsigned int Connect::id_ = 0;
 
+void resetIds() {
+	GeneratorMockup::id_ = 0;
+	ForwardMockup::id_ = 0;
+	BackwardMockup::id_ = 0;
+	Connect::id_ = 0;
+}
+
 // https://github.com/ros-planning/moveit_task_constructor/issues/182
 TEST(ConnectConnect, SuccSucc) {
-	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
+	resetIds();
+
 	Task t;
 	t.setRobotModel(getModel());
 	t.add(Stage::pointer(new GeneratorMockup({ 1, 2, 3 })));
@@ -158,8 +167,44 @@ TEST(ConnectConnect, SuccSucc) {
 	}
 }
 
-TEST(ConnectConnect, PruningForward) {
-	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
+// https://github.com/ros-planning/moveit_task_constructor/issues/218
+TEST(ConnectConnect, FailSucc) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+	t.add(Stage::pointer(new GeneratorMockup()));
+	t.add(Stage::pointer(new Connect({ inf }, true)));
+	t.add(Stage::pointer(new GeneratorMockup()));
+	t.add(Stage::pointer(new Connect()));
+	t.add(Stage::pointer(new GeneratorMockup()));
+	t.add(Stage::pointer(new ForwardDummy()));
+
+	EXPECT_FALSE(t.plan());
+}
+
+TEST(Pruning, PruningMultiForward) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+
+	t.add(Stage::pointer(new BackwardMockup()));
+	t.add(Stage::pointer(new BackwardMockup()));
+	t.add(Stage::pointer(new GeneratorMockup()));
+	// spawn two solutions for the only incoming state
+	t.add(Stage::pointer(new ForwardMockup({ 0, 0 }, 2)));
+	// fail to exten
+	t.add(Stage::pointer(new ForwardMockup({ 0, inf })));
+
+	t.plan();
+
+	// the second (infeasible) solution in the last stage must not disable
+	// the earlier partial solution just because they share stage solutions
+	ASSERT_EQ(t.solutions().size(), 1);
+	EXPECT_EQ((*t.solutions().begin())->cost(), 0u);
+}
+
+TEST(Pruning, ConnectConnectForward) {
+	resetIds();
 	Task t;
 	t.setRobotModel(getModel());
 	Connect *c1, *c2;
@@ -183,30 +228,8 @@ TEST(ConnectConnect, PruningForward) {
 	EXPECT_EQ(c2->calls_, 6u);
 }
 
-TEST(ConnectConnect, PruningMultiForward) {
-	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
-	Task t;
-
-	t.setRobotModel(getModel());
-	t.add(Stage::pointer(new GeneratorMockup()));
-	t.add(Stage::pointer(new Connect()));
-	t.add(Stage::pointer(new BackwardMockup()));
-	/* TODO(v4hn):
-	 * t.add(Stage::pointer(new GeneratorMockup()));
-	 * should be enough instead of the above, but propagators do not even respect ENABLED/DISABLED yet
-	 */
-
-	t.add(Stage::pointer(new GeneratorMockup()));
-	t.add(Stage::pointer(new ForwardMockup({ 0, 0 }, 2)));  // spawn two solutions for the only incoming state
-	t.add(Stage::pointer(new ForwardMockup({ 0, inf })));
-	t.plan();
-
-	ASSERT_EQ(t.solutions().size(), 1);
-	EXPECT_EQ((*t.solutions().begin())->cost(), 0u);
-}
-
-TEST(ConnectConnect, PruningBackward) {
-	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
+TEST(Pruning, ConnectConnectBackward) {
+	resetIds();
 	Task t;
 	t.setRobotModel(getModel());
 	Connect *c1, *c2;
@@ -228,19 +251,4 @@ TEST(ConnectConnect, PruningBackward) {
 	}
 	EXPECT_EQ(c2->calls_, 3u);
 	EXPECT_EQ(c1->calls_, 6u);
-}
-
-// https://github.com/ros-planning/moveit_task_constructor/issues/218
-TEST(ConnectConnect, FailSucc) {
-	GeneratorMockup::id_ = Connect::id_ = 0;  // reset IDs
-	Task t;
-	t.setRobotModel(getModel());
-	t.add(Stage::pointer(new GeneratorMockup()));
-	t.add(Stage::pointer(new Connect({ inf }, true)));
-	t.add(Stage::pointer(new GeneratorMockup()));
-	t.add(Stage::pointer(new Connect()));
-	t.add(Stage::pointer(new GeneratorMockup()));
-	t.add(Stage::pointer(new ForwardDummy()));
-
-	EXPECT_FALSE(t.plan());
 }
