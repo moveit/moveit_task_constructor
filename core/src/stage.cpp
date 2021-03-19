@@ -562,7 +562,7 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const {
-	return starts_ && !starts_->empty();
+	return starts_ && !starts_->empty() && starts_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
@@ -571,7 +571,7 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const {
-	return ends_ && !ends_->empty();
+	return ends_ && !ends_->empty() && ends_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState() {
