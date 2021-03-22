@@ -578,6 +578,11 @@ template <Interface::Direction dir>
 void PropagatingEitherWay::send(const InterfaceState& start, InterfaceState&& end, SubTrajectory&& trajectory) {
 	pimpl()->send<dir>(start, std::move(end), std::make_shared<SubTrajectory>(std::move(trajectory)));
 }
+// Explicit template instantiation is required. The compiler, otherwise, might just inline them.
+template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                             SubTrajectory&& trajectory);
+template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                              SubTrajectory&& trajectory);
 
 template <Interface::Direction dir>
 void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
