@@ -76,23 +76,42 @@ class InterfaceState
 {
 	friend class SolutionBase;  // addIncoming() / addOutgoing() should be called only by SolutionBase
 	friend class Interface;  // allow Interface to set owner_ and priority_
+	friend class StagePrivate;
+
 public:
+	enum Status
+	{
+		ENABLED,  // state is actively considered during planning
+		DISABLED,  // state is disabled because a required connected state failed
+		DISABLED_FAILED,  // state that failed, causing the whole partial solution to be disabled
+	};
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
-	struct Priority : public std::pair<unsigned int, double>
+	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost) : std::pair<unsigned int, double>(depth, cost) {}
+		Priority(unsigned int depth, double cost, Status status = ENABLED)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
+			assert(std::isfinite(cost));
+		}
+		// Constructor copying depth and cost, but modifying its status
+		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 
-		inline unsigned int depth() const { return this->first; }
-		inline double cost() const { return this->second; }
+		inline Status status() const { return std::get<0>(*this); }
+		inline bool enabled() const { return std::get<0>(*this) == ENABLED; }
+		inline unsigned int depth() const { return std::get<1>(*this); }
+		inline double cost() const { return std::get<2>(*this); }
 
 		// add priorities
 		Priority operator+(const Priority& other) const {
-			return Priority(this->depth() + other.depth(), this->cost() + other.cost());
+			return Priority(depth() + other.depth(), cost() + other.cost(), std::min(status(), other.status()));
 		}
-		bool operator<(const Priority& other) const;
+		// comparison operators
+		bool operator<(const Priority& rhs) const;
+		inline bool operator>(const Priority& rhs) const { return rhs < *this; }
+		inline bool operator<=(const Priority& rhs) const { return !(rhs < *this); }
+		inline bool operator>=(const Priority& rhs) const { return !(*this < rhs); }
 	};
 	using Solutions = std::deque<SolutionBase*>;
 
@@ -147,19 +166,20 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
-		using base_type::iterator::iterator;  // inherit base constructors
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }
+
 		InterfaceState* operator->() const noexcept { return base_type::iterator::operator*(); }
 	};
 	class const_iterator : public base_type::const_iterator
 	{
 	public:
-		using base_type::const_iterator::const_iterator;  // inherit base constructors
 		const_iterator(base_type::const_iterator other) : base_type::const_iterator(other) {}
+		const_iterator(base_type::iterator other) : base_type::const_iterator(other) {}
 
 		const InterfaceState& operator*() const noexcept { return *base_type::const_iterator::operator*(); }
+
 		const InterfaceState* operator->() const noexcept { return base_type::const_iterator::operator*(); }
 	};
 
@@ -193,6 +213,9 @@ private:
 	using base_type::moveTo;
 	using base_type::remove_if;
 };
+
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
+std::ostream& operator<<(std::ostream& os, const Interface& interface);
 
 class CostTerm;
 class StagePrivate;
@@ -370,14 +393,26 @@ inline const InterfaceState* state<Interface::BACKWARD>(const SolutionBase& solu
 
 /// Trait to retrieve outgoing (FORWARD) or incoming (BACKWARD) solution segments of a given state
 template <Interface::Direction dir>
-const InterfaceState::Solutions& trajectories(const InterfaceState* state);
+const InterfaceState::Solutions& trajectories(const InterfaceState& state);
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState* state) {
-	return state->outgoingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState& state) {
+	return state.outgoingTrajectories();
 }
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState* state) {
-	return state->incomingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState& state) {
+	return state.incomingTrajectories();
+}
+
+/// Trait to retrieve opposite direction (FORWARD <-> BACKWARD)
+template <Interface::Direction dir>
+constexpr Interface::Direction opposite();
+template <>
+inline constexpr Interface::Direction opposite<Interface::FORWARD>() {
+	return Interface::BACKWARD;
+}
+template <>
+inline constexpr Interface::Direction opposite<Interface::BACKWARD>() {
+	return Interface::FORWARD;
 }
 }  // namespace task_constructor
 }  // namespace moveit

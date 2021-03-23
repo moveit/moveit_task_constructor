@@ -129,13 +129,16 @@ void StagePrivate::validateConnectivity() const {
 	}
 }
 
-bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
+bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const InterfaceState* from,
+                                 const InterfaceState* to) {
 	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
 	if (solution->isFailure()) {
 		++num_failures_;
+		if (parent())
+			parent()->onNewFailure(*me(), from, to);
 		if (!storeFailures())
 			return false;  // drop solution
 		failures_.push_back(solution);
@@ -145,12 +148,50 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 	return true;
 }
 
+template <Interface::Direction dir>
+void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
+	if (s->priority().status() == status)
+		return;  // nothing changing
+
+	// if we should disable the state, only do so when there is no enabled alternative path
+	if (status == InterfaceState::DISABLED) {
+		auto solution_is_enabled = [](auto&& solution) {
+			return state<opposite<dir>()>(*solution)->priority().enabled();
+		};
+		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
+		if (alternative_path != alternatives.cend())
+			return;
+	}
+
+	if (s->owner()) {
+		// actually enable/disable the state
+		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
+	} else {
+		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
+	}
+
+	// To break symmetry between both ends of a partial solution sequence that gets disabled,
+	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
+	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
+	// when new states arrive in a Connecting stage.
+	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	if (status == InterfaceState::DISABLED_FAILED)
+		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
+
+	// traverse solution tree
+	for (const SolutionBase* successor : trajectories<dir>(*s))
+		setStatus<dir>(state<dir>(*successor), status);
+}
+template void StagePrivate::setStatus<Interface::FORWARD>(const InterfaceState* s, InterfaceState::Status status);
+template void StagePrivate::setStatus<Interface::BACKWARD>(const InterfaceState* s, InterfaceState::Status status);
+
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, nullptr))
 		return;  // solution dropped
 
 	me()->forwardProperties(from, to);
@@ -172,7 +213,7 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, &to))
 		return;  // solution dropped
 
 	me()->forwardProperties(to, from);
@@ -193,7 +234,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 
 	computeCost(state, state, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, nullptr))
 		return;  // solution dropped
 
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
@@ -213,7 +254,7 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, &to))
 		return;  // solution dropped
 
 	solution->setStartState(from);
@@ -521,7 +562,7 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
 }
 
 inline bool PropagatingEitherWayPrivate::hasStartState() const {
-	return starts_ && !starts_->empty();
+	return starts_ && !starts_->empty() && starts_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
@@ -530,7 +571,7 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const {
-	return ends_ && !ends_->empty();
+	return ends_ && !ends_->empty() && ends_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState() {
@@ -706,32 +747,87 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (!std::isfinite(it->priority().cost()))
-		return;
-	if (updated) {
-		// many pairs might be affected: sort
-		pending.sort();
+	if (updated) {  // many pairs might be affected: resort
+		if (it->priority().status() == InterfaceState::DISABLED)
+			// remove all pending pairs involving this state
+			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
+		else
+			pending.sort();
 	} else {  // new state: insert all pairs with other interface
+		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			if (!std::isfinite(oit->priority().cost()))
-				break;
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
+			// Don't re-enable states that are marked DISABLED
+			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
+				// re-enable the opposing state oit if its status is DISABLED_FAILED
+				if (oit->priority().status() == InterfaceState::DISABLED_FAILED)
+					oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), InterfaceState::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
+			}
 		}
 	}
+	// std::cerr << name_ << ": ";
+	// printPendingPairs(std::cerr);
+	// std::cerr << std::endl;
 }
 
+// Check whether there are pending feasible states that could connect to source.
+// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+template <Interface::Direction dir>
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+	for (const auto& candidate : this->pending) {
+		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto src = std::get<dir>(candidate);
+		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto tgt = std::get<opposite<dir>()>(candidate);
+
+		if (&*src == source && tgt->priority().enabled())
+			return true;
+
+		// early stopping when only infeasible pairs are to come
+		if (!std::get<0>(candidate)->priority().enabled())
+			break;
+	}
+	return false;
+}
+// explicitly instantiate templates for both directions
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+
 bool ConnectingPrivate::canCompute() const {
-	return !pending.empty();
+	// Do we still have feasible pending state pairs?
+	return !pending.empty() && pending.front().first->priority().enabled() &&
+	       pending.front().second->priority().enabled();
 }
 
 void ConnectingPrivate::compute() {
 	const StatePair& top = pending.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
-	assert(std::isfinite((from.priority() + to.priority()).cost()));
+	assert(from.priority().enabled() && to.priority().enabled());
 	static_cast<Connecting*>(me_)->compute(from, to);
+}
+
+std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+	static const char* red = "\033[31m";
+	static const char* reset = "\033[m";
+	for (const auto& candidate : pending) {
+		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
+			os << " " << red;
+		// find indeces of InterfaceState pointers in start/end Interfaces
+		unsigned int first = 0, second = 0;
+		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
+			++first;
+			return &*candidate.first == s;
+		});
+		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
+			++second;
+			return &*candidate.second == s;
+		});
+		os << first << ":" << second << " ";
+	}
+	os << reset;
+	return os;
 }
 
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}

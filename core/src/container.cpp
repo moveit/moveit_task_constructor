@@ -122,9 +122,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
                                         const InterfaceState* internal_to) {
 	computeCost(*internal_from, *internal_to, *solution);
 
-	if (!storeSolution(solution))
-		return;
-
+	// map internal to external states
 	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
 		auto it = internal_to_external_.find(internal);
 		if (it != internal_to_external_.end())
@@ -139,6 +137,9 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	bool created_to = false;
 	InterfaceState* external_from = find_or_create_external(internal_from, created_from);
 	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
+
+	if (!storeSolution(solution, external_from, external_to))
+		return;
 
 	// connect solution to start/end state
 	solution->setStartState(*external_from);
@@ -280,7 +281,32 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
-/** Collect all potential solutions originating from start */
+// for debugging of how children interfaces evolve over time
+static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr) {
+	static unsigned int id = 0;
+	const unsigned int width = 10;  // indentation of name
+	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	if (success)
+		os << ++id << ' ';
+	if (const Connecting* conn = dynamic_cast<const Connecting*>(&creator))
+		conn->pimpl()->printPendingPairs(os);
+	os << std::endl;
+
+	for (const auto& child : container.pimpl()->children()) {
+		auto cimpl = child->pimpl();
+		os << std::setw(width) << std::left << child->name();
+		if (!cimpl->starts() && !cimpl->ends())
+			os << "↕ " << std::endl;
+		if (cimpl->starts())
+			os << "↓ " << *child->pimpl()->starts() << std::endl;
+		if (cimpl->starts() && cimpl->ends())
+			os << std::setw(width) << "  ";
+		if (cimpl->ends())
+			os << "↑ " << *child->pimpl()->ends() << std::endl;
+	}
+}
+/** Collect all partial solution sequences originating from start into given direction */
 template <Interface::Direction dir>
 struct SolutionCollector
 {
@@ -291,16 +317,14 @@ struct SolutionCollector
 	}
 
 	void traverse(const SolutionBase& start, const InterfaceState::Priority& prio) {
-		const InterfaceState::Solutions& next = trajectories<dir>(state<dir>(start));
+		const InterfaceState::Solutions& next = trajectories<dir>(*state<dir>(start));
 		if (next.empty()) {  // when reaching the end, add the trace to solutions
 			assert(prio.depth() == trace.size());
 			assert(prio.depth() <= max_depth);
 			solutions.emplace_back(std::make_pair(trace, prio));
 		} else {
 			for (SolutionBase* successor : next) {
-				if (successor->isFailure())
-					continue;
-
+				assert(!successor->isFailure());  // We shouldn't have invalid solutions
 				trace.push_back(successor);
 				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
 				trace.pop_back();
@@ -315,11 +339,27 @@ struct SolutionCollector
 };
 
 inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
-	if (state->owner())
-		state->owner()->updatePriority(const_cast<InterfaceState*>(state), prio);
+	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
+		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
+		                               // update depth + cost, but keep current status
+		                               InterfaceState::Priority(prio, state->priority().status()));
+}
+
+template <Interface::Direction dir>
+inline void updateStatePrios(const SolutionSequence::container_type& partial_solution_path,
+                             const InterfaceState::Priority& prio) {
+	for (const SolutionBase* solution : partial_solution_path)
+		updateStatePrio(state<dir>(*solution), prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
+	// failures should never trigger this callback
+	assert(!current.isFailure());
+
+	// states of solution must be active, otherwise this would not have been computed
+	assert(current.start()->priority().enabled());
+	assert(current.end()->priority().enabled());
+
 	auto impl = pimpl();
 	const Stage* creator = current.creator();
 	auto& children = impl->children();
@@ -343,9 +383,9 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
 			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
+			assert(prio.enabled());
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				assert(std::isfinite(prio.cost()));
 				assert(solution.empty());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
@@ -355,17 +395,48 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
 				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
-			} else if (prio.depth() > 1) {
-				// update state priorities at both ends of newly created partial solution
-				updateStatePrio((in.first.empty() ? current : *in.first.back()).start(), prio);
-				updateStatePrio((out.first.empty() ? current : *out.first.back()).end(), prio);
+			}
+			if (prio.depth() > 1) {
+				// update state priorities along the whole partial solution path
+				updateStatePrio(current.start(), prio);
+				updateStatePrio(current.end(), prio);
+				updateStatePrios<Interface::BACKWARD>(in.first, prio);
+				updateStatePrios<Interface::FORWARD>(out.first, prio);
 			}
 		}
 	}
+	// printChildrenInterfaces(*this, true, *current.creator());
 
-	// finally store + announce new solutions to external interface
+	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
+}
+
+void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			// just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+			break;
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			break;
+
+		case CONNECT:
+			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
+				auto cimpl = conn->pimpl();
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
+					StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
+					StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			}
+			break;
+	}
+	// printChildrenInterfaces(*this, false, child);
 }
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
@@ -601,6 +672,8 @@ void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
 ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
+
+void ParallelContainerBase::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
 	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),

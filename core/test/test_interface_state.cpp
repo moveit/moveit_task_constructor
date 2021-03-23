@@ -11,22 +11,30 @@
 #include <gmock/gmock-matchers.h>
 
 using namespace moveit::task_constructor;
+using Prio = InterfaceState::Priority;
+
 TEST(InterfaceStatePriority, compare) {
-	using Prio = InterfaceState::Priority;
-	constexpr double inf = std::numeric_limits<double>::infinity();
-
 	EXPECT_TRUE(Prio(0, 0) == Prio(0, 0));
-	EXPECT_TRUE(Prio(0, inf) == Prio(0, inf));
-
 	EXPECT_TRUE(Prio(1, 0) < Prio(0, 0));  // higher depth is smaller
 	EXPECT_TRUE(Prio(1, 42) < Prio(0, 0));
-	EXPECT_TRUE(Prio(1, inf) > Prio(0, 0));  // infinite costs are always largest
-	EXPECT_TRUE(Prio(1, inf) < Prio(0, inf));
+	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // at same depth, higher cost is larger
 
-	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // higher cost is larger
-	EXPECT_TRUE(Prio(0, 0) < Prio(0, inf));
-	EXPECT_TRUE(Prio(0, 42) > Prio(0, 0));
-	EXPECT_TRUE(Prio(0, inf) > Prio(0, 0));
+	auto dstart = InterfaceState::DISABLED_FAILED;
+	EXPECT_TRUE(Prio(0, 0, dstart) == Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(1, 0, dstart) < Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(1, 42, dstart) < Prio(0, 0, dstart));
+	EXPECT_TRUE(Prio(0, 0, dstart) < Prio(0, 42, dstart));
+
+	// disabled prios are always larger than enabled ones
+	EXPECT_TRUE(Prio(0, 42) < Prio(1, 0, dstart));
+	EXPECT_TRUE(Prio(1, 0) < Prio(0, 42, dstart));
+
+	// other comparison operators
+	EXPECT_TRUE(Prio(0, 0) <= Prio(0, 0));
+	EXPECT_TRUE(Prio(0, 0) <= Prio(0, 1));
+	EXPECT_TRUE(Prio(0, 0) > Prio(1, 10));
+	EXPECT_TRUE(Prio(0, 0) >= Prio(0, 0));
+	EXPECT_TRUE(Prio(0, 10) >= Prio(0, 0));
 }
 
 using Prio = InterfaceState::Priority;
@@ -60,6 +68,27 @@ TEST(Interface, update) {
 	i.updatePriority(*i.rbegin(), Prio(5, 0.0));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));
 
-	i.updatePriority(*i.begin(), Prio(6, std::numeric_limits<double>::infinity()));
-	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));  // larger priority is ignored
+	i.updatePriority(*i.begin(), Prio(6, 0, InterfaceState::DISABLED_FAILED));
+	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 3, 6 }));
+}
+
+using PrioPair = std::pair<Prio, Prio>;
+inline bool operator<(const PrioPair& lhs, const PrioPair& rhs) {
+	return ConnectingPrivate::StatePair::less(lhs.first, lhs.second, rhs.first, rhs.second);
+}
+PrioPair pair(Prio&& p1, Prio&& p2) {
+	return std::make_pair(std::move(p1), std::move(p2));
+}
+PrioPair pair(InterfaceState::Status s1, InterfaceState::Status s2) {
+	return pair(Prio(0, 0, s1), Prio(0, 0, s2));
+}
+TEST(StatePairs, compare) {
+	EXPECT_TRUE(pair(Prio(1, 0), Prio(0, 1)) < pair(Prio(1, 1), Prio(0, 1)));
+	EXPECT_TRUE(pair(Prio(1, 1), Prio(1, 1)) < pair(Prio(1, 0), Prio(0, 0)));
+
+	auto good = InterfaceState::ENABLED;
+	auto bad = InterfaceState::DISABLED_FAILED;
+	EXPECT_TRUE(pair(good, good) < pair(good, bad));
+	EXPECT_TRUE(pair(good, good) < pair(bad, good));
+	EXPECT_TRUE(pair(bad, good) < pair(good, bad));
 }

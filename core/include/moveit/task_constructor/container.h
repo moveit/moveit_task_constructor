@@ -77,6 +77,8 @@ public:
 
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;
+	/// called by a (direct) child when a solution failed
+	virtual void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) = 0;
 
 protected:
 	ContainerBase(ContainerBasePrivate* impl);
@@ -95,8 +97,8 @@ public:
 	void compute() override;
 
 protected:
-	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase& s) override;
+	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
 
 protected:
 	SerialContainer(SerialContainerPrivate* impl);
@@ -116,6 +118,7 @@ class ParallelContainerBase : public ContainerBase
 public:
 	PRIVATE_CLASS(ParallelContainerBase)
 	ParallelContainerBase(const std::string& name = "parallel container");
+	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
 
 protected:
 	ParallelContainerBase(ParallelContainerBasePrivate* impl);

@@ -70,22 +70,16 @@ InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
 bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
-	// infinite costs go always last
-	if (std::isinf(this->cost()) && std::isinf(other.cost()))
-		return this->depth() > other.depth();
-	else if (std::isinf(this->cost()))
-		return false;
-	else if (std::isinf(other.cost()))
-		return true;
+	// first order by status if that differs
+	if (status() != other.status())
+		return status() < other.status();
 
-	if (this->depth() == other.depth())
-		return this->cost() < other.cost();
-	else
-		return this->depth() > other.depth();
-}
+	// then by depth if that differs
+	if (depth() != other.depth())
+		return depth() > other.depth();  // larger depth = smaller prio!
 
-std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& p) {
-	return os << "[depth: " << p.depth() << ", cost: " << p.cost() << "]";
+	// finally by cost
+	return cost() < other.cost();
 }
 
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
@@ -113,7 +107,7 @@ void Interface::add(InterfaceState& state) {
 	else if (!state.outgoingTrajectories().empty())
 		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
 	else  // otherwise, assume priority was well defined before
-		assert(it->priority_ >= InterfaceState::Priority(1, 0.0));
+		assert(it->priority_.enabled() && it->priority_.depth() >= 1u);
 
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);
@@ -130,14 +124,34 @@ Interface::container_type Interface::remove(iterator it) {
 }
 
 void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
-	if (priority < state->priority()) {  // only allow decreasing of priority (smaller is better)
-		auto it = std::find(begin(), end(), state);  // find iterator to state
-		assert(it != end());  // state should be part of this interface
-		state->priority_ = priority;  // update priority
-		update(it);
-		if (notify_)
-			notify_(it, true);
-	}
+	if (priority == state->priority())
+		return;  // nothing to do
+
+	auto it = std::find(begin(), end(), state);  // find iterator to state
+	assert(it != end());  // state should be part of this interface
+	state->priority_ = priority;  // update priority
+	update(it);  // update position in ordered list
+	if (notify_)
+		notify_(it, true);  // notify callback
+}
+
+std::ostream& operator<<(std::ostream& os, const Interface& interface) {
+	if (interface.empty())
+		os << "---";
+	for (const auto& istate : interface)
+		os << istate->priority() << "  ";
+	return os;
+}
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {
+	// maps InterfaceState::Status values to output (color-changing) prefix
+	static const char* prefix[] = {
+		"\033[32me:",  // ENABLED - green
+		"\033[33md:",  // DISABLED - yellow
+		"\033[31mf:",  // DISABLED_FAILED - red
+	};
+	static const char* color_reset = "\033[m";
+	os << prefix[prio.status()] << prio.depth() << ":" << prio.cost() << color_reset;
+	return os;
 }
 
 void SolutionBase::setCreator(Stage* creator) {
