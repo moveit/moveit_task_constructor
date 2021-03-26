@@ -1,0 +1,95 @@
+###
+### This file is a note "merging" the Pickup and Place actions from moveit_msgs.
+### Fields indented 0 times are only in the "Pickup" action.
+### Fields indented 1 times are in both "Pickup" and "Place".
+### Fields indented 2 times are only in the "Place" action.
+### This should help get an overview which information should be included
+### in a replacement PlanPickPlace action in moveit_task_constructor.
+
+### Other messages to consider:
+### Grasp, PlaceLocation
+### GraspPlanning, PlanningOptions
+
+# An action for picking or placing an object
+
+# The name of the object to pick up (as known in the planning scene)
+string target_name
+
+    # which group should be used to plan for pickup
+    string group_name
+
+        # the name of the attached object to place
+        string attached_object_name
+
+# which end-effector to be used for pickup (ideally descending from the group above)
+string end_effector
+
+# a list of possible grasps to be used. At least one grasp must be filled in
+Grasp[] possible_grasps
+
+        # a list of possible transformations for placing the object
+        PlaceLocation[] place_locations
+
+        # if the user prefers setting the eef pose (same as in pick) rather than 
+        # the location of the object, this flag should be set to true
+        bool place_eef
+
+    # the name that the support surface (e.g. table) has in the collision map
+    # can be left empty if no name is available
+    string support_surface_name
+
+    # whether collisions between the gripper and the support surface should be acceptable
+    # during move from pre-grasp to grasp and during lift. Collisions when moving to the
+    # pre-grasp location are still not allowed even if this is set to true.
+    bool allow_gripper_support_collision
+
+# The names of the links the object to be attached is allowed to touch;
+# If this is left empty, it defaults to the links in the used end-effector
+string[] attached_object_touch_links
+
+# Optionally notify the pick action that it should approach the object further,
+# as much as possible (this minimizing the distance to the object before the grasp)
+# along the approach direction; Note: this option changes the grasping poses
+# supplied in possible_grasps[] such that they are closer to the object when possible.
+bool minimize_object_distance
+
+    # Optional constraints to be imposed on every point in the motion plan
+    Constraints path_constraints
+
+    # The name of the motion planner to use. If no name is specified,
+    # a default motion planner will be used
+    string planner_id
+
+    # an optional list of obstacles that we have semantic information about
+    # and that can be touched/pushed/moved in the course of grasping;
+    # CAREFUL: If the object name 'all' is used, collisions with all objects are disabled during the approach & lift.
+    string[] allowed_touch_objects
+
+    # The maximum amount of time the motion planner is allowed to plan for
+    float64 allowed_planning_time
+
+    # Planning options
+    PlanningOptions planning_options
+
+---
+
+    # The overall result of the pickup attempt
+    MoveItErrorCodes error_code
+
+    # The full starting state of the robot at the start of the trajectory
+    RobotState trajectory_start
+
+    # The trajectory that moved group produced for execution
+    RobotTrajectory[] trajectory_stages
+
+    string[] trajectory_descriptions
+
+# The performed grasp, if attempt was successful
+Grasp grasp
+
+        # The successful place location, if any
+        PlaceLocation place_location
+
+    # The amount of time in seconds it took to complete the plan
+    float64 planning_time
+    ---
