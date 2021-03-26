@@ -146,7 +146,9 @@ private:
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
 	PropertyMap properties_;
+	/// trajectories which are *timewise before* this state
 	Solutions incoming_trajectories_;
+	/// trajectories which are *timewise after* this state
 	Solutions outgoing_trajectories_;
 
 	// members needed for priority scheduling in Interface list

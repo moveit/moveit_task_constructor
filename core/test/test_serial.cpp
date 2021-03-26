@@ -145,6 +145,13 @@ void resetIds() {
 	Connect::id_ = 0;
 }
 
+template <typename C, typename S>
+auto add(C& container, S* stage) -> S* {
+	Stage::pointer ptr{ stage };
+	container.add(std::move(ptr));
+	return stage;
+}
+
 // https://github.com/ros-planning/moveit_task_constructor/issues/182
 TEST(ConnectConnect, SuccSucc) {
 	resetIds();
@@ -208,7 +215,7 @@ TEST(Pruning, PruningMultiForward) {
 	t.add(Stage::pointer(new GeneratorMockup()));
 	// spawn two solutions for the only incoming state
 	t.add(Stage::pointer(new ForwardMockup({ 0, 0 }, 2)));
-	// fail to exten
+	// fail to extend the second solution
 	t.add(Stage::pointer(new ForwardMockup({ 0, inf })));
 
 	t.plan();
@@ -267,4 +274,40 @@ TEST(Pruning, ConnectConnectBackward) {
 	}
 	EXPECT_EQ(c2->calls_, 3u);
 	EXPECT_EQ(c1->calls_, 6u);
+}
+
+TEST(Pruning, PropagateInsideContainerBoundaries) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+	add(t, new BackwardMockup({ inf }));
+	add(t, new GeneratorMockup({ 0 }));
+	auto c{ std::make_unique<SerialContainer>() };
+	auto con = add(*c, new Connect());
+	add(*c, new GeneratorMockup({ 0 }));
+	t.add(std::move(c));
+
+	t.plan();
+
+	// the failure in the backward stage (outside the container)
+	// should prune the expected computation of con
+	EXPECT_EQ(con->calls_, 0);
+}
+
+TEST(Pruning, DISABLED_PropagateOutsideContainerBoundaries) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+	auto back = add(t, new BackwardMockup());
+	add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	auto c{ std::make_unique<SerialContainer>() };
+	add(*c, new ForwardMockup({ inf }));
+	add(*c, new ForwardMockup());
+	t.add(std::move(c));
+
+	t.plan();
+
+	// the failure inside the container should prune computing of back
+	EXPECT_EQ(back->calls_, 0);
 }

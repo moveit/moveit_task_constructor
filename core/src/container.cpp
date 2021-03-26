@@ -106,10 +106,17 @@ void ContainerBasePrivate::compute() {
 	static_cast<ContainerBase*>(me_)->compute();
 }
 
+template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
-	// TODO: update internal's prio from external's new priority
-	if (updated)
+	if (updated) {
+		// TODO(v4hn): This is inefficient, consider storing inverse mapping for each start/end pair in children
+		// for parallel containers there will be multiple internal states
+		std::for_each(internal_to_external_.begin(), internal_to_external_.end(), [&external](auto& p) {
+			if (p.second == &*external)
+				setStatus<dir>(p.first, external->priority().status());
+		});
 		return;
+	}
 
 	// create a clone of external state within target interface (child's starts() or ends())
 	auto internal = states_.insert(states_.end(), InterfaceState(*external));
@@ -497,8 +504,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface(
-			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+			starts_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+				this->copyState<Interface::FORWARD>(it, target, updated);
+			}));
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -521,8 +529,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface(
-			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+			ends_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+				this->copyState<Interface::BACKWARD>(it, target, updated);
+			}));
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -622,11 +631,11 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (expected & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState(Interface::FORWARD, external, updated);
+			this->onNewExternalState<Interface::FORWARD>(external, updated);
 		}));
 	if (expected & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState(Interface::BACKWARD, external, updated);
+			this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		}));
 
 	required_interface_ = expected;
@@ -663,10 +672,10 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 	ContainerBasePrivate::validateConnectivity();
 }
 
-void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external,
-                                                      bool updated) {
+template <Interface::Direction dir>
+void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
-		copyState(external, stage->pimpl()->pullInterface(dir), updated);
+		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
 }
 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
