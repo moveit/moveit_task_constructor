@@ -40,6 +40,8 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
+
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
 
@@ -126,49 +128,9 @@ Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-const
 	return *this;
 }
 
-struct PlannerCache
-{
-	using PlannerID = std::tuple<std::string, std::string, std::string>;
-	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
-	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
-	ModelList cache_;
-
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
-		// find model in cache_ and remove expired entries while doing so
-		ModelList::iterator model_it = cache_.begin();
-		while (model_it != cache_.end()) {
-			if (model_it->first.expired()) {
-				model_it = cache_.erase(model_it);
-				continue;
-			}
-			if (model_it->first.lock() == model)
-				break;
-			++model_it;
-		}
-		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
-			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
-
-		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
-	}
-};
-
-planning_pipeline::PlanningPipelinePtr Task::createPlanner(const robot_model::RobotModelConstPtr& model,
-                                                           const std::string& ns,
-                                                           const std::string& planning_plugin_param_name,
-                                                           const std::string& adapter_plugins_param_name) {
-	static PlannerCache cache;
-	PlannerCache::PlannerID id(ns, planning_plugin_param_name, adapter_plugins_param_name);
-
-	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(model, id);
-	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
-	if (!planner) {
-		// create new entry
-		planner = std::make_shared<planning_pipeline::PlanningPipeline>(
-		    model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
-		// store in cache
-		entry = planner;
-	}
-	return planner;
+planning_pipeline::PlanningPipelinePtr Task::createPlanner(const moveit::core::RobotModelConstPtr& model) {
+	using namespace moveit::task_constructor::solvers;
+	return PipelinePlanner::create(PipelinePlanner::Specification{ .model = model });
 }
 
 Task::~Task() {
