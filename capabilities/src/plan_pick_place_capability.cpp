@@ -45,7 +45,7 @@ namespace move_group {
 PlanPickPlaceCapability::PlanPickPlaceCapability() : MoveGroupCapability("PlanPickPlace") {}
 
 void PlanPickPlaceCapability::initialize() {
-	// configure the action server
+	// Configure the action server
 	as_.reset(new actionlib::SimpleActionServer<moveit_task_constructor_msgs::PlanPickPlaceAction>(
 	    root_node_handle_, "plan_pick_place",
 	    std::bind(&PlanPickPlaceCapability::goalCallback, this, std::placeholders::_1), false));
@@ -77,13 +77,13 @@ void PlanPickPlaceCapability::goalCallback(
   parameters.lift_object_min_dist_ = goal->grasp.post_grasp_retreat.min_distance;
   parameters.lift_object_max_dist_ = goal->grasp.post_grasp_retreat.desired_distance;
 
-  // initialize task
+  // Initialize task
   pick_place_task_->init(parameters);
 
-  // run plan
+  // Run plan
   pick_place_task_->plan();
 
-  // retrieve and return result
+  // Retrieve and return result
   as_->setSucceeded(result);
 }
 

@@ -82,7 +82,7 @@ void PickPlaceTask::init(const Parameters& parameters)
     auto _current_state = std::make_unique<stages::CurrentState>("current state");
     _current_state->setTimeout(10);
 
-    // Verify that object is not attachd
+    // Verify that object is not attached
     auto applicability_filter =
         std::make_unique<stages::PredicateFilter>("applicability test", std::move(_current_state));
     applicability_filter->setPredicate([&](const SolutionBase& s, std::string& comment) {
