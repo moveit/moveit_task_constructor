@@ -19,6 +19,7 @@ catkin_package(
 	LIBRARIES
 		${PROJECT_NAME}
 		${PROJECT_NAME}_stages
+		${PROJECT_NAME}_tasks
 	INCLUDE_DIRS
 		include
 	CATKIN_DEPENDS
