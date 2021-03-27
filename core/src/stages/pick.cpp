@@ -14,6 +14,8 @@
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <eigen_conversions/eigen_msg.h>
+#include "moveit/task_constructor/stages/grasp_provider_base.h"
+#include "moveit/task_constructor/stages/place_provider_base.h"
 
 namespace moveit {
 namespace task_constructor {

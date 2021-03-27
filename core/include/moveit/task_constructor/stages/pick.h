@@ -46,6 +46,8 @@
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
+#include "grasp_provider_base.h"
+#include "place_provider_base.h"
 
 namespace moveit {
 namespace task_constructor {

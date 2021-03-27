@@ -6,7 +6,9 @@
       Use the current state of the robot (when starting planning) as a target.
     </description>
   </class>
+</library>
 
+<library path="libmoveit_task_constructor_core_providers">
   <class name="moveit_task_constructor/GraspProviderDefault"
          type="moveit::task_constructor::stages::GraspProviderDefault"
          base_class_type="moveit::task_constructor::stages::GraspProviderBase">

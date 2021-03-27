@@ -52,66 +52,6 @@ namespace stages {
 //  GraspProviderBase
 //  -------------------
 
-GraspProviderBase::GraspProviderBase(const std::string& name) : GeneratePose(name) {
-	auto& p = properties();
-	p.declare<std::string>("eef", "name of end-effector");
-	p.declare<std::string>("object");
-
-	p.declare<boost::any>("pregrasp", "pregrasp posture");
-	p.declare<boost::any>("grasp", "grasp posture");
-}
-
-void GraspProviderBase::init(const core::RobotModelConstPtr& robot_model) {
-	InitStageException errors;
-	try {
-		GeneratePose::init(robot_model);
-	} catch (InitStageException& e) {
-		errors.append(e);
-	}
-
-	const auto& props = properties();
-
-	// check availability of object
-	props.get<std::string>("object");
-	// check availability of eef
-	const std::string& eef = props.get<std::string>("eef");
-	if (!robot_model->hasEndEffector(eef))
-		errors.push_back(*this, "unknown end effector: " + eef);
-	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
-	}
-
-	if (errors)
-		throw errors;
-}
-
-void GraspProviderBase::onNewSolution(const SolutionBase& s) {
-	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
-
-	const auto& props = properties();
-	const std::string& object = props.get<std::string>("object");
-	if (!scene->knowsFrameTransform(object)) {
-		const std::string msg = "object '" + object + "' not in scene";
-		if (storeFailures()) {
-			InterfaceState state(scene);
-			SubTrajectory solution;
-			solution.markAsFailure();
-			solution.setComment(msg);
-			spawn(std::move(state), std::move(solution));
-		} else
-			ROS_WARN_STREAM_NAMED("GraspProviderBase", msg);
-		return;
-	}
-
-	upstream_solutions_.push(&s);
-}
-
-
 //  -------------------
 //  GraspProviderDefault
 //  -------------------

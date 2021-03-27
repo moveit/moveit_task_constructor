@@ -39,23 +39,13 @@
 #pragma once
 
 #include <moveit/task_constructor/stages/generate_pose.h>
+#include "place_provider_base.h"
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
 /// Base class for Place Provider Plugins
-
-class PlaceProviderBase : public GeneratePose
-{
-public:
-	PlaceProviderBase(const std::string& name = "place pose");
-
-	void setObject(const std::string& object) { setProperty("object", object); }
-
-protected:
-	void onNewSolution(const SolutionBase& s) override;
-};
 
 /// Default Place Provider plugin implementing the functionality of the GeneratePlacePose stage
 

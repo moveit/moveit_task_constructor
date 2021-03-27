@@ -53,37 +53,6 @@ namespace stages {
 //  PlaceProviderBase
 //  -------------------
 
-PlaceProviderBase::PlaceProviderBase(const std::string& name) : GeneratePose(name) {
-	auto& p = properties();
-	p.declare<std::string>("object");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame");
-}
-
-void PlaceProviderBase::onNewSolution(const SolutionBase& s) {
-	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
-
-	const auto& props = properties();
-	const std::string& object = props.get<std::string>("object");
-	std::string msg;
-	if (!scene->getCurrentState().hasAttachedBody(object))
-		msg = "'" + object + "' is not an attached object";
-	if (scene->getCurrentState().getAttachedBody(object)->getFixedTransforms().empty())
-		msg = "'" + object + "' has no associated shapes";
-	if (!msg.empty()) {
-		if (storeFailures()) {
-			InterfaceState state(scene);
-			SubTrajectory solution;
-			solution.markAsFailure();
-			solution.setComment(msg);
-			spawn(std::move(state), std::move(solution));
-		} else
-			ROS_WARN_STREAM_NAMED("PlaceProviderBase", msg);
-		return;
-	}
-
-	upstream_solutions_.push(&s);
-}
-
 //  -------------------
 //  PlaceProviderDefault
 //  -------------------

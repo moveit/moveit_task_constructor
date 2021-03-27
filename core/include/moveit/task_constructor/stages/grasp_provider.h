@@ -39,32 +39,13 @@
 #pragma once
 
 #include <moveit/task_constructor/stages/generate_pose.h>
+#include "grasp_provider_base.h"
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
 /// Base class for Grasp Provider Plugins
-
-class GraspProviderBase : public GeneratePose
-{
-public:
-	GraspProviderBase(const std::string& name = "grasp provider");
-
-	void init(const core::RobotModelConstPtr& robot_model) override;
-
-	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
-	void setObject(const std::string& object) { setProperty("object", object); }
-
-	void setPreGraspPose(const std::string& pregrasp) { properties().set("pregrasp", pregrasp); }
-	void setPreGraspPose(const moveit_msgs::RobotState& pregrasp) { properties().set("pregrasp", pregrasp); }
-	void setGraspPose(const std::string& grasp) { properties().set("grasp", grasp); }
-	void setGraspPose(const moveit_msgs::RobotState& grasp) { properties().set("grasp", grasp); }
-
-protected:
-	void onNewSolution(const SolutionBase& s) override;
-};
-
 
 /// Default Grasp Provider plugin implementing the functionality of the GenerateGraspPose stage
 
