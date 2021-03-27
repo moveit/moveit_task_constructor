@@ -109,12 +109,10 @@ void ContainerBasePrivate::compute() {
 template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
 	if (updated) {
-		// TODO(v4hn): This is inefficient, consider storing inverse mapping for each start/end pair in children
-		// for parallel containers there will be multiple internal states
-		std::for_each(internal_to_external_.begin(), internal_to_external_.end(), [&external](auto& p) {
-			if (p.second == &*external)
-				setStatus<dir>(p.first, external->priority().status());
-		});
+		auto internals{ externalToInternalMap().equal_range(&*external) };
+		for (auto& i = internals.first; i != internals.second; ++i) {
+			setStatus<dir>(i->second, external->priority().status());
+		}
 		return;
 	}
 
@@ -122,7 +120,7 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	auto internal = states_.insert(states_.end(), InterfaceState(*external));
 	target->add(*internal);
 	// and remember the mapping between them
-	internal_to_external_.insert(std::make_pair(&*internal, &*external));
+	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
@@ -131,12 +129,12 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 
 	// map internal to external states
 	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
-		auto it = internal_to_external_.find(internal);
-		if (it != internal_to_external_.end())
-			return it->second;
+		auto it = internalToExternalMap().find(internal);
+		if (it != internalToExternalMap().end())
+			return const_cast<InterfaceState*>(it->second);
 
 		InterfaceState* external = &*states_.insert(states_.end(), InterfaceState(*internal));
-		internal_to_external_.insert(std::make_pair(internal, external));
+		internalToExternalMap().insert(std::make_pair(internal, external));
 		created = true;
 		return external;
 	};
@@ -240,7 +238,7 @@ void ContainerBase::reset() {
 	impl->pending_backward_->clear();
 	impl->pending_forward_->clear();
 	// ... and state mapping
-	impl->internal_to_external_.clear();
+	impl->internalToExternalMap().clear();
 
 	// interfaces depend on children which might change
 	impl->required_interface_ = UNKNOWN;

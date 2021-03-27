@@ -42,6 +42,10 @@
 #include <moveit/macros/class_forward.h>
 #include "stage_p.h"
 
+#include <boost/bimap.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
+#include <boost/bimap/unordered_multiset_of.hpp>
+
 #include <map>
 #include <climits>
 
@@ -118,7 +122,8 @@ public:
 	InterfacePtr pendingForward() const { return pending_forward_; }
 
 	// map InterfaceStates from children to external InterfaceStates of the container
-	const auto& internalToExternalMap() const { return internal_to_external_; }
+	const auto& internalToExternalMap() const { return internal_external_.left; }
+	const auto& externalToInternalMap() const { return internal_external_.right; }
 
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
@@ -135,14 +140,16 @@ protected:
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
-	/// copy external_state to a child's interface and remember the link in internal_to map
+	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
 	/// lift solution from internal to external level
 	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
 	                  const InterfaceState* internal_to);
 
-	auto& internalToExternalMap() { return internal_to_external_; }
+	/// protected writable overloads
+	inline auto& internalToExternalMap() { return internal_external_.left; }
+	inline auto& ExternalToInternalMap() { return internal_external_.right; }
 
 	// set in resolveInterface()
 	InterfaceFlags required_interface_;
@@ -151,7 +158,9 @@ private:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
-	std::map<const InterfaceState*, InterfaceState*> internal_to_external_;
+	boost::bimap<boost::bimaps::unordered_set_of<const InterfaceState*>,
+	             boost::bimaps::unordered_multiset_of<const InterfaceState*>>
+	    internal_external_;
 
 	/* TODO: these interfaces don't need to be priority-sorted.
 	 * Introduce base class UnsortedInterface (which is a plain list) for this use case. */
