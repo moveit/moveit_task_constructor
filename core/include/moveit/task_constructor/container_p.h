@@ -230,7 +230,7 @@ class MergerPrivate : public ParallelContainerBasePrivate
 	using ChildSolutionList = std::vector<const SubTrajectory*>;
 	using ChildSolutionMap = std::map<const Stage*, ChildSolutionList>;
 	// map from external source state (iterator) to all corresponding children's solutions
-	std::map<InterfaceState*, ChildSolutionMap> source_state_to_solutions_;
+	std::map<const InterfaceState*, ChildSolutionMap> source_state_to_solutions_;
 
 public:
 	using Spawner = std::function<void(SubTrajectory&&)>;

@@ -883,7 +883,7 @@ void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	auto source_it = internalToExternalMap().find(source_state);
 	// internal->external mapping for source state should have been created
 	assert(source_it != internalToExternalMap().end());
-	InterfaceState* external_source_state = &*source_it->second;
+	const InterfaceState* external_source_state = &*source_it->second;
 
 	// retrieve (or create if necessary) the ChildSolutionMap for the given external source state
 	ChildSolutionMap& all_solutions =
