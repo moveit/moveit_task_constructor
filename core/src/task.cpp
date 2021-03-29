@@ -40,8 +40,6 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
-#include <moveit/task_constructor/solvers/pipeline_planner.h>
-
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
 
@@ -126,11 +124,6 @@ Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-const
 	clear();  // remove all stages of current task
 	swap(this->pimpl_, other.pimpl_);
 	return *this;
-}
-
-planning_pipeline::PlanningPipelinePtr Task::createPlanner(const moveit::core::RobotModelConstPtr& model) {
-	using namespace moveit::task_constructor::solvers;
-	return PipelinePlanner::create(PipelinePlanner::Specification{ .model = model });
 }
 
 Task::~Task() {

@@ -73,9 +73,6 @@ class Task : protected WrapperBase
 public:
 	PRIVATE_CLASS(Task)
 
-	[[deprecated("use PipelinePlanner::create")]] static planning_pipeline::PlanningPipelinePtr
-	    createPlanner(const moveit::core::RobotModelConstPtr& model);
-
 	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
