@@ -77,15 +77,13 @@ struct PlannerCache
 planning_pipeline::PlanningPipelinePtr PipelinePlanner::create(const PipelinePlanner::Specification& spec) {
 	static PlannerCache cache;
 
-	constexpr char PLUGIN_PARAMETER_NAME[]{ "planning_plugin" };
+	constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
 
-	std::string pipeline_ns{ spec.ns + "/planning_pipelines/" + spec.pipeline };
+	std::string pipeline_ns = spec.ns + "/planning_pipelines/" + spec.pipeline;
 	// fallback to old structure for pipeline parameters in MoveIt
-	if (!ros::NodeHandle{ pipeline_ns }.hasParam(PLUGIN_PARAMETER_NAME)) {
-		ROS_WARN_STREAM("Failed to find '" << pipeline_ns << "/" << PLUGIN_PARAMETER_NAME
-		                                   << "'."
-		                                      "Attempting to load pipeline from old parameter structure. Please update "
-		                                      "your MoveIt config.");
+	if (!ros::NodeHandle(pipeline_ns).hasParam(PLUGIN_PARAMETER_NAME)) {
+		ROS_WARN("Failed to find '%s/%s'. %s", pipeline_ns.c_str(), PLUGIN_PARAMETER_NAME,
+		         "Attempting to load pipeline from old parameter structure. Please update your MoveIt config.");
 		pipeline_ns = spec.ns;
 	}
 
@@ -122,7 +120,7 @@ PipelinePlanner::PipelinePlanner(const std::string& pipeline_name) : pipeline_na
 	                    planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 }
 
-PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline) : PipelinePlanner{} {
+PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline) : PipelinePlanner() {
 	planner_ = planning_pipeline;
 }
 
