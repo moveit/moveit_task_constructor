@@ -64,7 +64,9 @@ public:
 	};
 
 	static planning_pipeline::PlanningPipelinePtr create(const moveit::core::RobotModelConstPtr& model) {
-		return create(Specification{ .model = model });
+		Specification spec;
+		spec.model = model;
+		return create(spec);
 	}
 
 	static planning_pipeline::PlanningPipelinePtr create(const Specification& spec);
