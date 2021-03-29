@@ -55,7 +55,23 @@ MOVEIT_CLASS_FORWARD(PipelinePlanner)
 class PipelinePlanner : public PlannerInterface
 {
 public:
-	PipelinePlanner();
+	struct Specification
+	{
+		moveit::core::RobotModelConstPtr model;
+		std::string ns{ "move_group" };
+		std::string pipeline{ "ompl" };
+		std::string adapter_param{ "request_adapters" };
+	};
+
+	static planning_pipeline::PlanningPipelinePtr create(const moveit::core::RobotModelConstPtr& model) {
+		Specification spec;
+		spec.model = model;
+		return create(spec);
+	}
+
+	static planning_pipeline::PlanningPipelinePtr create(const Specification& spec);
+
+	PipelinePlanner(const std::string& pipeline = "ompl");
 
 	PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline);
 
@@ -73,6 +89,7 @@ public:
 	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
 protected:
+	std::string pipeline_name_;
 	planning_pipeline::PlanningPipelinePtr planner_;
 };
 }  // namespace solvers

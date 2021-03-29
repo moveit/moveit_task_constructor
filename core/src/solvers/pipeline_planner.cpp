@@ -48,7 +48,60 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-PipelinePlanner::PipelinePlanner() {
+struct PlannerCache
+{
+	using PlannerID = std::tuple<std::string, std::string>;
+	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
+	ModelList cache_;
+
+	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
+		// find model in cache_ and remove expired entries while doing so
+		ModelList::iterator model_it = cache_.begin();
+		while (model_it != cache_.end()) {
+			if (model_it->first.expired()) {
+				model_it = cache_.erase(model_it);
+				continue;
+			}
+			if (model_it->first.lock() == model)
+				break;
+			++model_it;
+		}
+		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
+			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
+
+		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
+	}
+};
+
+planning_pipeline::PlanningPipelinePtr PipelinePlanner::create(const PipelinePlanner::Specification& spec) {
+	static PlannerCache cache;
+
+	constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
+
+	std::string pipeline_ns = spec.ns + "/planning_pipelines/" + spec.pipeline;
+	// fallback to old structure for pipeline parameters in MoveIt
+	if (!ros::NodeHandle(pipeline_ns).hasParam(PLUGIN_PARAMETER_NAME)) {
+		ROS_WARN("Failed to find '%s/%s'. %s", pipeline_ns.c_str(), PLUGIN_PARAMETER_NAME,
+		         "Attempting to load pipeline from old parameter structure. Please update your MoveIt config.");
+		pipeline_ns = spec.ns;
+	}
+
+	PlannerCache::PlannerID id(pipeline_ns, spec.adapter_param);
+
+	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(spec.model, id);
+	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
+	if (!planner) {
+		// create new entry
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>(spec.model, ros::NodeHandle(pipeline_ns),
+		                                                                PLUGIN_PARAMETER_NAME, spec.adapter_param);
+		// store in cache
+		entry = planner;
+	}
+	return planner;
+}
+
+PipelinePlanner::PipelinePlanner(const std::string& pipeline_name) : pipeline_name_{ pipeline_name } {
 	auto& p = properties();
 	p.declare<std::string>("planner", "", "planner id");
 
@@ -73,7 +126,10 @@ PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& p
 
 void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	if (!planner_) {
-		planner_ = Task::createPlanner(robot_model);
+		Specification spec;
+		spec.model = robot_model;
+		spec.pipeline = pipeline_name_;
+		planner_ = create(spec);
 	} else if (robot_model != planner_->getRobotModel()) {
 		throw std::runtime_error(
 		    "The robot model of the planning pipeline isn't the same as the task's robot model -- "
