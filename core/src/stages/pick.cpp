@@ -67,7 +67,8 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	{
 		std::unique_ptr<stages::ComputeIK> wrapper;
 		if (is_pick_) {
-			std::unique_ptr<GraspProviderBase> provider_stage_plugin(grasp_provider_class_loader_.createUnmanagedInstance(provider_stage_plugin_name_));
+			// std::unique_ptr<GraspProviderBase> provider_stage_plugin(grasp_provider_class_loader_.createUnmanagedInstance(provider_stage_plugin_name_));
+			auto provider_stage_plugin = grasp_provider_class_loader_.createUniqueInstance(provider_stage_plugin_name_);
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
 			provider_stage_plugin->properties().property("pregrasp").configureInitFrom(Stage::PARENT, "eef_group_open_pose");
 			provider_stage_plugin->properties().property("grasp").configureInitFrom(Stage::PARENT, "eef_group_close_pose");

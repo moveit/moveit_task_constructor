@@ -128,6 +128,8 @@ public:
 private:
 	moveit::task_constructor::TaskPtr task_;
   const std::string task_name_;
+  Stage* current_state_stage;
+	Stage* attach_object_stage;
 };
 
 }  // namespace tasks

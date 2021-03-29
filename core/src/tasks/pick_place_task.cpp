@@ -43,17 +43,25 @@ namespace tasks {
 
 constexpr char LOGNAME[] = "pick_place_task";
 PickPlaceTask::PickPlaceTask(const std::string& task_name)
-  : task_name_(task_name) {}
+  : task_name_(task_name) {
+    task_.reset();
+    task_.reset(new moveit::task_constructor::Task(task_name_));
+    task_->reset();
+    task_->loadRobotModel();
+    current_state_stage = nullptr;
+    attach_object_stage = nullptr;
+  }
 
 void PickPlaceTask::init(const Parameters& parameters)
 {
   ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
   // Reset ROS introspection before constructing the new object
   // TODO(henningkayser): verify this is a bug, fix if possible
-  task_.reset();
-  task_.reset(new moveit::task_constructor::Task(task_name_));
+  if(task_){
+    task_->clear();
+    task_->loadRobotModel();
+  }
   Task& t = *task_;
-  t.loadRobotModel();
 
   // Sampling planner
   // TODO(henningkayser): Setup and parameterize alternative planners
@@ -77,7 +85,6 @@ void PickPlaceTask::init(const Parameters& parameters)
    *               Current State                      *
    *                                                  *
    ***************************************************/
-  Stage* current_state = nullptr;  // Forward current_state on to grasp pose generator
   {
     auto _current_state = std::make_unique<stages::CurrentState>("current state");
     _current_state->setTimeout(10);
@@ -95,7 +102,7 @@ void PickPlaceTask::init(const Parameters& parameters)
       return true;
     });
 
-    current_state = applicability_filter.get();
+    current_state_stage = applicability_filter.get();
     t.add(std::move(applicability_filter));
   }
 
@@ -129,7 +136,6 @@ void PickPlaceTask::init(const Parameters& parameters)
    *               Pick Object                        *
    *                                                  *
    ***************************************************/
-  Stage* attach_object_stage = nullptr;  // Forward attach_object_stage to place pose generator
   {
     auto stage = std::make_unique<stages::Pick>("Pick object", parameters.grasp_provider_plugin_name_);
     stage->properties().property("eef_group").configureInitFrom(Stage::PARENT, "hand");
@@ -140,7 +146,7 @@ void PickPlaceTask::init(const Parameters& parameters)
     stage->setSupportSurfaces(parameters.support_surfaces_);
     stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
     stage->GraspProviderPlugin()->properties().set("angle_delta", M_PI / 12);  // Set plugin-specific properties
-    stage->setMonitoredStage(current_state);
+    stage->setMonitoredStage(current_state_stage);
     stage->setApproachMotion(parameters.approach_object_direction_,parameters.approach_object_min_dist_, parameters.approach_object_max_dist_);
     stage->setLiftMotion(parameters.lift_object_direction_, parameters.lift_object_min_dist_, parameters.lift_object_max_dist_);
     attach_object_stage = stage->attachStage();
