@@ -125,6 +125,9 @@ public:
 	const auto& internalToExternalMap() const { return internal_external_.left; }
 	const auto& externalToInternalMap() const { return internal_external_.right; }
 
+	/// called by a (direct) child when a solution failed
+	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to);
+
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
 
@@ -139,6 +142,10 @@ protected:
 		bool allowed = (required & WRITES_NEXT_START);
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
+
+	/// Set ENABLED / DISABLED status of the solution tree starting from s into given direction
+	template <Interface::Direction dir>
+	void setStatus(const InterfaceState* s, InterfaceState::Status status);
 
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>

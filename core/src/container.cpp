@@ -106,6 +106,85 @@ void ContainerBasePrivate::compute() {
 	static_cast<ContainerBase*>(me_)->compute();
 }
 
+void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			// just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+			break;
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			break;
+
+		case CONNECT:
+			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
+				auto cimpl = conn->pimpl();
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
+					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
+					setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			}
+			break;
+	}
+	// printChildrenInterfaces(*this, false, child);
+}
+
+template <Interface::Direction dir>
+void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
+	if (s->priority().status() == status)
+		return;  // nothing changing
+
+	// if we should disable the state, only do so when there is no enabled alternative path
+	if (status == InterfaceState::DISABLED) {
+		auto solution_is_enabled = [](auto&& solution) {
+			return state<opposite<dir>()>(*solution)->priority().enabled();
+		};
+		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
+		if (alternative_path != alternatives.cend())
+			return;
+	}
+
+	// actually enable/disable the state
+	if (s->owner()) {
+		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
+	} else {
+		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
+	}
+
+	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
+	if (parent()) {
+		auto external{ internalToExternalMap().find(s) };
+		if (external != internalToExternalMap().end()) {
+			// only escalate if there is no enabled alternative child
+			auto internals{ externalToInternalMap().equal_range(external->second) };
+			auto is_enabled = [](auto&& state_pair) { return state_pair.second->priority().enabled(); };
+			auto other_path{ std::find_if(internals.first, internals.second, is_enabled) };
+			if (other_path == internals.second)
+				parent()->pimpl()->setStatus<dir>(external->second, status);
+			return;
+		}
+	}
+
+	// To break symmetry between both ends of a partial solution sequence that gets disabled,
+	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
+	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
+	// when new states arrive in a Connecting stage.
+	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	if (status == InterfaceState::DISABLED_FAILED)
+		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
+
+	// traverse solution tree
+	for (const SolutionBase* successor : trajectories<dir>(*s))
+		setStatus<dir>(state<dir>(*successor), status);
+}
+template void ContainerBasePrivate::setStatus<Interface::FORWARD>(const InterfaceState*, InterfaceState::Status);
+template void ContainerBasePrivate::setStatus<Interface::BACKWARD>(const InterfaceState*, InterfaceState::Status);
+
 template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
 	if (updated) {
@@ -417,33 +496,6 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
 
-void SerialContainer::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	switch (child.pimpl()->interfaceFlags()) {
-		case GENERATE:
-			// just ignore: the pair of (new) states isn't known to us anyway
-			// TODO: If child is a container, from and to might have associated solutions already!
-			break;
-
-		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
-			break;
-		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
-			break;
-
-		case CONNECT:
-			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
-				auto cimpl = conn->pimpl();
-				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
-					StagePrivate::setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
-				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
-					StagePrivate::setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
-			}
-			break;
-	}
-	// printChildrenInterfaces(*this, false, child);
-}
-
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
 SerialContainer::SerialContainer(const std::string& name) : SerialContainer(new SerialContainerPrivate(this, name)) {}
 
@@ -679,8 +731,6 @@ void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator extern
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
 ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
-
-void ParallelContainerBase::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
 	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),

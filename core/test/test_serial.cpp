@@ -198,7 +198,7 @@ TEST(Pruning, PropagatorFailure) {
 	t.add(Stage::pointer(new GeneratorMockup({ 0 })));
 	t.add(Stage::pointer(new ForwardMockup({ inf })));
 
-	t.plan();
+	EXPECT_FALSE(t.plan());
 
 	ASSERT_EQ(t.solutions().size(), 0);
 	// ForwardMockup fails, so the backward stage should never compute
@@ -218,7 +218,7 @@ TEST(Pruning, PruningMultiForward) {
 	// fail to extend the second solution
 	t.add(Stage::pointer(new ForwardMockup({ 0, inf })));
 
-	t.plan();
+	EXPECT_TRUE(t.plan());
 
 	// the second (infeasible) solution in the last stage must not disable
 	// the earlier partial solution just because they share stage solutions
@@ -287,14 +287,14 @@ TEST(Pruning, PropagateInsideContainerBoundaries) {
 	add(*c, new GeneratorMockup({ 0 }));
 	t.add(std::move(c));
 
-	t.plan();
+	EXPECT_FALSE(t.plan());
 
 	// the failure in the backward stage (outside the container)
 	// should prune the expected computation of con
 	EXPECT_EQ(con->calls_, 0);
 }
 
-TEST(Pruning, DISABLED_PropagateOutsideContainerBoundaries) {
+TEST(Pruning, PropagateOutsideContainerBoundaries) {
 	resetIds();
 	Task t;
 	t.setRobotModel(getModel());
@@ -306,8 +306,67 @@ TEST(Pruning, DISABLED_PropagateOutsideContainerBoundaries) {
 	add(*c, new ForwardMockup());
 	t.add(std::move(c));
 
-	t.plan();
+	EXPECT_FALSE(t.plan());
 
 	// the failure inside the container should prune computing of back
 	EXPECT_EQ(back->calls_, 0);
+}
+
+TEST(Pruning, PropagateOutsideParallelContainerBoundariesSinglePathPull) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	auto c{ new Alternatives };
+	add(*c, new ForwardMockup({ inf }));
+	add(t, c);
+
+	EXPECT_FALSE(t.plan());
+
+	// the failure in Alternatives must prune computing back
+	EXPECT_EQ(back->calls_, 0);
+}
+
+TEST(Pruning, PropagateOutsideParallelContainerBoundariesSinglePathPush) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+
+	auto c{ new SerialContainer };
+	add(*c, new BackwardMockup({ inf }));
+	add(*c, new GeneratorMockup({ 0 }));
+	add(t, c);
+
+	auto con = add(t, new Connect());
+	add(t, new GeneratorMockup({ 0 }));
+
+	EXPECT_FALSE(t.plan());
+
+	// currently this is trivially true because containers only push full solutions
+	// (so c never contributes a solution con could operate on), but it might change
+	// in the future and the failure inside the container must still prune computing con
+	EXPECT_EQ(con->calls_, 0);
+}
+
+TEST(Pruning, PropagateOutsideParallelContainerBoundariesMultiplePaths) {
+	resetIds();
+	Task t;
+	t.setRobotModel(getModel());
+
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	auto c{ new Alternatives };
+	auto s1{ new SerialContainer };
+	add(*s1, new Connect());
+	add(*s1, new GeneratorMockup({ 0 }));
+	add(*c, s1);
+	add(*c, new ForwardMockup({ inf }));
+	add(t, c);
+
+	EXPECT_TRUE(t.plan());
+
+	// the failure in one branch of Alternatives must not prune computing back
+	EXPECT_EQ(back->calls_, 1);
 }

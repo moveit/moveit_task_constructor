@@ -76,7 +76,7 @@ class InterfaceState
 {
 	friend class SolutionBase;  // addIncoming() / addOutgoing() should be called only by SolutionBase
 	friend class Interface;  // allow Interface to set owner_ and priority_
-	friend class StagePrivate;
+	friend class ContainerBasePrivate;  // allow setting priority_ for pruning
 
 public:
 	enum Status

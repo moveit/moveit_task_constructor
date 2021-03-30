@@ -138,7 +138,7 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const Interfac
 	if (solution->isFailure()) {
 		++num_failures_;
 		if (parent())
-			parent()->onNewFailure(*me(), from, to);
+			parent()->pimpl()->onNewFailure(*me(), from, to);
 		if (!storeFailures())
 			return false;  // drop solution
 		failures_.push_back(solution);
@@ -147,44 +147,6 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const Interfac
 	}
 	return true;
 }
-
-template <Interface::Direction dir>
-void StagePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
-	if (s->priority().status() == status)
-		return;  // nothing changing
-
-	// if we should disable the state, only do so when there is no enabled alternative path
-	if (status == InterfaceState::DISABLED) {
-		auto solution_is_enabled = [](auto&& solution) {
-			return state<opposite<dir>()>(*solution)->priority().enabled();
-		};
-		const auto& alternatives = trajectories<opposite<dir>()>(*s);
-		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
-		if (alternative_path != alternatives.cend())
-			return;
-	}
-
-	if (s->owner()) {
-		// actually enable/disable the state
-		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
-	} else {
-		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
-	}
-
-	// To break symmetry between both ends of a partial solution sequence that gets disabled,
-	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
-	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
-	// when new states arrive in a Connecting stage.
-	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
-	if (status == InterfaceState::DISABLED_FAILED)
-		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
-
-	// traverse solution tree
-	for (const SolutionBase* successor : trajectories<dir>(*s))
-		setStatus<dir>(state<dir>(*successor), status);
-}
-template void StagePrivate::setStatus<Interface::FORWARD>(const InterfaceState* s, InterfaceState::Status status);
-template void StagePrivate::setStatus<Interface::BACKWARD>(const InterfaceState* s, InterfaceState::Status status);
 
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
