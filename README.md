@@ -22,7 +22,6 @@ The current roadmap is to replace MoveIt's old pick&place pipeline and provide a
 Further planned features include
 
 - Entwined planning and execution for early execution, monitoring and code hooks
-- Support custom cost terms
 - Subsolution blending
 - Parallel planning
 - Iterative solution improvement
