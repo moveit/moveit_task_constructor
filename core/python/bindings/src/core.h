@@ -1,3 +1,5 @@
+#pragma once
+
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
 #include <pybind11/pybind11.h>

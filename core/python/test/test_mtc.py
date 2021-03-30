@@ -140,12 +140,14 @@ class TestStages(unittest.TestCase):
 
             try:
                 setattr(stage, name, value)
-            except TypeError as e:
+            except TypeError:
                 pass
             except:
                 msg = "Assigning {} did raise wrong exception: {}"
                 self.fail(msg.format(value, sys.exc_info()[0]))
             else:
+                if value == "string" and target_type is PoseStamped:
+                    continue  # string is convertible to PoseStamped
                 msg = "Assigning {} did not raise an exception, result: {}"
                 self.fail(msg.format(value, getattr(stage, name)))
 

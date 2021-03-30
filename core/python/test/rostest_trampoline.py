@@ -47,6 +47,7 @@ class PyMoveRelX(stages.MoveRelative):
     def __init__(self, x, planner, name="Move ±x"):
         stages.MoveRelative.__init__(self, name, planner)
         self.group = PLANNING_GROUP
+        self.ik_frame = "tool0"
         self.setDirection(
             Vector3Stamped(header=Header(frame_id="base_link"), vector=Vector3(x, 0, 0))
         )

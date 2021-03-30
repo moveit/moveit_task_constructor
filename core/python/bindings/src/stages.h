@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core.h"
 
 #include <moveit/task_constructor/stages/move_relative.h>

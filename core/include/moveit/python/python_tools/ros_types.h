@@ -1,3 +1,5 @@
+#pragma once
+
 #include <pybind11/pybind11.h>
 #include <ros/duration.h>
 #include <ros/serialization.h>
@@ -48,8 +50,8 @@ struct type_caster<ros::WallDuration> : DurationCaster<ros::WallDuration>
 {};
 
 /// Convert ROS message types (C++ <-> python)
-template <typename T>
-struct type_caster<T, enable_if_t<ros::message_traits::IsMessage<T>::value>>
+template <typename T, typename SFINAE = enable_if_t<ros::message_traits::IsMessage<T>::value>>
+struct type_caster_ros_msg
 {
 	// C++ -> Python
 	static handle cast(const T& src, return_value_policy /* policy */, handle /* parent */) {
@@ -83,5 +85,10 @@ struct type_caster<T, enable_if_t<ros::message_traits::IsMessage<T>::value>>
 
 	PYBIND11_TYPE_CASTER(T, _<T>());
 };
+
+template <typename T>
+struct type_caster<T, enable_if_t<ros::message_traits::IsMessage<T>::value>> : type_caster_ros_msg<T>
+{};
+
 }  // namespace detail
 }  // namespace pybind11
