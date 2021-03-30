@@ -21,7 +21,7 @@ add_subdirectory(pybind11)
 
 
 # C++ wrapper code
-add_subdirectory(wrapper)
+add_subdirectory(bindings)
 
 if(CATKIN_ENABLE_TESTING)
 	find_package(rostest REQUIRED)
