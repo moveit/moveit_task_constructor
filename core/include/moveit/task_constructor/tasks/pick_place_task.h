@@ -54,6 +54,10 @@
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/stages/pick.h>
+
+#include <moveit/task_constructor/stages/grasp_provider_base.h>
+#include <moveit/task_constructor/stages/place_provider_base.h>
+
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
@@ -65,11 +69,16 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/Vector3Stamped.h>
 
+#include <pluginlib/class_loader.h>
+
 #pragma once
 
 namespace moveit {
 namespace task_constructor {
 namespace tasks {
+
+using GraspProviderPluginLoader = pluginlib::ClassLoader<stages::GraspProviderBase>;
+using PlaceProviderPluginLoader = pluginlib::ClassLoader<stages::PlaceProviderBase>;
 using namespace moveit::task_constructor;
 
 class PickPlaceTask
@@ -126,10 +135,13 @@ public:
 	bool plan();
 
 private:
-	moveit::task_constructor::TaskPtr task_;
+	TaskPtr task_;
   const std::string task_name_;
-  Stage* current_state_stage;
-	Stage* attach_object_stage;
+  Stage* current_state_stage_;
+	Stage* attach_object_stage_;
+  
+  std::unique_ptr<GraspProviderPluginLoader> grasp_provider_class_loader_;
+  std::unique_ptr<PlaceProviderPluginLoader> place_provider_class_loader_;
 };
 
 }  // namespace tasks

@@ -44,12 +44,14 @@ namespace tasks {
 constexpr char LOGNAME[] = "pick_place_task";
 PickPlaceTask::PickPlaceTask(const std::string& task_name)
   : task_name_(task_name) {
+    grasp_provider_class_loader_ = std::make_unique<GraspProviderPluginLoader>("moveit_task_constructor_core", "moveit::task_constructor::stages::GraspProviderBase");
+    place_provider_class_loader_ = std::make_unique<PlaceProviderPluginLoader>("moveit_task_constructor_core", "moveit::task_constructor::stages::PlaceProviderBase");
     task_.reset();
     task_.reset(new moveit::task_constructor::Task(task_name_));
     task_->reset();
     task_->loadRobotModel();
-    current_state_stage = nullptr;
-    attach_object_stage = nullptr;
+    current_state_stage_ = nullptr;
+    attach_object_stage_ = nullptr;
   }
 
 void PickPlaceTask::init(const Parameters& parameters)
@@ -102,7 +104,7 @@ void PickPlaceTask::init(const Parameters& parameters)
       return true;
     });
 
-    current_state_stage = applicability_filter.get();
+    current_state_stage_ = applicability_filter.get();
     t.add(std::move(applicability_filter));
   }
 
@@ -137,7 +139,7 @@ void PickPlaceTask::init(const Parameters& parameters)
    *                                                  *
    ***************************************************/
   {
-    auto stage = std::make_unique<stages::Pick>("Pick object", parameters.grasp_provider_plugin_name_);
+    auto stage = std::make_unique<stages::Pick>("Pick object", parameters.grasp_provider_plugin_name_, grasp_provider_class_loader_.get());
     stage->properties().property("eef_group").configureInitFrom(Stage::PARENT, "hand");
     stage->properties().property("eef_parent_group").configureInitFrom(Stage::PARENT, "group");
     stage->setObject(parameters.object_name_);
@@ -146,10 +148,10 @@ void PickPlaceTask::init(const Parameters& parameters)
     stage->setSupportSurfaces(parameters.support_surfaces_);
     stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
     stage->GraspProviderPlugin()->properties().set("angle_delta", M_PI / 12);  // Set plugin-specific properties
-    stage->setMonitoredStage(current_state_stage);
+    stage->setMonitoredStage(current_state_stage_);
     stage->setApproachMotion(parameters.approach_object_direction_,parameters.approach_object_min_dist_, parameters.approach_object_max_dist_);
     stage->setLiftMotion(parameters.lift_object_direction_, parameters.lift_object_min_dist_, parameters.lift_object_max_dist_);
-    attach_object_stage = stage->attachStage();
+    attach_object_stage_ = stage->attachStage();
     t.add(std::move(stage));
   }
 

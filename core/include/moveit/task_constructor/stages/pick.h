@@ -85,23 +85,23 @@ class PickPlaceBase : public SerialContainer
 
 	Stage* move_there_stage_ = nullptr;
 	Stage* compute_ik_stage_ = nullptr;
-	moveit::task_constructor::stages::ModifyPlanningScene* set_collision_object_hand_stage_ = nullptr;
-	moveit::task_constructor::stages::ModifyPlanningScene* allow_collision_object_support_stage_ = nullptr;
-	moveit::task_constructor::stages::ModifyPlanningScene* forbid_collision_object_support_stage_ = nullptr;
+	ModifyPlanningScene* set_collision_object_hand_stage_ = nullptr;
+	ModifyPlanningScene* allow_collision_object_support_stage_ = nullptr;
+	ModifyPlanningScene* forbid_collision_object_support_stage_ = nullptr;
 	Stage* move_back_stage_ = nullptr;
 
 	std::string provider_stage_plugin_name_;
 
-	pluginlib::ClassLoader<GraspProviderBase> grasp_provider_class_loader_;
-	pluginlib::ClassLoader<PlaceProviderBase> place_provider_class_loader_;
+	pluginlib::ClassLoader<GraspProviderBase>* grasp_provider_class_loader_;
+	pluginlib::ClassLoader<PlaceProviderBase>* place_provider_class_loader_;
 
 protected:
-	moveit::task_constructor::stages::GraspProviderBase* grasp_stage_ = nullptr;
-	moveit::task_constructor::stages::PlaceProviderBase* place_stage_ = nullptr;
-	moveit::task_constructor::stages::ModifyPlanningScene* attach_detach_stage_ = nullptr;
+	GraspProviderBase* grasp_stage_ = nullptr;
+	PlaceProviderBase* place_stage_ = nullptr;
+	ModifyPlanningScene* attach_detach_stage_ = nullptr;
 
 public:
-	PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick);
+	PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<GraspProviderBase>* grasp_class_loader, pluginlib::ClassLoader<PlaceProviderBase>* place_class_loader);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -164,8 +164,8 @@ public:
 class Pick : public PickPlaceBase
 {
 public:
-	Pick(const std::string& name = "pick", const std::string& provider_stage_plugin_name = "moveit_task_constructor/GraspProviderDefault")
-	  : PickPlaceBase(name, provider_stage_plugin_name, true) {}
+	Pick(const std::string& name = "pick", const std::string& provider_stage_plugin_name = "moveit_task_constructor/GraspProviderDefault", pluginlib::ClassLoader<GraspProviderBase>* class_loader = nullptr)
+	  : PickPlaceBase(name, provider_stage_plugin_name, true, class_loader, nullptr) {}
 
 	void setMonitoredStage(Stage* monitored);
 
@@ -196,8 +196,8 @@ public:
 class Place : public PickPlaceBase
 {
 public:
-	Place(const std::string& name = "place", const std::string& provider_stage_plugin_name = "moveit_task_constructor/PlaceProviderDefault")
-	  : PickPlaceBase(name, provider_stage_plugin_name, false) {}
+	Place(const std::string& name = "place", const std::string& provider_stage_plugin_name = "moveit_task_constructor/PlaceProviderDefault", pluginlib::ClassLoader<PlaceProviderBase>* class_loader = nullptr)
+	  : PickPlaceBase(name, provider_stage_plugin_name, false, nullptr, class_loader) {}
 
 	void setMonitoredStage(Stage* monitored);
 

@@ -21,10 +21,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name,  bool is_pick)
-  : SerialContainer(name),
-  grasp_provider_class_loader_("moveit_task_constructor_core", "moveit::task_constructor::stages::GraspProviderBase"),
-  place_provider_class_loader_("moveit_task_constructor_core", "moveit::task_constructor::stages::PlaceProviderBase") {
+PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<GraspProviderBase>* grasp_class_loader, pluginlib::ClassLoader<PlaceProviderBase>* place_class_loader)
+  : SerialContainer(name) {
 	PropertyMap& p = properties();
 	p.declare<std::string>("object", "name of object to grasp/place");
 	p.declare<std::string>("eef", "end effector name");
@@ -36,6 +34,9 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	// internal properties (cannot be marked as such yet)
 	p.declare<std::string>("eef_group", "JMG of eef");
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
+
+	grasp_provider_class_loader_ = grasp_class_loader;
+	place_provider_class_loader_ = place_class_loader;
 
 	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
 	sampling_planner_ = std::make_shared<solvers::PipelinePlanner>();
@@ -65,25 +66,24 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 
 	try
 	{
-		std::unique_ptr<stages::ComputeIK> wrapper;
+		std::unique_ptr<ComputeIK> wrapper;
 		if (is_pick_) {
-			// std::unique_ptr<GraspProviderBase> provider_stage_plugin(grasp_provider_class_loader_.createUnmanagedInstance(provider_stage_plugin_name_));
-			auto provider_stage_plugin = grasp_provider_class_loader_.createUniqueInstance(provider_stage_plugin_name_);
+			std::unique_ptr<GraspProviderBase> provider_stage_plugin(grasp_provider_class_loader_->createUnmanagedInstance(provider_stage_plugin_name_));
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
 			provider_stage_plugin->properties().property("pregrasp").configureInitFrom(Stage::PARENT, "eef_group_open_pose");
 			provider_stage_plugin->properties().property("grasp").configureInitFrom(Stage::PARENT, "eef_group_close_pose");
 			provider_stage_plugin->properties().set("marker_ns", "grasp_pose");
 			grasp_stage_ = provider_stage_plugin.get();
 
-			wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(provider_stage_plugin));
+			wrapper = std::make_unique<ComputeIK>("grasp pose IK", std::move(provider_stage_plugin));
 		}
 		else {
-			std::unique_ptr<PlaceProviderBase> provider_stage_plugin(place_provider_class_loader_.createUnmanagedInstance(provider_stage_plugin_name_));
+			std::unique_ptr<PlaceProviderBase> provider_stage_plugin(place_provider_class_loader_->createUnmanagedInstance(provider_stage_plugin_name_));
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
 			provider_stage_plugin->properties().set("marker_ns", "place_pose");
 			place_stage_ = provider_stage_plugin.get();
 
-			wrapper = std::make_unique<stages::ComputeIK>("place pose IK", std::move(provider_stage_plugin));
+			wrapper = std::make_unique<ComputeIK>("place pose IK", std::move(provider_stage_plugin));
 		}
 
 		properties().exposeTo(wrapper->properties(), {"object", "eef_group_open_pose", "eef_group_close_pose"});
@@ -99,13 +99,13 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	}
 
 	{
-		auto set_collision_object_hand = std::make_unique<stages::ModifyPlanningScene>(is_pick_ ? "allow collision (hand,object)" : "forbid collision (hand,object)");
+		auto set_collision_object_hand = std::make_unique<ModifyPlanningScene>(is_pick_ ? "allow collision (hand,object)" : "forbid collision (hand,object)");
 		set_collision_object_hand_stage_ = set_collision_object_hand.get();
 		insert(std::move(set_collision_object_hand));
 	}
 
 	{
-		auto open_close_hand = std::make_unique<stages::MoveTo>(is_pick_ ? "close hand" : "open hand", sampling_planner_);
+		auto open_close_hand = std::make_unique<MoveTo>(is_pick_ ? "close hand" : "open hand", sampling_planner_);
 		PropertyMap& p = open_close_hand->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_group");
 		p.property("goal").configureInitFrom(Stage::PARENT, is_pick_ ? "eef_group_close_pose" : "eef_group_open_pose");
@@ -116,13 +116,13 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	}
 
 	{
-		auto attach_detach = std::make_unique<stages::ModifyPlanningScene>(is_pick_ ? "attach object" : "detach object");
+		auto attach_detach = std::make_unique<ModifyPlanningScene>(is_pick_ ? "attach object" : "detach object");
 		attach_detach_stage_ = attach_detach.get();
 		insert(std::move(attach_detach));
 	}
 
 	if (is_pick_) {
-		auto set_collision_object_support = std::make_unique<stages::ModifyPlanningScene>("allow collision (object,support)");
+		auto set_collision_object_support = std::make_unique<ModifyPlanningScene>("allow collision (object,support)");
 		allow_collision_object_support_stage_ = set_collision_object_support.get();
 		insert(std::move(set_collision_object_support));
 	}
@@ -138,7 +138,7 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	}
 
 	if (is_pick_) {
-		auto set_collision_object_support = std::make_unique<stages::ModifyPlanningScene>("forbid collision (object,support)");
+		auto set_collision_object_support = std::make_unique<ModifyPlanningScene>("forbid collision (object,support)");
 		forbid_collision_object_support_stage_ = set_collision_object_support.get();
 		insert(std::move(set_collision_object_support));
 	}
