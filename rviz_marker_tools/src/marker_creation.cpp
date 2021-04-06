@@ -276,6 +276,23 @@ vm::Marker& makeMesh(vm::Marker& m, const std::string& filename, double sx, doub
 	return m;
 }
 
+vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point,
+                      double diameter, double head_length) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	m.scale.x = diameter;
+	m.scale.y = 2 * diameter;
+	m.scale.z = head_length;
+	prepareMarker(m, vm::Marker::ARROW);
+	geometry_msgs::Point start;
+	tf::pointEigenToMsg(start_point, start);
+	geometry_msgs::Point end;
+	tf::pointEigenToMsg(end_point, end);
+	m.points.push_back(start);
+	m.points.push_back(end);
+	return m;
+}
+
 vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
 	m.scale.y = m.scale.z = 0.1 * scale;
 	m.scale.x = scale;
