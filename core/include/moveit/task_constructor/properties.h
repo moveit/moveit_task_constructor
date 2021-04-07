@@ -317,7 +317,7 @@ public:
 	/// allow initialization from given source for listed properties - always using the same name
 	void configureInitFrom(Property::SourceFlags source, const std::set<std::string>& properties = {});
 
-	/// set (and, if neccessary, declare) the value of a property
+	/// set (and, if necessary, declare) the value of a property
 	template <typename T>
 	void set(const std::string& name, const T& value) {
 		auto it = props_.find(name);

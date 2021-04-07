@@ -54,7 +54,7 @@ class PropertyTypeRegistry
 		PropertySerializerBase::SerializeFunction serialize_;
 		PropertySerializerBase::DeserializeFunction deserialize_;
 	};
-	Entry dummy_;
+	const Entry dummy_;
 
 	// map from type_info to corresponding converter functions
 	using RegistryMap = std::map<std::type_index, Entry>;
@@ -193,7 +193,7 @@ Property& Property::configureInitFrom(SourceFlags source, const std::string& nam
 Property& PropertyMap::declare(const std::string& name, const Property::type_info& type_info,
                                const std::string& description, const boost::any& default_value) {
 	auto it_inserted = props_.insert(std::make_pair(name, Property(type_info, description, default_value)));
-	// if name was already declared, the new declaration should match in type (except it was boost::any)
+	// if name was already declared, the new declaration should match in type (except if it was boost::any)
 	if (!it_inserted.second && it_inserted.first->second.type_info_ != typeid(boost::any) &&
 	    type_info != it_inserted.first->second.type_info_)
 		throw Property::type_error(type_info.name(), it_inserted.first->second.type_info_.name());
@@ -269,7 +269,7 @@ const boost::any& PropertyMap::get(const std::string& name) const {
 size_t PropertyMap::countDefined(const std::vector<std::string>& list) const {
 	size_t count = 0u;
 	for (const std::string& name : list) {
-		if (!get(name).empty())
+		if (!property(name).defined())
 			++count;
 	}
 	return count;
