@@ -133,9 +133,11 @@ public:
 	/// is a value defined?
 	inline bool defined() const { return !(value_.empty() && default_.empty()); }
 
+	/// is a non-default value set?
+	inline bool hasCurrentValue() const { return !value_.empty(); }
+
 	/// get current value (or default if not set)
 	inline const boost::any& value() const { return value_.empty() ? default_ : value_; }
-	inline boost::any& value() { return value_.empty() ? default_ : value_; }
 
 	/// get typed value of property. Throws bad_any_cast on type mismatch, undefined if !defined().
 	template <typename T>
@@ -148,6 +150,8 @@ public:
 
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
+	const boost::any& currentValue() const { return value_; }
+	boost::any& currentValue() { return value_; };
 
 	/// serialize value using registered functions
 	static std::string serialize(const boost::any& value);
