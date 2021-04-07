@@ -212,6 +212,18 @@ Property& PropertyMap::property(const std::string& name) {
 	return it->second;
 }
 
+void PropertyMap::fillMsgs(std::vector<moveit_task_constructor_msgs::Property>& msgs) const {
+	msgs.reserve(size());
+	for (const auto& pair : *this) {
+		msgs.emplace_back();
+		auto& p{ msgs.back() };
+		p.name = pair.first;
+		p.description = pair.second.description();
+		p.type = pair.second.typeName();
+		p.value = pair.second.serialize();
+	}
+}
+
 void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string>& properties) const {
 	for (const std::string& name : properties)
 		exposeTo(other, name, name);

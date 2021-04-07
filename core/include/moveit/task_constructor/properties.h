@@ -47,6 +47,8 @@
 #include <sstream>
 #include <ros/serialization.h>
 
+#include <moveit_task_constructor_msgs/Property.h>
+
 namespace moveit {
 namespace task_constructor {
 
@@ -297,6 +299,8 @@ public:
 	Property& property(const std::string& name);
 	const Property& property(const std::string& name) const { return const_cast<PropertyMap*>(this)->property(name); }
 
+	void fillMsgs(std::vector<moveit_task_constructor_msgs::Property>& msg) const;
+
 	using iterator = std::map<std::string, Property>::iterator;
 	using const_iterator = std::map<std::string, Property>::const_iterator;
 
@@ -304,6 +308,7 @@ public:
 	iterator end() { return props_.end(); }
 	const_iterator begin() const { return props_.begin(); }
 	const_iterator end() const { return props_.end(); }
+	size_t size() const { return props_.size(); }
 
 	/// allow initialization from given source for listed properties - always using the same name
 	void configureInitFrom(Property::SourceFlags source, const std::set<std::string>& properties = {});
