@@ -17,7 +17,6 @@ TEST(Property, standard) {
 
 	EXPECT_THROW(props.get<double>("double4"), Property::undefined);
 	EXPECT_FALSE(props.property("double4").defined());
-	EXPECT_EQ(props.get<double>("double4", 0.0), 0.0);
 
 	props.set("double3", 3.0);
 	EXPECT_EQ(props.get<double>("double3"), 3.0);

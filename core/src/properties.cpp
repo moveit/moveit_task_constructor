@@ -239,7 +239,7 @@ void PropertyMap::set<boost::any>(const std::string& name, const boost::any& val
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) {  // name is not yet declared
 		if (value.empty())
-			throw Property::undeclared(name, "trying to set undeclared property '" + name + "' with NULL value");
+			throw std::runtime_error("trying to set undeclared property '" + name + "' with NULL value");
 		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any())));
 		it->second.setValue(value);
 	} else
@@ -308,11 +308,13 @@ void Property::error::setName(const std::string& name) {
 	msg_ = "Property '" + name + "': " + std::runtime_error::what();
 }
 
-Property::undeclared::undeclared(const std::string& name, const std::string& msg) : Property::error(msg) {
+Property::undeclared::undeclared(const std::string& name) : Property::error("undeclared") {
 	setName(name);
 }
 
-Property::undefined::undefined(const std::string& name, const std::string& msg) : Property::error(msg) {
+Property::undefined::undefined() : Property::error("undefined") {}
+
+Property::undefined::undefined(const std::string& name) : Property::undefined() {
 	setName(name);
 }
 
