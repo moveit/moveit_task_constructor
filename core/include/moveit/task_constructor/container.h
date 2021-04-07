@@ -127,12 +127,11 @@ protected:
 	/// lift child solution to external interface, adapting the costs and comment
 	void liftSolution(const SolutionBase& solution, double cost, std::string comment);
 
-	/// spawn a new solution with given state as start and end
-	void spawn(InterfaceState&& state, SubTrajectory&& trajectory);
-	/// propagate a solution forwards
-	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
-	/// propagate a solution backwards
-	void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory);
+	/// lift a modified solution based on the solution of a child stage
+	void liftModifiedSolution(SolutionBasePtr&& new_solution, const SolutionBase& child_solution);
+	/// lift a modified solution, changing the (single!) new associated start or end InterfaceState
+	void liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_propagated_state,
+	                          const SolutionBase& child_solution);
 };
 
 /** Plan for different alternatives in parallel.
