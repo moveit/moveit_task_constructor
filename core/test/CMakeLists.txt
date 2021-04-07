@@ -19,7 +19,7 @@ if (CATKIN_ENABLE_TESTING)
 	target_link_libraries(${PROJECT_NAME}-test-serial ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-properties test_properties.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-properties ${PROJECT_NAME} gtest_main)
+	target_link_libraries(${PROJECT_NAME}-test-properties ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_main)
 
 	catkin_add_gmock(${PROJECT_NAME}-test-cost_queue test_cost_queue.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-cost_queue ${PROJECT_NAME} gtest_main)

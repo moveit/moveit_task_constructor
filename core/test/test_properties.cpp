@@ -1,5 +1,8 @@
 #include <moveit/task_constructor/properties.h>
 
+#include <moveit/task_constructor/stages/connect.h>
+#include <geometry_msgs/PoseStamped.h>
+
 #include <gtest/gtest.h>
 #include <initializer_list>
 
@@ -86,12 +89,12 @@ TEST(Property, anytype) {
 }
 
 TEST(Property, serialize_basic) {
-	EXPECT_TRUE(hasSerialize<int>::value);
-	EXPECT_TRUE(hasDeserialize<int>::value);
-	EXPECT_TRUE(hasSerialize<double>::value);
-	EXPECT_TRUE(hasDeserialize<double>::value);
-	EXPECT_TRUE(hasSerialize<std::string>::value);
-	EXPECT_TRUE(hasDeserialize<std::string>::value);
+	EXPECT_TRUE(hasInsertionOperator<int>::value);
+	EXPECT_TRUE(hasExtractionOperator<int>::value);
+	EXPECT_TRUE(hasInsertionOperator<double>::value);
+	EXPECT_TRUE(hasExtractionOperator<double>::value);
+	EXPECT_TRUE(hasInsertionOperator<std::string>::value);
+	EXPECT_TRUE(hasExtractionOperator<std::string>::value);
 }
 
 TEST(Property, serialize) {
@@ -104,6 +107,45 @@ TEST(Property, serialize) {
 	// std::map doesn't provide operator<< serialization
 	props.declare<std::map<int, int>>("map", std::map<int, int>());
 	EXPECT_EQ(props.property("map").serialize(), "");
+}
+
+#define STORABLE_PROPERTY(T, V)                                                \
+	{                                                                           \
+		T v{ V };                                                                \
+		PropertyMap example_props;                                               \
+		example_props.declare<T>("property", "description");                     \
+		example_props.set("property", v);                                        \
+		moveit_task_constructor_msgs::Property props_msg;                        \
+		example_props.property("property").fillMsg(props_msg);                   \
+		std::cout << "serialized property message:\n" << props_msg << std::endl; \
+		T deserialized_value;                                                    \
+		try {                                                                    \
+			deserialized_value = Property::deserialize<T>(props_msg);             \
+		} catch (boost::bad_any_cast&) {                                         \
+			ADD_FAILURE() << "deserialization failed";                            \
+		}                                                                        \
+		EXPECT_EQ(deserialized_value, v);                                        \
+	}
+
+TEST(Property, storeInMsg) {
+	STORABLE_PROPERTY(std::string, "custom text");
+	STORABLE_PROPERTY(int, 42);
+	STORABLE_PROPERTY(double, 42);
+	STORABLE_PROPERTY(stages::Connect::MergeMode, stages::Connect::WAYPOINTS);
+	//	STORABLE_PROPERTY(double, M_PI);
+
+	STORABLE_PROPERTY(geometry_msgs::PoseStamped, []() {
+		geometry_msgs::PoseStamped msg;
+		msg.header.frame_id = "world";
+		msg.pose.orientation.x = 0.5;
+		msg.pose.orientation.y = 0.5;
+		msg.pose.orientation.z = -0.5;
+		msg.pose.orientation.w = -0.5;
+		return msg;
+	}());
+
+	std::map<std::string, double> joint_targets{ { "joint0", -0.5 }, { "joint1", 1.0 } };
+	STORABLE_PROPERTY(decltype(joint_targets), joint_targets);
 }
 
 class InitFromTest : public ::testing::Test

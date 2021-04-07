@@ -98,6 +98,9 @@ protected:
 	std::list<SubTrajectory> subsolutions_;
 	std::list<InterfaceState> states_;
 };
+
+std::ostream& operator<<(std::ostream&, const Connect::MergeMode&);
+std::istream& operator>>(std::istream&, Connect::MergeMode&);
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
