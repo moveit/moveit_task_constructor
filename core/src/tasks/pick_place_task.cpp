@@ -147,7 +147,7 @@ void PickPlaceTask::init(const Parameters& parameters)
     stage->setEndEffectorOpenClose(parameters.hand_open_pose_, parameters.hand_close_pose_);
     stage->setSupportSurfaces(parameters.support_surfaces_);
     stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
-    stage->GraspProviderPlugin()->properties().set("angle_delta", M_PI / 12);  // Set plugin-specific properties
+    stage->ProviderPlugin()->properties().set("angle_delta", M_PI / 12);  // Set plugin-specific properties
     stage->setMonitoredStage(current_state_stage_);
     stage->setApproachMotion(parameters.approach_object_direction_,parameters.approach_object_min_dist_, parameters.approach_object_max_dist_);
     stage->setLiftMotion(parameters.lift_object_direction_, parameters.lift_object_min_dist_, parameters.lift_object_max_dist_);

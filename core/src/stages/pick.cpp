@@ -21,7 +21,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<GraspProviderBase>* grasp_class_loader, pluginlib::ClassLoader<PlaceProviderBase>* place_class_loader)
+template <class C>
+PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<C>* class_loader)
   : SerialContainer(name) {
 	PropertyMap& p = properties();
 	p.declare<std::string>("object", "name of object to grasp/place");
@@ -34,9 +35,6 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	// internal properties (cannot be marked as such yet)
 	p.declare<std::string>("eef_group", "JMG of eef");
 	p.declare<std::string>("eef_parent_group", "JMG of eef's parent");
-
-	grasp_provider_class_loader_ = grasp_class_loader;
-	place_provider_class_loader_ = place_class_loader;
 
 	cartesian_solver_ = std::make_shared<solvers::CartesianPath>();
 	sampling_planner_ = std::make_shared<solvers::PipelinePlanner>();
@@ -68,20 +66,20 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	{
 		std::unique_ptr<ComputeIK> wrapper;
 		if (is_pick_) {
-			std::unique_ptr<GraspProviderBase> provider_stage_plugin(grasp_provider_class_loader_->createUnmanagedInstance(provider_stage_plugin_name_));
+			std::unique_ptr<C> provider_stage_plugin(class_loader->createUnmanagedInstance(provider_stage_plugin_name_));
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
 			provider_stage_plugin->properties().property("pregrasp").configureInitFrom(Stage::PARENT, "eef_group_open_pose");
 			provider_stage_plugin->properties().property("grasp").configureInitFrom(Stage::PARENT, "eef_group_close_pose");
 			provider_stage_plugin->properties().set("marker_ns", "grasp_pose");
-			grasp_stage_ = provider_stage_plugin.get();
+			provider_plugin_stage_ = provider_stage_plugin.get();
 
 			wrapper = std::make_unique<ComputeIK>("grasp pose IK", std::move(provider_stage_plugin));
 		}
 		else {
-			std::unique_ptr<PlaceProviderBase> provider_stage_plugin(place_provider_class_loader_->createUnmanagedInstance(provider_stage_plugin_name_));
+			std::unique_ptr<C> provider_stage_plugin(class_loader->createUnmanagedInstance(provider_stage_plugin_name_));
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
 			provider_stage_plugin->properties().set("marker_ns", "place_pose");
-			place_stage_ = provider_stage_plugin.get();
+			provider_plugin_stage_ = provider_stage_plugin.get();
 
 			wrapper = std::make_unique<ComputeIK>("place pose IK", std::move(provider_stage_plugin));
 		}
@@ -144,7 +142,11 @@ PickPlaceBase::PickPlaceBase(const std::string& name, const std::string& provide
 	}
 }
 
-void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
+template class PickPlaceBase<GraspProviderBase>;
+template class PickPlaceBase<PlaceProviderBase>;
+
+template <class C>
+void PickPlaceBase<C>::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	// inherit properties from parent
 	PropertyMap* p = &properties();
 	p->performInitFrom(Stage::PARENT, parent()->properties());
@@ -180,7 +182,8 @@ void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 /// -------------------------
 /// setters of own properties
 
-void PickPlaceBase::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
+template <class C>
+void PickPlaceBase<C>::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	tf::poseEigenToMsg(pose, pose_msg.pose);
@@ -194,7 +197,8 @@ void PickPlaceBase::setIKFrame(const Eigen::Isometry3d& pose, const std::string&
 
 /// approach / place
 
-void PickPlaceBase::setApproachPlace(const geometry_msgs::TwistStamped& motion, double min_distance,
+template <class C>
+void PickPlaceBase<C>::setApproachPlace(const geometry_msgs::TwistStamped& motion, double min_distance,
                                        double max_distance) {
 	auto& p = move_there_stage_->properties();
 	p.set("direction", motion);
@@ -202,7 +206,8 @@ void PickPlaceBase::setApproachPlace(const geometry_msgs::TwistStamped& motion, 
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setApproachPlace(const geometry_msgs::Vector3Stamped& direction, double min_distance,
+template <class C>
+void PickPlaceBase<C>::setApproachPlace(const geometry_msgs::Vector3Stamped& direction, double min_distance,
                                        double max_distance) {
 	auto& p = move_there_stage_->properties();
 	p.set("direction", direction);
@@ -210,24 +215,28 @@ void PickPlaceBase::setApproachPlace(const geometry_msgs::Vector3Stamped& direct
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setApproachPlace(const std::map<std::string, double>& joints) {
+template <class C>
+void PickPlaceBase<C>::setApproachPlace(const std::map<std::string, double>& joints) {
 	auto& p = move_there_stage_->properties();
 	p.set("joints", joints);
 }
 
 /// IK computation
 
-void PickPlaceBase::setMaxIKSolutions(const uint32_t& max_ik_solutions) {
+template <class C>
+void PickPlaceBase<C>::setMaxIKSolutions(const uint32_t& max_ik_solutions) {
 	auto& p = compute_ik_stage_->properties();
 	p.set("max_ik_solutions", max_ik_solutions);
 }
 
-void PickPlaceBase::setMinIKSolutionDistance(const double& min_ik_solution_distance) {
+template <class C>
+void PickPlaceBase<C>::setMinIKSolutionDistance(const double& min_ik_solution_distance) {
 	auto& p = compute_ik_stage_->properties();
 	p.set("min_solution_distance", min_ik_solution_distance);
 }
 
-void PickPlaceBase::setIgnoreIKCollisions(const bool& ignore_ik_collisions) {
+template <class C>
+void PickPlaceBase<C>::setIgnoreIKCollisions(const bool& ignore_ik_collisions) {
 	auto& p = compute_ik_stage_->properties();
 	p.set("ignore_collisions", ignore_ik_collisions);
 }
@@ -235,21 +244,24 @@ void PickPlaceBase::setIgnoreIKCollisions(const bool& ignore_ik_collisions) {
 
 /// lift / retract
 
-void PickPlaceBase::setLiftRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+template <class C>
+void PickPlaceBase<C>::setLiftRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
 	auto& p = move_back_stage_->properties();
 	p.set("direction", motion);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftRetract(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
+template <class C>
+void PickPlaceBase<C>::setLiftRetract(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
 	auto& p = move_back_stage_->properties();
 	p.set("direction", direction);
 	p.set("min_distance", min_distance);
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftRetract(const std::map<std::string, double>& joints) {
+template <class C>
+void PickPlaceBase<C>::setLiftRetract(const std::map<std::string, double>& joints) {
 	auto& p = move_back_stage_->properties();
 	p.set("joints", joints);
 }
@@ -259,7 +271,7 @@ void PickPlaceBase::setLiftRetract(const std::map<std::string, double>& joints) 
 /// setters of pick properties
 
 void Pick::setMonitoredStage(Stage* monitored) {
-	grasp_stage_->setMonitoredStage(monitored);
+	provider_plugin_stage_->setMonitoredStage(monitored);
 }
 
 
@@ -267,11 +279,11 @@ void Pick::setMonitoredStage(Stage* monitored) {
 /// setters of place properties
 
 void Place::setMonitoredStage(Stage* monitored) {
-	place_stage_->setMonitoredStage(monitored);
+	provider_plugin_stage_->setMonitoredStage(monitored);
 }
 
 void Place::setPlacePose(const geometry_msgs::PoseStamped& pose) {
-	place_stage_->setPose(pose);
+	provider_plugin_stage_->setPose(pose);
 }
 
 }  // namespace stages

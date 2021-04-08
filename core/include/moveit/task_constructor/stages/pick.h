@@ -39,6 +39,8 @@
 #include <pluginlib/class_loader.h>
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/container.h>
+#include <moveit/task_constructor/stages/move_relative.h>
+#include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/stages/grasp_provider.h>
 #include <moveit/task_constructor/stages/place_provider.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
@@ -75,6 +77,7 @@ namespace stages {
  * - detach the object
  * - linearly retract end effector
  */
+template <class C>
 class PickPlaceBase : public SerialContainer
 {
 
@@ -83,25 +86,21 @@ class PickPlaceBase : public SerialContainer
 	solvers::CartesianPathPtr cartesian_solver_;
 	solvers::PipelinePlannerPtr sampling_planner_;
 
-	Stage* move_there_stage_ = nullptr;
-	Stage* compute_ik_stage_ = nullptr;
+	MoveRelative* move_there_stage_ = nullptr;
+	ComputeIK* compute_ik_stage_ = nullptr;
 	ModifyPlanningScene* set_collision_object_hand_stage_ = nullptr;
 	ModifyPlanningScene* allow_collision_object_support_stage_ = nullptr;
 	ModifyPlanningScene* forbid_collision_object_support_stage_ = nullptr;
-	Stage* move_back_stage_ = nullptr;
+	MoveRelative* move_back_stage_ = nullptr;
 
 	std::string provider_stage_plugin_name_;
 
-	pluginlib::ClassLoader<GraspProviderBase>* grasp_provider_class_loader_;
-	pluginlib::ClassLoader<PlaceProviderBase>* place_provider_class_loader_;
-
 protected:
-	GraspProviderBase* grasp_stage_ = nullptr;
-	PlaceProviderBase* place_stage_ = nullptr;
+	C* provider_plugin_stage_ = nullptr;
 	ModifyPlanningScene* attach_detach_stage_ = nullptr;
 
 public:
-	PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<GraspProviderBase>* grasp_class_loader, pluginlib::ClassLoader<PlaceProviderBase>* place_class_loader);
+	PickPlaceBase(const std::string& name, const std::string& provider_stage_plugin_name, bool is_pick, pluginlib::ClassLoader<C>* class_loader);
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -157,15 +156,15 @@ public:
 	solvers::PipelinePlannerPtr samplingPlanner() {return sampling_planner_;}
 	
 	// Use this to retrieve a pointer to the GraspProviderPlugin object, to set its custom properties
-	moveit::task_constructor::Stage* GraspProviderPlugin() {return grasp_stage_;}
+	C* ProviderPlugin() {return provider_plugin_stage_;}
 };
 
 /// specialization of PickPlaceBase to realize picking
-class Pick : public PickPlaceBase
+class Pick : public PickPlaceBase <GraspProviderBase>
 {
 public:
 	Pick(const std::string& name = "pick", const std::string& provider_stage_plugin_name = "moveit_task_constructor/GraspProviderDefault", pluginlib::ClassLoader<GraspProviderBase>* class_loader = nullptr)
-	  : PickPlaceBase(name, provider_stage_plugin_name, true, class_loader, nullptr) {}
+	  : PickPlaceBase(name, provider_stage_plugin_name, true, class_loader) {}
 
 	void setMonitoredStage(Stage* monitored);
 
@@ -193,11 +192,11 @@ public:
 };
 
 /// specialization of PickPlaceBase to realize placing
-class Place : public PickPlaceBase
+class Place : public PickPlaceBase <PlaceProviderBase>
 {
 public:
 	Place(const std::string& name = "place", const std::string& provider_stage_plugin_name = "moveit_task_constructor/PlaceProviderDefault", pluginlib::ClassLoader<PlaceProviderBase>* class_loader = nullptr)
-	  : PickPlaceBase(name, provider_stage_plugin_name, false, nullptr, class_loader) {}
+	  : PickPlaceBase(name, provider_stage_plugin_name, false, class_loader) {}
 
 	void setMonitoredStage(Stage* monitored);
 
