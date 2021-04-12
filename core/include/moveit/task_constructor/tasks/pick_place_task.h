@@ -133,6 +133,7 @@ public:
   void init(const Parameters& parameters);
 
 	bool plan();
+  void getSolutionMsg(moveit_task_constructor_msgs::Solution& solution);
 
 private:
 	TaskPtr task_;

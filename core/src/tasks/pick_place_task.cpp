@@ -204,6 +204,10 @@ bool PickPlaceTask::plan() {
 	return true;
 }
 
+void PickPlaceTask::getSolutionMsg(moveit_task_constructor_msgs::Solution& solution) {
+  task_->solutions().front()->fillMessage(solution);
+}
+
 }  // namespace tasks
 }  // namespace task_constructor
 }  // namespace moveit

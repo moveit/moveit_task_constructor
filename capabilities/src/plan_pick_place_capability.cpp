@@ -80,8 +80,11 @@ void PlanPickPlaceCapability::goalCallback(
   // Initialize task
   pick_place_task_->init(parameters);
 
-  // Run plan
-  pick_place_task_->plan();
+  // Compute plan
+  result.success = pick_place_task_->plan();
+  if (result.success) {
+    pick_place_task_->getSolutionMsg(result.solution);
+  }
 
   // Retrieve and return result
   as_->setSucceeded(result);
