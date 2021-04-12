@@ -86,6 +86,8 @@ class PickPlaceTask
 public:
   struct Parameters
   {
+    short task_type_;
+
     // planning group properties
     std::string arm_group_name_;
     std::string eef_name_;
@@ -108,6 +110,7 @@ public:
 
     // Plugins
     std::string grasp_provider_plugin_name_;
+    std::string place_provider_plugin_name_;
 
     // Pick metrics
     Eigen::Isometry3d grasp_frame_transform_;
@@ -117,20 +120,22 @@ public:
     geometry_msgs::Vector3Stamped lift_object_direction_;
     double lift_object_min_dist_;
     double lift_object_max_dist_;
-    double place_object_min_dist_;
-    double place_object_max_dist_;
-    double retreat_object_min_dist_;
-    double retreat_object_max_dist_;
 
     // Place metrics
     geometry_msgs::PoseStamped place_pose_;
     double place_surface_offset_;
+    geometry_msgs::Vector3Stamped place_object_direction_;
+    double place_object_min_dist_;
+    double place_object_max_dist_;
+    geometry_msgs::Vector3Stamped retract_direction_;
+    double retract_min_dist_;
+    double retract_max_dist_;
   };
 
 	PickPlaceTask(const std::string& task_name);
 	~PickPlaceTask() = default;
 
-  void init(const Parameters& parameters);
+  bool init(const Parameters& parameters);
 
 	bool plan();
   void getSolutionMsg(moveit_task_constructor_msgs::Solution& solution);

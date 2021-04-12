@@ -60,6 +60,7 @@ void PlanPickPlaceCapability::goalCallback(
 
   // TODO: fill parameters
   PickPlaceTask::Parameters parameters;
+  parameters.task_type_ = goal->task_type;
   parameters.arm_group_name_ = goal->arm_group_name;
   parameters.hand_group_name_ = goal->hand_group_name;
   parameters.eef_name_ = goal->eef_name;
@@ -77,17 +78,27 @@ void PlanPickPlaceCapability::goalCallback(
   parameters.lift_object_min_dist_ = goal->grasp.post_grasp_retreat.min_distance;
   parameters.lift_object_max_dist_ = goal->grasp.post_grasp_retreat.desired_distance;
 
-  // Initialize task
-  pick_place_task_->init(parameters);
+  parameters.place_provider_plugin_name_ = goal->place_provider_plugin_name;
+  parameters.place_pose_ = goal->place_location.place_pose;
+  parameters.place_object_direction_ = goal->place_location.pre_place_approach.direction;
+  parameters.place_object_min_dist_ = goal->place_location.pre_place_approach.min_distance;
+  parameters.place_object_max_dist_ = goal->place_location.pre_place_approach.desired_distance;
+  parameters.retract_direction_ = goal->place_location.post_place_retreat.direction;
+  parameters.retract_min_dist_ = goal->place_location.post_place_retreat.min_distance;
+  parameters.retract_max_dist_ = goal->place_location.post_place_retreat.desired_distance;
 
-  // Compute plan
-  result.success = pick_place_task_->plan();
-  if (result.success) {
-    pick_place_task_->getSolutionMsg(result.solution);
+  // Initialize task and plan
+  if (pick_place_task_->init(parameters)){
+    // Compute plan
+    result.success = pick_place_task_->plan();
+    if (result.success) {
+      pick_place_task_->getSolutionMsg(result.solution);
+    }
+  } else {
+    result.success = false;
   }
-
   // Retrieve and return result
-  as_->setSucceeded(result);
+    as_->setSucceeded(result);
 }
 
 void PlanPickPlaceCapability::preemptCallback() {
