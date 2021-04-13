@@ -150,9 +150,11 @@ protected:
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
-	/// lift solution from internal to external level, possibly replacing the generated InterfaceState with new_external
+	/// lift solution from internal to external level, possibly replacing the generated InterfaceStates with new_*
+	/// If specified, *new_from/*new_to will be moved from.
 	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
-	                  const InterfaceState* internal_to, const InterfaceState* new_external = nullptr);
+	                  const InterfaceState* internal_to, InterfaceState* new_from = nullptr,
+	                  InterfaceState* new_to = nullptr);
 
 	/// protected writable overloads
 	inline auto& internalToExternalMap() { return internal_external_.left; }

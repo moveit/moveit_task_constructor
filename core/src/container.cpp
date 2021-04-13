@@ -204,13 +204,14 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
-                                        const InterfaceState* internal_to, const InterfaceState* new_external) {
+                                        const InterfaceState* internal_to, InterfaceState* new_from,
+                                        InterfaceState* new_to) {
 	const bool create_from{ requiredInterface().testFlag(WRITES_PREV_END) };
 	const bool create_to{ requiredInterface().testFlag(WRITES_NEXT_START) };
 
 	// external states, nullptr if they don't exist yet
-	const InterfaceState* external_from{ create_from ? new_external : internalToExternalMap().at(internal_from) };
-	const InterfaceState* external_to{ create_to ? new_external : internalToExternalMap().at(internal_to) };
+	const InterfaceState* external_from{ create_from ? new_from : internalToExternalMap().at(internal_from) };
+	const InterfaceState* external_to{ create_to ? new_to : internalToExternalMap().at(internal_to) };
 
 	// computeCost
 	// we can pass intern_{from/to} here because in this case the lifted states that might be created later
@@ -222,17 +223,16 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 		return;
 	}
 
-	auto create_state = [this, new_external](const InterfaceState& internal) {
-		InterfaceState* external{ storeState(new_external ? InterfaceState{ *new_external } :
-			                                                 InterfaceState{ internal }) };
+	auto create_state = [this](const InterfaceState& internal, InterfaceState* new_external) {
+		InterfaceState* external{ storeState(new_external ? std::move(*new_external) : InterfaceState{ internal }) };
 		internalToExternalMap().insert(std::make_pair(&internal, external));
 		return external;
 	};
 
 	if (create_from)
-		external_from = create_state(*internal_from);
+		external_from = create_state(*internal_from, new_from);
 	if (create_to)
-		external_to = create_state(*internal_to);
+		external_to = create_state(*internal_to, new_to);
 
 	assert(external_from);
 	assert(external_to);
@@ -749,7 +749,7 @@ void ParallelContainerBase::liftSolution(const SolutionBase& solution, double co
 	                      solution.start(), solution.end());
 }
 
-void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& modified_solution, const SolutionBase &child_solution) {
+void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& modified_solution, const SolutionBase& child_solution) {
 	// child_solution is correctly prepared by a child of this container
 	assert(child_solution.creator());
 	assert(child_solution.creator()->parent() == this);
@@ -758,12 +758,21 @@ void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& modified_solu
 	                      child_solution.start(), child_solution.end());
 }
 
-void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr &&new_solution, InterfaceState &&new_propagated_state, const SolutionBase &child_solution) {
+void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_propagated_state, const SolutionBase& child_solution) {
+	assert(child_solution.creator());
+	assert(child_solution.creator()->parent() == this);
+	assert(pimpl()->requiredInterface() == PROPAGATE_FORWARDS || pimpl()->requiredInterface() == PROPAGATE_BACKWARDS);
+
+	pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_propagated_state, &new_propagated_state);
+}
+
+void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_from, InterfaceState&& new_to, const SolutionBase& child_solution) {
 	assert(child_solution.creator());
 	assert(child_solution.creator()->parent() == this);
 
-	pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_propagated_state);
+	pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_from, &new_to);
 }
+
 
 WrapperBasePrivate::WrapperBasePrivate(WrapperBase* me, const std::string& name)
   : ParallelContainerBasePrivate(me, name) {}
