@@ -196,10 +196,11 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	}
 
 	// create a clone of external state within target interface (child's starts() or ends())
-	auto internal = states_.insert(states_.end(), InterfaceState(*external));
-	target->add(*internal);
+	InterfaceState* internal = storeState(InterfaceState{ *external });
+
 	// and remember the mapping between them
-	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
+	internalToExternalMap().insert(std::make_pair(internal, &*external));
+	target->add(*internal);
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
