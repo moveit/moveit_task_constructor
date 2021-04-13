@@ -213,8 +213,9 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	const InterfaceState* external_to{ create_to ? new_external : internalToExternalMap().at(internal_to) };
 
 	// computeCost
-	computeCost(external_from ? *external_from : InterfaceState(*internal_from),
-	            external_to ? *external_to : InterfaceState(*internal_to), *solution);
+	// we can pass intern_{from/to} here because in this case the lifted states that might be created later
+	// are equivalent up to the connected Solutions (which are not relevant for CostTerms)
+	computeCost(external_from ? *external_from : *internal_from, external_to ? *external_to : *internal_to, *solution);
 
 	// storeSolution
 	if (!storeSolution(solution, external_from, external_to)) {
