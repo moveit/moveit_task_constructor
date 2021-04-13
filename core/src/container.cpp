@@ -212,7 +212,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 		if (it != internalToExternalMap().end())
 			return const_cast<InterfaceState*>(it->second);
 
-		InterfaceState* external = &*states_.insert(states_.end(), InterfaceState(*internal));
+		InterfaceState* external = storeState(InterfaceState(*internal));
 		internalToExternalMap().insert(std::make_pair(internal, external));
 		created = true;
 		return external;
