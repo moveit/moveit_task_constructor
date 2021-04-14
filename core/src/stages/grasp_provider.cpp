@@ -49,10 +49,6 @@ namespace task_constructor {
 namespace stages {
 
 //  -------------------
-//  GraspProviderBase
-//  -------------------
-
-//  -------------------
 //  GraspProviderDefault
 //  -------------------
 
@@ -132,6 +128,77 @@ void GraspProviderDefault::compute() {
 	}
 }
 
+
+//  -------------------
+//  GraspProviderFixedPose
+//  -------------------
+
+
+GraspProviderFixedPose::GraspProviderFixedPose(const std::string& name) : GraspProviderBase(name){
+	auto& p = properties();
+	p.declare<geometry_msgs::PoseStamped>("pose", geometry_msgs::PoseStamped(), "Grasp pose");
+}
+
+void GraspProviderFixedPose::init(const core::RobotModelConstPtr& robot_model) {
+	InitStageException errors;
+	try {
+		GraspProviderBase::init(robot_model);
+	} catch (InitStageException& e) {
+		errors.append(e);
+	}
+
+	const auto& props = properties();
+
+	// check pose
+	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	if (props.get<geometry_msgs::PoseStamped>("pose").header.frame_id == "")
+		errors.push_back(*this, "grasp pose header must be set");
+
+	// check availability of object
+	props.get<std::string>("object");
+	// check availability of eef
+	const std::string& eef = props.get<std::string>("eef");
+	if (!robot_model->hasEndEffector(eef))
+		errors.push_back(*this, "unknown end effector: " + eef);
+	else {
+		// check availability of eef pose
+		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+		const std::string& name = props.get<std::string>("pregrasp");
+		std::map<std::string, double> m;
+		if (!jmg->getVariableDefaultPositions(name, m))
+			errors.push_back(*this, "unknown end effector pose: " + name);
+	}
+
+	if (errors)
+		throw errors;
+}
+
+void GraspProviderFixedPose::compute() {
+	if (upstream_solutions_.empty())
+		return;
+
+	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
+	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	if (target_pose.header.frame_id.empty())
+		target_pose.header.frame_id = scene->getPlanningFrame();
+	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+		return;
+	}
+
+	InterfaceState state(scene);
+	state.properties().set("target_pose", target_pose);
+
+	SubTrajectory trajectory;
+	trajectory.setCost(0.0);
+
+	rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "grasp frame");
+
+	spawn(std::move(state), std::move(trajectory));
+}
+
+
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
@@ -139,3 +206,4 @@ void GraspProviderDefault::compute() {
 /// register plugin
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::GraspProviderDefault, moveit::task_constructor::stages::GraspProviderBase)
+PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::GraspProviderFixedPose, moveit::task_constructor::stages::GraspProviderBase)

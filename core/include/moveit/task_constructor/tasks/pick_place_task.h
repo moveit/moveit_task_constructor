@@ -113,6 +113,7 @@ public:
     std::string place_provider_plugin_name_;
 
     // Pick metrics
+    geometry_msgs::PoseStamped grasp_pose_;
     Eigen::Isometry3d grasp_frame_transform_;
     geometry_msgs::Vector3Stamped approach_object_direction_;
     double approach_object_min_dist_;

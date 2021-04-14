@@ -58,6 +58,19 @@ public:
 	void compute() override;
 };
 
+
+/// Grasp Provider plugin for setting a single grasp pose
+
+class GraspProviderFixedPose : public GraspProviderBase
+{
+public:
+	GraspProviderFixedPose(const std::string& name = "set grasp pose");
+
+	void init(const core::RobotModelConstPtr& robot_model) override;
+	void compute() override;
+};
+
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

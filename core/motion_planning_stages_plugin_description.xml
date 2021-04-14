@@ -17,6 +17,14 @@
     </description>
   </class>
 
+  <class name="moveit_task_constructor/GraspProviderFixedPose"
+         type="moveit::task_constructor::stages::GraspProviderFixedPose"
+         base_class_type="moveit::task_constructor::stages::GraspProviderBase">
+    <description>
+      Grasp Provider plugin for setting a single grasp pose
+    </description>
+  </class>
+
   <class name="moveit_task_constructor/PlaceProviderDefault"
          type="moveit::task_constructor::stages::PlaceProviderDefault"
          base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
