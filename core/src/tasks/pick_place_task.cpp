@@ -132,17 +132,6 @@ bool PickPlaceTask::init(const Parameters& parameters)
   if (parameters.task_type_ == moveit_task_constructor_msgs::PlanPickPlaceGoal::PICK_ONLY || 
       parameters.task_type_ == moveit_task_constructor_msgs::PlanPickPlaceGoal::PICK_AND_PLACE)
   {
-    /****************************************************
-     *                                                  *
-     *               Open Hand                          *
-     *                                                  *
-     ***************************************************/
-    {  // Open Hand
-      auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
-      stage->setGroup(parameters.hand_group_name_);
-      stage->setGoal(parameters.hand_open_pose_);
-      t.add(std::move(stage));
-    }
 
     /****************************************************
      *                                                  *
@@ -162,36 +151,41 @@ bool PickPlaceTask::init(const Parameters& parameters)
      *               Pick Object                        *
      *                                                  *
      ***************************************************/
-    {
-      const bool grasp_pose_defined = grasp_pose_is_defined(parameters.grasp_pose_);
+    { // Decide which grasp provider to use
       std::string grasp_provider_plugin;
-      if (grasp_pose_defined)
-      {
-        grasp_provider_plugin = "moveit_task_constructor/GraspProviderFixedPose";
-      }
-      else
-      {
+      if (parameters.grasp_provider_plugin_name_ == ""){
+        if (parameters.grasps_.empty()){
+          ROS_ERROR_STREAM("No grasp provider plugin and no grasps are specified for stage 'Pick' \n"
+            "Either set the grasp provider plugin, or provide at least one Grasp in which at least the approach and retreat fields are specified");
+          grasp_provider_plugin = "moveit_task_constructor/GraspProviderDefault";
+        } else if (parameters.grasps_.size() == 1) {
+          if (!grasp_pose_is_defined(parameters.grasps_[0].grasp_pose)){
+            grasp_provider_plugin = "moveit_task_constructor/GraspProviderDefault";
+          } else {
+            grasp_provider_plugin = "moveit_task_constructor/GraspProviderFixedPoses";
+          }
+        } else {
+          grasp_provider_plugin = "moveit_task_constructor/GraspProviderFixedPoses";
+        }
+      } else {
         grasp_provider_plugin = parameters.grasp_provider_plugin_name_;
       }
+
+      // Create the Pick container
       auto stage = std::make_unique<stages::Pick>("Pick object", grasp_provider_plugin, grasp_provider_class_loader_.get());
       stage->properties().property("eef_group").configureInitFrom(Stage::PARENT, "hand");
       stage->properties().property("eef_parent_group").configureInitFrom(Stage::PARENT, "group");
       stage->setObject(parameters.object_name_);
       stage->setEndEffector(parameters.eef_name_);
-      stage->setEndEffectorOpenClose(parameters.hand_open_pose_, parameters.hand_close_pose_);
       stage->setSupportSurfaces(parameters.support_surfaces_);
       stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
-      if (grasp_pose_defined)
-      {
-        stage->ProviderPlugin()->properties().set("pose", parameters.grasp_pose_);
-      }
-      else // TODO: Go through properties systematically
-      {
-        stage->ProviderPlugin()->properties().set("angle_delta", M_PI / 12);  // Set plugin-specific properties
-      }
+      stage->ProviderPlugin()->properties().set("grasps", parameters.grasps_);
       stage->setMonitoredStage(current_state_stage_);
-      stage->setApproachMotion(parameters.approach_object_direction_,parameters.approach_object_min_dist_, parameters.approach_object_max_dist_);
-      stage->setLiftMotion(parameters.lift_object_direction_, parameters.lift_object_min_dist_, parameters.lift_object_max_dist_);
+      if (grasp_provider_plugin == "moveit_task_constructor/GraspProviderDefault") {
+        stage->ProviderPlugin()->properties().set("angle_delta", M_PI / 12);
+      } else if (grasp_provider_plugin != "moveit_task_constructor/GraspProviderFixedPoses") {
+        // TODO: Set plugin-specific properties systematically
+      }
       attach_object_stage_ = stage->attachStage();
       t.add(std::move(stage));
     }

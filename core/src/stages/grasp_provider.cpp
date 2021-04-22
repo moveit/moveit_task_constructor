@@ -44,6 +44,8 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
+#include <moveit_msgs/Grasp.h>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -78,12 +80,9 @@ void GraspProviderDefault::init(const core::RobotModelConstPtr& robot_model) {
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+		// TODO: Validate eef_poses specified in grasps
+		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
+			errors.push_back(*this, "no grasp provided");
 	}
 
 	if (errors)
@@ -97,11 +96,9 @@ void GraspProviderDefault::compute() {
 
 	// set end effector pose
 	const auto& props = properties();
+	const std::vector<moveit_msgs::Grasp>& grasps_ = props.get<std::vector<moveit_msgs::Grasp>>("grasps");
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
-
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
@@ -115,7 +112,30 @@ void GraspProviderDefault::compute() {
 		InterfaceState state(scene);
 		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
 		state.properties().set("target_pose", target_pose_msg);
-		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
+		state.properties().set("approach_direction", grasps_[0].pre_grasp_approach.direction);
+		state.properties().set("approach_min_dist", static_cast<double>(grasps_[0].pre_grasp_approach.min_distance));
+		state.properties().set("approach_max_dist", static_cast<double>(grasps_[0].pre_grasp_approach.desired_distance));
+
+		state.properties().set("retreat_direction", grasps_[0].post_grasp_retreat.direction);
+		state.properties().set("retreat_min_dist", static_cast<double>(grasps_[0].post_grasp_retreat.min_distance));
+		state.properties().set("retreat_max_dist", static_cast<double>(grasps_[0].post_grasp_retreat.desired_distance));
+
+		std::map<std::string, double> hand_open_pose;
+		std::map<std::string, double> hand_close_pose;
+
+		std::vector<std::string> hand_joint_names = grasps_[0].pre_grasp_posture.joint_names;
+		std::vector<double> open_pose = grasps_[0].pre_grasp_posture.points[0].positions;
+		std::vector<double> close_pose = grasps_[0].grasp_posture.points[0].positions;
+
+		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
+		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
+
+		// TODO: Raise exception if the sizes do not match
+
+		state.properties().set("hand_open_pose", hand_open_pose);
+		state.properties().set("hand_close_pose", hand_close_pose);
+
+		// props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
@@ -130,16 +150,13 @@ void GraspProviderDefault::compute() {
 
 
 //  -------------------
-//  GraspProviderFixedPose
+//  GraspProviderFixedPoses
 //  -------------------
 
 
-GraspProviderFixedPose::GraspProviderFixedPose(const std::string& name) : GraspProviderBase(name){
-	auto& p = properties();
-	p.declare<geometry_msgs::PoseStamped>("pose", geometry_msgs::PoseStamped(), "Grasp pose");
-}
+GraspProviderFixedPoses::GraspProviderFixedPoses(const std::string& name) : GraspProviderBase(name){}
 
-void GraspProviderFixedPose::init(const core::RobotModelConstPtr& robot_model) {
+void GraspProviderFixedPoses::init(const core::RobotModelConstPtr& robot_model) {
 	InitStageException errors;
 	try {
 		GraspProviderBase::init(robot_model);
@@ -149,11 +166,6 @@ void GraspProviderFixedPose::init(const core::RobotModelConstPtr& robot_model) {
 
 	const auto& props = properties();
 
-	// check pose
-	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
-	if (props.get<geometry_msgs::PoseStamped>("pose").header.frame_id == "")
-		errors.push_back(*this, "grasp pose header must be set");
-
 	// check availability of object
 	props.get<std::string>("object");
 	// check availability of eef
@@ -161,40 +173,65 @@ void GraspProviderFixedPose::init(const core::RobotModelConstPtr& robot_model) {
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+		// TODO: Validate eef_poses specified in grasps
+		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
+			errors.push_back(*this, "no grasp provided");
 	}
 
 	if (errors)
 		throw errors;
 }
 
-void GraspProviderFixedPose::compute() {
+void GraspProviderFixedPoses::compute() {
 	if (upstream_solutions_.empty())
 		return;
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
-	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
-	if (target_pose.header.frame_id.empty())
-		target_pose.header.frame_id = scene->getPlanningFrame();
-	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
-		ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
-		return;
+
+	const std::vector<moveit_msgs::Grasp>& grasps_ = properties().get<std::vector<moveit_msgs::Grasp>>("grasps");
+
+	for (moveit_msgs::Grasp grasp_ : grasps_){
+
+		geometry_msgs::PoseStamped target_pose  = grasp_.grasp_pose;
+		if (target_pose.header.frame_id.empty())
+			target_pose.header.frame_id = scene->getPlanningFrame();
+		else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+			ROS_WARN_NAMED("GeneratePose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+			return;
+		}
+
+		InterfaceState state(scene);
+		state.properties().set("target_pose", target_pose);
+		state.properties().set("approach_direction", grasp_.pre_grasp_approach.direction);
+		state.properties().set("approach_min_dist", static_cast<double>(grasp_.pre_grasp_approach.min_distance));
+		state.properties().set("approach_max_dist", static_cast<double>(grasp_.pre_grasp_approach.desired_distance));
+
+		state.properties().set("retreat_direction", grasp_.post_grasp_retreat.direction);
+		state.properties().set("retreat_min_dist", static_cast<double>(grasp_.post_grasp_retreat.min_distance));
+		state.properties().set("retreat_max_dist", static_cast<double>(grasp_.post_grasp_retreat.desired_distance));
+
+		std::map<std::string, double> hand_open_pose;
+		std::map<std::string, double> hand_close_pose;
+
+		std::vector<std::string> hand_joint_names = grasp_.pre_grasp_posture.joint_names;
+		std::vector<double> open_pose = grasp_.pre_grasp_posture.points[0].positions;
+		std::vector<double> close_pose = grasp_.grasp_posture.points[0].positions;
+
+		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
+		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
+
+		// TODO: Raise exception if the sizes do not match
+
+		state.properties().set("hand_open_pose", hand_open_pose);
+		state.properties().set("hand_close_pose", hand_close_pose);
+
+		SubTrajectory trajectory;
+		trajectory.setCost(0.0);
+
+		rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "grasp frame");
+
+		spawn(std::move(state), std::move(trajectory));
 	}
-
-	InterfaceState state(scene);
-	state.properties().set("target_pose", target_pose);
-
-	SubTrajectory trajectory;
-	trajectory.setCost(0.0);
-
-	rviz_marker_tools::appendFrame(trajectory.markers(), target_pose, 0.1, "grasp frame");
-
-	spawn(std::move(state), std::move(trajectory));
 }
 
 
@@ -206,4 +243,4 @@ void GraspProviderFixedPose::compute() {
 /// register plugin
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::GraspProviderDefault, moveit::task_constructor::stages::GraspProviderBase)
-PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::GraspProviderFixedPose, moveit::task_constructor::stages::GraspProviderBase)
+PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::GraspProviderFixedPoses, moveit::task_constructor::stages::GraspProviderBase)

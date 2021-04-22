@@ -61,10 +61,10 @@ public:
 
 /// Grasp Provider plugin for setting a single grasp pose
 
-class GraspProviderFixedPose : public GraspProviderBase
+class GraspProviderFixedPoses : public GraspProviderBase
 {
 public:
-	GraspProviderFixedPose(const std::string& name = "set grasp pose");
+	GraspProviderFixedPoses(const std::string& name = "set grasp poses");
 
 	void init(const core::RobotModelConstPtr& robot_model) override;
 	void compute() override;

@@ -18,7 +18,7 @@ string[] support_surfaces
 
 # Picking
 string grasp_provider_plugin_name
-moveit_msgs/Grasp grasp
+moveit_msgs/Grasp[] grasps
 geometry_msgs/Pose grasp_frame_transform
 
 # Placing

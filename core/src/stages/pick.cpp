@@ -28,8 +28,6 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 	p.declare<std::string>("object", "name of object to grasp/place");
 	p.declare<std::string>("eef", "end effector name");
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
-	p.declare<std::string>("eef_group_open_pose", "Name of open pose of eef_group");
-	p.declare<std::string>("eef_group_close_pose", "Name of close pose of eef_group");
 	p.declare<std::vector<std::string>>("support_surfaces", {}, "Name of support surfaces");
 
 	// internal properties (cannot be marked as such yet)
@@ -49,6 +47,9 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.property("ik_frame").configureInitFrom(Stage::PARENT, "ik_frame");
 		p.set("marker_ns", std::string(is_pick_ ? "approach" : "place"));
+		p.property("direction").configureInitFrom(Stage::INTERFACE, "approach_direction");
+		p.property("min_distance").configureInitFrom(Stage::INTERFACE, "approach_min_dist");
+		p.property("max_distance").configureInitFrom(Stage::INTERFACE, "approach_max_dist");
 		move_there_stage_ = move_there.get();
 		insert(std::move(move_there));
 	}
@@ -68,8 +69,6 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 		if (is_pick_) {
 			std::unique_ptr<C> provider_stage_plugin(class_loader->createUnmanagedInstance(provider_stage_plugin_name_));
 			provider_stage_plugin->properties().configureInitFrom(Stage::PARENT);
-			provider_stage_plugin->properties().property("pregrasp").configureInitFrom(Stage::PARENT, "eef_group_open_pose");
-			provider_stage_plugin->properties().property("grasp").configureInitFrom(Stage::PARENT, "eef_group_close_pose");
 			provider_stage_plugin->properties().set("marker_ns", "grasp_pose");
 			provider_plugin_stage_ = provider_stage_plugin.get();
 
@@ -84,8 +83,9 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 			wrapper = std::make_unique<ComputeIK>("place pose IK", std::move(provider_stage_plugin));
 		}
 
-		properties().exposeTo(wrapper->properties(), {"object", "eef_group_open_pose", "eef_group_close_pose"});
-		wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group", "ik_frame", "object", "eef_group_open_pose", "eef_group_close_pose"});
+		properties().exposeTo(wrapper->properties(), {"object"});
+		wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group", "ik_frame", "object"});
+		wrapper->setForwardedProperties({"approach_direction", "approach_min_dist", "approach_max_dist", "retreat_direction", "retreat_min_dist", "retreat_max_dist", "hand_open_pose", "hand_close_pose"});
 		wrapper->properties().configureInitFrom(Stage::INTERFACE, { "target_pose" });
 		compute_ik_stage_ = wrapper.get();
 		insert(std::move(wrapper));
@@ -98,6 +98,7 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 
 	{
 		auto set_collision_object_hand = std::make_unique<ModifyPlanningScene>(is_pick_ ? "allow collision (hand,object)" : "forbid collision (hand,object)");
+		set_collision_object_hand->setForwardedProperties({"retreat_direction", "retreat_min_dist", "retreat_max_dist", "hand_open_pose", "hand_close_pose"});
 		set_collision_object_hand_stage_ = set_collision_object_hand.get();
 		insert(std::move(set_collision_object_hand));
 	}
@@ -106,7 +107,8 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 		auto open_close_hand = std::make_unique<MoveTo>(is_pick_ ? "close hand" : "open hand", sampling_planner_);
 		PropertyMap& p = open_close_hand->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_group");
-		p.property("goal").configureInitFrom(Stage::PARENT, is_pick_ ? "eef_group_close_pose" : "eef_group_open_pose");
+		p.property("goal").configureInitFrom(Stage::INTERFACE, is_pick_ ? "hand_close_pose" : "hand_open_pose");
+		open_close_hand->setForwardedProperties({"retreat_direction", "retreat_min_dist", "retreat_max_dist"});
 		if (is_pick_)
 			insert(std::move(open_close_hand));
 		else
@@ -115,12 +117,14 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 
 	{
 		auto attach_detach = std::make_unique<ModifyPlanningScene>(is_pick_ ? "attach object" : "detach object");
+		attach_detach->setForwardedProperties({"retreat_direction", "retreat_min_dist", "retreat_max_dist"});
 		attach_detach_stage_ = attach_detach.get();
 		insert(std::move(attach_detach));
 	}
 
 	if (is_pick_) {
 		auto set_collision_object_support = std::make_unique<ModifyPlanningScene>("allow collision (object,support)");
+		set_collision_object_support->setForwardedProperties({"retreat_direction", "retreat_min_dist", "retreat_max_dist"});
 		allow_collision_object_support_stage_ = set_collision_object_support.get();
 		insert(std::move(set_collision_object_support));
 	}
@@ -131,6 +135,9 @@ PickPlaceBase<C>::PickPlaceBase(const std::string& name, const std::string& prov
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.property("ik_frame").configureInitFrom(Stage::PARENT, "ik_frame");
 		p.set("marker_ns", std::string(is_pick_ ? "lift" : "retract"));
+		p.property("direction").configureInitFrom(Stage::INTERFACE, "retreat_direction");
+		p.property("min_distance").configureInitFrom(Stage::INTERFACE, "retreat_min_dist");
+		p.property("max_distance").configureInitFrom(Stage::INTERFACE, "retreat_max_dist");
 		move_back_stage_ = move_back.get();
 		insert(std::move(move_back));
 	}

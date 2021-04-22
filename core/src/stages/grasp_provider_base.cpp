@@ -12,6 +12,8 @@
 #include <moveit/task_constructor/stages/grasp_provider.h>
 #include <moveit/task_constructor/stages/grasp_provider_base.h>
 
+#include <moveit_msgs/Grasp.h>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -20,8 +22,7 @@ GraspProviderBase::GraspProviderBase(const std::string& name) : GeneratePose(nam
 	p.declare<std::string>("eef", "name of end-effector");
 	p.declare<std::string>("object");
 
-	p.declare<boost::any>("pregrasp", "pregrasp posture");
-	p.declare<boost::any>("grasp", "grasp posture");
+	p.declare<std::vector<moveit_msgs::Grasp>>("grasps", "list of Grasp messages");
 }
 void GraspProviderBase::init(const std::shared_ptr<const moveit::core::RobotModel>& robot_model) {
 	InitStageException errors;
@@ -40,12 +41,7 @@ void GraspProviderBase::init(const std::shared_ptr<const moveit::core::RobotMode
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+	// TODO: Validate eef_poses specified in grasps
 	}
 
 	if (errors)

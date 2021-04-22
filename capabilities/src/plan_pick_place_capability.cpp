@@ -67,17 +67,11 @@ void PlanPickPlaceCapability::goalCallback(
   parameters.hand_frame_ = goal->hand_frame;
   parameters.object_name_ = goal->object_id;
   parameters.support_surfaces_ = goal->support_surfaces;
-  parameters.grasp_pose_ = goal->grasp.grasp_pose;
+  parameters.grasps_ = goal->grasps;
   parameters.grasp_provider_plugin_name_ = goal->grasp_provider_plugin_name;
   tf::poseMsgToEigen(goal->grasp_frame_transform, parameters.grasp_frame_transform_);
   parameters.hand_open_pose_ = "open";
   parameters.hand_close_pose_ = "close";
-  parameters.approach_object_direction_ = goal->grasp.pre_grasp_approach.direction;
-  parameters.approach_object_min_dist_ = goal->grasp.pre_grasp_approach.min_distance;
-  parameters.approach_object_max_dist_ = goal->grasp.pre_grasp_approach.desired_distance;
-  parameters.lift_object_direction_ = goal->grasp.post_grasp_retreat.direction;
-  parameters.lift_object_min_dist_ = goal->grasp.post_grasp_retreat.min_distance;
-  parameters.lift_object_max_dist_ = goal->grasp.post_grasp_retreat.desired_distance;
 
   parameters.place_provider_plugin_name_ = goal->place_provider_plugin_name;
   parameters.place_pose_ = goal->place_location.place_pose;

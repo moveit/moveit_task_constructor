@@ -68,6 +68,7 @@
 
 #include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include <moveit_msgs/Grasp.h>
 
 #include <pluginlib/class_loader.h>
 
@@ -113,6 +114,7 @@ public:
     std::string place_provider_plugin_name_;
 
     // Pick metrics
+    std::vector<moveit_msgs::Grasp> grasps_;
     geometry_msgs::PoseStamped grasp_pose_;
     Eigen::Isometry3d grasp_frame_transform_;
     geometry_msgs::Vector3Stamped approach_object_direction_;
