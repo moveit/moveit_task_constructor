@@ -81,7 +81,7 @@ void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	const auto& props = properties();
 
 	// false-positive in clang-tidy 10.0.0: predicate might change comment
-	// NOLINTNEXTLINE(performance-unnecessary-value-param)
+	// NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
 	std::string comment = s.comment();
 
 	double cost = s.cost();

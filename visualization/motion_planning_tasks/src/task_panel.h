@@ -159,7 +159,7 @@ private:
 	Q_PRIVATE_SLOT(d_ptr, void _q_configureInsertedModels(QModelIndex, int, int));
 
 Q_SIGNALS:
-	void oldTaskHandlingChanged(int);
+	void oldTaskHandlingChanged(int old_task_handling);
 };
 
 class GlobalSettingsWidgetPrivate;

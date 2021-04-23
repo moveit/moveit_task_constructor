@@ -77,7 +77,7 @@ struct PlannerCache
 planning_pipeline::PlanningPipelinePtr PipelinePlanner::create(const PipelinePlanner::Specification& spec) {
 	static PlannerCache cache;
 
-	constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
+	static constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
 
 	std::string pipeline_ns = spec.ns + "/planning_pipelines/" + spec.pipeline;
 	// fallback to old structure for pipeline parameters in MoveIt

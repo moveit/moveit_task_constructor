@@ -132,7 +132,7 @@ struct Connect : stages::Connect
 	}
 };
 
-constexpr double inf = std::numeric_limits<double>::infinity();
+constexpr double INF = std::numeric_limits<double>::infinity();
 unsigned int GeneratorMockup::id_ = 0;
 unsigned int ForwardMockup::id_ = 0;
 unsigned int BackwardMockup::id_ = 0;
@@ -181,7 +181,7 @@ TEST_F(ConnectConnect, SuccSucc) {
 // https://github.com/ros-planning/moveit_task_constructor/issues/218
 TEST_F(ConnectConnect, FailSucc) {
 	add(task, new GeneratorMockup());
-	add(task, new Connect({ inf }, true));
+	add(task, new Connect({ INF }, true));
 	add(task, new GeneratorMockup());
 	add(task, new Connect());
 	add(task, new GeneratorMockup());
@@ -194,7 +194,7 @@ using Pruning = TestBase;
 TEST_F(Pruning, PropagatorFailure) {
 	auto back = add(task, new BackwardMockup());
 	add(task, new GeneratorMockup({ 0 }));
-	add(task, new ForwardMockup({ inf }));
+	add(task, new ForwardMockup({ INF }));
 
 	EXPECT_FALSE(task.plan());
 	ASSERT_EQ(task.solutions().size(), 0);
@@ -209,7 +209,7 @@ TEST_F(Pruning, PruningMultiForward) {
 	// spawn two solutions for the only incoming state
 	add(task, new ForwardMockup({ 0, 0 }, 2));
 	// fail to extend the second solution
-	add(task, new ForwardMockup({ 0, inf }));
+	add(task, new ForwardMockup({ 0, INF }));
 
 	EXPECT_TRUE(task.plan());
 
@@ -221,7 +221,7 @@ TEST_F(Pruning, PruningMultiForward) {
 
 TEST_F(Pruning, ConnectConnectForward) {
 	add(task, new GeneratorMockup());
-	auto c1 = add(task, new Connect({ inf, 0 }));  // 1st attempt is a failue
+	auto c1 = add(task, new Connect({ INF, 0 }));  // 1st attempt is a failue
 	add(task, new GeneratorMockup({ 0, 10, 20 }));
 	add(task, new ForwardMockup());
 	auto c2 = add(task, new Connect());
@@ -244,8 +244,8 @@ TEST_F(Pruning, ConnectConnectBackward) {
 	add(task, new GeneratorMockup({ 1, 2, 3 }));
 	auto c1 = add(task, new Connect());
 	add(task, new BackwardMockup());
-	add(task, new GeneratorMockup({ 0, inf, 10, 20 }));  // 2nd is a dummy to postpone creation of 3rd
-	auto c2 = add(task, new Connect({ inf, 0 }));  // 1st attempt is a failure
+	add(task, new GeneratorMockup({ 0, INF, 10, 20 }));  // 2nd is a dummy to postpone creation of 3rd
+	auto c2 = add(task, new Connect({ INF, 0 }));  // 1st attempt is a failure
 	add(task, new GeneratorMockup());
 
 	task.plan();
@@ -262,7 +262,7 @@ TEST_F(Pruning, ConnectConnectBackward) {
 }
 
 TEST_F(Pruning, PropagateIntoContainer) {
-	add(task, new BackwardMockup({ inf }));
+	add(task, new BackwardMockup({ INF }));
 	add(task, new GeneratorMockup({ 0 }));
 
 	auto inner = add(task, new SerialContainer());
@@ -283,7 +283,7 @@ TEST_F(Pruning, PropagateFromContainerPull) {
 
 	auto inner = add(task, new SerialContainer());
 	add(*inner, new ForwardMockup());
-	add(*inner, new ForwardMockup({ inf }));
+	add(*inner, new ForwardMockup({ INF }));
 
 	EXPECT_FALSE(task.plan());
 
@@ -293,7 +293,7 @@ TEST_F(Pruning, PropagateFromContainerPull) {
 
 TEST_F(Pruning, PropagateFromContainerPush) {
 	auto inner = add(task, new SerialContainer());
-	add(*inner, new BackwardMockup({ inf }));
+	add(*inner, new BackwardMockup({ INF }));
 
 	add(task, new GeneratorMockup({ 0 }));
 	auto con = add(task, new Connect());
@@ -310,7 +310,7 @@ TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
 	add(task, new GeneratorMockup({ 0 }));
 	auto inner = add(task, new Alternatives());
 
-	add(*inner, new ForwardMockup({ inf }));
+	add(*inner, new ForwardMockup({ INF }));
 	auto serial = add(*inner, new SerialContainer());
 	add(*serial, new Connect());
 	add(*serial, new GeneratorMockup({ 0 }));

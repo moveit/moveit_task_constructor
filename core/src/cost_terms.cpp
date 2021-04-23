@@ -45,11 +45,12 @@
 #include <Eigen/Geometry>
 
 #include <boost/format.hpp>
+#include <utility>
 
 namespace moveit {
 namespace task_constructor {
 
-double CostTerm::operator()(const SubTrajectory& s, std::string&) const {
+double CostTerm::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	return s.cost();
 }
 
@@ -85,7 +86,7 @@ LambdaCostTerm::LambdaCostTerm(const SubTrajectorySignature& term)
   : term_{ [term](const SolutionBase& s, std::string& c) { return term(static_cast<const SubTrajectory&>(s), c); } } {}
 
 LambdaCostTerm::LambdaCostTerm(const SubTrajectoryShortSignature& term)
-  : term_{ [term](const SolutionBase& s, std::string&) { return term(static_cast<const SubTrajectory&>(s)); } } {}
+  : term_{ [term](const SolutionBase& s, std::string& /*c*/) { return term(static_cast<const SubTrajectory&>(s)); } } {}
 
 double LambdaCostTerm::operator()(const SubTrajectory& s, std::string& comment) const {
 	assert(bool{ term_ });
@@ -94,19 +95,19 @@ double LambdaCostTerm::operator()(const SubTrajectory& s, std::string& comment) 
 
 namespace cost {
 
-double Constant::operator()(const SubTrajectory&, std::string&) const {
+double Constant::operator()(const SubTrajectory& /*s*/, std::string& /*comment*/) const {
 	return cost;
 }
 
-double Constant::operator()(const SolutionSequence&, std::string&) const {
+double Constant::operator()(const SolutionSequence& /*s*/, std::string& /*comment*/) const {
 	return cost;
 }
 
-double Constant::operator()(const WrappedSolution&, std::string&) const {
+double Constant::operator()(const WrappedSolution& /*s*/, std::string& /*comment*/) const {
 	return cost;
 }
 
-double PathLength::operator()(const SubTrajectory& s, std::string&) const {
+double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr)
@@ -118,7 +119,7 @@ double PathLength::operator()(const SubTrajectory& s, std::string&) const {
 	return path_length;
 }
 
-double TrajectoryDuration::operator()(const SubTrajectory& s, std::string&) const {
+double TrajectoryDuration::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	return s.trajectory() ? s.trajectory()->getDuration() : 0.0;
 }
 
@@ -150,12 +151,12 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) cons
 Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Mode mode)
   : with_world{ with_world }
   , cumulative{ cumulative }
-  , group_property{ group_property }
+  , group_property{ std::move(group_property) }
   , mode{ mode }
   , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
 double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
-	const std::string PREFIX{ "Clearance: " };
+	static const std::string PREFIX{ "Clearance: " };
 
 	collision_detection::DistanceRequest request;
 	request.type =

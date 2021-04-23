@@ -211,17 +211,17 @@ TEST(CostTerm, SetLambdaCostTerm) {
 
 	Standalone<SerialContainer> container(robot);
 	auto stage{ std::make_unique<GeneratorMockup>() };
-	stage->setCostTerm([](auto&&) { return 1.0; });
+	stage->setCostTerm([](auto&& /*s*/) { return 1.0; });
 	container.computeWithStages({ std::move(stage) });
 	EXPECT_EQ(container.solutions().front()->cost(), 1.0) << "can use simple lambda signature";
 
 	stage = std::make_unique<GeneratorMockup>();
-	stage->setCostTerm([](auto&&, auto&&) { return 1.0; });
+	stage->setCostTerm([](auto&& /*s*/, auto&& /*comment*/) { return 1.0; });
 	container.computeWithStages({ std::move(stage) });
 	EXPECT_EQ(container.solutions().front()->cost(), 1.0) << "can use full lambda signature";
 
 	stage = std::make_unique<GeneratorMockup>();
-	stage->setCostTerm([](auto&&, auto&& comment) {
+	stage->setCostTerm([](auto&& /*s*/, auto&& comment) {
 		comment = "I want the user to see this";
 		return 1.0;
 	});
