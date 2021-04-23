@@ -3,7 +3,7 @@
 		<arg name="load_robot_description" value="true"/>
 	</include>
 	<include file="$(find tams_ur5_setup_moveit_config)/launch/move_group.launch">
-		<arg name="allow_trajectory_execution" value="true"/>  
+		<arg name="allow_trajectory_execution" value="true"/>
 		<arg name="fake_execution" value="true"/>
 		<arg name="info" value="true"/>
 	</include>
