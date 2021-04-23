@@ -64,7 +64,7 @@ class SubPanel : public QWidget
 public:
 	SubPanel(QWidget* parent = nullptr) : QWidget(parent) {}
 
-	virtual void save(rviz::Config config) {}
+	virtual void save(rviz::Config config) {}  // NOLINT(performance-unnecessary-value-param)
 	virtual void load(const rviz::Config& config) {}
 
 Q_SIGNALS:

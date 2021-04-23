@@ -172,12 +172,12 @@ TEST(ContainerBase, positionForInsert) {
 
 /* TODO: remove interface as it returns raw pointers */
 TEST(ContainerBase, findChild) {
-	SerialContainer s, *c2;
+	SerialContainer s;
 	Stage *a, *b, *c1, *d;
 	s.add(Stage::pointer(a = new NamedStage("a")));
 	s.add(Stage::pointer(b = new NamedStage("b")));
 	s.add(Stage::pointer(c1 = new NamedStage("c")));
-	auto sub = ContainerBase::pointer(c2 = new SerialContainer("c"));
+	auto sub = ContainerBase::pointer(new SerialContainer("c"));
 	sub->add(Stage::pointer(d = new NamedStage("d")));
 	s.add(std::move(sub));
 
@@ -678,11 +678,11 @@ TEST(Task, move) {
 	MOCK_ID = 0;
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2u);
-	EXPECT_EQ(t1.stages()->numChildren(), 0u);
+	EXPECT_EQ(t1.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 
 	t1 = std::move(t2);
 	EXPECT_EQ(t1.stages()->numChildren(), 2u);
-	EXPECT_EQ(t2.stages()->numChildren(), 0u);
+	EXPECT_EQ(t2.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 TEST(Task, reuse) {

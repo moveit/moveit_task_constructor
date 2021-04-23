@@ -74,7 +74,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
-	for (double t = delta; t < 1.0; t += delta) {
+	for (double t = delta; t < 1.0; t += delta) {  // NOLINT(clang-analyzer-security.FloatLoopCounter)
 		from_state.interpolate(to_state, t, waypoint);
 		result->addSuffixWayPoint(waypoint, t);
 
