@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   LIBRARIES $PROJECT_NAME}
   CATKIN_DEPENDS
+    actionlib
     moveit_task_constructor_msgs
     std_msgs
 )
