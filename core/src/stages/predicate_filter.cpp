@@ -85,10 +85,17 @@ void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	std::string comment = s.comment();
 
 	double cost = s.cost();
-	if (!props.get<bool>("ignore_filter") && !props.get<Predicate>("predicate")(s, comment))
-		cost = std::numeric_limits<double>::infinity();
-
-	liftSolution(s, cost, comment);
+	if (!props.get<bool>("ignore_filter") && !props.get<Predicate>("predicate")(s, comment)) {
+		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+		SubTrajectory solution;
+		solution.markAsFailure();
+		solution.setComment(comment);
+		solution.setCost(std::numeric_limits<double>::infinity());
+		InterfaceState state(scene);
+		spawn(std::move(state), std::move(solution));
+	} else {
+		liftSolution(s, cost, comment);
+	}
 }
 }  // namespace stages
 }  // namespace task_constructor
