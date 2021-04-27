@@ -45,13 +45,11 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
+#include <moveit_msgs/PlaceLocation.h>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
-
-//  -------------------
-//  PlaceProviderBase
-//  -------------------
 
 //  -------------------
 //  PlaceProviderDefault
@@ -70,7 +68,9 @@ void PlaceProviderDefault::compute() {
 	// current object_pose w.r.t. planning frame
 	const Eigen::Isometry3d& orig_object_pose = object->getGlobalCollisionBodyTransforms()[0];
 
-	const geometry_msgs::PoseStamped& pose_msg = props.get<geometry_msgs::PoseStamped>("pose");
+	const std::vector<moveit_msgs::PlaceLocation>& place_locations_ = props.get<std::vector<moveit_msgs::PlaceLocation>>("place_locations");
+	const moveit_msgs::PlaceLocation& place_location_ =place_locations_[0];
+	const geometry_msgs::PoseStamped& pose_msg = place_location_.place_pose;
 	Eigen::Isometry3d target_pose;
 	tf::poseMsgToEigen(pose_msg.pose, target_pose);
 	// target pose w.r.t. planning frame
@@ -83,7 +83,7 @@ void PlaceProviderDefault::compute() {
 	Eigen::Isometry3d object_to_ik = orig_object_pose.inverse() * ik_frame;
 
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &object_to_ik, this](const Eigen::Isometry3d& nominal, uint z_flips,
+	auto spawner = [&s, &scene, &object_to_ik, &place_location_, this](const Eigen::Isometry3d& nominal, uint z_flips,
 	                                                 uint z_rotations = 10) {
 		for (uint flip = 0; flip < z_flips; ++flip) {
 			// flip about object's x-axis
@@ -103,6 +103,24 @@ void PlaceProviderDefault::compute() {
 				InterfaceState state(scene);
 				forwardProperties(*s.end(), state);  // forward properties from inner solutions
 				state.properties().set("target_pose", target_pose_msg);
+				state.properties().set("approach_direction", place_location_.pre_place_approach.direction);
+				state.properties().set("approach_min_dist", static_cast<double>(place_location_.pre_place_approach.min_distance));
+				state.properties().set("approach_max_dist", static_cast<double>(place_location_.pre_place_approach.desired_distance));
+
+				state.properties().set("retreat_direction", place_location_.post_place_retreat.direction);
+				state.properties().set("retreat_min_dist", static_cast<double>(place_location_.post_place_retreat.min_distance));
+				state.properties().set("retreat_max_dist", static_cast<double>(place_location_.post_place_retreat.desired_distance));
+
+				std::map<std::string, double> hand_open_pose;
+
+				std::vector<std::string> hand_joint_names = place_location_.post_place_posture.joint_names;
+				std::vector<double> open_pose = place_location_.post_place_posture.points[0].positions;
+
+				std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
+
+				// TODO(karolyartur): Raise exception if the sizes do not match
+
+				state.properties().set("hand_open_pose", hand_open_pose);
 
 				SubTrajectory trajectory;
 				trajectory.setCost(0.0);
@@ -136,6 +154,53 @@ void PlaceProviderDefault::compute() {
 	// any other case: only try given target pose
 	spawner(target_pose, 1, 1);
 }
+
+//  -------------------
+//  PlaceProviderDefault
+//  -------------------
+
+void PlaceProviderFixedPoses::compute(){
+	if (upstream_solutions_.empty())
+		return;
+
+	const SolutionBase& s = *upstream_solutions_.pop();
+	planning_scene::PlanningSceneConstPtr scene = s.end()->scene()->diff();
+
+	const auto& props = properties();
+
+	const std::vector<moveit_msgs::PlaceLocation>& place_locations_ = props.get<std::vector<moveit_msgs::PlaceLocation>>("place_locations");
+	for (moveit_msgs::PlaceLocation place_location_ : place_locations_){
+
+		InterfaceState state(scene);
+		state.properties().set("target_pose", place_location_.place_pose);
+		state.properties().set("approach_direction", place_location_.pre_place_approach.direction);
+		state.properties().set("approach_min_dist", static_cast<double>(place_location_.pre_place_approach.min_distance));
+		state.properties().set("approach_max_dist", static_cast<double>(place_location_.pre_place_approach.desired_distance));
+
+		state.properties().set("retreat_direction", place_location_.post_place_retreat.direction);
+		state.properties().set("retreat_min_dist", static_cast<double>(place_location_.post_place_retreat.min_distance));
+		state.properties().set("retreat_max_dist", static_cast<double>(place_location_.post_place_retreat.desired_distance));
+
+		std::map<std::string, double> hand_open_pose;
+
+		std::vector<std::string> hand_joint_names = place_location_.post_place_posture.joint_names;
+		std::vector<double> open_pose = place_location_.post_place_posture.points[0].positions;
+
+		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
+
+		// TODO(karolyartur): Raise exception if the sizes do not match
+
+		state.properties().set("hand_open_pose", hand_open_pose);
+
+		SubTrajectory trajectory;
+		trajectory.setCost(0.0);
+		rviz_marker_tools::appendFrame(trajectory.markers(), place_location_.place_pose, 0.1, "place frame");
+
+		spawn(std::move(state), std::move(trajectory));
+	}
+	
+}
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
@@ -143,3 +208,4 @@ void PlaceProviderDefault::compute() {
 /// register plugin
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::PlaceProviderDefault, moveit::task_constructor::stages::PlaceProviderBase)
+PLUGINLIB_EXPORT_CLASS(moveit::task_constructor::stages::PlaceProviderFixedPoses, moveit::task_constructor::stages::PlaceProviderBase)

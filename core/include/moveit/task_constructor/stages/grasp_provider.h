@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Authors: Michael Goerner, Artur Karoly
-   Desc:    Base class for grasp provider plaugins and default plugin
+   Desc:    Grasp provider plugins and default plugin
 */
 
 #pragma once
@@ -44,8 +44,6 @@
 namespace moveit {
 namespace task_constructor {
 namespace stages {
-
-/// Base class for Grasp Provider Plugins
 
 /// Default Grasp Provider plugin implementing the functionality of the GenerateGraspPose stage
 

@@ -33,7 +33,7 @@
  *********************************************************************/
 
 /* Authors: Robert Haschke, Artur Karoly
-   Desc:    Base class for place provider plaugins and default plugin
+   Desc:    Place provider plaugins and default plugin
 */
 
 #pragma once
@@ -45,8 +45,6 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-/// Base class for Place Provider Plugins
-
 /// Default Place Provider plugin implementing the functionality of the GeneratePlacePose stage
 
 class PlaceProviderDefault : public PlaceProviderBase
@@ -56,6 +54,17 @@ public:
 
 	void compute() override;
 };
+
+/// Place provider plugin for multiple place poses
+
+class PlaceProviderFixedPoses : public PlaceProviderBase
+{
+public:
+	PlaceProviderFixedPoses(const std::string& name = "set place poses") : PlaceProviderBase(name){}
+
+	void compute() override;
+};
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

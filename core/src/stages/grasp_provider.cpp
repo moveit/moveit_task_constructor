@@ -80,7 +80,7 @@ void GraspProviderDefault::init(const core::RobotModelConstPtr& robot_model) {
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// TODO: Validate eef_poses specified in grasps
+		// TODO(karolyartur): Validate eef_poses specified in grasps
 		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
 			errors.push_back(*this, "no grasp provided");
 	}
@@ -130,7 +130,7 @@ void GraspProviderDefault::compute() {
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
 
-		// TODO: Raise exception if the sizes do not match
+		// TODO(karolyartur): Raise exception if the sizes do not match
 
 		state.properties().set("hand_open_pose", hand_open_pose);
 		state.properties().set("hand_close_pose", hand_close_pose);
@@ -173,7 +173,7 @@ void GraspProviderFixedPoses::init(const core::RobotModelConstPtr& robot_model) 
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// TODO: Validate eef_poses specified in grasps
+		// TODO(karolyartur): Validate eef_poses specified in grasps
 		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
 			errors.push_back(*this, "no grasp provided");
 	}
@@ -220,7 +220,7 @@ void GraspProviderFixedPoses::compute() {
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
 
-		// TODO: Raise exception if the sizes do not match
+		// TODO(karolyartur): Raise exception if the sizes do not match
 
 		state.properties().set("hand_open_pose", hand_open_pose);
 		state.properties().set("hand_close_pose", hand_close_pose);

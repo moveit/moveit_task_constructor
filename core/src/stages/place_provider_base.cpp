@@ -13,6 +13,9 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/stages/place_provider.h>
 #include "moveit/task_constructor/stages/place_provider_base.h"
+
+#include <moveit_msgs/PlaceLocation.h>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -20,6 +23,7 @@ PlaceProviderBase::PlaceProviderBase(const std::string& name) : GeneratePose(nam
 	auto& p = properties();
 	p.declare<std::string>("object");
 	p.declare<::geometry_msgs::PoseStamped_<std::allocator<void>>>("ik_frame");
+	p.declare<std::vector<moveit_msgs::PlaceLocation>>("place_locations");
 }
 void PlaceProviderBase::onNewSolution(const SolutionBase& s) {
 	std::shared_ptr<const planning_scene::PlanningScene> scene = s.end()->scene();

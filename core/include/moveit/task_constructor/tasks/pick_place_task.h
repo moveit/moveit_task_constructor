@@ -69,6 +69,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/Vector3Stamped.h>
 #include <moveit_msgs/Grasp.h>
+#include <moveit_msgs/PlaceLocation.h>
 
 #include <pluginlib/class_loader.h>
 
@@ -97,17 +98,7 @@ public:
 
     // object + surface
     std::vector<std::string> support_surfaces_;
-    // std::string object_reference_frame_;
-    // std::string surface_link_;
     std::string object_name_;
-    // std::string world_frame_;
-    // std::string grasp_frame_;
-    // std::vector<double> object_dimensions_;
-
-    // Predefined pose targets
-    std::string hand_open_pose_;
-    std::string hand_close_pose_;
-    // std::string arm_home_pose_;
 
     // Plugins
     std::string grasp_provider_plugin_name_;
@@ -115,24 +106,10 @@ public:
 
     // Pick metrics
     std::vector<moveit_msgs::Grasp> grasps_;
-    geometry_msgs::PoseStamped grasp_pose_;
     Eigen::Isometry3d grasp_frame_transform_;
-    geometry_msgs::Vector3Stamped approach_object_direction_;
-    double approach_object_min_dist_;
-    double approach_object_max_dist_;
-    geometry_msgs::Vector3Stamped lift_object_direction_;
-    double lift_object_min_dist_;
-    double lift_object_max_dist_;
 
     // Place metrics
-    geometry_msgs::PoseStamped place_pose_;
-    double place_surface_offset_;
-    geometry_msgs::Vector3Stamped place_object_direction_;
-    double place_object_min_dist_;
-    double place_object_max_dist_;
-    geometry_msgs::Vector3Stamped retract_direction_;
-    double retract_min_dist_;
-    double retract_max_dist_;
+    std::vector<moveit_msgs::PlaceLocation> place_locations_;
   };
 
 	PickPlaceTask(const std::string& task_name);

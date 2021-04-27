@@ -21,7 +21,7 @@
          type="moveit::task_constructor::stages::GraspProviderFixedPoses"
          base_class_type="moveit::task_constructor::stages::GraspProviderBase">
     <description>
-      Grasp Provider plugin for setting a single grasp pose
+      Grasp Provider plugin for setting a set of grasp poses
     </description>
   </class>
 
@@ -30,6 +30,14 @@
          base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
     <description>
       Default Place provider stage plugin implementing the functionality of the GeneratePlacePose stage
+    </description>
+  </class>
+
+  <class name="moveit_task_constructor/PlaceProviderFixedPoses"
+         type="moveit::task_constructor::stages::PlaceProviderFixedPoses"
+         base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
+    <description>
+      Place Provider plugin for setting a set of place poses
     </description>
   </class>
 </library>

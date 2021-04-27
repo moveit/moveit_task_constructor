@@ -156,7 +156,7 @@ bool PickPlaceTask::init(const Parameters& parameters)
       if (parameters.grasp_provider_plugin_name_ == ""){
         if (parameters.grasps_.empty()){
           ROS_ERROR_STREAM("No grasp provider plugin and no grasps are specified for stage 'Pick' \n"
-            "Either set the grasp provider plugin, or provide at least one Grasp in which at least the approach and retreat fields are specified");
+            "Either set the grasp provider plugin, or provide at least one Grasp in which at least the approach and retreat fields and gripper poses are specified");
           grasp_provider_plugin = "moveit_task_constructor/GraspProviderDefault";
         } else if (parameters.grasps_.size() == 1) {
           if (!grasp_pose_is_defined(parameters.grasps_[0].grasp_pose)){
@@ -179,12 +179,13 @@ bool PickPlaceTask::init(const Parameters& parameters)
       stage->setEndEffector(parameters.eef_name_);
       stage->setSupportSurfaces(parameters.support_surfaces_);
       stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
+      stage->setMaxIKSolutions(8);
       stage->ProviderPlugin()->properties().set("grasps", parameters.grasps_);
       stage->setMonitoredStage(current_state_stage_);
       if (grasp_provider_plugin == "moveit_task_constructor/GraspProviderDefault") {
         stage->ProviderPlugin()->properties().set("angle_delta", M_PI / 12);
       } else if (grasp_provider_plugin != "moveit_task_constructor/GraspProviderFixedPoses") {
-        // TODO: Set plugin-specific properties systematically
+        // TODO(karolyartur): Set plugin-specific properties systematically
       }
       attach_object_stage_ = stage->attachStage();
       t.add(std::move(stage));
@@ -213,24 +214,41 @@ bool PickPlaceTask::init(const Parameters& parameters)
      *          Place Object                              *
      *                                                    *
      *****************************************************/
-      Stage* detach_object_stage = nullptr;  // Forward detach_object_stage to place pose generator
-    {
-      auto stage = std::make_unique<stages::Place>("Place object", parameters.place_provider_plugin_name_, place_provider_class_loader_.get());
+    { // Decide which place provider to use
+      std::string place_provider_plugin;
+      if (parameters.place_provider_plugin_name_ == ""){
+        if (parameters.place_locations_.empty()){
+          ROS_ERROR_STREAM("No place provider plugin and no place locations are specified for stage 'Place' \n"
+            "Either set the place provider plugin, or provide at least one PlaceLocation");
+          return false;
+        } else if(parameters.place_locations_.size()==1){
+          ROS_WARN_STREAM("No place provider plugin and only one place location specified in stage 'Place' \n"
+            "Assuming place provider plugin to be moveit_task_constructor/PlaceProviderDefault");
+          place_provider_plugin = "moveit_task_constructor/PlaceProviderDefault";
+        } else {
+          place_provider_plugin = "moveit_task_constructor/PlaceProviderFixedPoses";
+        }
+      } else {
+        place_provider_plugin = parameters.place_provider_plugin_name_;
+      }
+
+      // Create the Place container
+      auto stage = std::make_unique<stages::Place>("Place object", place_provider_plugin, place_provider_class_loader_.get());
       stage->properties().property("eef_group").configureInitFrom(Stage::PARENT, "hand");
       stage->properties().property("eef_parent_group").configureInitFrom(Stage::PARENT, "group");
       stage->setObject(parameters.object_name_);
       stage->setEndEffector(parameters.eef_name_);
-      stage->setEndEffectorOpenClose(parameters.hand_open_pose_, parameters.hand_close_pose_);
       stage->setSupportSurfaces(parameters.support_surfaces_);
       stage->setIKFrame(parameters.grasp_frame_transform_, parameters.hand_frame_);
+      stage->setMaxIKSolutions(8);
       if (parameters.task_type_ == moveit_task_constructor_msgs::PlanPickPlaceGoal::PLACE_ONLY)
         stage->setMonitoredStage(current_state_stage_);
       if (parameters.task_type_ == moveit_task_constructor_msgs::PlanPickPlaceGoal::PICK_AND_PLACE)
         stage->setMonitoredStage(attach_object_stage_);
-      stage->setPlacePose(parameters.place_pose_);
-      stage->setPlaceMotion(parameters.place_object_direction_, parameters.place_object_min_dist_, parameters.place_object_max_dist_);
-      stage->setRetractMotion(parameters.retract_direction_, parameters.retract_min_dist_, parameters.retract_max_dist_);
-      detach_object_stage = stage->detachStage();
+      stage->ProviderPlugin()->properties().set("place_locations", parameters.place_locations_);
+      if (place_provider_plugin != "moveit_task_constructor/PlaceProviderDefault" || place_provider_plugin != "moveit_task_constructor/PlaceProviderFixedPoses") {
+        // TODO(karolyartur): Set plugin-specific properties systematically
+      }
       t.add(std::move(stage));
     }
   }
@@ -239,7 +257,7 @@ bool PickPlaceTask::init(const Parameters& parameters)
 bool PickPlaceTask::plan() {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	try {
-		task_->plan(10);  // TODO: parameterize
+		task_->plan(1);  // TODO(karolyartur): parameterize
 	} catch (InitStageException& e) {
 		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;
