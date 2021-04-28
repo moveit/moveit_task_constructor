@@ -31,11 +31,12 @@
  *********************************************************************/
 
 /* Author: Boston Cleek
-   Desc:   Grasp generator stage using deep learning based grasp synthesizers
+   Desc:   Grasp generator stage
 */
 
 #pragma once
 
+#include <functional>
 #include <moveit/task_constructor/stages/generate_pose.h>
 #include <moveit/task_constructor/stages/action_base.h>
 #include <moveit/task_constructor/storage.h>
@@ -43,15 +44,11 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-// #include <memory>
-#include <functional>
-// #include <iostream>
-
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-constexpr char LOGNAME[] = "deep_grasp_generator";
+constexpr char LOGNAME[] = "grasp_provider";
 
 /**
  * @brief Generate grasp candidates using deep learning approaches
@@ -59,7 +56,7 @@ constexpr char LOGNAME[] = "deep_grasp_generator";
  * @details Interfaces with a deep learning based grasp library using a action client
  */
 template <class ActionSpec>
-class DeepGraspPose : public GeneratePose, ActionBase<ActionSpec>
+class GraspProvider : public GeneratePose, ActionBase<ActionSpec>
 {
 private:
 	typedef ActionBase<ActionSpec> ActionBaseT;
@@ -74,7 +71,7 @@ public:
 	 * @param server_timeout - connection to server time out (0 is considered infinite timeout)
 	 * @details Initialize the client and connect to server
 	 */
-	DeepGraspPose(const std::string& action_name, const std::string& stage_name = "generate grasp pose",
+	GraspProvider(const std::string& action_name, const std::string& stage_name = "generate grasp pose",
 	              double goal_timeout = 0.0, double server_timeout = 0.0);
 
 	/**
@@ -115,7 +112,7 @@ private:
 };
 
 template <class ActionSpec>
-DeepGraspPose<ActionSpec>::DeepGraspPose(const std::string& action_name, const std::string& stage_name,
+GraspProvider<ActionSpec>::GraspProvider(const std::string& action_name, const std::string& stage_name,
                                          double goal_timeout, double server_timeout)
   : GeneratePose(stage_name), ActionBaseT(action_name, false, goal_timeout, server_timeout), found_candidates_(false) {
 	auto& p = properties();
@@ -130,19 +127,19 @@ DeepGraspPose<ActionSpec>::DeepGraspPose(const std::string& action_name, const s
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::composeGoal() {
+void GraspProvider<ActionSpec>::composeGoal() {
 	Goal goal;
 	goal.action_name = ActionBaseT::action_name_;
 	ActionBaseT::clientPtr_->sendGoal(
-	    goal, std::bind(&DeepGraspPose<ActionSpec>::doneCallback, this, std::placeholders::_1, std::placeholders::_2),
-	    std::bind(&DeepGraspPose<ActionSpec>::activeCallback, this),
-	    std::bind(&DeepGraspPose<ActionSpec>::feedbackCallback, this, std::placeholders::_1));
+	    goal, std::bind(&GraspProvider<ActionSpec>::doneCallback, this, std::placeholders::_1, std::placeholders::_2),
+	    std::bind(&GraspProvider<ActionSpec>::activeCallback, this),
+	    std::bind(&GraspProvider<ActionSpec>::feedbackCallback, this, std::placeholders::_1));
 
 	ROS_INFO_NAMED(LOGNAME, "Goal sent to server: %s", ActionBaseT::action_name_.c_str());
 }
 
 template <class ActionSpec>
-bool DeepGraspPose<ActionSpec>::monitorGoal() {
+bool GraspProvider<ActionSpec>::monitorGoal() {
 	// monitor timeout
 	const bool monitor_timeout = ActionBaseT::goal_timeout_ > std::numeric_limits<double>::epsilon() ? true : false;
 	const double timeout_time = ros::Time::now().toSec() + ActionBaseT::goal_timeout_;
@@ -166,13 +163,13 @@ bool DeepGraspPose<ActionSpec>::monitorGoal() {
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::activeCallback() {
+void GraspProvider<ActionSpec>::activeCallback() {
 	ROS_INFO_NAMED(LOGNAME, "Generate grasp goal now active");
 	found_candidates_ = false;
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::feedbackCallback(const FeedbackConstPtr& feedback) {
+void GraspProvider<ActionSpec>::feedbackCallback(const FeedbackConstPtr& feedback) {
 	// each candidate should have a cost
 	if (feedback->grasp_candidates.size() != feedback->costs.size()) {
 		ROS_ERROR_NAMED(LOGNAME, "Invalid input: each grasp candidate needs an associated cost");
@@ -190,7 +187,7 @@ void DeepGraspPose<ActionSpec>::feedbackCallback(const FeedbackConstPtr& feedbac
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::doneCallback(const actionlib::SimpleClientGoalState& state,
+void GraspProvider<ActionSpec>::doneCallback(const actionlib::SimpleClientGoalState& state,
                                              const ResultConstPtr& result) {
 	if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
 		ROS_INFO_NAMED(LOGNAME, "Found grasp candidates (result): %s", result->grasp_state.c_str());
@@ -201,7 +198,7 @@ void DeepGraspPose<ActionSpec>::doneCallback(const actionlib::SimpleClientGoalSt
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::init(const core::RobotModelConstPtr& robot_model) {
+void GraspProvider<ActionSpec>::init(const core::RobotModelConstPtr& robot_model) {
 	InitStageException errors;
 	try {
 		GeneratePose::init(robot_model);
@@ -233,7 +230,7 @@ void DeepGraspPose<ActionSpec>::init(const core::RobotModelConstPtr& robot_model
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::compute() {
+void GraspProvider<ActionSpec>::compute() {
 	if (upstream_solutions_.empty()) {
 		return;
 	}
@@ -272,7 +269,7 @@ void DeepGraspPose<ActionSpec>::compute() {
 }
 
 template <class ActionSpec>
-void DeepGraspPose<ActionSpec>::onNewSolution(const SolutionBase& s) {
+void GraspProvider<ActionSpec>::onNewSolution(const SolutionBase& s) {
 	planning_scene::PlanningSceneConstPtr scene = s.end()->scene();
 
 	const auto& props = properties();

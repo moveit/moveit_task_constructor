@@ -4,7 +4,7 @@ add_library(${PROJECT_NAME}_stages
 
 	${PROJECT_INCLUDE}/stages/action_base.h
 	${PROJECT_INCLUDE}/stages/current_state.h
-	${PROJECT_INCLUDE}/stages/deep_grasp_pose.h
+	${PROJECT_INCLUDE}/stages/grasp_provider.h
 	${PROJECT_INCLUDE}/stages/fixed_state.h
 	${PROJECT_INCLUDE}/stages/fixed_cartesian_poses.h
 	${PROJECT_INCLUDE}/stages/generate_pose.h
