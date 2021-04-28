@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Henning Kayser, Simon Goldstein
-   Desc:   A demo to show MoveIt Task Constructor in action
+/* Author: Henning Kayser, Simon Goldstein, Artur Karoly
+   Desc:   MoveIt Task Constructor Task for the PickPlace Capability
 */
 
 #include <moveit/task_constructor/tasks/pick_place_task.h>
@@ -65,8 +65,6 @@ bool grasp_pose_is_defined(const geometry_msgs::PoseStamped& grasp_pose)
 bool PickPlaceTask::init(const Parameters& parameters)
 {
   ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
-  // Reset ROS introspection before constructing the new object
-  // TODO(henningkayser): verify this is a bug, fix if possible
   if(task_){
     task_->clear();
     task_->loadRobotModel();
@@ -99,7 +97,7 @@ bool PickPlaceTask::init(const Parameters& parameters)
     auto _current_state = std::make_unique<stages::CurrentState>("current state");
     _current_state->setTimeout(10);
 
-    // Verify that object is not attached
+    // Verify that object is not attached for picking and if object is attached for placing
     auto applicability_filter =
         std::make_unique<stages::PredicateFilter>("applicability test", std::move(_current_state));
     applicability_filter->setPredicate([&](const SolutionBase& s, std::string& comment) {
@@ -267,6 +265,11 @@ bool PickPlaceTask::plan() {
 		return false;
 	}
 	return true;
+}
+
+bool PickPlaceTask::preempt() {
+  task_->preempt();
+  return true;
 }
 
 void PickPlaceTask::getSolutionMsg(moveit_task_constructor_msgs::Solution& solution) {

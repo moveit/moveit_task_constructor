@@ -57,7 +57,7 @@ public:
 };
 
 
-/// Grasp Provider plugin for setting a single grasp pose
+/// Grasp Provider plugin for setting a set of grasp poses
 
 class GraspProviderFixedPoses : public GraspProviderBase
 {

@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Henning Kayser */
+/* Author: Henning Kayser, Artur Karoly*/
 
 #include "plan_pick_place_capability.h"
 
@@ -58,7 +58,7 @@ void PlanPickPlaceCapability::goalCallback(
     const moveit_task_constructor_msgs::PlanPickPlaceGoalConstPtr& goal) {
 	moveit_task_constructor_msgs::PlanPickPlaceResult result;
 
-  // TODO: fill parameters
+  // Fill parameters
   PickPlaceTask::Parameters parameters;
   parameters.task_type_ = goal->task_type;
   parameters.arm_group_name_ = goal->arm_group_name;
@@ -89,7 +89,7 @@ void PlanPickPlaceCapability::goalCallback(
 }
 
 void PlanPickPlaceCapability::preemptCallback() {
-  // TODO(henningkayser): abort planning
+  pick_place_task_->preempt();
 }
 
 }  // namespace move_group

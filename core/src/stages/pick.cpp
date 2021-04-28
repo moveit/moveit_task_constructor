@@ -201,33 +201,6 @@ void PickPlaceBase<C>::setIKFrame(const Eigen::Isometry3d& pose, const std::stri
 /// -------------------------
 /// setters of substage properties
 
-
-/// approach / place
-
-template <class C>
-void PickPlaceBase<C>::setApproachPlace(const geometry_msgs::TwistStamped& motion, double min_distance,
-                                       double max_distance) {
-	auto& p = move_there_stage_->properties();
-	p.set("direction", motion);
-	p.set("min_distance", min_distance);
-	p.set("max_distance", max_distance);
-}
-
-template <class C>
-void PickPlaceBase<C>::setApproachPlace(const geometry_msgs::Vector3Stamped& direction, double min_distance,
-                                       double max_distance) {
-	auto& p = move_there_stage_->properties();
-	p.set("direction", direction);
-	p.set("min_distance", min_distance);
-	p.set("max_distance", max_distance);
-}
-
-template <class C>
-void PickPlaceBase<C>::setApproachPlace(const std::map<std::string, double>& joints) {
-	auto& p = move_there_stage_->properties();
-	p.set("joints", joints);
-}
-
 /// IK computation
 
 template <class C>
@@ -249,31 +222,6 @@ void PickPlaceBase<C>::setIgnoreIKCollisions(const bool& ignore_ik_collisions) {
 }
 
 
-/// lift / retract
-
-template <class C>
-void PickPlaceBase<C>::setLiftRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
-	auto& p = move_back_stage_->properties();
-	p.set("direction", motion);
-	p.set("min_distance", min_distance);
-	p.set("max_distance", max_distance);
-}
-
-template <class C>
-void PickPlaceBase<C>::setLiftRetract(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
-	auto& p = move_back_stage_->properties();
-	p.set("direction", direction);
-	p.set("min_distance", min_distance);
-	p.set("max_distance", max_distance);
-}
-
-template <class C>
-void PickPlaceBase<C>::setLiftRetract(const std::map<std::string, double>& joints) {
-	auto& p = move_back_stage_->properties();
-	p.set("joints", joints);
-}
-
-
 /// -------------------------
 /// setters of pick properties
 
@@ -287,10 +235,6 @@ void Pick::setMonitoredStage(Stage* monitored) {
 
 void Place::setMonitoredStage(Stage* monitored) {
 	provider_plugin_stage_->setMonitoredStage(monitored);
-}
-
-void Place::setPlacePose(const geometry_msgs::PoseStamped& pose) {
-	provider_plugin_stage_->setPose(pose);
 }
 
 }  // namespace stages

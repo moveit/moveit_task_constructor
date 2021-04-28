@@ -134,20 +134,10 @@ public:
 	/// -------------------------
 	/// setters of substage properties
 
-	/// approach / place
-	void setApproachPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
-	void setApproachPlace(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance);
-	void setApproachPlace(const std::map<std::string, double>& joints);
-
 	/// IK computation
 	void setMaxIKSolutions(const uint32_t& max_ik_solutions);
 	void setMinIKSolutionDistance(const double& min_ik_solution_distance);
 	void setIgnoreIKCollisions(const bool& ignore_ik_collisions);
-
-	/// lift / retract
-	void setLiftRetract(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance);
-	void setLiftRetract(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance);
-	void setLiftRetract(const std::map<std::string, double>& joints);
 
 	/// -------------------------
 	/// getters, for further configuration
@@ -168,26 +158,6 @@ public:
 
 	void setMonitoredStage(Stage* monitored);
 
-	void setApproachMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
-		setApproachPlace(motion, min_distance, max_distance);
-	}
-
-	void setApproachMotion(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
-		setApproachPlace(direction, min_distance, max_distance);
-	}
-
-	void setApproachMotion(const std::map<std::string, double>& joints) { setApproachPlace(joints); }
-
-	void setLiftMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
-		setLiftRetract(motion, min_distance, max_distance);
-	}
-
-	void setLiftMotion(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
-		setLiftRetract(direction, min_distance, max_distance);
-	}
-
-	void setLiftMotion(const std::map<std::string, double>& joints) { setLiftRetract(joints); }
-
 	moveit::task_constructor::Stage* attachStage() {return attach_detach_stage_;}
 };
 
@@ -199,27 +169,6 @@ public:
 	  : PickPlaceBase(name, provider_stage_plugin_name, false, class_loader) {}
 
 	void setMonitoredStage(Stage* monitored);
-
-	void setPlacePose(const geometry_msgs::PoseStamped& pose);
-
-	void setRetractMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
-		setLiftRetract(motion, min_distance, max_distance);
-	}
-
-	void setRetractMotion(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
-		setLiftRetract(direction, min_distance, max_distance);
-	}
-
-	void setRetractMotion(const std::map<std::string, double>& joints) { setLiftRetract(joints); }
-
-	void setPlaceMotion(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
-		setApproachPlace(motion, min_distance, max_distance);
-	}
-	void setPlaceMotion(const geometry_msgs::Vector3Stamped& direction, double min_distance, double max_distance) {
-		setApproachPlace(direction, min_distance, max_distance);
-	}
-
-	void setPlaceMotion(const std::map<std::string, double>& joints) { setApproachPlace(joints); }
 
 	moveit::task_constructor::Stage* detachStage() {return attach_detach_stage_;}
 };

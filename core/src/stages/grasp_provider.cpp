@@ -46,6 +46,8 @@
 
 #include <moveit_msgs/Grasp.h>
 
+#include <boost/range/counting_range.hpp>
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -80,9 +82,42 @@ void GraspProviderDefault::init(const core::RobotModelConstPtr& robot_model) {
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// TODO(karolyartur): Validate eef_poses specified in grasps
 		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
 			errors.push_back(*this, "no grasp provided");
+		else {
+			const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+			moveit_msgs::Grasp grasp_ =  props.get<std::vector<moveit_msgs::Grasp>>("grasps")[0];
+			if (grasp_.pre_grasp_approach.min_distance > grasp_.pre_grasp_approach.desired_distance)
+				errors.push_back(*this, "min approach distance is greater than desired distance in Grasp message's pre_grasp_approach field");
+			if (grasp_.post_grasp_retreat.min_distance > grasp_.post_grasp_retreat.desired_distance)
+				errors.push_back(*this, "min approach distance is greater than desired distance in Grasp message's post_grasp_retreat field");
+			if (grasp_.pre_grasp_posture.points[0].positions.size() != jmg->getActiveJointModels().size())
+				errors.push_back(*this, "incorrect number of joints in Grasp message's pre_grasp_posture field");
+			else {
+				for (unsigned i : boost::counting_range(size_t(0), grasp_.pre_grasp_posture.points[0].positions.size())){
+					const moveit::core::JointModel::Bounds* bounds = jmg->getActiveJointModelsBounds()[i];
+					for (auto bound : *bounds) {
+						if (bound.position_bounded_) {
+							if ((grasp_.pre_grasp_posture.points[0].positions[i] < bound.min_position_) || (grasp_.pre_grasp_posture.points[0].positions[i] > bound.max_position_))
+								errors.push_back(*this, "joint value out of bounds in Grasp message's pre_grasp_posture field");
+						}
+					}
+				}
+			}
+			if (grasp_.grasp_posture.points[0].positions.size() != jmg->getActiveJointModels().size())
+				errors.push_back(*this, "incorrect number of joints in Grasp message's grasp_posture field");
+			else {
+				for (unsigned i : boost::counting_range(size_t(0), grasp_.pre_grasp_posture.points[0].positions.size())){
+					const moveit::core::JointModel::Bounds* bounds = jmg->getActiveJointModelsBounds()[i];
+					for (auto bound : *bounds) {
+						if (bound.position_bounded_) {
+							if ((grasp_.grasp_posture.points[0].positions[i] < bound.min_position_) || (grasp_.grasp_posture.points[0].positions[i] > bound.max_position_))
+								errors.push_back(*this, "joint value out of bounds in Grasp message's grasp_posture field");
+						}
+					}
+				}
+			}
+		}		
 	}
 
 	if (errors)
@@ -130,12 +165,8 @@ void GraspProviderDefault::compute() {
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
 
-		// TODO(karolyartur): Raise exception if the sizes do not match
-
 		state.properties().set("hand_open_pose", hand_open_pose);
 		state.properties().set("hand_close_pose", hand_close_pose);
-
-		// props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 
 		SubTrajectory trajectory;
 		trajectory.setCost(0.0);
@@ -173,9 +204,44 @@ void GraspProviderFixedPoses::init(const core::RobotModelConstPtr& robot_model) 
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
 	else {
-		// TODO(karolyartur): Validate eef_poses specified in grasps
 		if (props.get<std::vector<moveit_msgs::Grasp>>("grasps").empty())
 			errors.push_back(*this, "no grasp provided");
+		else {
+			const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+			std::vector<moveit_msgs::Grasp> grasps_ =  props.get<std::vector<moveit_msgs::Grasp>>("grasps");
+			for (moveit_msgs::Grasp grasp_ : grasps_) {
+				if (grasp_.pre_grasp_approach.min_distance > grasp_.pre_grasp_approach.desired_distance)
+					errors.push_back(*this, "min approach distance is greater than desired distance in Grasp message's pre_grasp_approach field");
+				if (grasp_.post_grasp_retreat.min_distance > grasp_.post_grasp_retreat.desired_distance)
+					errors.push_back(*this, "min approach distance is greater than desired distance in Grasp message's post_grasp_retreat field");
+				if (grasp_.pre_grasp_posture.points[0].positions.size() != jmg->getActiveJointModels().size())
+					errors.push_back(*this, "incorrect number of joints in Grasp message's pre_grasp_posture field");
+				else {
+					for (unsigned i : boost::counting_range(size_t(0), grasp_.pre_grasp_posture.points[0].positions.size())){
+						const moveit::core::JointModel::Bounds* bounds = jmg->getActiveJointModelsBounds()[i];
+						for (auto bound : *bounds) {
+							if (bound.position_bounded_) {
+								if ((grasp_.pre_grasp_posture.points[0].positions[i] < bound.min_position_) || (grasp_.pre_grasp_posture.points[0].positions[i] > bound.max_position_))
+									errors.push_back(*this, "joint value out of bounds in Grasp message's pre_grasp_posture field");
+							}
+						}
+					}
+				}
+				if (grasp_.grasp_posture.points[0].positions.size() != jmg->getActiveJointModels().size())
+					errors.push_back(*this, "incorrect number of joints in Grasp message's grasp_posture field");
+				else {
+					for (unsigned i : boost::counting_range(size_t(0), grasp_.pre_grasp_posture.points[0].positions.size())){
+						const moveit::core::JointModel::Bounds* bounds = jmg->getActiveJointModelsBounds()[i];
+						for (auto bound : *bounds) {
+							if (bound.position_bounded_) {
+								if ((grasp_.grasp_posture.points[0].positions[i] < bound.min_position_) || (grasp_.grasp_posture.points[0].positions[i] > bound.max_position_))
+									errors.push_back(*this, "joint value out of bounds in Grasp message's grasp_posture field");
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	if (errors)
@@ -219,8 +285,6 @@ void GraspProviderFixedPoses::compute() {
 
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), open_pose.begin(), std::inserter(hand_open_pose, hand_open_pose.end()), std::make_pair<std::string const&, double const&>);
 		std::transform(hand_joint_names.begin(), hand_joint_names.end(), close_pose.begin(), std::inserter(hand_close_pose, hand_close_pose.end()), std::make_pair<std::string const&, double const&>);
-
-		// TODO(karolyartur): Raise exception if the sizes do not match
 
 		state.properties().set("hand_open_pose", hand_open_pose);
 		state.properties().set("hand_close_pose", hand_close_pose);

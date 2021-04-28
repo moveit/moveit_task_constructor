@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Henning Kayser, Simon Goldstein
-   Desc:   A demo to show MoveIt Task Constructor in action
+/* Author: Henning Kayser, Simon Goldstein, Artur Karoly
+   Desc:   MoveIt Task Constructor Task for the PickPlace Capability
 */
 
 // ROS
@@ -118,6 +118,7 @@ public:
   bool init(const Parameters& parameters);
 
 	bool plan();
+  bool preempt();
   void getSolutionMsg(moveit_task_constructor_msgs::Solution& solution);
 
 private:
