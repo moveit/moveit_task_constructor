@@ -41,23 +41,15 @@
 #include <limits>
 
 #include <actionlib/client/simple_action_client.h>
+#include <grasping_msgs/GraspPlanningAction.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-/**
- * @brief Interface allowing stages to use a simple action client
- * @param ActionSpec - action message (action message name + "ACTION")
- * @details Some stages may require an action client. This class wraps the
- *          simple client action interface and exposes event based execution callbacks.
- */
-template <class ActionSpec>
+/** @brief Interface allowing stages to use a simple action client */
 class ActionBase
 {
-protected:
-	ACTION_DEFINITION(ActionSpec);
-
 public:
 	/**
 	 * @brief Constructor
@@ -87,39 +79,22 @@ public:
 	 * @brief Called every time feedback is received for the goal
 	 * @param feedback - pointer to the feedback message
 	 */
-	virtual void feedbackCallback(const FeedbackConstPtr& feedback) = 0;
+	virtual void feedbackCallback(const grasping_msgs::GraspPlanningFeedbackConstPtr& feedback) = 0;
 
 	/**
 	 * @brief Called once when the goal completes
 	 * @param state - state info for goal
 	 * @param result - pointer to result message
 	 */
-	virtual void doneCallback(const actionlib::SimpleClientGoalState& state, const ResultConstPtr& result) = 0;
+	virtual void doneCallback(const actionlib::SimpleClientGoalState& state,
+	                          const grasping_msgs::GraspPlanningResultConstPtr& result) = 0;
 
 protected:
 	ros::NodeHandle nh_;
 	std::string action_name_;  // action name space
-	std::unique_ptr<actionlib::SimpleActionClient<ActionSpec>> clientPtr_;  // action client
+	std::unique_ptr<actionlib::SimpleActionClient<grasping_msgs::GraspPlanningAction>> clientPtr_;  // action client
 	double server_timeout_, goal_timeout_;  // connection and goal completed time out
 };
-
-template <class ActionSpec>
-ActionBase<ActionSpec>::ActionBase(const std::string& action_name, bool spin_thread, double goal_timeout,
-                                   double server_timeout)
-  : action_name_(action_name), server_timeout_(server_timeout), goal_timeout_(goal_timeout) {
-	clientPtr_.reset(new actionlib::SimpleActionClient<ActionSpec>(nh_, action_name_, spin_thread));
-
-	// Negative timeouts are set to zero
-	server_timeout_ = server_timeout_ < std::numeric_limits<double>::epsilon() ? 0.0 : server_timeout_;
-	goal_timeout_ = goal_timeout_ < std::numeric_limits<double>::epsilon() ? 0.0 : goal_timeout_;
-}
-
-template <class ActionSpec>
-ActionBase<ActionSpec>::ActionBase(const std::string& action_name, bool spin_thread)
-  : action_name_(action_name), server_timeout_(0.0), goal_timeout_(0.0) {
-	clientPtr_.reset(new actionlib::SimpleActionClient<ActionSpec>(nh_, action_name_, spin_thread));
-}
-
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
