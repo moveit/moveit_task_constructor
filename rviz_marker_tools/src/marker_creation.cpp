@@ -284,12 +284,9 @@ vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const E
 	m.scale.y = 2 * diameter;
 	m.scale.z = head_length;
 	prepareMarker(m, vm::Marker::ARROW);
-	geometry_msgs::Point start;
-	tf::pointEigenToMsg(start_point, start);
-	geometry_msgs::Point end;
-	tf::pointEigenToMsg(end_point, end);
-	m.points.push_back(start);
-	m.points.push_back(end);
+	m.points.resize(2);
+	tf::pointEigenToMsg(start_point, m.points[0]);
+	tf::pointEigenToMsg(end_point, m.points[1]);
 	return m;
 }
 
