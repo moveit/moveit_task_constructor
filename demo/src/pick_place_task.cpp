@@ -101,7 +101,7 @@ void setupDemoScene(ros::NodeHandle& pnh) {
 }
 
 PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle& pnh)
-  : pnh_(pnh), task_name_(task_name), execute_("execute_task_solution", true) {
+  : pnh_(pnh), task_name_(task_name) {
 	loadParameters();
 }
 
@@ -497,13 +497,19 @@ bool PickPlaceTask::plan() {
 
 bool PickPlaceTask::execute() {
 	ROS_INFO_NAMED(LOGNAME, "Executing solution trajectory");
-	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
-	task_->solutions().front()->fillMessage(execute_goal.solution);
-	execute_.sendGoalAndWait(execute_goal);
-	moveit_msgs::MoveItErrorCodes execute_result = execute_.getResult()->error_code;
+	moveit_msgs::MoveItErrorCodes execute_result;
+
+	execute_result = task_->execute(*task_->solutions().front());
+	// // If you want to inspect the goal message, use this instead:
+	// actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>
+	// execute("execute_task_solution", true); execute.waitForServer();
+	// moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
+	// task_->solutions().front()->fillMessage(execute_goal.solution);
+	// execute.sendGoalAndWait(execute_goal);
+	// execute_result = execute.getResult()->error_code;
 
 	if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
-		ROS_ERROR_STREAM_NAMED(LOGNAME, "Task execution failed and returned: " << execute_.getState().toString());
+		ROS_ERROR_STREAM_NAMED(LOGNAME, "Task execution failed and returned: " << execute_result.val);
 		return false;
 	}
 

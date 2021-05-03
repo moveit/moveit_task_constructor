@@ -58,9 +58,6 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/server/simple_action_server.h>
-
 #include <eigen_conversions/eigen_msg.h>
 
 #pragma once
@@ -111,9 +108,6 @@ private:
 	std::string hand_open_pose_;
 	std::string hand_close_pose_;
 	std::string arm_home_pose_;
-
-	// Execution
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
 
 	// Pick metrics
 	Eigen::Isometry3d grasp_frame_transform_;

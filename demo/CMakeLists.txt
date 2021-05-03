@@ -11,7 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
 	rosparam_shortcuts
 )
 
-catkin_package()
+catkin_package(
+	CATKIN_DEPENDS roscpp
+)
 
 include_directories(
   include
