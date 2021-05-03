@@ -64,7 +64,7 @@ class SubPanel : public QWidget
 public:
 	SubPanel(QWidget* parent = nullptr) : QWidget(parent) {}
 
-	virtual void save(rviz::Config config) {}
+	virtual void save(rviz::Config config) {}  // NOLINT(performance-unnecessary-value-param)
 	virtual void load(const rviz::Config& config) {}
 
 Q_SIGNALS:
@@ -159,7 +159,7 @@ private:
 	Q_PRIVATE_SLOT(d_ptr, void _q_configureInsertedModels(QModelIndex, int, int));
 
 Q_SIGNALS:
-	void oldTaskHandlingChanged(int);
+	void oldTaskHandlingChanged(int old_task_handling);
 };
 
 class GlobalSettingsWidgetPrivate;
