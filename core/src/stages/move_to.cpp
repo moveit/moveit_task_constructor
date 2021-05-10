@@ -141,9 +141,8 @@ bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::Joint
 	return false;
 }
 
-bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-                         const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                         decltype(std::declval<SolutionBase>().markers())& markers) {
+bool MoveTo::getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
+                         Eigen::Isometry3d& target_eigen) {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
 		tf::poseMsgToEigen(target.pose, target_eigen);
@@ -151,12 +150,6 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
 		target_eigen = frame * target_eigen;
-
-		// frame at target pose
-		rviz_marker_tools::appendFrame(markers, target, 0.1, "ik frame");
-
-		// frame at link
-		rviz_marker_tools::appendFrame(markers, ik_pose_msg, 0.1, "ik frame");
 	} catch (const boost::bad_any_cast&) {
 		return false;
 	}
@@ -164,8 +157,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 }
 
 bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                          decltype(std::declval<SolutionBase>().markers())& /*unused*/) {
+                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen) {
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
 		Eigen::Vector3d target_point;
@@ -178,8 +170,6 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 		// retain link orientation
 		target_eigen = scene->getCurrentState().getGlobalLinkTransform(link);
 		target_eigen.translation() = target_point;
-
-		// TODO: add marker visualization
 	} catch (const boost::bad_any_cast&) {
 		return false;
 	}
@@ -236,11 +226,17 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 			}
 		}
 
-		if (!getPoseGoal(goal, ik_pose_msg, scene, target_eigen, solution.markers()) &&
-		    !getPointGoal(goal, link, scene, target_eigen, solution.markers())) {
+		if (!getPoseGoal(goal, scene, target_eigen) && !getPointGoal(goal, link, scene, target_eigen)) {
 			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
 			return false;
 		}
+
+		// visualize plan with frame at target pose and frame at link
+		geometry_msgs::PoseStamped target;
+		target.header.frame_id = scene->getPlanningFrame();
+		tf::poseEigenToMsg(target_eigen, target.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
+		rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;

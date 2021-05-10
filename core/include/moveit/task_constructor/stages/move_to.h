@@ -97,12 +97,10 @@ protected:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
 	             Interface::Direction dir) override;
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
-	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                 decltype(std::declval<SolutionBase>().markers())& markers);
+	bool getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
+	                 Eigen::Isometry3d& target_eigen);
 	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                  decltype(std::declval<SolutionBase>().markers())& /*unused*/);
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;
