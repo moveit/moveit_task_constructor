@@ -166,11 +166,6 @@ public:
 			const_cast<StageUniquePtr&&>(stage)->setCostTerm(cost_term);
 		computeWithStages(stages);
 	}
-
-	void computeWithContainerCost(std::initializer_list<StageUniquePtr> stages, const CostTermPtr& cost_term) {
-		this->setCostTerm(cost_term);
-		computeWithStages(stages);
-	}
 };
 
 TEST(CostTerm, SolutionConnected) {
