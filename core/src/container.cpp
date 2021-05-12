@@ -206,38 +206,70 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to, InterfaceState* new_from,
                                         InterfaceState* new_to) {
-	const bool create_from{ requiredInterface().testFlag(WRITES_PREV_END) };
-	const bool create_to{ requiredInterface().testFlag(WRITES_NEXT_START) };
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	auto findExternal = [this](const InterfaceState* internal,
+	                           const InterfaceState* replacement) -> const InterfaceState* {
+		auto it = internalToExternalMap().find(internal);
+		if (it != internalToExternalMap().end() && (!replacement || &*it->second == replacement)) {
+			return &*it->second;
+		}
+
+		return nullptr;
+	};
 
 	// external states, nullptr if they don't exist yet
-	const InterfaceState* external_from{ create_from ? new_from : internalToExternalMap().at(internal_from) };
-	const InterfaceState* external_to{ create_to ? new_to : internalToExternalMap().at(internal_to) };
+	const InterfaceState* external_from{ findExternal(internal_from, new_from) };
+	const InterfaceState* external_to{ findExternal(internal_to, new_to) };
 
 	// computeCost
-	// we can pass intern_{from/to} here because in this case the lifted states that might be created later
+	// If there are no external states known yet, we can pass internal_{from/to} here
+	// because in this case the lifted states that will be created later
 	// are equivalent up to the connected Solutions (which are not relevant for CostTerms)
-	computeCost(external_from ? *external_from : *internal_from, external_to ? *external_to : *internal_to, *solution);
+	{
+		auto getPreliminaryState = [](const InterfaceState* external, const InterfaceState* new_state,
+		                              const InterfaceState* internal) -> const InterfaceState& {
+			if (external)
+				return *external;
+			if (new_state)
+				return *new_state;
+			else
+				return *internal;
+		};
+		computeCost(getPreliminaryState(external_from, new_from, internal_from),
+		            getPreliminaryState(external_to, new_to, internal_to), *solution);
+	}
 
 	// storeSolution
+	// only pass stored external states here (others are not relevant for pruning)
 	if (!storeSolution(solution, external_from, external_to)) {
 		return;
 	}
 
-	auto create_state = [this](const InterfaceState& internal, InterfaceState* new_external) {
+	// store unstored states in stage-internal storage
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	auto createState = [this](const InterfaceState& internal, InterfaceState* new_external) {
 		InterfaceState* external{ storeState(new_external ? std::move(*new_external) : InterfaceState{ internal }) };
 		internalToExternalMap().insert(std::make_pair(&internal, external));
 		return external;
 	};
 
-	if (create_from)
-		external_from = create_state(*internal_from, new_from);
-	if (create_to)
-		external_to = create_state(*internal_to, new_to);
+	const bool create_from{ external_from == nullptr };
+	const bool create_to{ external_to == nullptr };
+
+	if (create_from) {
+		assert(requiredInterface().testFlag(WRITES_PREV_END));
+		external_from = createState(*internal_from, new_from);
+	}
+	if (create_to) {
+		assert(requiredInterface().testFlag(WRITES_NEXT_START));
+		external_to = createState(*internal_to, new_to);
+	}
 
 	assert(external_from);
 	assert(external_to);
 
-	// connect solution to states
+	// connect solution to stored states
 	solution->setStartState(*external_from);
 	solution->setEndState(*external_to);
 
