@@ -78,13 +78,41 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	const std::string& eef = props.get<std::string>("eef");
 	if (!robot_model->hasEndEffector(eef))
 		errors.push_back(*this, "unknown end effector: " + eef);
-	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+	else if (props.property("pregrasp").defined()) {
+		// if pregrasp pose is defined, check if it's valid
+		const moveit::core::JointModelGroup* eef_jmg = robot_model->getEndEffector(eef);
+		const boost::any& pregrasp_prop = props.get("pregrasp");
+		if (pregrasp_prop.type() == typeid(std::string)) {
+			// check if the specified pregrasp pose is a valid named target
+			const auto& pregrasp_name = boost::any_cast<std::string>(pregrasp_prop);
+			std::map<std::string, double> m;
+			if (!eef_jmg->getVariableDefaultPositions(pregrasp_name, m))
+				errors.push_back(*this, "pregrasp is set to unknown end effector pose: " + pregrasp_name);
+		} else if (pregrasp_prop.type() == typeid(sensor_msgs::JointState)) {
+			// check if the specified pregrasp pose is a valid named target
+			const auto& pregrasp_state = boost::any_cast<sensor_msgs::JointState>(pregrasp_prop);
+			if (pregrasp_state.name.size() == pregrasp_state.position.size() &&
+			    pregrasp_state.name.size() == pregrasp_state.velocity.size() &&
+			    pregrasp_state.name.size() == pregrasp_state.effort.size()) {
+				// We only apply the joint state for for joints of the end effector
+				sensor_msgs::JointState eef_state;
+				eef_state.header = pregrasp_state.header;
+				for (size_t i = 0; i < pregrasp_state.name.size(); ++i) {
+					if (eef_jmg->hasJointModel(pregrasp_state.name[i])) {
+						eef_state.name.push_back(pregrasp_state.name[i]);
+						eef_state.position.push_back(pregrasp_state.position[i]);
+						eef_state.velocity.push_back(pregrasp_state.velocity[i]);
+						eef_state.effort.push_back(pregrasp_state.effort[i]);
+					}
+				}
+				if (eef_state.name.empty())
+					errors.push_back(*this, "pregrasp JointState doesn't contain joint values for end effector group");
+				else
+					properties().set("pregrasp_state", eef_state);  // Override property with filtered joint state
+			} else {
+				errors.push_back(*this, "pregrasp JointState is malformed - size mismatch between joint names and values");
+			}
+		}
 	}
 
 	if (errors)
@@ -122,8 +150,17 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	// Apply pregrasp target or joint state if defined
+	const boost::any& pregrasp_prop = props.get("pregrasp");
+	if (!pregrasp_prop.empty()) {
+		robot_state::RobotState& current_state = scene->getCurrentStateNonConst();
+		if (pregrasp_prop.type() == typeid(std::string)) {
+			current_state.setToDefaultValues(jmg, boost::any_cast<std::string>(pregrasp_prop));
+		} else if (pregrasp_prop.type() == typeid(sensor_msgs::JointState)) {
+			const auto& pregrasp_state = boost::any_cast<sensor_msgs::JointState>(pregrasp_prop);
+			current_state.setVariablePositions(pregrasp_state.name, pregrasp_state.position);
+		}
+	}
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
