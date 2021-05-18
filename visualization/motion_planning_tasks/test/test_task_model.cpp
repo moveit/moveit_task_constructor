@@ -34,9 +34,9 @@
 
 /* Author: Robert Haschke */
 
-#include <task_list_model.h>
-#include <local_task_model.h>
-#include <remote_task_model.h>
+#include <src/task_list_model.h>
+#include <src/local_task_model.h>
+#include <src/remote_task_model.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/stages/current_state.h>
 
