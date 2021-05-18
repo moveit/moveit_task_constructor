@@ -6,8 +6,8 @@
 if (CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
 
-  add_executable(${PROJECT_NAME}-test test_pickplace_demo.cpp)
-  target_link_libraries(${PROJECT_NAME}-test $<TARGET_OBJECTS:pick_place_task> ${catkin_LIBRARIES} gtest_main)
+  add_executable(pick_place_test pick_place_test.cpp)
+  target_link_libraries(pick_place_test $<TARGET_OBJECTS:pick_place_task> ${catkin_LIBRARIES} gtest_main)
 
-  add_rostest(pickplace_demo.test)
+  add_rostest(pick_place.test)
 endif()

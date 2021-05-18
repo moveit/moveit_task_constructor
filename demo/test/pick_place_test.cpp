@@ -31,7 +31,7 @@ TEST(PickPlaceDemo, run) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "pickplace_demo");
+	ros::init(argc, argv, "pick_place_test");
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
