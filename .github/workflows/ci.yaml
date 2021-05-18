@@ -11,11 +11,14 @@ on:
 jobs:
   default:
     strategy:
+      fail-fast: false
       matrix:
         env:
           - IMAGE: melodic-source
-            CCOV: true
+            NAME: ccov
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: master-source
+            NAME: clang
             CXX: clang++
           - IMAGE: noetic-source
             CLANG_TIDY: true
@@ -24,17 +27,14 @@ jobs:
       # CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-strict-aliasing -Wno-sign-compare"
       UNDERLAY: /root/ws_moveit/install
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
-      TARGET_CMAKE_ARGS: >
-        -DCMAKE_BUILD_TYPE=${{ matrix.env.CCOV && 'RelWithDebInfo' || 'Release' }}
-        ${{ matrix.env.CCOV && '-DCMAKE_CXX_FLAGS="--coverage"' || '' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: /home/runner/work
       DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
-      CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ matrix.env.CCOV && '-ccov' || '' }}"
+      CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
       # perform full clang-tidy check only on manual trigger (workflow_dispatch), PRs do check changed files, otherwise nothing
       CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
 
-    name: "${{ matrix.env.IMAGE }}${{ matrix.env.CATKIN_LINT && ' + catkin_lint' || ''}}${{ matrix.env.CCOV && ' + ccov' || ''}}${{ matrix.env.IKFAST_TEST && ' + ikfast' || ''}}${{ matrix.env.CLANG_TIDY && ' + clang-tidy' || '' }}"
+    name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -58,3 +58,15 @@ jobs:
         with:
           name: test-results
           path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
+      - name: Collect coverage information
+        uses: rhaschke/lcov-action@master
+        if: ${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') }}
+        with:
+          workdir: ${{ env.BASEDIR }}
+          dir: target_ws
+          ignore: '"/usr/*" "/opt/*" "/root/ws_moveit/*" "*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
+      - name: Upload codecov report
+        uses: codecov/codecov-action@v1
+        if: ${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') }}
+        with:
+          files: ${{ env.BASEDIR }}/coverage.info
