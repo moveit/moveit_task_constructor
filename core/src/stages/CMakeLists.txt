@@ -17,7 +17,7 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/move_relative.h
 
 	${PROJECT_INCLUDE}/stages/simple_grasp.h
-	${PROJECT_INCLUDE}/stages/pick.h
+	${PROJECT_INCLUDE}/stages/pick_place.h
 
 	modify_planning_scene.cpp
 	fix_collision_objects.cpp
@@ -41,7 +41,7 @@ add_library(${PROJECT_NAME}_stages
 	move_relative.cpp
 
 	simple_grasp.cpp
-	pick.cpp
+	pick_place.cpp
 )
 target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
 

@@ -1,4 +1,4 @@
-# By default, the task type is 
+# By default, the task type is PICK_ONLY
 byte PICK_ONLY=0
 byte PLACE_ONLY=1
 byte PICK_AND_PLACE=2
@@ -9,21 +9,26 @@ string arm_group_name
 string hand_group_name
 
 # Robot model and links
-string eef_name
-string hand_frame
+string eef_name   # The name of the end effector as in the srdf
+string hand_frame  # Will be used as the endEffectorFrame
 
 # Object and surfaces
-string object_id
+# During the pick and place operation, the object is allowed to collide with the support_surfaces
+string object_id  # ID of the CollisionObject to pick/place
 string[] support_surfaces
 
 # Picking
-string grasp_provider_plugin_name
-moveit_msgs/Grasp[] grasps
-geometry_msgs/Pose grasp_frame_transform
+# grasp_provider_plugin_name defaults to "moveit_task_constructor/GraspProviderDefault" if only one Grasp is provided in grasps without setting its grasp_pose field
+# If the grasp_pose field is set, or there are multiple Grasps provided in grasps, grasp_provider_plugin_name defaults to "moveit_task_constructor/GraspProviderFixedPoses"
+string grasp_provider_plugin_name  # Name of the Grasp Provider plugin to load 
+moveit_msgs/Grasp[] grasps  # List of Grasps (The approach and retreat movements and hand poses are all used and required for each Grasp)
+geometry_msgs/Pose grasp_frame_transform   # Additional transformation to apply to the endEffectorFrame when computing the IK
 
 # Placing
-string place_provider_plugin_name
-moveit_msgs/PlaceLocation[] place_locations
+# place_provider_plugin_name defaults to "moveit_task_constructor/PlaceProviderDefault" if only one PlaceLocation is provided in place_locations
+# Otherwise place_provider_plugin_name defaults to "moveit_task_constructor/PlaceProviderFixedPoses"
+string place_provider_plugin_name  # Name of the Place Provider plugin to load
+moveit_msgs/PlaceLocation[] place_locations  # List of PlaceLocations (The approach and retreat movements and hand poses are all used and required for each PlaceLocation)
 
 ---
 

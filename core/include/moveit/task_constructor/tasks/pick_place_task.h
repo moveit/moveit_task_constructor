@@ -53,7 +53,7 @@
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/move_to.h>
-#include <moveit/task_constructor/stages/pick.h>
+#include <moveit/task_constructor/stages/pick_place.h>
 
 #include <moveit/task_constructor/stages/grasp_provider_base.h>
 #include <moveit/task_constructor/stages/place_provider_base.h>

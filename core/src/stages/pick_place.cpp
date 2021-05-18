@@ -1,4 +1,4 @@
-#include <moveit/task_constructor/stages/pick.h>
+#include <moveit/task_constructor/stages/pick_place.h>
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
