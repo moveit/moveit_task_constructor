@@ -98,12 +98,12 @@ class BackwardMockup : public PropagatingBackward
 template <typename T>
 class Standalone : public T
 {
+public:
 	moveit::core::RobotModelConstPtr robot;
 	InterfacePtr dummy;
 	planning_scene::PlanningSceneConstPtr ps;
 	InterfaceStatePtr state_start, state_end;
 
-public:
 	Standalone(const moveit::core::RobotModelConstPtr& robot)
 	  : T(), robot(robot), dummy(std::make_shared<Interface>()), ps(new planning_scene::PlanningScene(robot)) {}
 
@@ -112,8 +112,8 @@ public:
 		auto impl{ this->pimpl() };
 		this->reset();
 
-		state_start.reset(new InterfaceState(ps, InterfaceState::Priority(1, 0.0)));
-		state_end.reset(new InterfaceState(ps, InterfaceState::Priority(1, 0.0)));
+		state_start.reset();
+		state_end.reset();
 
 		// infer and setup interface from children
 		Stage* s{ this };
@@ -137,9 +137,11 @@ public:
 
 		// feed interfaces as required for one computation
 		if (flags & READS_START) {
+			state_start.reset(new InterfaceState(ps, InterfaceState::Priority(1, 0.0)));
 			impl->starts()->add(*state_start);
 		}
 		if (flags & READS_END) {
+			state_end.reset(new InterfaceState(ps, InterfaceState::Priority(1, 0.0)));
 			impl->ends()->add(*state_end);
 		}
 	}
@@ -164,30 +166,57 @@ public:
 			const_cast<StageUniquePtr&&>(stage)->setCostTerm(cost_term);
 		computeWithStages(stages);
 	}
-
-	void computeWithContainerCost(std::initializer_list<StageUniquePtr> stages, const CostTermPtr& cost_term) {
-		this->setCostTerm(cost_term);
-		computeWithStages(stages);
-	}
 };
 
+TEST(CostTerm, SolutionConnected) {
+	const moveit::core::RobotModelConstPtr robot{ getModel() };
+
+	Standalone<SerialContainer> container(robot);
+	auto stage{ std::make_unique<ConnectMockup>() };
+
+	// custom CostTerm to verify SubTrajectory is hooked up to its states & creator
+	class VerifySolutionCostTerm : public TrajectoryCostTerm
+	{
+		Standalone<SerialContainer>& container_;
+		Stage* creator_;
+
+	public:
+		VerifySolutionCostTerm(Standalone<SerialContainer>& container, Stage* creator)
+		  : container_{ container }, creator_{ creator } {}
+
+		double operator()(const SubTrajectory& s, std::string& /*comment*/) const override {
+			EXPECT_EQ(&*container_.state_start,
+			          const_cast<const SerialContainerPrivate*>(container_.pimpl())->internalToExternalMap().at(s.start()))
+			    << "SubTrajectory is not connected to its expected start InterfaceState";
+			EXPECT_EQ(&*container_.state_end,
+			          const_cast<const SerialContainerPrivate*>(container_.pimpl())->internalToExternalMap().at(s.end()))
+			    << "SubTrajectory is not connected to its expected end InterfaceState";
+			EXPECT_EQ(s.creator(), creator_);
+			return 1.0;
+		}
+	};
+
+	stage->setCostTerm(std::make_unique<VerifySolutionCostTerm>(container, &*stage));
+	container.computeWithStages({ std::move(stage) });
+	EXPECT_EQ(container.solutions().front()->cost(), 1.0) << "custom CostTerm overwrites stage cost";
+}
+
 TEST(CostTerm, SetLambdaCostTerm) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	const moveit::core::RobotModelConstPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
 	auto stage{ std::make_unique<GeneratorMockup>() };
-	stage->setCostTerm([](auto&&) { return 1.0; });
+	stage->setCostTerm([](auto&& /*s*/) { return 1.0; });
 	container.computeWithStages({ std::move(stage) });
 	EXPECT_EQ(container.solutions().front()->cost(), 1.0) << "can use simple lambda signature";
 
 	stage = std::make_unique<GeneratorMockup>();
-	stage->setCostTerm([](auto&&, auto&&) { return 1.0; });
+	stage->setCostTerm([](auto&& /*s*/, auto&& /*comment*/) { return 1.0; });
 	container.computeWithStages({ std::move(stage) });
 	EXPECT_EQ(container.solutions().front()->cost(), 1.0) << "can use full lambda signature";
 
 	stage = std::make_unique<GeneratorMockup>();
-	stage->setCostTerm([](auto&&, auto&& comment) {
+	stage->setCostTerm([](auto&& /*s*/, auto&& comment) {
 		comment = "I want the user to see this";
 		return 1.0;
 	});
@@ -198,7 +227,6 @@ TEST(CostTerm, SetLambdaCostTerm) {
 }
 
 TEST(CostTerm, CostOverwrite) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	const moveit::core::RobotModelConstPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
@@ -215,7 +243,6 @@ TEST(CostTerm, CostOverwrite) {
 }
 
 TEST(CostTerm, StageTypes) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 
 	Standalone<SerialContainer> container(robot);
@@ -237,7 +264,6 @@ TEST(CostTerm, StageTypes) {
 }
 
 TEST(CostTerm, PassThroughUsesCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -253,7 +279,6 @@ TEST(CostTerm, PassThroughUsesCost) {
 }
 
 TEST(CostTerm, PassThroughOverwritesCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -271,7 +296,6 @@ TEST(CostTerm, PassThroughOverwritesCost) {
 }
 
 TEST(CostTerm, PassThroughCanModifyCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	moveit::core::RobotModelPtr robot{ getModel() };
 	Standalone<stages::PassThrough> container(robot);
 
@@ -287,7 +311,6 @@ TEST(CostTerm, PassThroughCanModifyCost) {
 }
 
 TEST(CostTerm, CompositeSolutions) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	Standalone<SerialContainer> container{ getModel() };
 
 	{
@@ -330,7 +353,6 @@ TEST(CostTerm, CompositeSolutions) {
 }
 
 TEST(CostTerm, CompositeSolutionsContainerCost) {
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME, ros::console::levels::Fatal);
 	Standalone<SerialContainer> container{ getModel() };
 
 	auto s1{ std::make_unique<ForwardMockup>() };

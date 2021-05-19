@@ -43,8 +43,6 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/cost_queue.h>
 
-#include <ros/ros.h>
-
 #include <ostream>
 #include <chrono>
 
@@ -100,7 +98,7 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// templated access to pull/push interfaces
+	/// direction-based access to pull/push interfaces
 	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
 	inline InterfacePtr pushInterface(Interface::Direction dir) {
 		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
@@ -114,13 +112,12 @@ public:
 
 	/// set parent of stage
 	/// enforce only one parent exists
-	inline bool setParent(ContainerBase* parent) {
+	inline void setParent(ContainerBase* parent) {
 		if (parent_) {
-			ROS_ERROR_STREAM("Tried to add stage '" << name() << "' to two parents");
-			return false;  // it's not allowed to add a stage to a parent if it already has one
+			// it's not allowed to add a stage to a parent if it already has one
+			throw std::runtime_error("Tried to add stage '" + name() + "' to two parents");
 		}
 		parent_ = parent;
-		return true;
 	}
 
 	/// explicitly orphan stage
@@ -142,10 +139,12 @@ public:
 	// methods to spawn new solutions
 	void sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution);
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
+	template <Interface::Direction>
+	inline void send(const InterfaceState& start, InterfaceState&& end, const SolutionBasePtr& solution);
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
-	bool storeSolution(const SolutionBasePtr& solution);
+	bool storeSolution(const SolutionBasePtr& solution, const InterfaceState* from, const InterfaceState* to);
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
@@ -181,7 +180,7 @@ protected:
 	std::list<InterfaceState> states_;  // storage for created states
 	ordered<SolutionBaseConstPtr> solutions_;
 	std::list<SolutionBaseConstPtr> failures_;
-	size_t num_failures_ = 0;  // num of failures if not stored
+	std::size_t num_failures_ = 0;  // num of failures if not stored
 
 private:
 	// !! items write-accessed only by ContainerBasePrivate to maintain hierarchy !!
@@ -197,6 +196,17 @@ private:
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+
+template <>
+inline void StagePrivate::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                   const SolutionBasePtr& solution) {
+	sendForward(start, std::move(end), solution);
+}
+template <>
+inline void StagePrivate::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                    const SolutionBasePtr& solution) {
+	sendBackward(std::move(end), start, solution);
+}
 
 // ComputeBasePrivate is the base class for all computing stages, i.e. non-containers.
 // It adds the trajectories_ variable.
@@ -236,11 +246,6 @@ public:
 
 	bool hasEndState() const;
 	const InterfaceState& fetchEndState();
-
-protected:
-	// drop states corresponding to failed (infinite-cost) trajectories
-	void dropFailedStarts(Interface::iterator state);
-	void dropFailedEnds(Interface::iterator state);
 };
 PIMPL_FUNCTIONS(PropagatingEitherWay)
 
@@ -289,31 +294,53 @@ class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 
-	using StatePair = std::pair<Interface::const_iterator, Interface::const_iterator>;
-	struct StatePairLess
+public:
+	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
 	{
-		bool operator()(const StatePair& x, const StatePair& y) const {
-			return x.first->priority() + x.second->priority() < y.first->priority() + y.second->priority();
+		using std::pair<Interface::const_iterator, Interface::const_iterator>::pair;  // inherit base constructors
+		bool operator<(const StatePair& rhs) const {
+			return less(first->priority(), second->priority(), rhs.first->priority(), rhs.second->priority());
+		}
+		static inline bool less(const InterfaceState::Priority& lhsA, const InterfaceState::Priority& lhsB,
+		                        const InterfaceState::Priority& rhsA, const InterfaceState::Priority& rhsB) {
+			unsigned char lhs = (lhsA.enabled() << 1) | lhsB.enabled();  // combine bits into two-digit binary number
+			unsigned char rhs = (rhsA.enabled() << 1) | rhsB.enabled();
+			if (lhs == rhs)  // if enabled status is identical
+				return lhsA + lhsB < rhsA + rhsB;  // compare the sums of both contributions
+			// one of the states in each pair should be enabled
+			assert(lhs != 0b00 && rhs != 0b00);
+			// both states valid (b11)
+			if (lhs == 0b11)
+				return true;
+			if (rhs == 0b11)
+				return false;
+			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
 		}
 	};
 
-	template <Interface::Direction other>
-	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
-
-public:
 	inline ConnectingPrivate(Connecting* me, const std::string& name);
 
 	InterfaceFlags requiredInterface() const override;
 	bool canCompute() const override;
 	void compute() override;
 
+	// Check whether there are pending feasible states that could connect to source
+	template <Interface::Direction dir>
+	bool hasPendingOpposites(const InterfaceState* source) const;
+
+	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
+
 private:
+	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
+	template <Interface::Direction other>
+	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
+
 	// get informed when new start or end state becomes available
 	template <Interface::Direction other>
 	void newState(Interface::iterator it, bool updated);
 
 	// ordered list of pending state pairs
-	ordered<StatePair, StatePairLess> pending;
+	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
 }  // namespace task_constructor

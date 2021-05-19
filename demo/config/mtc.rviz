@@ -17,6 +17,7 @@ Panels:
   - Class: moveit_task_constructor/Motion Planning Tasks
     Global Settings:
       Task View Settings:
+        Show Computation Times: true
         Task Expansion: All Expanded
     Name: Motion Planning Tasks
     Tasks View:

@@ -10,8 +10,8 @@ namespace task_constructor {
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  object_names: set of links to include (or all if empty) */
-void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& callback,
-                               const std::vector<std::string>& object_names) {
+void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& /*callback*/,
+                               const std::vector<std::string>& /*object_names*/) {
 	scene->printKnownObjects(std::cout);
 	/*
 	   const std::vector<std::string>* names = object_names.empty() ? &scene->getCollisionObjectMsg()
@@ -86,7 +86,7 @@ const std::string& materialName(const urdf::Visual& element) {
 	return element.material_name;
 }
 template <>
-const std::string& materialName(const urdf::Collision& element) {
+const std::string& materialName(const urdf::Collision& /*element*/) {
 	static std::string empty;
 	return empty;
 }

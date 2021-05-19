@@ -1,4 +1,4 @@
-#include <remote_task_model.h>
+#include <src/remote_task_model.h>
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>

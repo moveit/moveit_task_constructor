@@ -73,11 +73,6 @@ class Task : protected WrapperBase
 public:
 	PRIVATE_CLASS(Task)
 
-	// +1 TODO: move into MoveIt! core
-	static planning_pipeline::PlanningPipelinePtr
-	createPlanner(const moveit::core::RobotModelConstPtr& model, const std::string& ns = "move_group",
-	              const std::string& planning_plugin_param_name = "planning_plugin",
-	              const std::string& adapter_plugins_param_name = "request_adapters");
 	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
 	Task(Task&& other);  // NOLINT(performance-noexcept-move-constructor)
@@ -94,7 +89,7 @@ public:
 	void loadRobotModel(const std::string& robot_description = "robot_description");
 
 	void add(Stage::pointer&& stage);
-	bool insert(Stage::pointer&& stage, int before = -1) override;
+	void insert(Stage::pointer&& stage, int before = -1) override;
 	void clear() final;
 
 	/// enable introspection publishing for use with rviz

@@ -76,23 +76,42 @@ class InterfaceState
 {
 	friend class SolutionBase;  // addIncoming() / addOutgoing() should be called only by SolutionBase
 	friend class Interface;  // allow Interface to set owner_ and priority_
+	friend class ContainerBasePrivate;  // allow setting priority_ for pruning
+
 public:
+	enum Status
+	{
+		ENABLED,  // state is actively considered during planning
+		DISABLED,  // state is disabled because a required connected state failed
+		DISABLED_FAILED,  // state that failed, causing the whole partial solution to be disabled
+	};
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
-	struct Priority : public std::pair<unsigned int, double>
+	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority() : Priority(0, 0.0) {}
-		Priority(unsigned int depth, double cost) : std::pair<unsigned int, double>(depth, cost) {}
-
-		inline unsigned int depth() const { return this->first; }
-		inline double cost() const { return this->second; }
-
-		Priority operator+(const Priority& other) const {
-			return Priority(this->depth() + other.depth(), this->cost() + other.cost());
+		Priority(unsigned int depth, double cost, Status status = ENABLED)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
+			assert(std::isfinite(cost));
 		}
-		bool operator<(const Priority& other) const;
+		// Constructor copying depth and cost, but modifying its status
+		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
+
+		inline Status status() const { return std::get<0>(*this); }
+		inline bool enabled() const { return std::get<0>(*this) == ENABLED; }
+		inline unsigned int depth() const { return std::get<1>(*this); }
+		inline double cost() const { return std::get<2>(*this); }
+
+		// add priorities
+		Priority operator+(const Priority& other) const {
+			return Priority(depth() + other.depth(), cost() + other.cost(), std::min(status(), other.status()));
+		}
+		// comparison operators
+		bool operator<(const Priority& rhs) const;
+		inline bool operator>(const Priority& rhs) const { return rhs < *this; }
+		inline bool operator<=(const Priority& rhs) const { return !(rhs < *this); }
+		inline bool operator>=(const Priority& rhs) const { return !(*this < rhs); }
 	};
 	using Solutions = std::deque<SolutionBase*>;
 
@@ -105,6 +124,7 @@ public:
 
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);
+	InterfaceState(InterfaceState&& other) = default;
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
@@ -126,7 +146,9 @@ private:
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
 	PropertyMap properties_;
+	/// trajectories which are *timewise before* this state
 	Solutions incoming_trajectories_;
+	/// trajectories which are *timewise after* this state
 	Solutions outgoing_trajectories_;
 
 	// members needed for priority scheduling in Interface list
@@ -192,14 +214,18 @@ private:
 	using base_type::remove_if;
 };
 
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
+std::ostream& operator<<(std::ostream& os, const Interface& interface);
+
 class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
+struct TmpSolutionContext;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
-	friend StagePrivate;  // for set[Start|End]StateUnsafe
 	friend ContainerBasePrivate;
+	friend TmpSolutionContext;
 
 public:
 	virtual ~SolutionBase() = default;
@@ -207,26 +233,24 @@ public:
 	inline const InterfaceState* start() const { return start_; }
 	inline const InterfaceState* end() const { return end_; }
 
-	/// Retrieve following (FORWARD) or preceding (BACKWARD) solution segments
-	template <Interface::Direction dir>
-	inline const InterfaceState::Solutions& trajectories() const;
-
-	/** set the solution's start_state_
+	/** Set the solution's start_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must be called only once, because it registers the solution with the state.
 	 */
 	inline void setStartState(const InterfaceState& state) {
-		assert(start_ == nullptr || start_ == &state);
-		setStartStateUnsafe(state);
+		assert(start_ == nullptr);
+		start_ = &state;
+		const_cast<InterfaceState&>(state).addOutgoing(this);
 	}
 
-	/** set the solution's end_state_
+	/** Set the solution's end_state_
 	 *
-	 * Must not be used with different states because it registers the solution with the state as well.
+	 * Must be called only once, because it registers the solution with the state.
 	 */
 	inline void setEndState(const InterfaceState& state) {
-		assert(end_ == nullptr || end_ == &state);
-		setEndStateUnsafe(state);
+		assert(end_ == nullptr);
+		end_ = &state;
+		const_cast<InterfaceState&>(state).addIncoming(this);
 	}
 
 	inline const Stage* creator() const { return creator_; }
@@ -234,7 +258,7 @@ public:
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
-	void markAsFailure() { setCost(std::numeric_limits<double>::infinity()); }
+	void markAsFailure(const std::string& msg = std::string());
 	inline bool isFailure() const { return !std::isfinite(cost_); }
 
 	const std::string& comment() const { return comment_; }
@@ -257,18 +281,6 @@ public:
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
-
-	/** unsafe setter for start_state_
-	 *
-	 * must only be used if the previously set state removes its link to this solution
-	 */
-	void setStartStateUnsafe(const InterfaceState& state);
-
-	/** unsafe setter for end_state_
-	 *
-	 * must only be used if the previously set state removes its link to this solution
-	 */
-	void setEndStateUnsafe(const InterfaceState& state);
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
@@ -367,13 +379,40 @@ private:
 	const SolutionBase* wrapped_;
 };
 
+/// Trait to retrieve the end (FORWARD) or start (BACKWARD) state of a given solution
+template <Interface::Direction dir>
+const InterfaceState* state(const SolutionBase& solution);
 template <>
-inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::FORWARD>() const {
-	return end_->outgoingTrajectories();
+inline const InterfaceState* state<Interface::FORWARD>(const SolutionBase& solution) {
+	return solution.end();
 }
 template <>
-inline const InterfaceState::Solutions& SolutionBase::trajectories<Interface::BACKWARD>() const {
-	return start_->incomingTrajectories();
+inline const InterfaceState* state<Interface::BACKWARD>(const SolutionBase& solution) {
+	return solution.start();
+}
+
+/// Trait to retrieve outgoing (FORWARD) or incoming (BACKWARD) solution segments of a given state
+template <Interface::Direction dir>
+const InterfaceState::Solutions& trajectories(const InterfaceState& state);
+template <>
+inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState& state) {
+	return state.outgoingTrajectories();
+}
+template <>
+inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState& state) {
+	return state.incomingTrajectories();
+}
+
+/// Trait to retrieve opposite direction (FORWARD <-> BACKWARD)
+template <Interface::Direction dir>
+constexpr Interface::Direction opposite();
+template <>
+inline constexpr Interface::Direction opposite<Interface::FORWARD>() {
+	return Interface::BACKWARD;
+}
+template <>
+inline constexpr Interface::Direction opposite<Interface::BACKWARD>() {
+	return Interface::FORWARD;
 }
 }  // namespace task_constructor
 }  // namespace moveit

@@ -129,12 +129,16 @@ void StagePrivate::validateConnectivity() const {
 	}
 }
 
-bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
+bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const InterfaceState* from,
+                                 const InterfaceState* to) {
+	solution->setCreator(me());
 	if (introspection_)
 		introspection_->registerSolution(*solution);
 
 	if (solution->isFailure()) {
 		++num_failures_;
+		if (parent())
+			parent()->pimpl()->onNewFailure(*me(), from, to);
 		if (!storeFailures())
 			return false;  // drop solution
 		failures_.push_back(solution);
@@ -147,11 +151,9 @@ bool StagePrivate::storeSolution(const SolutionBasePtr& solution) {
 void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(nextStarts());
 
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, nullptr))
 		return;  // solution dropped
 
 	me()->forwardProperties(from, to);
@@ -159,8 +161,8 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 	auto to_it = states_.insert(states_.end(), std::move(to));
 
 	// register stored interfaces with solution
-	solution->setStartStateUnsafe(from);
-	solution->setEndStateUnsafe(*to_it);
+	solution->setStartState(from);
+	solution->setEndState(*to_it);
 
 	if (!solution->isFailure())
 		nextStarts()->add(*to_it);
@@ -171,19 +173,17 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution) {
 	assert(prevEnds());
 
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, &to))
 		return;  // solution dropped
 
 	me()->forwardProperties(to, from);
 
 	auto from_it = states_.insert(states_.end(), std::move(from));
 
-	solution->setStartStateUnsafe(*from_it);
-	solution->setEndStateUnsafe(to);
+	solution->setStartState(*from_it);
+	solution->setEndState(to);
 
 	if (!solution->isFailure())
 		prevEnds()->add(*from_it);
@@ -194,18 +194,16 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
 
-	solution->setCreator(me());
-
 	computeCost(state, state, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, nullptr, nullptr))
 		return;  // solution dropped
 
 	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
 	auto to = states_.insert(states_.end(), std::move(state));
 
-	solution->setStartStateUnsafe(*from);
-	solution->setEndStateUnsafe(*to);
+	solution->setStartState(*from);
+	solution->setEndState(*to);
 
 	if (!solution->isFailure()) {
 		prevEnds()->add(*from);
@@ -216,15 +214,13 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 }
 
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
-	solution->setCreator(me());
-
 	computeCost(from, to, *solution);
 
-	if (!storeSolution(solution))
+	if (!storeSolution(solution, &from, &to))
 		return;  // solution dropped
 
-	solution->setStartStateUnsafe(from);
-	solution->setEndStateUnsafe(to);
+	solution->setStartState(from);
+	solution->setEndState(to);
 
 	newSolution(solution);
 }
@@ -238,17 +234,34 @@ void StagePrivate::newSolution(const SolutionBasePtr& solution) {
 		parent()->onNewSolution(*solution);
 }
 
+// To solve the chicken-egg problem in computeCost() and provide proper states at both ends of the solution,
+// this class temporarily sets the new interface states w/o registering the solution yet.
+// On destruction the start/end states are reset again.
+struct TmpSolutionContext
+{
+	SolutionBase& solution_;
+	TmpSolutionContext(SolutionBase& solution, Stage* creator, const InterfaceState& from, const InterfaceState& to)
+	  : solution_(solution) {
+		assert(solution_.start_ == nullptr);
+		assert(solution_.end_ == nullptr);
+		solution_.start_ = &from;
+		solution_.end_ = &to;
+		solution_.creator_ = creator;
+	}
+	~TmpSolutionContext() {
+		solution_.start_ = nullptr;
+		solution_.end_ = nullptr;
+		solution_.creator_ = nullptr;
+	}
+};
 void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution) {
 	// no reason to compute costs for a failed solution
 	if (solution.isFailure())
 		return;
 
-	// chicken-and-egg problem: we don't know whether/where we will store the solution yet,
-	// but need to store it properly to compute the cost with a clean interface:
-	// set state copies for solution before computing cost:
-	InterfaceState tmp_from{ from }, tmp_to{ to };
-	solution.setStartState(tmp_from);
-	solution.setEndState(tmp_to);
+	// Temporarily set start/end states of the solution w/o actually registering the solution with them
+	// This allows CostTerms to compute costs based on the InterfaceState.
+	TmpSolutionContext tip(solution, me(), from, to);
 
 	std::string comment;
 	assert(cost_term_);
@@ -363,7 +376,7 @@ void Stage::setCostTerm(const CostTermConstPtr& term) {
 	if (!term)
 		pimpl()->cost_term_ = std::make_unique<CostTerm>();
 	else
-		pimpl()->cost_term_ = std::move(term);
+		pimpl()->cost_term_ = term;
 }
 
 const ordered<SolutionBaseConstPtr>& Stage::solutions() const {
@@ -468,15 +481,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(
-				    new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedStarts(it); }));
+				starts_.reset(new Interface());
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface([this](Interface::iterator it, bool /*updated*/) { this->dropFailedEnds(it); }));
+				ends_.reset(new Interface());
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -511,17 +523,8 @@ InterfaceFlags PropagatingEitherWayPrivate::requiredInterface() const {
 	return required_interface_;
 }
 
-void PropagatingEitherWayPrivate::dropFailedStarts(Interface::iterator state) {
-	if (std::isinf(state->priority().cost()))
-		starts_->remove(state);
-}
-void PropagatingEitherWayPrivate::dropFailedEnds(Interface::iterator state) {
-	if (std::isinf(state->priority().cost()))
-		ends_->remove(state);
-}
-
 inline bool PropagatingEitherWayPrivate::hasStartState() const {
-	return starts_ && !starts_->empty();
+	return starts_ && !starts_->empty() && starts_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
@@ -530,7 +533,7 @@ const InterfaceState& PropagatingEitherWayPrivate::fetchStartState() {
 }
 
 inline bool PropagatingEitherWayPrivate::hasEndState() const {
-	return ends_ && !ends_->empty();
+	return ends_ && !ends_->empty() && ends_->front()->priority().enabled();
 }
 
 const InterfaceState& PropagatingEitherWayPrivate::fetchEndState() {
@@ -574,12 +577,25 @@ void PropagatingEitherWay::restrictDirection(PropagatingEitherWay::Direction dir
 	impl->initInterface(dir);
 }
 
-void PropagatingEitherWay::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
-	pimpl()->sendForward(from, std::move(to), std::make_shared<SubTrajectory>(std::move(t)));
+template <Interface::Direction dir>
+void PropagatingEitherWay::send(const InterfaceState& start, InterfaceState&& end, SubTrajectory&& trajectory) {
+	pimpl()->send<dir>(start, std::move(end), std::make_shared<SubTrajectory>(std::move(trajectory)));
 }
+// Explicit template instantiation is required. The compiler, otherwise, might just inline them.
+template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                             SubTrajectory&& trajectory);
+template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
+                                                              SubTrajectory&& trajectory);
 
-void PropagatingEitherWay::sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t) {
-	pimpl()->sendBackward(std::move(from), to, std::make_shared<SubTrajectory>(std::move(t)));
+template <Interface::Direction dir>
+void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
+	planning_scene::PlanningScenePtr end;
+	SubTrajectory trajectory;
+
+	if (!compute(start, end, trajectory, dir) && trajectory.comment().empty())
+		silentFailure();  // there is nothing to report (comment is empty)
+	else
+		send<dir>(start, InterfaceState(end), std::move(trajectory));
 }
 
 PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward* me, const std::string& name)
@@ -683,46 +699,97 @@ InterfaceFlags ConnectingPrivate::requiredInterface() const {
 template <>
 ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::BACKWARD>(Interface::const_iterator first,
                                                                                Interface::const_iterator second) {
-	return std::make_pair(first, second);
+	return StatePair(first, second);
 }
 template <>
 ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(Interface::const_iterator first,
                                                                               Interface::const_iterator second) {
-	return std::make_pair(second, first);
+	return StatePair(second, first);
 }
 
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	// TODO: only consider interface states with priority depth > threshold
-	if (!std::isfinite(it->priority().cost())) {
-		// remove pending pairs, if cost updated to infinity
-		if (updated)
-			pending.remove_if([it](const StatePair& p) { return p.first == it; });
-		return;
-	}
-	if (updated) {
-		// many pairs might be affected: sort
-		pending.sort();
+	if (updated) {  // many pairs might be affected: resort
+		if (it->priority().status() == InterfaceState::DISABLED)
+			// remove all pending pairs involving this state
+			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
+		else
+			pending.sort();
 	} else {  // new state: insert all pairs with other interface
+		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			if (!std::isfinite(oit->priority().cost()))
-				break;
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit))
+			// Don't re-enable states that are marked DISABLED
+			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
+				// re-enable the opposing state oit if its status is DISABLED_FAILED
+				if (oit->priority().status() == InterfaceState::DISABLED_FAILED)
+					oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), InterfaceState::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
+			}
 		}
 	}
+	// std::cerr << name_ << ": ";
+	// printPendingPairs(std::cerr);
+	// std::cerr << std::endl;
 }
 
+// Check whether there are pending feasible states that could connect to source.
+// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+template <Interface::Direction dir>
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+	for (const auto& candidate : this->pending) {
+		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto src = std::get<dir>(candidate);
+		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const auto tgt = std::get<opposite<dir>()>(candidate);
+
+		if (&*src == source && tgt->priority().enabled())
+			return true;
+
+		// early stopping when only infeasible pairs are to come
+		if (!std::get<0>(candidate)->priority().enabled())
+			break;
+	}
+	return false;
+}
+// explicitly instantiate templates for both directions
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+
 bool ConnectingPrivate::canCompute() const {
-	return !pending.empty();
+	// Do we still have feasible pending state pairs?
+	return !pending.empty() && pending.front().first->priority().enabled() &&
+	       pending.front().second->priority().enabled();
 }
 
 void ConnectingPrivate::compute() {
 	const StatePair& top = pending.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
+	assert(from.priority().enabled() && to.priority().enabled());
 	static_cast<Connecting*>(me_)->compute(from, to);
+}
+
+std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+	static const char* red = "\033[31m";
+	static const char* reset = "\033[m";
+	for (const auto& candidate : pending) {
+		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
+			os << " " << red;
+		// find indeces of InterfaceState pointers in start/end Interfaces
+		unsigned int first = 0, second = 0;
+		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
+			++first;
+			return &*candidate.first == s;
+		});
+		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
+			++second;
+			return &*candidate.second == s;
+		});
+		os << first << ":" << second << " ";
+	}
+	os << reset;
+	return os;
 }
 
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}

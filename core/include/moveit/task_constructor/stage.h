@@ -227,20 +227,20 @@ public:
 	const ordered<SolutionBaseConstPtr>& solutions() const;
 	const std::list<SolutionBaseConstPtr>& failures() const;
 	size_t numFailures() const;
-	/// call to increase number of failures w/o storing a (failure) trajectory
+	/// Call to increase number of failures w/o storing a (failure) trajectory
 	void silentFailure();
-	/// should we generate failure solutions?
+	/// Should we generate failure solutions? Note: Always report a failure!
 	bool storeFailures() const;
 
-	/// get the stage's property map
+	/// Get the stage's property map
 	PropertyMap& properties();
 	const PropertyMap& properties() const { return const_cast<Stage*>(this)->properties(); }
-	/// set a previously declared property to a new value
+	/// Set a previously declared property to a new value
 	void setProperty(const std::string& name, const boost::any& value);
 	/// overload: const char* values are stored as std::string
 	inline void setProperty(const std::string& name, const char* value) { setProperty(name, std::string(value)); }
 
-	/// analyze source of error and report accordingly
+	/// Analyze source of error and report accordingly
 	[[noreturn]] void reportPropertyError(const Property::error& e);
 
 	double getTotalComputeTime() const;
@@ -289,15 +289,33 @@ public:
 	};
 	void restrictDirection(Direction dir);
 
-	virtual void computeForward(const InterfaceState& from) = 0;
-	virtual void computeBackward(const InterfaceState& to) = 0;
-
-	void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory);
-	void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory);
+	// Default implementations, using generic compute().
+	// Override if you want to use different code for FORWARD and BACKWARD directions.
+	virtual void computeForward(const InterfaceState& from) { computeGeneric<Interface::FORWARD>(from); }
+	virtual void computeBackward(const InterfaceState& to) { computeGeneric<Interface::BACKWARD>(to); }
 
 protected:
 	// constructor for use in derived classes
 	PropagatingEitherWay(PropagatingEitherWayPrivate* impl);
+
+	template <Interface::Direction dir>
+	void send(const InterfaceState& start, InterfaceState&& end, SubTrajectory&& trajectory);
+
+	inline void sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& trajectory) {
+		send<Interface::FORWARD>(from, std::move(to), std::move(trajectory));
+	}
+	inline void sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& trajectory) {
+		send<Interface::BACKWARD>(to, std::move(from), std::move(trajectory));
+	}
+
+private:
+	virtual bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+	                     SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) {
+		throw std::runtime_error("PropagatingEitherWay: Override compute() or compute[Forward|Backward]()");
+	}
+
+	template <Interface::Direction dir>
+	void computeGeneric(const InterfaceState& start);
 };
 
 class PropagatingForwardPrivate;
@@ -373,9 +391,6 @@ protected:
 class ConnectingPrivate;
 class Connecting : public ComputeBase
 {
-protected:
-	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
-
 public:
 	PRIVATE_CLASS(Connecting)
 	Connecting(const std::string& name = "connecting");
@@ -385,6 +400,8 @@ public:
 	virtual void compute(const InterfaceState& from, const InterfaceState& to) = 0;
 
 protected:
+	virtual bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const;
+
 	/// register solution as a solution connecting states from -> to
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 

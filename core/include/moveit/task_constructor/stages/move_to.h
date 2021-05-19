@@ -60,8 +60,6 @@ public:
 	       const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void computeForward(const InterfaceState& from) override;
-	void computeBackward(const InterfaceState& to) override;
 
 	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
@@ -97,14 +95,12 @@ public:
 protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
-	             Direction dir);
+	             Interface::Direction dir) override;
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
-	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                 decltype(std::declval<SolutionBase>().markers())& markers);
+	bool getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
+	                 Eigen::Isometry3d& target_eigen);
 	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                  decltype(std::declval<SolutionBase>().markers())& /*unused*/);
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;

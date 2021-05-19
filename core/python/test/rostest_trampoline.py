@@ -74,7 +74,7 @@ class TestTrampolines(unittest.TestCase):
     def plan(self, task, expected_solutions=None, wait=False):
         task.plan()
         if expected_solutions is not None:
-            assert len(task.solutions) == expected_solutions
+            self.assertEqual(len(task.solutions), expected_solutions)
         if wait:
             input("Waiting for any key (allows inspection in rviz)")
 

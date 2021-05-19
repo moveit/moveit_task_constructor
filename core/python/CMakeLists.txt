@@ -17,8 +17,8 @@ set(PYBIND11_CMAKECONFIG_INSTALL_DIR ${CATKIN_PACKAGE_SHARE_DESTINATION}/cmake
     CACHE INTERNAL "install path for pybind11 cmake files")
 
 # source pybind11 folder, which exposes its targets and installs it
+#catkin_lint: ignore_once subproject duplicate_cmd
 add_subdirectory(pybind11)
-
 
 # C++ wrapper code
 add_subdirectory(bindings)

@@ -141,9 +141,8 @@ bool MoveTo::getJointStateGoal(const boost::any& goal, const moveit::core::Joint
 	return false;
 }
 
-bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-                         const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                         decltype(std::declval<SolutionBase>().markers())& markers) {
+bool MoveTo::getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
+                         Eigen::Isometry3d& target_eigen) {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
 		tf::poseMsgToEigen(target.pose, target_eigen);
@@ -151,12 +150,6 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
 		target_eigen = frame * target_eigen;
-
-		// frame at target pose
-		rviz_marker_tools::appendFrame(markers, target, 0.1, "ik frame");
-
-		// frame at link
-		rviz_marker_tools::appendFrame(markers, ik_pose_msg, 0.1, "ik frame");
 	} catch (const boost::bad_any_cast&) {
 		return false;
 	}
@@ -164,8 +157,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStampe
 }
 
 bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-                          decltype(std::declval<SolutionBase>().markers())& /*unused*/) {
+                          const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen) {
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
 		Eigen::Vector3d target_point;
@@ -178,8 +170,6 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 		// retain link orientation
 		target_eigen = scene->getCurrentState().getGlobalLinkTransform(link);
 		target_eigen.translation() = target_point;
-
-		// TODO: add marker visualization
 	} catch (const boost::bad_any_cast&) {
 		return false;
 	}
@@ -187,7 +177,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 }
 
 bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& solution,
-                     Direction dir) {
+                     Interface::Direction dir) {
 	scene = state.scene()->diff();
 	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
@@ -197,12 +187,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM_NAMED("MoveTo", "Invalid joint model group: " << group);
+		solution.markAsFailure("invalid joint model group: " + group);
 		return false;
 	}
 	boost::any goal = props.get("goal");
 	if (goal.empty()) {
-		ROS_WARN_NAMED("MoveTo", "goal undefined");
+		solution.markAsFailure("undefined goal");
 		return false;
 	}
 
@@ -223,7 +213,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (value.empty()) {  // property undefined
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				ROS_WARN_STREAM_NAMED("MoveTo", "Failed to derive IK target link");
+				solution.markAsFailure("missing ik_frame");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
@@ -231,16 +221,22 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		} else {
 			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				ROS_WARN_STREAM_NAMED("MoveTo", "Unknown link: " << ik_pose_msg.header.frame_id);
+				solution.markAsFailure("unknown link for ik_frame: " + ik_pose_msg.header.frame_id);
 				return false;
 			}
 		}
 
-		if (!getPoseGoal(goal, ik_pose_msg, scene, target_eigen, solution.markers()) &&
-		    !getPointGoal(goal, link, scene, target_eigen, solution.markers())) {
-			ROS_ERROR_STREAM_NAMED("MoveTo", "Invalid type for goal: " << goal.type().name());
+		if (!getPoseGoal(goal, scene, target_eigen) && !getPointGoal(goal, link, scene, target_eigen)) {
+			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
 			return false;
 		}
+
+		// visualize plan with frame at target pose and frame at link
+		geometry_msgs::PoseStamped target;
+		target.header.frame_id = scene->getPlanningFrame();
+		tf::poseEigenToMsg(target_eigen, target.pose);
+		rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
+		rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;
@@ -259,7 +255,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	}
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD)
+		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
@@ -271,25 +267,6 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	return false;
 }
 
-void MoveTo::computeForward(const InterfaceState& from) {
-	planning_scene::PlanningScenePtr to;
-	SubTrajectory trajectory;
-
-	if (compute(from, to, trajectory, FORWARD))
-		sendForward(from, InterfaceState(to), std::move(trajectory));
-	else
-		silentFailure();
-}
-
-void MoveTo::computeBackward(const InterfaceState& to) {
-	planning_scene::PlanningScenePtr from;
-	SubTrajectory trajectory;
-
-	if (compute(to, from, trajectory, BACKWARD))
-		sendBackward(InterfaceState(from), to, std::move(trajectory));
-	else
-		silentFailure();
-}
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

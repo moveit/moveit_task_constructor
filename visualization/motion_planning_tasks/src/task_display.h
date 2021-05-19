@@ -85,7 +85,7 @@ public:
 	void load(const rviz::Config& config) override;
 
 	void setName(const QString& name) override;
-	void setSolutionStatus(bool ok);
+	void setSolutionStatus(bool ok, const char* msg = "");
 
 	TaskListModel& getTaskListModel() { return *task_list_model_; }
 	TaskSolutionVisualization* visualization() const { return trajectory_visual_.get(); }

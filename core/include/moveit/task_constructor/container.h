@@ -64,7 +64,7 @@ public:
 
 	void add(Stage::pointer&& stage);
 
-	virtual bool insert(Stage::pointer&& stage, int before = -1);
+	virtual void insert(Stage::pointer&& stage, int before = -1);
 	virtual Stage::pointer remove(int pos);
 	virtual Stage::pointer remove(Stage* child);
 	virtual void clear();
@@ -95,20 +95,8 @@ public:
 	void compute() override;
 
 protected:
-	/// called by a (direct) child when a new solution becomes available
 	void onNewSolution(const SolutionBase& s) override;
 
-	using SolutionProcessor = std::function<void(const SolutionSequence::container_type&, double)>;
-
-	/// Traverse all solution pathes starting at start and going in given direction dir
-	/// until the end, i.e. until there are no more subsolutions in the given direction
-	/// For each solution path, callback the given processor passing
-	/// the full trace (from start to end, but not including start) and its accumulated costs
-	template <Interface::Direction dir>
-	void traverse(const SolutionBase& start, const SolutionProcessor& cb, SolutionSequence::container_type& trace,
-	              double trace_cost = 0);
-
-protected:
 	SerialContainer(SerialContainerPrivate* impl);
 };
 
@@ -215,7 +203,7 @@ public:
 	WrapperBase(const std::string& name = "wrapper", Stage::pointer&& child = Stage::pointer());
 
 	/// insertion is only allowed if children() is empty
-	bool insert(Stage::pointer&& stage, int before = -1) override;
+	void insert(Stage::pointer&& stage, int before = -1) override;
 
 	/// access the single wrapped child, NULL if still empty
 	Stage* wrapped();

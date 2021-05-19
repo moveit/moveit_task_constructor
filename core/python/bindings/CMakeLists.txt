@@ -18,6 +18,8 @@ install(TARGETS ${TOOLS_LIB_NAME}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
+# catkin_lint cannot detect target declarations in functions, here in pybind11_add_module
+#catkin_lint: ignore undefined_target
 
 # moveit.python_tools
 pybind11_add_module(pymoveit_python_tools src/python_tools.cpp)

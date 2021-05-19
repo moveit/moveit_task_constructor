@@ -106,34 +106,114 @@ void ContainerBasePrivate::compute() {
 	static_cast<ContainerBase*>(me_)->compute();
 }
 
+void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			// just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+			break;
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			break;
+
+		case CONNECT:
+			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
+				auto cimpl = conn->pimpl();
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
+					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::DISABLED_FAILED);
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
+					setStatus<Interface::FORWARD>(to, InterfaceState::Status::DISABLED_FAILED);
+			}
+			break;
+	}
+	// printChildrenInterfaces(*this, false, child);
+}
+
+template <Interface::Direction dir>
+void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
+	if (s->priority().status() == status)
+		return;  // nothing changing
+
+	// if we should disable the state, only do so when there is no enabled alternative path
+	if (status == InterfaceState::DISABLED) {
+		auto solution_is_enabled = [](auto&& solution) {
+			return state<opposite<dir>()>(*solution)->priority().enabled();
+		};
+		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
+		if (alternative_path != alternatives.cend())
+			return;
+	}
+
+	// actually enable/disable the state
+	if (s->owner()) {
+		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
+	} else {
+		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
+	}
+
+	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
+	if (parent()) {
+		auto external{ internalToExternalMap().find(s) };
+		if (external != internalToExternalMap().end()) {
+			// only escalate if there is no enabled alternative child
+			auto internals{ externalToInternalMap().equal_range(external->second) };
+			auto is_enabled = [](auto&& state_pair) { return state_pair.second->priority().enabled(); };
+			auto other_path{ std::find_if(internals.first, internals.second, is_enabled) };
+			if (other_path == internals.second)
+				parent()->pimpl()->setStatus<dir>(external->second, status);
+			return;
+		}
+	}
+
+	// To break symmetry between both ends of a partial solution sequence that gets disabled,
+	// we mark the first state with DISABLED_FAILED and all other states down the tree only with DISABLED.
+	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
+	// when new states arrive in a Connecting stage.
+	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	if (status == InterfaceState::DISABLED_FAILED)
+		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
+
+	// traverse solution tree
+	for (const SolutionBase* successor : trajectories<dir>(*s))
+		setStatus<dir>(state<dir>(*successor), status);
+}
+template void ContainerBasePrivate::setStatus<Interface::FORWARD>(const InterfaceState*, InterfaceState::Status);
+template void ContainerBasePrivate::setStatus<Interface::BACKWARD>(const InterfaceState*, InterfaceState::Status);
+
+template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
-	// TODO: update internal's prio from external's new priority
-	if (updated)
+	if (updated) {
+		auto internals{ externalToInternalMap().equal_range(&*external) };
+		for (auto& i = internals.first; i != internals.second; ++i) {
+			setStatus<dir>(i->second, external->priority().status());
+		}
 		return;
+	}
 
 	// create a clone of external state within target interface (child's starts() or ends())
 	auto internal = states_.insert(states_.end(), InterfaceState(*external));
 	target->add(*internal);
 	// and remember the mapping between them
-	internal_to_external_.insert(std::make_pair(&*internal, &*external));
+	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to) {
-	solution->setCreator(me());
-
 	computeCost(*internal_from, *internal_to, *solution);
 
-	if (!storeSolution(solution))
-		return;
-
+	// map internal to external states
 	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
-		auto it = internal_to_external_.find(internal);
-		if (it != internal_to_external_.end())
-			return it->second;
+		auto it = internalToExternalMap().find(internal);
+		if (it != internalToExternalMap().end())
+			return const_cast<InterfaceState*>(it->second);
 
 		InterfaceState* external = &*states_.insert(states_.end(), InterfaceState(*internal));
-		internal_to_external_.insert(std::make_pair(internal, external));
+		internalToExternalMap().insert(std::make_pair(internal, external));
 		created = true;
 		return external;
 	};
@@ -142,9 +222,12 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	InterfaceState* external_from = find_or_create_external(internal_from, created_from);
 	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
 
+	if (!storeSolution(solution, external_from, external_to))
+		return;
+
 	// connect solution to start/end state
-	solution->setStartStateUnsafe(*external_from);
-	solution->setEndStateUnsafe(*external_to);
+	solution->setStartState(*external_from);
+	solution->setEndState(*external_to);
 
 	// spawn created states in external interfaces
 	if (created_from)
@@ -184,24 +267,18 @@ bool ContainerBase::traverseRecursively(const ContainerBase::StageCallback& proc
 }
 
 void ContainerBase::add(Stage::pointer&& stage) {
-	if (!insert(std::move(stage))) {
-		throw std::runtime_error(name() + ": Could not insert stage");
-	}
+	insert(std::move(stage), -1);
 }
 
-bool ContainerBase::insert(Stage::pointer&& stage, int before) {
-	if (!stage) {
-		ROS_ERROR_STREAM(name() << ": received invalid stage pointer");
-		return false;
-	}
+void ContainerBase::insert(Stage::pointer&& stage, int before) {
+	if (!stage)
+		throw std::runtime_error(name() + ": received invalid stage pointer");
 
 	StagePrivate* impl = stage->pimpl();
-	if (!impl->setParent(this))
-		return false;
+	impl->setParent(this);
 	ContainerBasePrivate::const_iterator where = pimpl()->childByIndex(before, true);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
 	impl->setParentPosition(it);
-	return true;
 }
 
 Stage::pointer ContainerBasePrivate::remove(ContainerBasePrivate::const_iterator pos) {
@@ -240,7 +317,7 @@ void ContainerBase::reset() {
 	impl->pending_backward_->clear();
 	impl->pending_forward_->clear();
 	// ... and state mapping
-	impl->internal_to_external_.clear();
+	impl->internalToExternalMap().clear();
 
 	// interfaces depend on children which might change
 	impl->required_interface_ = UNKNOWN;
@@ -288,50 +365,85 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
+// for debugging of how children interfaces evolve over time
+static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr) {
+	static unsigned int id = 0;
+	const unsigned int width = 10;  // indentation of name
+	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	if (success)
+		os << ++id << ' ';
+	if (const Connecting* conn = dynamic_cast<const Connecting*>(&creator))
+		conn->pimpl()->printPendingPairs(os);
+	os << std::endl;
+
+	for (const auto& child : container.pimpl()->children()) {
+		auto cimpl = child->pimpl();
+		os << std::setw(width) << std::left << child->name();
+		if (!cimpl->starts() && !cimpl->ends())
+			os << "↕ " << std::endl;
+		if (cimpl->starts())
+			os << "↓ " << *child->pimpl()->starts() << std::endl;
+		if (cimpl->starts() && cimpl->ends())
+			os << std::setw(width) << "  ";
+		if (cimpl->ends())
+			os << "↑ " << *child->pimpl()->ends() << std::endl;
+	}
+}
+/** Collect all partial solution sequences originating from start into given direction */
+template <Interface::Direction dir>
 struct SolutionCollector
 {
-	SolutionCollector(size_t max_depth) : max_depth(max_depth) {}
-
-	void operator()(const SolutionSequence::container_type& trace, double cost) {
-#ifndef NDEBUG
-		// Traced path should not extend past container boundaries, i.e. trace.size() <= max_depth
-		// However, as the Merging-Connect's solution may be composed of several subsolutions, we need to disregard those
-		size_t len = trace.size();
-		const Stage* prev_creator = nullptr;
-		for (const auto& s : trace) {
-			if (s->creator() == prev_creator)
-				--len;
-			else
-				prev_creator = s->creator();
-		}
-		assert(len <= max_depth);
-#endif
-		solutions.emplace_back(std::make_pair(trace, cost));
+	SolutionCollector(size_t max_depth, const SolutionBase& start) : max_depth(max_depth) {
+		trace.reserve(max_depth);
+		traverse(start, InterfaceState::Priority(0, 0.0));
+		assert(trace.empty());
 	}
 
-	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, double>>;
+	void traverse(const SolutionBase& start, const InterfaceState::Priority& prio) {
+		const InterfaceState::Solutions& next = trajectories<dir>(*state<dir>(start));
+		if (next.empty()) {  // when reaching the end, add the trace to solutions
+			assert(prio.depth() == trace.size());
+			assert(prio.depth() <= max_depth);
+			solutions.emplace_back(std::make_pair(trace, prio));
+		} else {
+			for (SolutionBase* successor : next) {
+				assert(!successor->isFailure());  // We shouldn't have invalid solutions
+				trace.push_back(successor);
+				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
+				trace.pop_back();
+			}
+		}
+	}
+
+	using SolutionCostPairs = std::list<std::pair<SolutionSequence::container_type, InterfaceState::Priority>>;
 	SolutionCostPairs solutions;
 	const size_t max_depth;
+	SolutionSequence::container_type trace;
 };
 
-void updateStateCosts(const SolutionSequence::container_type& partial_solution_path,
-                      const InterfaceState::Priority& prio) {
-	for (const SolutionBase* solution : partial_solution_path) {
-		// here it suffices to update the start state, because the end state is the start state
-		// of the next solution (they are all connected)
-		InterfaceState* state = const_cast<InterfaceState*>(solution->start());
-		if (state->owner())
-			state->owner()->updatePriority(state, prio);
-	}
-	// finally update the end state of the last solution
-	if (partial_solution_path.empty())
-		return;
-	InterfaceState* state = const_cast<InterfaceState*>(partial_solution_path.back()->end());
-	if (state->owner())
-		state->owner()->updatePriority(state, prio);
+inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
+	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
+		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
+		                               // update depth + cost, but keep current status
+		                               InterfaceState::Priority(prio, state->priority().status()));
+}
+
+template <Interface::Direction dir>
+inline void updateStatePrios(const SolutionSequence::container_type& partial_solution_path,
+                             const InterfaceState::Priority& prio) {
+	for (const SolutionBase* solution : partial_solution_path)
+		updateStatePrio(state<dir>(*solution), prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
+	// failures should never trigger this callback
+	assert(!current.isFailure());
+
+	// states of solution must be active, otherwise this would not have been computed
+	assert(current.start()->priority().enabled());
+	assert(current.end()->priority().enabled());
+
 	auto impl = pimpl();
 	const Stage* creator = current.creator();
 	auto& children = impl->children();
@@ -344,30 +456,20 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	assert(num_before < children.size());  // creator should be one of our children
 	num_after = children.size() - 1 - num_before;
 
-	SolutionSequence::container_type trace;
-	trace.reserve(children.size());
-
-	// find all incoming solution paths ending at current solution
-	SolutionCollector incoming(num_before);
-	traverse<Interface::BACKWARD>(current, std::ref(incoming), trace);
-
-	// find all outgoing solution paths starting at current solution
-	SolutionCollector outgoing(num_after);
-	traverse<Interface::FORWARD>(current, std::ref(outgoing), trace);
+	// find all incoming and outgoing solution paths originating from current solution
+	SolutionCollector<Interface::BACKWARD> incoming(num_before, current);
+	SolutionCollector<Interface::FORWARD> outgoing(num_after, current);
 
 	// collect (and sort) all solutions spanning from start to end of this container
 	ordered<SolutionSequencePtr> sorted;
-	SolutionSequence::container_type solution;
-	solution.reserve(children.size());
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
-			InterfaceState::Priority prio(static_cast<unsigned int>(in.first.size() + 1 + out.first.size()),
-			                              in.second + current.cost() + out.second);
+			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
+			assert(prio.enabled());
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				if (std::isinf(prio.cost()))
-					continue;  // don't propagate failures
-				assert(solution.empty());
+				SolutionSequence::container_type solution;
+				solution.reserve(children.size());
 				// insert incoming solutions in reverse order
 				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
 				// insert current solution
@@ -376,16 +478,19 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 				solution.insert(solution.end(), out.first.begin(), out.first.end());
 				// store solution in sorted list
 				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
-			} else if (prio.depth() > 1) {
+			}
+			if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
-				updateStateCosts(in.first, prio);
-				updateStateCosts({ &current }, prio);
-				updateStateCosts(out.first, prio);
+				updateStatePrio(current.start(), prio);
+				updateStatePrio(current.end(), prio);
+				updateStatePrios<Interface::BACKWARD>(in.first, prio);
+				updateStatePrios<Interface::FORWARD>(out.first, prio);
 			}
 		}
 	}
+	// printChildrenInterfaces(*this, true, *current.creator());
 
-	// finally store + announce new solutions to external interface
+	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
 		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
@@ -448,8 +553,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface(
-			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+			starts_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+				this->copyState<Interface::FORWARD>(it, target, updated);
+			}));
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -472,8 +578,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface(
-			    [this, target](Interface::iterator it, bool updated) { this->copyState(it, target, updated); }));
+			ends_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+				this->copyState<Interface::BACKWARD>(it, target, updated);
+			}));
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -541,24 +648,6 @@ void SerialContainer::compute() {
 	}
 }
 
-template <Interface::Direction dir>
-void SerialContainer::traverse(const SolutionBase& start, const SolutionProcessor& cb,
-                               SolutionSequence::container_type& trace, double trace_cost) {
-	const InterfaceState::Solutions& solutions = start.trajectories<dir>();
-	if (solutions.empty())  // if we reached the end, call the callback
-		cb(trace, trace_cost);
-	else
-		for (SolutionBase* successor : solutions) {
-			trace.push_back(successor);
-			trace_cost += successor->cost();
-
-			traverse<dir>(*successor, cb, trace, trace_cost);
-
-			trace_cost -= successor->cost();
-			trace.pop_back();
-		}
-}
-
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
@@ -591,11 +680,11 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (expected & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState(Interface::FORWARD, external, updated);
+			this->onNewExternalState<Interface::FORWARD>(external, updated);
 		}));
 	if (expected & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState(Interface::BACKWARD, external, updated);
+			this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		}));
 
 	required_interface_ = expected;
@@ -632,10 +721,10 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 	ContainerBasePrivate::validateConnectivity();
 }
 
-void ParallelContainerBasePrivate::onNewExternalState(Interface::Direction dir, Interface::iterator external,
-                                                      bool updated) {
+template <Interface::Direction dir>
+void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
-		copyState(external, stage->pimpl()->pullInterface(dir), updated);
+		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
 }
 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
@@ -643,9 +732,8 @@ ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
-	auto impl = pimpl();
-	impl->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)), solution.start(),
-	                   solution.end());
+	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),
+	                      solution.start(), solution.end());
 }
 
 void ParallelContainerBase::spawn(InterfaceState&& state, SubTrajectory&& t) {
@@ -671,10 +759,10 @@ WrapperBase::WrapperBase(WrapperBasePrivate* impl, Stage::pointer&& child) : Par
 		WrapperBase::insert(std::move(child));
 }
 
-bool WrapperBase::insert(Stage::pointer&& stage, int before) {
+void WrapperBase::insert(Stage::pointer&& stage, int before) {
 	// restrict num of children to one
 	if (numChildren() > 0)
-		return false;
+		throw std::runtime_error(name() + ": Wrapper only allows a single child");
 	return ParallelContainerBase::insert(std::move(stage), before);
 }
 
@@ -734,7 +822,10 @@ bool Fallbacks::canCompute() const {
 		// active child failed, continue with next
 		auto next = child->it();
 		++next;
-		active_child_ = next->get();
+		if (next == pimpl()->children().end())
+			active_child_ = nullptr;
+		else
+			active_child_ = next->get();
 	}
 	return false;
 }
@@ -839,7 +930,7 @@ void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	auto source_it = internalToExternalMap().find(source_state);
 	// internal->external mapping for source state should have been created
 	assert(source_it != internalToExternalMap().end());
-	InterfaceState* external_source_state = &*source_it->second;
+	const InterfaceState* external_source_state = &*source_it->second;
 
 	// retrieve (or create if necessary) the ChildSolutionMap for the given external source state
 	ChildSolutionMap& all_solutions =

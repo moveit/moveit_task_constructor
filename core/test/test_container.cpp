@@ -3,8 +3,8 @@
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit/utils/robot_model_test_utils.h>
 
+#include "models.h"
 #include "gtest_value_printers.h"
 #include <gtest/gtest.h>
 #include <initializer_list>
@@ -172,12 +172,12 @@ TEST(ContainerBase, positionForInsert) {
 
 /* TODO: remove interface as it returns raw pointers */
 TEST(ContainerBase, findChild) {
-	SerialContainer s, *c2;
+	SerialContainer s;
 	Stage *a, *b, *c1, *d;
 	s.add(Stage::pointer(a = new NamedStage("a")));
 	s.add(Stage::pointer(b = new NamedStage("b")));
 	s.add(Stage::pointer(c1 = new NamedStage("c")));
-	auto sub = ContainerBase::pointer(c2 = new SerialContainer("c"));
+	auto sub = ContainerBase::pointer(new SerialContainer("c"));
 	sub->add(Stage::pointer(d = new NamedStage("d")));
 	s.add(std::move(sub));
 
@@ -298,28 +298,28 @@ TEST_F(SerialTest, insertion_order) {
 	/*****  inserting first stage  *****/
 	auto g = std::make_unique<GeneratorMockup>();
 	StagePrivate* gp = g->pimpl();
-	ASSERT_TRUE(container.insert(std::move(g)));
+	container.insert(std::move(g));
 	EXPECT_FALSE(g);  // ownership transferred to container
 	VALIDATE(gp);
 
 	/*****  inserting second stage  *****/
 	auto f = std::make_unique<ForwardMockup>();
 	StagePrivate* fp = f->pimpl();
-	ASSERT_TRUE(container.insert(std::move(f)));
+	container.insert(std::move(f));
 	EXPECT_FALSE(f);  // ownership transferred to container
 	VALIDATE(gp, fp);
 
 	/*****  inserting third stage  *****/
 	auto f2 = std::make_unique<ForwardMockup>();
 	StagePrivate* fp2 = f2->pimpl();
-	ASSERT_TRUE(container.insert(std::move(f2), 1));
+	container.insert(std::move(f2), 1);
 	EXPECT_FALSE(f2);  // ownership transferred to container
 	VALIDATE(gp, fp2, fp);
 
 	/*****  inserting another generator stage  *****/
 	auto g2 = std::make_unique<GeneratorMockup>();
 	StagePrivate* gp2 = g2->pimpl();
-	ASSERT_TRUE(container.insert(std::move(g2)));
+	container.insert(std::move(g2));
 	VALIDATE(gp, fp2, fp, gp2);
 }
 
@@ -669,31 +669,30 @@ TEST_F(ParallelTest, init_any) {
 }
 
 TEST(Task, move) {
+	MOCK_ID = 0;
 	Task t1("foo");
 	t1.add(std::make_unique<GeneratorMockup>());
 	t1.add(std::make_unique<GeneratorMockup>());
 	EXPECT_EQ(t1.stages()->numChildren(), 2u);
 
+	MOCK_ID = 0;
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2u);
-	EXPECT_EQ(t1.stages()->numChildren(), 0u);
+	EXPECT_EQ(t1.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 
 	t1 = std::move(t2);
 	EXPECT_EQ(t1.stages()->numChildren(), 2u);
-	EXPECT_EQ(t2.stages()->numChildren(), 0u);
+	EXPECT_EQ(t2.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 TEST(Task, reuse) {
-	// create dummy robot model
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->a->b->c", "continuous");
-	builder.addGroupChain("base", "c", "group");
-	moveit::core::RobotModelConstPtr robot_model = builder.build();
+	moveit::core::RobotModelConstPtr robot_model = getModel();
 
 	Task t("first");
 	t.setRobotModel(robot_model);
 
 	auto configure = [](Task& t) {
+		MOCK_ID = 0;
 		auto ref = new stages::FixedState("fixed");
 		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
 		ref->setState(scene);
@@ -721,13 +720,9 @@ TEST(Task, reuse) {
 }
 
 TEST(Task, timeout) {
-	// create dummy robot model
-	moveit::core::RobotModelBuilder builder("robot", "base");
-	builder.addChain("base->a->b->c", "continuous");
-	builder.addGroupChain("base", "c", "group");
-
+	MOCK_ID = 0;
 	Task t;
-	t.setRobotModel(builder.build());
+	t.setRobotModel(getModel());
 
 	auto timeout = std::chrono::milliseconds(10);
 	t.add(std::make_unique<GeneratorMockup>(100));  // allow up to 100 solutions spawned
@@ -753,4 +748,20 @@ TEST(Task, timeout) {
 	t.setTimeout(std::chrono::duration<double>(2 * timeout).count());
 	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.solutions().size(), 2u);
+}
+
+TEST(Fallback, failing) {
+	MOCK_ID = 0;
+	Task t;
+	t.setRobotModel(getModel());
+
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>());
+	fallback->add(std::make_unique<ForwardMockup>());
+	t.add(std::move(fallback));
+
+	EXPECT_FALSE(t.plan());
+	EXPECT_EQ(t.solutions().size(), 0u);
 }

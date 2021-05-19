@@ -54,7 +54,7 @@ CartesianPath::CartesianPath() {
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
 }
 
-void CartesianPath::init(const core::RobotModelConstPtr& robot_model) {}
+void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
                          const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,

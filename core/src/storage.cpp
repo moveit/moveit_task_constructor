@@ -46,16 +46,17 @@
 namespace moveit {
 namespace task_constructor {
 
-const planning_scene::PlanningScenePtr& ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
+planning_scene::PlanningSceneConstPtr ensureUpdated(const planning_scene::PlanningScenePtr& scene) {
 	// ensure scene's state is updated
 	if (scene->getCurrentState().dirty())
 		scene->getCurrentStateNonConst().update();
 	return scene;
 }
 
-InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps) : scene_(ensureUpdated(ps)) {}
+InterfaceState::InterfaceState(const planning_scene::PlanningScenePtr& ps) : InterfaceState(ensureUpdated(ps)) {}
 
-InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps) : scene_(ps) {
+InterfaceState::InterfaceState(const planning_scene::PlanningSceneConstPtr& ps)
+  : scene_(ps), priority_(Priority(0, 0.0)) {
 	if (scene_->getCurrentState().dirty())
 		ROS_ERROR_NAMED("InterfaceState", "Dirty PlanningScene! Please only forward clean ones into InterfaceState.");
 }
@@ -69,18 +70,16 @@ InterfaceState::InterfaceState(const InterfaceState& other)
   : scene_(other.scene_), properties_(other.properties_), priority_(other.priority_) {}
 
 bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) const {
-	// infinite costs go always last
-	if (std::isinf(this->cost()) && std::isinf(other.cost()))
-		return this->depth() > other.depth();
-	else if (std::isinf(this->cost()))
-		return false;
-	else if (std::isinf(other.cost()))
-		return true;
+	// first order by status if that differs
+	if (status() != other.status())
+		return status() < other.status();
 
-	if (this->depth() == other.depth())
-		return this->cost() < other.cost();
-	else
-		return this->depth() > other.depth();
+	// then by depth if that differs
+	if (depth() != other.depth())
+		return depth() > other.depth();  // larger depth = smaller prio!
+
+	// finally by cost
+	return cost() < other.cost();
 }
 
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
@@ -108,7 +107,7 @@ void Interface::add(InterfaceState& state) {
 	else if (!state.outgoingTrajectories().empty())
 		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
 	else  // otherwise, assume priority was well defined before
-		assert(it->priority_ >= InterfaceState::Priority(1, 0.0));
+		assert(it->priority_.enabled() && it->priority_.depth() >= 1u);
 
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);
@@ -125,15 +124,34 @@ Interface::container_type Interface::remove(iterator it) {
 }
 
 void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
-	if (priority != state->priority()) {
-		auto it = std::find_if(begin(), end(), [state](const InterfaceState* other) { return state == other; });
-		// state should be part of the interface
-		assert(it != end());
-		state->priority_ = priority;
-		update(it);
-		if (notify_)
-			notify_(it, true);
-	}
+	if (priority == state->priority())
+		return;  // nothing to do
+
+	auto it = std::find(begin(), end(), state);  // find iterator to state
+	assert(it != end());  // state should be part of this interface
+	state->priority_ = priority;  // update priority
+	update(it);  // update position in ordered list
+	if (notify_)
+		notify_(it, true);  // notify callback
+}
+
+std::ostream& operator<<(std::ostream& os, const Interface& interface) {
+	if (interface.empty())
+		os << "---";
+	for (const auto& istate : interface)
+		os << istate->priority() << "  ";
+	return os;
+}
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {
+	// maps InterfaceState::Status values to output (color-changing) prefix
+	static const char* prefix[] = {
+		"\033[32me:",  // ENABLED - green
+		"\033[33md:",  // DISABLED - yellow
+		"\033[31mf:",  // DISABLED_FAILED - red
+	};
+	static const char* color_reset = "\033[m";
+	os << prefix[prio.status()] << prio.depth() << ":" << prio.cost() << color_reset;
+	return os;
 }
 
 void SolutionBase::setCreator(Stage* creator) {
@@ -141,18 +159,14 @@ void SolutionBase::setCreator(Stage* creator) {
 	creator_ = creator;
 }
 
-void SolutionBase::setStartStateUnsafe(const InterfaceState& state) {
-	start_ = &state;
-	const_cast<InterfaceState&>(state).addOutgoing(this);
-}
-
-void SolutionBase::setEndStateUnsafe(const InterfaceState& state) {
-	end_ = &state;
-	const_cast<InterfaceState&>(state).addIncoming(this);
-}
-
 void SolutionBase::setCost(double cost) {
 	cost_ = cost;
+}
+
+void SolutionBase::markAsFailure(const std::string& msg) {
+	setCost(std::numeric_limits<double>::infinity());
+	if (!msg.empty())
+		setComment(msg + "\n" + comment());
 }
 
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {

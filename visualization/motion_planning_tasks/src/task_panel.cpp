@@ -430,7 +430,7 @@ void TaskView::removeSelectedStages() {
 		m->removeRows(range.top(), range.bottom() - range.top() + 1, range.parent());
 }
 
-void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelIndex& previous) {
+void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelIndex& /*previous*/) {
 	// adding task is allowed on top-level items and sub-top-level items
 	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
 	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
@@ -472,7 +472,7 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 }
 
-void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous) {
+void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& /*previous*/) {
 	TaskDisplay* display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
 	d_ptr->lock(display);
 
@@ -483,13 +483,19 @@ void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModel
 	Q_ASSERT(task);
 
 	TaskSolutionVisualization* vis = display->visualization();
-	const DisplaySolutionPtr& solution = task->getSolution(current);
-	display->setSolutionStatus(bool(solution));
+	DisplaySolutionPtr solution;
+	try {
+		solution = task->getSolution(current);
+		display->setSolutionStatus(bool(solution));
+	} catch (const std::invalid_argument& e) {
+		ROS_ERROR_STREAM(e.what());
+		display->setSolutionStatus(false, e.what());
+	}
 	vis->interruptCurrentDisplay();
 	vis->showTrajectory(solution, true);
 }
 
-void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected) {
+void TaskView::onSolutionSelectionChanged(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/) {
 	QItemSelectionModel* sm = d_ptr->solutions_view->selectionModel();
 	const QModelIndexList& selected_rows = sm->selectedRows();
 
@@ -500,8 +506,14 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const 
 
 	display->clearMarkers();
 	for (const auto& index : selected_rows) {
-		const DisplaySolutionPtr& solution = task->getSolution(index);
-		display->setSolutionStatus(bool(solution));
+		DisplaySolutionPtr solution;
+		try {
+			solution = task->getSolution(index);
+			display->setSolutionStatus(bool(solution));
+		} catch (const std::invalid_argument& e) {
+			ROS_ERROR_STREAM(e.what());
+			display->setSolutionStatus(false, e.what());
+		}
 		display->addMarkers(solution);
 	}
 }

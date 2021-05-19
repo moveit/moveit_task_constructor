@@ -83,7 +83,7 @@ TEST(UR5, pick) {
 	}
 
 	auto solutions = t.solutions().size();
-	EXPECT_GE(solutions, 30u);
+	EXPECT_GE(solutions, 15u);
 	EXPECT_LE(solutions, 60u);
 }
 

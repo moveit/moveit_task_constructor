@@ -68,6 +68,7 @@ public:
 class TrajectoryCostTerm : public CostTerm
 {
 public:
+	double operator()(const SolutionSequence& s, std::string& comment) const override;
 	double operator()(const WrappedSolution& s, std::string& comment) const override;
 };
 
@@ -81,8 +82,8 @@ public:
 	template <typename Term, typename Signature = decltype(signatureMatcher(std::declval<Term>()))>
 	LambdaCostTerm(const Term& t) : LambdaCostTerm{ Signature{ t } } {}
 
-	LambdaCostTerm(const SubTrajectorySignature&);
-	LambdaCostTerm(const SubTrajectoryShortSignature&);
+	LambdaCostTerm(const SubTrajectorySignature& term);
+	LambdaCostTerm(const SubTrajectoryShortSignature& term);
 
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
@@ -104,7 +105,7 @@ class Constant : public CostTerm
 public:
 	Constant(double c) : cost{ c } {};
 
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 	double operator()(const SolutionSequence& s, std::string& comment) const override;
 	double operator()(const WrappedSolution& s, std::string& comment) const override;
 
@@ -116,14 +117,14 @@ class PathLength : public TrajectoryCostTerm
 {
 	// TODO(v4hn): allow to consider specific joints only
 public:
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 /// execution duration of the whole trajectory
 class TrajectoryDuration : public TrajectoryCostTerm
 {
 public:
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 /** length of Cartesian trajection of a link */
@@ -134,7 +135,7 @@ public:
 
 	std::string link_name;
 
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 /** inverse distance to collision

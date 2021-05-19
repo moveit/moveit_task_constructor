@@ -15,6 +15,9 @@ if (CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}-test-container test_container.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-container ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
 
+	catkin_add_gtest(${PROJECT_NAME}-test-serial test_serial.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-serial ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
+
 	catkin_add_gtest(${PROJECT_NAME}-test-properties test_properties.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-properties ${PROJECT_NAME} gtest_main)
 
@@ -22,7 +25,7 @@ if (CATKIN_ENABLE_TESTING)
 	target_link_libraries(${PROJECT_NAME}-test-cost_queue ${PROJECT_NAME} gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-interface_state test_interface_state.cpp)
-	target_link_libraries(${PROJECT_NAME}-test-interface_state ${PROJECT_NAME} gtest_main)
+	target_link_libraries(${PROJECT_NAME}-test-interface_state ${PROJECT_NAME} gtest_utils gtest_main)
 
 	catkin_add_gtest(${PROJECT_NAME}-test-cost_terms test_cost_terms.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-cost_terms ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)

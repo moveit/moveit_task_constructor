@@ -70,7 +70,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 	if (planner_.empty())
 		errors.push_back(*this, "empty set of groups");
 
-	size_t num_joints = 0;
 	std::vector<const moveit::core::JointModelGroup*> groups;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		if (!robot_model->hasJointModelGroup(pair.first))
@@ -82,7 +81,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 
 			auto jmg = robot_model->getJointModelGroup(pair.first);
 			groups.push_back(jmg);
-			num_joints += jmg->getJointModels().size();
 		}
 	}
 
@@ -179,31 +177,34 @@ SolutionSequencePtr
 Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
                         const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                         const InterfaceState& from, const InterfaceState& to) {
+	assert(!sub_trajectories.empty());
 	assert(sub_trajectories.size() + 1 == intermediate_scenes.size());
-	auto scene_it = intermediate_scenes.begin();
-	planning_scene::PlanningSceneConstPtr start_ps = *scene_it;
-	const InterfaceState* state = &from;
 
+	/* We need to decouple the sequence of subsolutions, created here, from the external from and to states.
+	   Hence, we create new interface states for all subsolutions. */
+	const InterfaceState* start = &*states_.insert(states_.end(), InterfaceState(from.scene()));
+
+	auto scene_it = intermediate_scenes.begin();
 	SolutionSequence::container_type sub_solutions;
 	for (const auto& sub : sub_trajectories) {
-		planning_scene::PlanningSceneConstPtr end_ps = *++scene_it;
-
+		// persistently store sub solution
 		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
 		inserted->setCreator(this);
+		if (!sub)  // a null RobotTrajectoryPtr indicates a failure
+			inserted->markAsFailure();
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
 
-		// provide meaningful start/end states
-		subsolutions_.back().setStartState(*state);
+		// create a new end state, either from intermediate or final planning scene
+		planning_scene::PlanningSceneConstPtr end_ps =
+		    (sub_solutions.size() < sub_trajectories.size()) ? *++scene_it : to.scene();
+		const InterfaceState* end = &*states_.insert(states_.end(), InterfaceState(end_ps));
 
-		// for all but last scene, create a new state
-		if (sub_solutions.size() < sub_trajectories.size()) {
-			state = &*states_.insert(states_.end(), InterfaceState(end_ps));
-			subsolutions_.back().setEndState(*state);
-		} else
-			subsolutions_.back().setEndState(to);
+		// provide newly created start/end states
+		subsolutions_.back().setStartState(*start);
+		subsolutions_.back().setEndState(*end);
 
-		start_ps = end_ps;
+		start = end;  // end state becomes next start state
 	}
 
 	return std::make_shared<SolutionSequence>(std::move(sub_solutions));

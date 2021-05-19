@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_capabilities)
 
 add_compile_options(-std=c++14)
@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   LIBRARIES $PROJECT_NAME}
   CATKIN_DEPENDS
+    actionlib
     moveit_task_constructor_msgs
     std_msgs
 )

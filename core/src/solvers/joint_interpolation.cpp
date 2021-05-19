@@ -49,7 +49,7 @@ JointInterpolationPlanner::JointInterpolationPlanner() {
 	p.declare<double>("max_step", 0.1, "max joint step");
 }
 
-void JointInterpolationPlanner::init(const core::RobotModelConstPtr& robot_model) {}
+void JointInterpolationPlanner::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 
 bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                                      const planning_scene::PlanningSceneConstPtr& to,
@@ -74,7 +74,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
-	for (double t = delta; t < 1.0; t += delta) {
+	for (double t = delta; t < 1.0; t += delta) {  // NOLINT(clang-analyzer-security.FloatLoopCounter)
 		from_state.interpolate(to_state, t, waypoint);
 		result->addSuffixWayPoint(waypoint, t);
 
@@ -95,11 +95,11 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	return true;
 }
 
-bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                     const moveit::core::LinkModel& link, const Eigen::Isometry3d& target_eigen,
-                                     const moveit::core::JointModelGroup* jmg, double timeout,
-                                     robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& path_constraints) {
+bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& /*from*/,
+                                     const moveit::core::LinkModel& /*link*/, const Eigen::Isometry3d& /*target_eigen*/,
+                                     const moveit::core::JointModelGroup* /*jmg*/, double /*timeout*/,
+                                     robot_trajectory::RobotTrajectoryPtr& /*result*/,
+                                     const moveit_msgs::Constraints& /*path_constraints*/) {
 	throw std::runtime_error("Not yet implemented");
 }
 }  // namespace solvers
