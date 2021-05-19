@@ -22,6 +22,9 @@ jobs:
             CXX: clang++
           - IMAGE: noetic-source
             CLANG_TIDY: true
+          - IMAGE: noetic-source
+            NAME: asan
+            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
     env:
       CATKIN_LINT: true
       # CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-strict-aliasing -Wno-sign-compare"
