@@ -5,6 +5,7 @@ import unittest
 import rostest
 from moveit.python_tools import roscpp_init
 from moveit.task_constructor import core, stages
+from moveit.core.planning_scene import PlanningScene
 from geometry_msgs.msg import Vector3Stamped, Vector3
 from std_msgs.msg import Header
 
@@ -20,6 +21,9 @@ class PyGenerator(core.Generator):
         core.Generator.__init__(self, name)
         self.reset()
 
+    def init(self, robot_model):
+        self.ps = PlanningScene(robot_model)
+
     def reset(self):
         core.Generator.reset(self)
         self.num = self.max_calls
@@ -29,6 +33,7 @@ class PyGenerator(core.Generator):
 
     def compute(self):
         self.num = self.num - 1
+        self.spawn(core.InterfaceState(self.ps), self.num)
 
 
 class PyMonitoringGenerator(core.MonitoringGenerator):

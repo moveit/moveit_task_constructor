@@ -132,6 +132,8 @@ void export_core(pybind11::module& m) {
 		;
 
 	py::class_<InterfaceState>(m, "InterfaceState")
+		.def(py::init<const planning_scene::PlanningScenePtr&>(), py::arg("scene"))
+		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties), py::return_value_policy::reference_internal)
 		;
 
 	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage")
@@ -178,6 +180,7 @@ void export_core(pybind11::module& m) {
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
 		.def("canCompute", &Generator::canCompute)
 		.def("compute", &Generator::compute)
+		.def("spawn", [](Generator& self, InterfaceState& state, double cost) { self.spawn(std::move(state), cost); })
 		;
 
 	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator")
