@@ -306,7 +306,7 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 
 namespace moveit_rviz_plugin {
 
-rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
                                                const std::string& description, const std::string& value,
                                                rviz::Property* old) {
 	QString qname = QString::fromStdString(name);

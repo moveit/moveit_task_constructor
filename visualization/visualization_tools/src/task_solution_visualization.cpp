@@ -354,7 +354,7 @@ float TaskSolutionVisualization::getStateDisplayTime() {
 	}
 }
 
-void TaskSolutionVisualization::update(float wall_dt, float ros_dt) {
+void TaskSolutionVisualization::update(float wall_dt, float /*ros_dt*/) {
 	if (drop_displaying_solution_) {
 		current_state_ = -1;
 		displaying_solution_.reset();
@@ -497,7 +497,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 	robot_render_->update(robot_state, color, color_map);
 	marker_visual_->update(*scene, *robot_state);
 
-	if (slider_panel_ && index >= 0)
+	if (slider_panel_)
 		slider_panel_->setSliderPosition(index);
 }
 

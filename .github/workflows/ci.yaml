@@ -24,7 +24,7 @@ jobs:
             CLANG_TIDY: true
     env:
       CATKIN_LINT: true
-      # CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-strict-aliasing -Wno-sign-compare"
+      CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-deprecated-copy"
       UNDERLAY: /root/ws_moveit/install
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache

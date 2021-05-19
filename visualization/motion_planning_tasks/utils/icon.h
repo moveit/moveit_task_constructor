@@ -69,12 +69,6 @@ public:
 	// where icons are still defined as filename.
 	QString imageFileName() const;
 
-	// Returns either the classic or a themed icon depending on
-	// the current Theme::FlatModeIcons flag.
-	static QIcon sideBarIcon(const Icon& classic, const Icon& flat);
-	// Like sideBarIcon plus added action mode for the flat icon
-	static QIcon modeIcon(const Icon& classic, const Icon& flat, const Icon& flatActive);
-
 	// Combined icon pixmaps in Normal and Disabled states from several QIcons
 	static QIcon combinedIcon(const QList<QIcon>& icons);
 

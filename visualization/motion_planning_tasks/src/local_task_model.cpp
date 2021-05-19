@@ -196,7 +196,7 @@ void LocalTaskModel::setStageFactory(const StageFactoryPtr& factory) {
 	stage_factory_ = factory;
 }
 
-bool LocalTaskModel::dropMimeData(const QMimeData* mime, Qt::DropAction action, int row, int column,
+bool LocalTaskModel::dropMimeData(const QMimeData* mime, Qt::DropAction /*action*/, int row, int column,
                                   const QModelIndex& parent) {
 	Q_UNUSED(column);
 
@@ -220,17 +220,17 @@ bool LocalTaskModel::dropMimeData(const QMimeData* mime, Qt::DropAction action, 
 	return true;
 }
 
-QModelIndex LocalTaskModel::indexFromStageId(size_t id) const {
+QModelIndex LocalTaskModel::indexFromStageId(size_t /*id*/) const {
 	// TODO implement
 	return QModelIndex();
 }
 
-QAbstractItemModel* LocalTaskModel::getSolutionModel(const QModelIndex& index) {
+QAbstractItemModel* LocalTaskModel::getSolutionModel(const QModelIndex& /*index*/) {
 	// TODO implement
 	return nullptr;
 }
 
-DisplaySolutionPtr LocalTaskModel::getSolution(const QModelIndex& index) {
+DisplaySolutionPtr LocalTaskModel::getSolution(const QModelIndex& /*index*/) {
 	// TODO implement
 	return DisplaySolutionPtr();
 }

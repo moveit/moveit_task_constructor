@@ -321,7 +321,7 @@ void ComputeIK::compute() {
 	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "ik frame");
 	rviz_marker_tools::appendFrame(failure_markers, ik_pose_msg, 0.1, "ik frame");
 	// visualize placed end-effector
-	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& name) {
+	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& /*name*/) {
 		marker.ns = "ik target";
 		marker.color.a *= 0.5;
 		failure_markers.push_back(marker);

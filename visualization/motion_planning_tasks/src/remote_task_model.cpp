@@ -462,11 +462,11 @@ typename T::iterator insert(T& c, typename T::value_type&& item) {
 
 RemoteSolutionModel::RemoteSolutionModel(QObject* parent) : QAbstractTableModel(parent) {}
 
-int RemoteSolutionModel::rowCount(const QModelIndex& parent) const {
+int RemoteSolutionModel::rowCount(const QModelIndex& /*parent*/) const {
 	return sorted_.size();
 }
 
-int RemoteSolutionModel::columnCount(const QModelIndex& parent) const {
+int RemoteSolutionModel::columnCount(const QModelIndex& /*parent*/) const {
 	return 3;
 }
 
@@ -482,6 +482,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 					case 2:
 						return tr("comment");
 				}
+				break;
 			case Qt::TextAlignmentRole:
 				return Qt::AlignLeft;
 		}
@@ -515,6 +516,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 				case 2:
 					return item.comment;
 			}
+			break;
 
 		case Qt::ForegroundRole:
 			if (std::isinf(item.cost))

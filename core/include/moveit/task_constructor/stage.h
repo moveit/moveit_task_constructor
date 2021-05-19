@@ -309,8 +309,8 @@ protected:
 	}
 
 private:
-	virtual bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
-	                     Interface::Direction dir) {
+	virtual bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+	                     SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) {
 		throw std::runtime_error("PropagatingEitherWay: Override compute() or compute[Forward|Backward]()");
 	}
 
