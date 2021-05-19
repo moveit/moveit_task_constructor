@@ -141,7 +141,7 @@ void export_core(pybind11::module& m) {
 		// expose name as writeable property
 		.def_property("name", &Stage::name, &Stage::setName)
 		// read-only access to properties + solutions
-		.def_property_readonly<const PropertyMap& (Stage::*)() const>("properties", &Stage::properties, py::return_value_policy::reference_internal)
+		.def_property_readonly("properties", py::overload_cast<>(&Stage::properties), py::return_value_policy::reference_internal)
 		.def_property_readonly("solutions", &Stage::solutions, py::return_value_policy::reference_internal)
 		.def_property_readonly("failures", &Stage::failures, py::return_value_policy::reference_internal)
 		.def("reset", &Stage::reset)
@@ -189,7 +189,7 @@ void export_core(pybind11::module& m) {
 	py::class_<ContainerBase, Stage>(m, "ContainerBase")
 		.def("add", &ContainerBase::add)
 		.def("insert", &ContainerBase::insert, py::arg("stage"), py::arg("before") = -1)
-		.def("remove", static_cast<Stage::pointer (ContainerBase::*)(int)>(&ContainerBase::remove))
+		.def("remove", py::overload_cast<int>(&ContainerBase::remove), "Remove child stage by index")
 		.def("clear", &ContainerBase::clear)
 		.def("__len__", &ContainerBase::numChildren)
 		.def("__getitem__", [](const ContainerBase &c, const std::string &name) -> Stage* {
@@ -225,7 +225,7 @@ void export_core(pybind11::module& m) {
 		.def(py::init<const std::string&, bool, ContainerBase::pointer&&>(),
 		     py::arg("ns") = std::string(), py::arg("introspection") = true, py::arg("container"))
 		// read-only access to properties + solutions
-		.def_property_readonly<const PropertyMap& (Task::*)() const>("properties", &Task::properties, py::return_value_policy::reference_internal)
+		.def_property_readonly("properties", py::overload_cast<>(&Task::properties), py::return_value_policy::reference_internal)
 		.def_property_readonly("solutions", &Task::solutions, py::return_value_policy::reference_internal)
 		.def_property_readonly("failures", &Task::failures, py::return_value_policy::reference_internal)
 		.def_property("name", &Task::name, &Task::setName)

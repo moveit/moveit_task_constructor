@@ -46,13 +46,10 @@ namespace moveit {
 namespace python {
 
 void export_solvers(py::module& m) {
-	// resolve &PlannerInterface::properties to non-const version
-	PropertyMap& (PlannerInterface::*PlannerInterface_getPropertyMap)() = &PlannerInterface::properties;
-
 	properties::class_<PlannerInterface, PlannerInterfacePtr>(m, "PlannerInterface")
 	    .property<double>("max_velocity_scaling_factor")
 	    .property<double>("max_acceleration_scaling_factor")
-	    .def_property_readonly("properties", PlannerInterface_getPropertyMap,
+	    .def_property_readonly("properties", py::overload_cast<>(&PlannerInterface::properties),
 	                           py::return_value_policy::reference_internal);
 
 	properties::class_<PipelinePlanner, PipelinePlannerPtr, PlannerInterface>(m, "PipelinePlanner")

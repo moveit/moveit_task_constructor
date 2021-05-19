@@ -112,11 +112,11 @@ void export_stages(pybind11::module& m) {
 	    .property<geometry_msgs::PoseStamped>("ik_frame")
 	    .property<moveit_msgs::Constraints>("path_constraints")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
-	    .def<void (MoveTo::*)(const geometry_msgs::PoseStamped&)>("setGoal", &MoveTo::setGoal)
-	    .def<void (MoveTo::*)(const geometry_msgs::PointStamped&)>("setGoal", &MoveTo::setGoal)
-	    .def<void (MoveTo::*)(const moveit_msgs::RobotState&)>("setGoal", &MoveTo::setGoal)
-	    .def<void (MoveTo::*)(const std::map<std::string, double>&)>("setGoal", &MoveTo::setGoal)
-	    .def<void (MoveTo::*)(const std::string&)>("setGoal", &MoveTo::setGoal);
+	    .def("setGoal", py::overload_cast<const geometry_msgs::PoseStamped&>(&MoveTo::setGoal))
+	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal))
+	    .def("setGoal", py::overload_cast<const moveit_msgs::RobotState&>(&MoveTo::setGoal))
+	    .def("setGoal", py::overload_cast<const std::map<std::string, double>&>(&MoveTo::setGoal))
+	    .def("setGoal", py::overload_cast<const std::string&>(&MoveTo::setGoal));
 
 	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative")
 	    .property<std::string>("group")
@@ -125,9 +125,9 @@ void export_stages(pybind11::module& m) {
 	    .property<double>("max_distance")
 	    .property<moveit_msgs::Constraints>("path_constraints")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
-	    .def<void (MoveRelative::*)(const geometry_msgs::TwistStamped&)>("setDirection", &MoveRelative::setDirection)
-	    .def<void (MoveRelative::*)(const geometry_msgs::Vector3Stamped&)>("setDirection", &MoveRelative::setDirection)
-	    .def<void (MoveRelative::*)(const std::map<std::string, double>&)>("setDirection", &MoveRelative::setDirection);
+	    .def("setDirection", py::overload_cast<const geometry_msgs::TwistStamped&>(&MoveRelative::setDirection))
+	    .def("setDirection", py::overload_cast<const geometry_msgs::Vector3Stamped&>(&MoveRelative::setDirection))
+	    .def("setDirection", py::overload_cast<const std::map<std::string, double>&>(&MoveRelative::setDirection));
 
 	py::enum_<stages::Connect::MergeMode>(m, "MergeMode")
 	    .value("SEQUENTIAL", stages::Connect::MergeMode::SEQUENTIAL)
@@ -164,8 +164,9 @@ void export_stages(pybind11::module& m) {
 	         py::arg("name") = std::string("pick"))
 
 	    .def("setApproachMotion", &Pick::setApproachMotion)
-	    .def<void (Pick::*)(const geometry_msgs::TwistStamped&, double, double)>("setLiftMotion", &Pick::setLiftMotion)
-	    .def<void (Pick::*)(const std::map<std::string, double>&)>("setLiftMotion", &Pick::setLiftMotion);
+	    .def("setLiftMotion",
+	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Pick::setLiftMotion))
+	    .def("setLiftMotion", py::overload_cast<const std::map<std::string, double>&>(&Pick::setLiftMotion));
 
 	properties::class_<Place, Stage>(m, "Place")
 	    .property<std::string>("object")
