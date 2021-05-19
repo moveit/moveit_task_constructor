@@ -22,9 +22,14 @@ jobs:
             CXX: clang++
           - IMAGE: noetic-source
             CLANG_TIDY: true
+            CXXFLAGS: >-
+             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
+          - IMAGE: noetic-source
+            NAME: asan
+            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
     env:
       CATKIN_LINT: true
-      CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-deprecated-copy"
       UNDERLAY: /root/ws_moveit/install
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
