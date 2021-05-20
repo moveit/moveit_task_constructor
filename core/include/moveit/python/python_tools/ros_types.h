@@ -1,6 +1,6 @@
 #pragma once
 
-#include <pybind11/pybind11.h>
+#include <pybind11/smart_holder.h>
 #include <ros/duration.h>
 #include <ros/serialization.h>
 

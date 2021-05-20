@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <pybind11/pybind11.h>
+#include <pybind11/smart_holder.h>
 #include <pybind11/stl.h>
 #include <moveit/python/python_tools/ros_init.h>
 #include <ros/init.h>

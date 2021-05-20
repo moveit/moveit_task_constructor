@@ -38,6 +38,9 @@
 namespace py = pybind11;
 using namespace moveit::task_constructor;
 
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
+
 namespace moveit {
 namespace python {
 namespace {
@@ -166,7 +169,7 @@ bool PropertyConverterBase::insert(const std::type_index& type_index, const std:
 
 void export_properties(py::module& m) {
 	// clang-format off
-	py::class_<Property>(m, "Property")
+	py::classh<Property>(m, "Property")
 		.def("setValue", [](Property& self, const py::object& value)
 		     { self.setValue(PropertyConverterRegistry::fromPython(value)); })
 		.def("setCurrentValue", [](Property& self, const py::object& value)
@@ -179,7 +182,7 @@ void export_properties(py::module& m) {
 		.def("defined", &Property::defined)
 		;
 
-	py::class_<PropertyMap>(m, "PropertyMap")
+	py::classh<PropertyMap>(m, "PropertyMap")
 		.def(py::init<>())
 		.def("__bool__", [](const PropertyMap& self) { return self.begin() == self.end(); },
 		     "Check whether the map is nonempty")

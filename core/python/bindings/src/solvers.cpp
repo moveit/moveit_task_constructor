@@ -42,6 +42,11 @@ namespace py = pybind11;
 using namespace moveit::task_constructor;
 using namespace moveit::task_constructor::solvers;
 
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(PlannerInterface)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(PipelinePlanner)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(JointInterpolationPlanner)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(CartesianPath)
+
 namespace moveit {
 namespace python {
 

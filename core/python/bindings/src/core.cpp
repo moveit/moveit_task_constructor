@@ -110,7 +110,7 @@ void export_core(pybind11::module& m) {
 	});
 
 	// clang-format off
-	py::class_<SolutionBase>(m, "Solution")
+	py::classh<SolutionBase>(m, "Solution")
 		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost)
 		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment)
 		.def("toMsg", [](const SolutionBasePtr& s) {
@@ -119,19 +119,19 @@ void export_core(pybind11::module& m) {
 			return msg;
 		})
 		;
-	py::class_<SubTrajectory, SolutionBase>(m, "SubTrajectory")
+	py::classh<SubTrajectory, SolutionBase>(m, "SubTrajectory")
 		.def(py::init<>())
 		;
 
-	typedef ordered<SolutionBaseConstPtr> Solutions;
-	py::class_<Solutions>(m, "Solutions")
+	using Solutions = ordered<SolutionBaseConstPtr>;
+	py::classh<Solutions>(m, "Solutions")
 		.def("__len__", &Solutions::size)
 		.def("__getitem__", &get_item<Solutions>)
 		.def("__iter__", [](Solutions& self) { return py::make_iterator(self.begin(), self.end()); },
 		     py::keep_alive<0, 1>())
 		;
 
-	py::class_<InterfaceState>(m, "InterfaceState")
+	py::classh<InterfaceState>(m, "InterfaceState")
 		.def(py::init<const planning_scene::PlanningScenePtr&>(), py::arg("scene"))
 		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties), py::return_value_policy::reference_internal)
 		;
@@ -155,7 +155,7 @@ void export_core(pybind11::module& m) {
 		;
 
 
-	auto either_way = py::class_<PropagatingEitherWay, Stage, PyPropagatingEitherWay<>>(m, "PropagatingEitherWay")
+	auto either_way = py::classh<PropagatingEitherWay, Stage, PyPropagatingEitherWay<>>(m, "PropagatingEitherWay")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingEitherWay"))
 		.def("restrictDirection", &PropagatingEitherWay::restrictDirection)
 		.def("computeForward", &PropagatingEitherWay::computeForward)
@@ -169,10 +169,10 @@ void export_core(pybind11::module& m) {
 		.value("FORWARD", PropagatingEitherWay::FORWARD)
 		.value("BACKWARD", PropagatingEitherWay::BACKWARD);
 
-	py::class_<PropagatingForward, Stage, PyPropagatingEitherWay<PropagatingForward>>(m, "PropagatingForward")
+	py::classh<PropagatingForward, Stage, PyPropagatingEitherWay<PropagatingForward>>(m, "PropagatingForward")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingForward"))
 		;
-	py::class_<PropagatingBackward, Stage, PyPropagatingEitherWay<PropagatingBackward>>(m, "PropagatingBackward")
+	py::classh<PropagatingBackward, Stage, PyPropagatingEitherWay<PropagatingBackward>>(m, "PropagatingBackward")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingBackward"))
 		;
 
@@ -189,7 +189,7 @@ void export_core(pybind11::module& m) {
 		.def("_onNewSolution", &PubMonitoringGenerator::onNewSolution)
 		;
 
-	py::class_<ContainerBase, Stage>(m, "ContainerBase")
+	py::classh<ContainerBase, Stage>(m, "ContainerBase")
 		.def("add", &ContainerBase::add)
 		.def("insert", &ContainerBase::insert, py::arg("stage"), py::arg("before") = -1)
 		.def("remove", py::overload_cast<int>(&ContainerBase::remove), "Remove child stage by index")
@@ -207,23 +207,23 @@ void export_core(pybind11::module& m) {
 		}, py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
 		;
 
-	py::class_<SerialContainer, ContainerBase>(m, "SerialContainer")
+	py::classh<SerialContainer, ContainerBase>(m, "SerialContainer")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("serial container"));
 
-	py::class_<ParallelContainerBase, ContainerBase>(m, "ParallelContainerBase");
+	py::classh<ParallelContainerBase, ContainerBase>(m, "ParallelContainerBase");
 
-	py::class_<Alternatives, ParallelContainerBase>(m, "Alternatives")
+	py::classh<Alternatives, ParallelContainerBase>(m, "Alternatives")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"));
 
-	py::class_<Fallbacks, ParallelContainerBase>(m, "Fallbacks")
+	py::classh<Fallbacks, ParallelContainerBase>(m, "Fallbacks")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("fallbacks"));
 
-	py::class_<Merger, ParallelContainerBase>(m, "Merger")
+	py::classh<Merger, ParallelContainerBase>(m, "Merger")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("merger"));
 
-	py::class_<WrapperBase, ParallelContainerBase>(m, "WrapperBase");
+	py::classh<WrapperBase, ParallelContainerBase>(m, "WrapperBase");
 
-	py::class_<Task>(m, "Task")
+	py::classh<Task>(m, "Task")
 		.def(py::init<const std::string&, bool>(), py::arg("ns") = std::string(), py::arg("introspection") = true)
 		.def(py::init<const std::string&, bool, ContainerBase::pointer&&>(),
 		     py::arg("ns") = std::string(), py::arg("introspection") = true, py::arg("container"))

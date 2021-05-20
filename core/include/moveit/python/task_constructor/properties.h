@@ -50,13 +50,13 @@ namespace properties {
  */
 
 template <typename type_, typename... options>
-class class_ : public pybind11::class_<type_, options...>
+class class_ : public pybind11::classh<type_, options...>
 {
-	using base_class_ = pybind11::class_<type_, options...>;
+	using base_class_ = pybind11::classh<type_, options...>;
 
 public:
 	// forward all constructors
-	using base_class_::class_;
+	using base_class_::classh;
 
 	template <typename PropertyType, typename... Extra>
 	class_& property(const char* name, const Extra&... extra) {

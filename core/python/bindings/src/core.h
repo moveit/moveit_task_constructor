@@ -36,12 +36,18 @@
 
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
-#include <pybind11/pybind11.h>
+#include <moveit/task_constructor/cost_queue.h>
+#include <pybind11/smart_holder.h>
 
 /** Trampoline classes to allow inheritance in Python (overriding virtual functions) */
 
 namespace moveit {
 namespace task_constructor {
+
+class Task;
+namespace solvers {
+class PlannerInterface;
+}
 
 template <class T = Stage>
 class PyStage : public T, public pybind11::trampoline_self_life_support
@@ -98,3 +104,29 @@ public:
 
 }  // namespace task_constructor
 }  // namespace moveit
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::solvers::PlannerInterface)
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SolutionBase)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SubTrajectory)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(ordered<moveit::task_constructor::SolutionBaseConstPtr>)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::InterfaceState)
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Stage)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingEitherWay)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingForward)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingBackward)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Generator)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::MonitoringGenerator)
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::ContainerBase)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SerialContainer)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::ParallelContainerBase)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Alternatives)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Fallbacks)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Merger)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::WrapperBase)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Task)

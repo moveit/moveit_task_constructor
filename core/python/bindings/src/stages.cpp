@@ -44,6 +44,21 @@ namespace py = pybind11;
 using namespace moveit::task_constructor;
 using namespace moveit::task_constructor::stages;
 
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(ModifyPlanningScene)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(CurrentState)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(FixedState)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(ComputeIK)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(MoveTo)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(MoveRelative)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(Connect)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(FixCollisionObjects)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(GenerateGraspPose)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(GeneratePose)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(Pick)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(Place)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(SimpleGrasp)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(SimpleUnGrasp)
+
 namespace moveit {
 namespace python {
 
@@ -104,7 +119,7 @@ void export_stages(pybind11::module& m) {
 	    .property<bool>("ignore_collisions")
 	    .property<geometry_msgs::PoseStamped>("ik_frame")
 	    .property<geometry_msgs::PoseStamped>("target_pose")
-	    // methods of base class boost::python::class_ need to be called last!
+	    // methods of base class py::class_ need to be called last!
 	    .def(py::init<const std::string&, Stage::pointer&&>());
 
 	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo")
