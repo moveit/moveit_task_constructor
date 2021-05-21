@@ -49,35 +49,35 @@ namespace solvers {
 class PlannerInterface;
 }
 
-template <class T = Stage>
-class PyStage : public T, public pybind11::trampoline_self_life_support
+template <class Stage = moveit::task_constructor::Stage>
+class PyStage : public Stage, public pybind11::trampoline_self_life_support
 {
 public:
-	using T::T;
+	using Stage::Stage;
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override {
-		PYBIND11_OVERRIDE(void, T, init, robot_model);
+		PYBIND11_OVERRIDE(void, Stage, init, robot_model);
 	}
-	void reset() override { PYBIND11_OVERRIDE(void, T, reset, ); }
+	void reset() override { PYBIND11_OVERRIDE(void, Stage, reset, ); }
 };
 
-template <class T = Generator>
-class PyGenerator : public PyStage<T>
+template <class Generator = moveit::task_constructor::Generator>
+class PyGenerator : public PyStage<Generator>
 {
 public:
-	using PyStage<T>::PyStage;
-	bool canCompute() const override { PYBIND11_OVERRIDE_PURE(bool, T, canCompute, ); }
-	void compute() override { PYBIND11_OVERRIDE_PURE(void, T, compute, ); }
+	using PyStage<Generator>::PyStage;
+	bool canCompute() const override { PYBIND11_OVERRIDE_PURE(bool, Generator, canCompute, ); }
+	void compute() override { PYBIND11_OVERRIDE_PURE(void, Generator, compute, ); }
 };
 
-template <class T = MonitoringGenerator>
-class PyMonitoringGenerator : public PyGenerator<T>
+template <class MonitoringGenerator = moveit::task_constructor::MonitoringGenerator>
+class PyMonitoringGenerator : public PyGenerator<MonitoringGenerator>
 {
 public:
-	using PyGenerator<T>::PyGenerator;
+	using PyGenerator<MonitoringGenerator>::PyGenerator;
 	void onNewSolution(const SolutionBase& s) override {
 		// pass solution as pointer to trigger passing by reference
-		PYBIND11_OVERRIDE_PURE(void, T, onNewSolution, &s);
+		PYBIND11_OVERRIDE_PURE(void, MonitoringGenerator, onNewSolution, &s);
 	}
 };
 
@@ -87,18 +87,18 @@ public:
 	using MonitoringGenerator::onNewSolution;
 };
 
-template <class T = PropagatingEitherWay>
-class PyPropagatingEitherWay : public PyStage<T>
+template <class PropagatingEitherWay = moveit::task_constructor::PropagatingEitherWay>
+class PyPropagatingEitherWay : public PyStage<PropagatingEitherWay>
 {
 public:
-	using PyStage<T>::PyStage;
+	using PyStage<PropagatingEitherWay>::PyStage;
 	void computeForward(const InterfaceState& from_state) override {
 		// pass InterfaceState as pointer to trigger passing by reference
-		PYBIND11_OVERRIDE_PURE(void, T, computeForward, &from_state);
+		PYBIND11_OVERRIDE_PURE(void, PropagatingEitherWay, computeForward, &from_state);
 	}
 	void computeBackward(const InterfaceState& to_state) override {
 		// pass InterfaceState as pointer to trigger passing by reference
-		PYBIND11_OVERRIDE_PURE(void, T, computeBackward, &to_state);
+		PYBIND11_OVERRIDE_PURE(void, PropagatingEitherWay, computeBackward, &to_state);
 	}
 };
 
