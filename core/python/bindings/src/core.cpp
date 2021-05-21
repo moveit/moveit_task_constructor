@@ -121,6 +121,13 @@ void export_core(pybind11::module& m) {
 		;
 	py::classh<SubTrajectory, SolutionBase>(m, "SubTrajectory")
 		.def(py::init<>())
+		.def_property_readonly("start", &SolutionBase::start)
+		.def_property_readonly("end", &SolutionBase::end)
+		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost)
+		.def("markAsFailure", &SolutionBase::markAsFailure)
+		.def_property_readonly("isFailure", &SolutionBase::isFailure)
+		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment)
+		.def_property_readonly("markers", py::overload_cast<>(&SolutionBase::markers))
 		;
 
 	using Solutions = ordered<SolutionBaseConstPtr>;
@@ -133,7 +140,8 @@ void export_core(pybind11::module& m) {
 
 	py::classh<InterfaceState>(m, "InterfaceState")
 		.def(py::init<const planning_scene::PlanningScenePtr&>(), py::arg("scene"))
-		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties), py::return_value_policy::reference_internal)
+		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties))
+		.def_property_readonly("scene", &InterfaceState::scene)
 		;
 
 	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage")
@@ -143,9 +151,9 @@ void export_core(pybind11::module& m) {
 		// expose name as writeable property
 		.def_property("name", &Stage::name, &Stage::setName)
 		// read-only access to properties + solutions
-		.def_property_readonly("properties", py::overload_cast<>(&Stage::properties), py::return_value_policy::reference_internal)
-		.def_property_readonly("solutions", &Stage::solutions, py::return_value_policy::reference_internal)
-		.def_property_readonly("failures", &Stage::failures, py::return_value_policy::reference_internal)
+		.def_property_readonly("properties", py::overload_cast<>(&Stage::properties))
+		.def_property_readonly("solutions", &Stage::solutions)
+		.def_property_readonly("failures", &Stage::failures)
 		.def("reset", &Stage::reset)
 		.def("init", &Stage::init);
 
@@ -228,9 +236,9 @@ void export_core(pybind11::module& m) {
 		.def(py::init<const std::string&, bool, ContainerBase::pointer&&>(),
 		     py::arg("ns") = std::string(), py::arg("introspection") = true, py::arg("container"))
 		// read-only access to properties + solutions
-		.def_property_readonly("properties", py::overload_cast<>(&Task::properties), py::return_value_policy::reference_internal)
-		.def_property_readonly("solutions", &Task::solutions, py::return_value_policy::reference_internal)
-		.def_property_readonly("failures", &Task::failures, py::return_value_policy::reference_internal)
+		.def_property_readonly("properties", py::overload_cast<>(&Task::properties))
+		.def_property_readonly("solutions", &Task::solutions)
+		.def_property_readonly("failures", &Task::failures)
 		.def_property("name", &Task::name, &Task::setName)
 		.def("loadRobotModel", &Task::loadRobotModel)
 		.def("enableIntrospection", &Task::enableIntrospection, py::arg("enabled") = true)

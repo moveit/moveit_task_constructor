@@ -39,11 +39,26 @@ class PyGenerator(core.Generator):
 class PyMonitoringGenerator(core.MonitoringGenerator):
     """ Implements a custom 'MonitoringGenerator' stage."""
 
+    solution_multiplier = 2
+
     def __init__(self, name="MonitoringGenerator"):
         core.MonitoringGenerator.__init__(self, name)
+        self.reset()
+
+    def reset(self):
+        core.MonitoringGenerator.reset(self)
+        self.upstream_solutions = list()
 
     def onNewSolution(self, sol):
-        pass
+        self.upstream_solutions.append(sol)
+
+    def canCompute(self):
+        return bool(self.upstream_solutions)
+
+    def compute(self):
+        scene = self.upstream_solutions.pop(0).end.scene
+        for i in range(self.solution_multiplier):
+            self.spawn(core.InterfaceState(scene), i)
 
 
 class PyMoveRelX(stages.MoveRelative):
@@ -91,11 +106,10 @@ class TestTrampolines(unittest.TestCase):
         task = self.create(
             stages.CurrentState("current"),
             stages.Connect(planners=[(PLANNING_GROUP, self.jointspace)]),
+            PyMonitoringGenerator("generator"),
         )
-        gen = PyMonitoringGenerator()
-        gen.setMonitoredStage(task["current"])
-        task.add(gen)
-        self.plan(task)
+        task["generator"].setMonitoredStage(task["current"])
+        self.plan(task, expected_solutions=PyMonitoringGenerator.solution_multiplier)
 
     def test_propagator(self):
         task = self.create(
