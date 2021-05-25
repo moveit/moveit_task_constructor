@@ -115,9 +115,12 @@ public:
 /// trajectory length (interpolated between waypoints)
 class PathLength : public TrajectoryCostTerm
 {
-	// TODO(v4hn): allow to consider specific joints only
 public:
-	double operator()(const SubTrajectory& s, std::string& comment) const override;
+	PathLength() = default;
+	PathLength(std::vector<std::string> j) : joints{ std::move(j) } {};
+	double operator()(const SubTrajectory&, std::string&) const override;
+
+	std::vector<std::string> joints;
 };
 
 /// execution duration of the whole trajectory
