@@ -110,12 +110,28 @@ double Constant::operator()(const WrappedSolution& /*s*/, std::string& /*comment
 double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	const auto& traj = s.trajectory();
 
-	if (traj == nullptr)
+	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
+	std::vector<const robot_model::JointModel*> joint_models;
+	joint_models.reserve(joints.size());
+	const auto& first_waypoint = traj->getWayPoint(0);
+	for (auto& joint : joints) {
+		joint_models.push_back(first_waypoint.getJointModel(joint));
+	}
+
 	double path_length{ 0.0 };
-	for (size_t i = 1; i < traj->getWayPointCount(); ++i)
-		path_length += traj->getWayPoint(i - 1).distance(traj->getWayPoint(i));
+	for (size_t i = 1; i < traj->getWayPointCount(); ++i) {
+		auto& last = traj->getWayPoint(i - 1);
+		auto& curr = traj->getWayPoint(i);
+		if (joints.empty()) {
+			path_length += last.distance(curr);
+		} else {
+			for (const auto& model : joint_models) {
+				path_length += last.distance(curr, model);
+			}
+		}
+	}
 	return path_length;
 }
 
