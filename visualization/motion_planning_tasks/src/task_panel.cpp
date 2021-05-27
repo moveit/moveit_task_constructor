@@ -158,6 +158,7 @@ void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
 	QDockWidget* dock =
 	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
 	                              Qt::LeftDockWidgetArea, true /* floating */);
+	Q_UNUSED(dock);
 	assert(dock->widget() == SINGLETON);
 }
 

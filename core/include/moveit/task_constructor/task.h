@@ -151,6 +151,7 @@ protected:
 	void onNewSolution(const SolutionBase& s) override;
 
 private:
+	using WrapperBase::init;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {
