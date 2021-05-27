@@ -18,6 +18,7 @@ catkin_package(
 	LIBRARIES
 		${PROJECT_NAME}
 		${PROJECT_NAME}_stages
+		${PROJECT_NAME}_stage_plugins
 	INCLUDE_DIRS
 		include
 	CATKIN_DEPENDS
