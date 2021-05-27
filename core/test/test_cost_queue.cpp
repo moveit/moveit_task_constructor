@@ -16,7 +16,10 @@ int create(int cost) {
 }
 template <>
 int* create(int cost) {
-	return new int(cost);
+	// return new int(cost), but store values for clean memory management
+	static std::list<int> storage;
+	storage.push_back(cost);
+	return &storage.back();
 }
 template <>
 mtc::SolutionBasePtr create(int cost) {
