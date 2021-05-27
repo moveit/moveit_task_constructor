@@ -112,6 +112,7 @@ public:
 		auto impl{ this->pimpl() };
 		this->reset();
 
+		dummy->clear();
 		state_start.reset();
 		state_end.reset();
 
