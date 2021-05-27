@@ -17,7 +17,7 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/move_relative.h
 
 	${PROJECT_INCLUDE}/stages/simple_grasp.h
-	${PROJECT_INCLUDE}/stages/pick.h
+	${PROJECT_INCLUDE}/stages/pick_place.h
 
 	modify_planning_scene.cpp
 	fix_collision_objects.cpp
@@ -25,6 +25,10 @@ add_library(${PROJECT_NAME}_stages
 	current_state.cpp
 	fixed_state.cpp
 	fixed_cartesian_poses.cpp
+  grasp_provider_base.cpp
+						${PROJECT_INCLUDE}/stages/grasp_provider_base.h
+  place_provider_base.cpp
+						${PROJECT_INCLUDE}/stages/place_provider_base.h
 	generate_pose.cpp
 	generate_grasp_pose.cpp
 	generate_place_pose.cpp
@@ -37,10 +41,24 @@ add_library(${PROJECT_NAME}_stages
 	move_relative.cpp
 
 	simple_grasp.cpp
-	pick.cpp
+	pick_place.cpp
 )
 target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME}_stages
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+
+add_library(${PROJECT_NAME}_providers
+	${PROJECT_INCLUDE}/stages/grasp_provider.h
+	${PROJECT_INCLUDE}/stages/place_provider.h
+						${PROJECT_INCLUDE}/stages/place_provider_base.h
+						${PROJECT_INCLUDE}/stages/grasp_provider_base.h
+	grasp_provider.cpp
+	place_provider.cpp
+)
+target_link_libraries(${PROJECT_NAME}_providers ${PROJECT_NAME} ${PROJECT_NAME}_stages ${catkin_LIBRARIES})
+
+install(TARGETS ${PROJECT_NAME}_providers
+				ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+				LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})

@@ -7,3 +7,37 @@
     </description>
   </class>
 </library>
+
+<library path="libmoveit_task_constructor_core_providers">
+  <class name="moveit_task_constructor/GraspProviderDefault"
+         type="moveit::task_constructor::stages::GraspProviderDefault"
+         base_class_type="moveit::task_constructor::stages::GraspProviderBase">
+    <description>
+      Default Grasp provider stage plugin implementing the functionality of the GenerateGraspPose stage
+    </description>
+  </class>
+
+  <class name="moveit_task_constructor/GraspProviderFixedPoses"
+         type="moveit::task_constructor::stages::GraspProviderFixedPoses"
+         base_class_type="moveit::task_constructor::stages::GraspProviderBase">
+    <description>
+      Grasp Provider plugin for setting a set of grasp poses
+    </description>
+  </class>
+
+  <class name="moveit_task_constructor/PlaceProviderDefault"
+         type="moveit::task_constructor::stages::PlaceProviderDefault"
+         base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
+    <description>
+      Default Place provider stage plugin implementing the functionality of the GeneratePlacePose stage
+    </description>
+  </class>
+
+  <class name="moveit_task_constructor/PlaceProviderFixedPoses"
+         type="moveit::task_constructor::stages::PlaceProviderFixedPoses"
+         base_class_type="moveit::task_constructor::stages::PlaceProviderBase">
+    <description>
+      Place Provider plugin for setting a set of place poses
+    </description>
+  </class>
+</library>

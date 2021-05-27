@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Hamburg University
+ *  Copyright (c) 2017, Bielefeld + Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,71 +31,70 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-/* Authors: Michael Goerner */
 
-#include <moveit/task_constructor/stages/predicate_filter.h>
+/* Authors: Artur Karoly, Jafar Abdi */
 
-#include <moveit/task_constructor/storage.h>
-
+#include <pluginlib/class_list_macros.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <Eigen/Geometry>
 #include <moveit/planning_scene/planning_scene.h>
+#include <rviz_marker_tools/marker_creation.h>
+#include <moveit/task_constructor/marker_tools.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/stages/grasp_provider.h>
+#include <moveit/task_constructor/stages/grasp_provider_base.h>
 
-#include <moveit/robot_state/conversions.h>
-#include <moveit/robot_state/robot_state.h>
-
-#include <functional>
+#include <moveit_msgs/Grasp.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
-
-PredicateFilter::PredicateFilter(const std::string& name, Stage::pointer&& child)
-  : WrapperBase(name, std::move(child)) {
+GraspProviderBase::GraspProviderBase(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
-	p.declare<Predicate>("predicate", "predicate to filter wrapped solutions");
-	p.declare<bool>("ignore_filter", false, "ignore predicate and forward all solutions");
+	p.declare<std::string>("eef", "name of end-effector");
+	p.declare<std::string>("object");
+
+	p.declare<std::vector<moveit_msgs::Grasp>>("grasps", "list of Grasp messages");
 }
-
-void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model) {
+void GraspProviderBase::init(const std::shared_ptr<const moveit::core::RobotModel>& robot_model) {
 	InitStageException errors;
-
 	try {
-		WrapperBase::init(robot_model);
+		GeneratePose::init(robot_model);
 	} catch (InitStageException& e) {
 		errors.append(e);
 	}
 
 	const auto& props = properties();
 
-	// In theory this could be set in interface states
-	// but we enforce it here to keep code flow sane and maintainable
-	if (props.get("predicate").empty()) {
-		InitStageException e(*this, "predicate is not specified");
-		errors.append(e);
-	}
+	// check availability of object
+	props.get<std::string>("object");
+	// check availability of eef
+	const std::string& eef = props.get<std::string>("eef");
+	if (!robot_model->hasEndEffector(eef))
+		errors.push_back(*this, "unknown end effector: " + eef);
 
 	if (errors)
 		throw errors;
 }
+void GraspProviderBase::onNewSolution(const SolutionBase& s) {
+	std::shared_ptr<const planning_scene::PlanningScene> scene = s.end()->scene();
 
-void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	const auto& props = properties();
-
-	// false-positive in clang-tidy 10.0.0: predicate might change comment
-	// NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
-	std::string comment = s.comment();
-
-	double cost = s.cost();
-	if (!props.get<bool>("ignore_filter") && !props.get<Predicate>("predicate")(s, comment)) {
-		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
-		SubTrajectory solution;
-		solution.markAsFailure();
-		solution.setComment(comment);
-		solution.setCost(std::numeric_limits<double>::infinity());
-		InterfaceState state(scene);
-		spawn(std::move(state), std::move(solution));
-	} else {
-		liftSolution(s, cost, comment);
+	const std::string& object = props.get<std::string>("object");
+	if (!scene->knowsFrameTransform(object)) {
+		const std::string msg = "object '" + object + "' not in scene";
+		if (storeFailures()) {
+			InterfaceState state(scene);
+			SubTrajectory solution;
+			solution.markAsFailure();
+			solution.setComment(msg);
+			spawn(std::move(state), std::move(solution));
+		} else
+			ROS_WARN_STREAM_NAMED("GraspProviderBase", msg);
+		return;
 	}
+
+	upstream_solutions_.push(&s);
 }
 }  // namespace stages
 }  // namespace task_constructor

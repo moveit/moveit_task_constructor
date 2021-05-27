@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/stages/generate_grasp_pose.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
-#include <moveit/task_constructor/stages/pick.h>
+#include <moveit/task_constructor/stages/pick_place.h>
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 

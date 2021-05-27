@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2018, Hamburg University
+ *  Copyright (c) 2017, Bielefeld + Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,72 +31,43 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-/* Authors: Michael Goerner */
 
-#include <moveit/task_constructor/stages/predicate_filter.h>
+/* Authors: Artur Karoly, Jafar Abdi */
 
-#include <moveit/task_constructor/storage.h>
+#ifndef MOVEIT_TASK_CONSTRUCTOR_CORE_GRASP_PROVIDER_BASE_H
+#define MOVEIT_TASK_CONSTRUCTOR_CORE_GRASP_PROVIDER_BASE_H
 
-#include <moveit/planning_scene/planning_scene.h>
-
-#include <moveit/robot_state/conversions.h>
-#include <moveit/robot_state/robot_state.h>
-
-#include <functional>
+#include "memory"
+#include "moveit/task_constructor/container.h"
+#include "grasp_provider_base.h"
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
+class GraspProviderBase : public GeneratePose
+{
+public:
+	GraspProviderBase(const std::string& name = "grasp provider");
 
-PredicateFilter::PredicateFilter(const std::string& name, Stage::pointer&& child)
-  : WrapperBase(name, std::move(child)) {
-	auto& p = properties();
-	p.declare<Predicate>("predicate", "predicate to filter wrapped solutions");
-	p.declare<bool>("ignore_filter", false, "ignore predicate and forward all solutions");
-}
+	void init(const std::shared_ptr<const moveit::core::RobotModel>& robot_model) override;
 
-void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model) {
-	InitStageException errors;
+	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
+	void setObject(const std::string& object) { setProperty("object", object); }
 
-	try {
-		WrapperBase::init(robot_model);
-	} catch (InitStageException& e) {
-		errors.append(e);
+	void setPreGraspPose(const std::string& pregrasp) { properties().set("pregrasp", pregrasp); }
+	void setPreGraspPose(const ::moveit_msgs::RobotState_<std::allocator<void>>& pregrasp) {
+		properties().set("pregrasp", pregrasp);
+	}
+	void setGraspPose(const std::string& grasp) { properties().set("grasp", grasp); }
+	void setGraspPose(const ::moveit_msgs::RobotState_<std::allocator<void>>& grasp) {
+		properties().set("grasp", grasp);
 	}
 
-	const auto& props = properties();
-
-	// In theory this could be set in interface states
-	// but we enforce it here to keep code flow sane and maintainable
-	if (props.get("predicate").empty()) {
-		InitStageException e(*this, "predicate is not specified");
-		errors.append(e);
-	}
-
-	if (errors)
-		throw errors;
-}
-
-void PredicateFilter::onNewSolution(const SolutionBase& s) {
-	const auto& props = properties();
-
-	// false-positive in clang-tidy 10.0.0: predicate might change comment
-	// NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
-	std::string comment = s.comment();
-
-	double cost = s.cost();
-	if (!props.get<bool>("ignore_filter") && !props.get<Predicate>("predicate")(s, comment)) {
-		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
-		SubTrajectory solution;
-		solution.markAsFailure();
-		solution.setComment(comment);
-		solution.setCost(std::numeric_limits<double>::infinity());
-		InterfaceState state(scene);
-		spawn(std::move(state), std::move(solution));
-	} else {
-		liftSolution(s, cost, comment);
-	}
-}
+protected:
+	void onNewSolution(const SolutionBase& s) override;
+};
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
+#include <moveit/task_constructor/stages/generate_pose.h>
+#endif  // MOVEIT_TASK_CONSTRUCTOR_CORE_GRASP_PROVIDER_BASE_H
