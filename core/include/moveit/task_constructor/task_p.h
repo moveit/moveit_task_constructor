@@ -42,7 +42,7 @@
 #include <moveit/task_constructor/task.h>
 
 namespace robot_model_loader {
-MOVEIT_CLASS_FORWARD(RobotModelLoader)
+MOVEIT_CLASS_FORWARD(RobotModelLoader);
 }
 
 namespace moveit {

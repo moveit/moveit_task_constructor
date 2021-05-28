@@ -44,7 +44,7 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(CartesianPath)
+MOVEIT_CLASS_FORWARD(CartesianPath);
 
 /** Use MoveIt's computeCartesianPath() to generate a straigh-line path between to scenes */
 class CartesianPath : public PlannerInterface

@@ -50,17 +50,17 @@
 
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotModel)
-MOVEIT_CLASS_FORWARD(RobotState)
+MOVEIT_CLASS_FORWARD(RobotModel);
+MOVEIT_CLASS_FORWARD(RobotState);
 }  // namespace core
 }  // namespace moveit
 
 namespace moveit {
 namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(Stage)
-MOVEIT_CLASS_FORWARD(ContainerBase)
-MOVEIT_CLASS_FORWARD(Task)
+MOVEIT_CLASS_FORWARD(Stage);
+MOVEIT_CLASS_FORWARD(ContainerBase);
+MOVEIT_CLASS_FORWARD(Task);
 
 class TaskPrivate;
 /** A Task is the root of a tree of stages.

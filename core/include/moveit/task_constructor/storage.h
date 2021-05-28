@@ -52,21 +52,21 @@
 #include <functional>
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
 namespace moveit {
 namespace task_constructor {
 
 class SolutionBase;
-MOVEIT_CLASS_FORWARD(InterfaceState)
-MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(Stage)
-MOVEIT_CLASS_FORWARD(Introspection)
+MOVEIT_CLASS_FORWARD(InterfaceState);
+MOVEIT_CLASS_FORWARD(Interface);
+MOVEIT_CLASS_FORWARD(Stage);
+MOVEIT_CLASS_FORWARD(Introspection);
 
 /** InterfaceState describes a potential start or goal state for a planning stage.
  *
@@ -296,7 +296,7 @@ private:
 	const InterfaceState* start_ = nullptr;
 	const InterfaceState* end_ = nullptr;
 };
-MOVEIT_CLASS_FORWARD(SolutionBase)
+MOVEIT_CLASS_FORWARD(SolutionBase);
 
 /// SubTrajectory connects interface states of ComputeStages
 class SubTrajectory : public SolutionBase
@@ -318,7 +318,7 @@ private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
 };
-MOVEIT_CLASS_FORWARD(SubTrajectory)
+MOVEIT_CLASS_FORWARD(SubTrajectory);
 
 /** Sequence of individual sub solutions
  *
@@ -350,7 +350,7 @@ private:
 	/// series of sub solutions
 	container_type subsolutions_;
 };
-MOVEIT_CLASS_FORWARD(SolutionSequence)
+MOVEIT_CLASS_FORWARD(SolutionSequence);
 
 /** Wrap an existing solution
  *

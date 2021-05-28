@@ -52,8 +52,8 @@
 namespace moveit {
 namespace task_constructor {
 
-MOVEIT_CLASS_FORWARD(Stage)
-MOVEIT_CLASS_FORWARD(SolutionBase)
+MOVEIT_CLASS_FORWARD(Stage);
+MOVEIT_CLASS_FORWARD(SolutionBase);
 
 class TaskPrivate;
 class IntrospectionPrivate;

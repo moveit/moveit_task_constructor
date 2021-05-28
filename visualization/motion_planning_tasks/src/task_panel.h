@@ -54,8 +54,8 @@ class EnumProperty;
 namespace moveit_rviz_plugin {
 
 class TaskSolutionVisualization;
-MOVEIT_CLASS_FORWARD(TaskListModel)
-MOVEIT_CLASS_FORWARD(TaskPanel)
+MOVEIT_CLASS_FORWARD(TaskListModel);
+MOVEIT_CLASS_FORWARD(TaskPanel);
 
 /// Base class for all sub panels within the Task Panel
 class SubPanel : public QWidget
