@@ -781,35 +781,34 @@ void ParallelContainerBase::liftSolution(const SolutionBase& solution, double co
 	                      solution.start(), solution.end());
 }
 
-void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& modified_solution, const SolutionBase& child_solution) {
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& modified_solution, const SolutionBase& child_solution) {
 	// child_solution is correctly prepared by a child of this container
 	assert(child_solution.creator());
 	assert(child_solution.creator()->parent() == this);
 
-	pimpl()->liftSolution(std::move(modified_solution),
-	                      child_solution.start(), child_solution.end());
+	pimpl()->liftSolution(modified_solution, child_solution.start(), child_solution.end());
 }
 
-void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_propagated_state, const SolutionBase& child_solution) {
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_propagated_state, const SolutionBase& child_solution) {
 	assert(child_solution.creator());
 	assert(child_solution.creator()->parent() == this);
 
 	if(pimpl()->requiredInterface() == GENERATE){
 		// in this case we need a second InterfaceState to move from
 		InterfaceState new_to{ new_propagated_state };
-		pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_propagated_state, &new_to);
+		pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_propagated_state, &new_to);
 	}
 	else {
 		// pass new_propagated_state as start *and* end. We know at most one will be used.
-		pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_propagated_state, &new_propagated_state);
+		pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_propagated_state, &new_propagated_state);
 	}
 }
 
-void ParallelContainerBase::liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_from, InterfaceState&& new_to, const SolutionBase& child_solution) {
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_from, InterfaceState&& new_to, const SolutionBase& child_solution) {
 	assert(child_solution.creator());
 	assert(child_solution.creator()->parent() == this);
 
-	pimpl()->liftSolution(std::move(new_solution), child_solution.start(), child_solution.end(), &new_from, &new_to);
+	pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_from, &new_to);
 }
 
 

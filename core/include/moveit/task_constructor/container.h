@@ -128,13 +128,13 @@ protected:
 	void liftSolution(const SolutionBase& solution, double cost, std::string comment);
 
 	/// lift a modified solution based on the solution of a child stage
-	void liftModifiedSolution(SolutionBasePtr&& new_solution, const SolutionBase& child_solution);
+	void liftModifiedSolution(const SolutionBasePtr& new_solution, const SolutionBase& child_solution);
 	/// lift a modified solution, changing the (single!) new associated start or end InterfaceState
-	void liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_propagated_state,
+	void liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_propagated_state,
 	                          const SolutionBase& child_solution);
 	/// lift a modified solution, providing new start and end states
 	/// The new states will only be used if this's should actually create the corresponding states
-	void liftModifiedSolution(SolutionBasePtr&& new_solution, InterfaceState&& new_start_state,
+	void liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_start_state,
 	                          InterfaceState&& new_end_state, const SolutionBase& child_solution);
 };
 
