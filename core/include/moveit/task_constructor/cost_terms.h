@@ -118,7 +118,7 @@ class PathLength : public TrajectoryCostTerm
 public:
 	PathLength() = default;
 	PathLength(std::vector<std::string> j) : joints{ std::move(j) } {};
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
 	std::vector<std::string> joints;
 };
