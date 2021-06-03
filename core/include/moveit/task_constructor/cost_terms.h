@@ -56,6 +56,7 @@ class CostTerm
 public:
 	CostTerm() = default;
 	CostTerm(std::nullptr_t) : CostTerm{} {}
+	virtual ~CostTerm() = default;
 
 	virtual double operator()(const SubTrajectory& s, std::string& comment) const;
 	virtual double operator()(const SolutionSequence& s, std::string& comment) const;
