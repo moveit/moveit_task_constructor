@@ -25,7 +25,6 @@ jobs:
             CXX: clang++
             CLANG_TIDY: true
             CXXFLAGS: >-
-             --system-header-prefix=Ogre
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
           - IMAGE: noetic-source
