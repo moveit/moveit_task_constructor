@@ -10,6 +10,17 @@ find_package(catkin REQUIRED COMPONENTS
 	rviz
 )
 
+# rviz transitively includes OGRE headers which break with `-Wall -Werror`
+# so isolate these include dirs and add them as SYSTEM include where needed.
+set(rviz_OGRE_INCLUDE_DIRS)
+foreach(header IN ITEMS OgreRoot.h OgreOverlay.h)
+	find_path(include_dir ${header}
+		HINTS ${catkin_INCLUDE_DIRS}
+		NO_DEFAULT_PATH)
+	list(REMOVE_ITEM catkin_INCLUDE_DIRS "${include_dir}")
+	list(APPEND rviz_OGRE_INCLUDE_DIRS "${include_dir}")
+endforeach()
+
 # definition needed for boost/math/constants/constants.hpp included by Ogre to compile
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
 
