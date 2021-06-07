@@ -48,6 +48,7 @@ catkin_package(
 
 set(CMAKE_CXX_STANDARD 14)
 
+#catkin_lint: ignore unused_catkin_include_dirs
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)
 
