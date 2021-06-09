@@ -151,9 +151,8 @@ rviz::Property* Parser::process(const yaml_event_t& event, const QString& name, 
 		case YAML_SCALAR_EVENT:
 			return createScalar(name, description, byteArray(event), old);
 		default:
-			break;
+			throw std::runtime_error("Unhandled YAML event");
 	}
-	assert(false);  // should not be reached
 }
 
 // Try to set numeric or arbitrary scalar value from YAML node. Needs to match old's type.
