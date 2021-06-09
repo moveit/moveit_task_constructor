@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
 import unittest
@@ -64,7 +65,7 @@ class PyMonitoringGenerator(core.MonitoringGenerator):
 class PyMoveRelX(stages.MoveRelative):
     """ Implements a custom propagator stage."""
 
-    def __init__(self, x, planner, name="Move ±x"):
+    def __init__(self, x, planner, name=u"Move ±x"):
         stages.MoveRelative.__init__(self, name, planner)
         self.group = PLANNING_GROUP
         self.ik_frame = "tool0"
