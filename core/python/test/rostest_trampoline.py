@@ -12,6 +12,13 @@ from std_msgs.msg import Header
 
 PLANNING_GROUP = "manipulator"
 
+pybind11_versions = [
+    k for k in __builtins__.__dict__.keys() if k.startswith("__pybind11_internals_v")
+]
+incompatible_pybind11_msg = "MoveIt and MTC use incompatible pybind11 versions: " + "\n- ".join(
+    pybind11_versions
+)
+
 
 class PyGenerator(core.Generator):
     """ Implements a custom 'Generator' stage."""
@@ -99,10 +106,12 @@ class TestTrampolines(unittest.TestCase):
         if wait:
             input("Waiting for any key (allows inspection in rviz)")
 
+    @unittest.skipIf(len(pybind11_versions) > 1, incompatible_pybind11_msg)
     def test_generator(self):
         task = self.create(PyGenerator())
         self.plan(task, expected_solutions=PyGenerator.max_calls)
 
+    @unittest.skipIf(len(pybind11_versions) > 1, incompatible_pybind11_msg)
     def test_monitoring_generator(self):
         task = self.create(
             stages.CurrentState("current"),
