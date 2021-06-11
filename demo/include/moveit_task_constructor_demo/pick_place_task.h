@@ -58,9 +58,6 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/server/simple_action_server.h>
-
 #include <eigen_conversions/eigen_msg.h>
 
 #pragma once
@@ -68,22 +65,27 @@
 namespace moveit_task_constructor_demo {
 using namespace moveit::task_constructor;
 
+// prepare a demo environment from ROS parameters under pnh
+void setupDemoScene(ros::NodeHandle& pnh);
+
 class PickPlaceTask
 {
 public:
-	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& nh);
+	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& pnh);
 	~PickPlaceTask() = default;
 
-	void loadParameters();
-
-	void init();
+	bool init();
 
 	bool plan();
 
 	bool execute();
 
 private:
-	ros::NodeHandle nh_;
+	void loadParameters();
+
+	static constexpr char LOGNAME[]{ "pick_place_task" };
+
+	ros::NodeHandle pnh_;
 
 	std::string task_name_;
 	moveit::task_constructor::TaskPtr task_;
@@ -106,9 +108,6 @@ private:
 	std::string hand_open_pose_;
 	std::string hand_close_pose_;
 	std::string arm_home_pose_;
-
-	// Execution
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> execute_;
 
 	// Pick metrics
 	Eigen::Isometry3d grasp_frame_transform_;

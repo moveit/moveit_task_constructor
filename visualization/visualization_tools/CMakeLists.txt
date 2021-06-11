@@ -35,6 +35,9 @@ target_include_directories(${MOVEIT_LIB_NAME}
   PUBLIC include
   PRIVATE ${catkin_INCLUDE_DIRS}
 )
+target_include_directories(${MOVEIT_LIB_NAME} SYSTEM
+  PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
+)
 add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
 
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})

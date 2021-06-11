@@ -56,6 +56,7 @@ class CostTerm
 public:
 	CostTerm() = default;
 	CostTerm(std::nullptr_t) : CostTerm{} {}
+	virtual ~CostTerm() = default;
 
 	virtual double operator()(const SubTrajectory& s, std::string& comment) const;
 	virtual double operator()(const SolutionSequence& s, std::string& comment) const;
@@ -115,9 +116,12 @@ public:
 /// trajectory length (interpolated between waypoints)
 class PathLength : public TrajectoryCostTerm
 {
-	// TODO(v4hn): allow to consider specific joints only
 public:
+	PathLength() = default;
+	PathLength(std::vector<std::string> j) : joints{ std::move(j) } {};
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
+
+	std::vector<std::string> joints;
 };
 
 /// execution duration of the whole trajectory

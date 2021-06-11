@@ -155,9 +155,9 @@ void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
 	if (SINGLETON || !vis_frame)
 		return;  // already defined, nothing to do
 
-	QDockWidget* dock =
-	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
-	                              Qt::LeftDockWidgetArea, true /* floating */);
+	QDockWidget* dock = vis_frame->addPanelByName(
+	    "Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks", Qt::LeftDockWidgetArea);
+	Q_UNUSED(dock);
 	assert(dock->widget() == SINGLETON);
 }
 

@@ -44,16 +44,16 @@
 #include <Eigen/Geometry>
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(LinkModel)
-MOVEIT_CLASS_FORWARD(RobotModel)
-MOVEIT_CLASS_FORWARD(JointModelGroup)
+MOVEIT_CLASS_FORWARD(LinkModel);
+MOVEIT_CLASS_FORWARD(RobotModel);
+MOVEIT_CLASS_FORWARD(JointModelGroup);
 }  // namespace core
 }  // namespace moveit
 
@@ -61,7 +61,7 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(PlannerInterface)
+MOVEIT_CLASS_FORWARD(PlannerInterface);
 class PlannerInterface
 {
 	// these properties take precedence over stage properties

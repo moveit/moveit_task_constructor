@@ -11,10 +11,17 @@
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>moveit_task_constructor_core</depend>
-  <depend>moveit_ros_planning_interface</depend>
-  <depend>moveit_core</depend>
+
+  <depend>roscpp</depend>
   <depend>rosparam_shortcuts</depend>
-  <build_depend>roscpp</build_depend>
+
+  <depend>moveit_core</depend>
+  <depend>moveit_ros_planning_interface</depend>
+
+  <depend>moveit_task_constructor_core</depend>
+
+  <exec_depend>moveit_task_constructor_capabilities</exec_depend>
   <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
+
+  <test_depend>rostest</test_depend>
 </package>

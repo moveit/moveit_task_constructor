@@ -256,7 +256,7 @@ void export_core(pybind11::module& m) {
 			return py::make_iterator(children.begin(), children.end());
 		}, py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
 		.def("reset", &Task::reset)
-		.def("init", &Task::init)
+		.def("init", py::overload_cast<>(&Task::init))
 		.def("plan", &Task::plan, py::arg("max_solutions") = 0)
 		.def("preempt", &Task::preempt)
 		.def("publish", [](Task& self, const SolutionBasePtr& solution) {

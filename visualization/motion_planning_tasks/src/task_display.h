@@ -57,16 +57,16 @@ class RosTopicProperty;
 
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(RobotModel);
 }
 }  // namespace moveit
 namespace rdf_loader {
-MOVEIT_CLASS_FORWARD(RDFLoader)
+MOVEIT_CLASS_FORWARD(RDFLoader);
 }
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(DisplaySolution)
+MOVEIT_CLASS_FORWARD(DisplaySolution);
 class TaskListModel;
 
 class TaskDisplay : public rviz::Display

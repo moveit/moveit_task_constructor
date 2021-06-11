@@ -30,9 +30,9 @@ struct PredefinedCosts : CostTerm
 		return cost_;
 	}
 
-	double operator()(const SubTrajectory& s, std::string& comment) const override { return cost(); }
-	double operator()(const SolutionSequence& s, std::string& comment) const override { return cost(); }
-	double operator()(const WrappedSolution& s, std::string& comment) const override { return cost(); }
+	double operator()(const SubTrajectory& /*s*/, std::string& /*comment*/) const override { return cost(); }
+	double operator()(const SolutionSequence& /*s*/, std::string& /*comment*/) const override { return cost(); }
+	double operator()(const WrappedSolution& /*s*/, std::string& /*comment*/) const override { return cost(); }
 };
 
 /** Generator creating solutions with given costs */
@@ -197,9 +197,9 @@ TEST_F(Pruning, PropagatorFailure) {
 	add(task, new ForwardMockup({ INF }));
 
 	EXPECT_FALSE(task.plan());
-	ASSERT_EQ(task.solutions().size(), 0);
+	ASSERT_EQ(task.solutions().size(), 0u);
 	// ForwardMockup fails, so the backward stage should never compute
-	EXPECT_EQ(back->calls_, 0);
+	EXPECT_EQ(back->calls_, 0u);
 }
 
 TEST_F(Pruning, PruningMultiForward) {
@@ -215,7 +215,7 @@ TEST_F(Pruning, PruningMultiForward) {
 
 	// the second (infeasible) solution in the last stage must not disable
 	// the earlier partial solution just because they share stage solutions
-	ASSERT_EQ(task.solutions().size(), 1);
+	ASSERT_EQ(task.solutions().size(), 1u);
 	EXPECT_EQ((*task.solutions().begin())->cost(), 0u);
 }
 
@@ -273,7 +273,7 @@ TEST_F(Pruning, PropagateIntoContainer) {
 
 	// the failure in the backward stage (outside the container)
 	// should prune the expected computation of con inside the container
-	EXPECT_EQ(con->calls_, 0);
+	EXPECT_EQ(con->calls_, 0u);
 }
 
 TEST_F(Pruning, PropagateFromContainerPull) {
@@ -288,7 +288,7 @@ TEST_F(Pruning, PropagateFromContainerPull) {
 	EXPECT_FALSE(task.plan());
 
 	// the failure inside the container should prune computing of back
-	EXPECT_EQ(back->calls_, 0);
+	EXPECT_EQ(back->calls_, 0u);
 }
 
 TEST_F(Pruning, PropagateFromContainerPush) {
@@ -302,7 +302,7 @@ TEST_F(Pruning, PropagateFromContainerPush) {
 	EXPECT_FALSE(task.plan());
 
 	// the failure inside container should prune computing of con
-	EXPECT_EQ(con->calls_, 0);
+	EXPECT_EQ(con->calls_, 0u);
 }
 
 TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
@@ -318,5 +318,5 @@ TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
 	EXPECT_TRUE(task.plan());
 
 	// the failure in one branch of Alternatives must not prune computing back
-	EXPECT_EQ(back->calls_, 1);
+	EXPECT_EQ(back->calls_, 1u);
 }

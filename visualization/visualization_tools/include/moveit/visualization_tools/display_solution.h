@@ -41,14 +41,14 @@
 
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotState)
+MOVEIT_CLASS_FORWARD(RobotState);
 }
 }  // namespace moveit
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 namespace Ogre {
 class SceneNode;
@@ -59,8 +59,8 @@ class DisplayContext;
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(DisplaySolution)
-MOVEIT_CLASS_FORWARD(MarkerVisualization)
+MOVEIT_CLASS_FORWARD(DisplaySolution);
+MOVEIT_CLASS_FORWARD(MarkerVisualization);
 
 /** Class representing a task solution for display */
 class DisplaySolution

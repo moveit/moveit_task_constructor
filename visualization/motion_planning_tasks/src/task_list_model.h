@@ -60,8 +60,8 @@ class DisplayContext;
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(DisplaySolution)
-MOVEIT_CLASS_FORWARD(RemoteTaskModel)
+MOVEIT_CLASS_FORWARD(DisplaySolution);
+MOVEIT_CLASS_FORWARD(RemoteTaskModel);
 using StageFactory = PluginlibFactory<moveit::task_constructor::Stage>;
 using StageFactoryPtr = std::shared_ptr<StageFactory>;
 

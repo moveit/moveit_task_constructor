@@ -11,7 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
 	rosparam_shortcuts
 )
 
-catkin_package()
+catkin_package(
+	CATKIN_DEPENDS roscpp
+)
 
 include_directories(
   include
@@ -24,7 +26,9 @@ target_link_libraries(cartesian ${catkin_LIBRARIES})
 add_executable(modular src/modular.cpp)
 target_link_libraries(modular ${catkin_LIBRARIES})
 
-add_executable(pick_place_demo src/pick_place_demo.cpp src/pick_place_task.cpp)
+add_library(pick_place_task OBJECT src/pick_place_task.cpp)
+
+add_executable(pick_place_demo src/pick_place_demo.cpp $<TARGET_OBJECTS:pick_place_task>)
 target_link_libraries(pick_place_demo ${catkin_LIBRARIES})
 
 add_executable(alternative_path_costs src/alternative_path_costs.cpp)
@@ -42,3 +46,5 @@ install(TARGETS cartesian modular pick_place_demo
 install(DIRECTORY launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+add_subdirectory(test)

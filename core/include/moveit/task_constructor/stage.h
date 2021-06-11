@@ -52,20 +52,20 @@
 
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(RobotModel);
 }
 }  // namespace moveit
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 
 namespace planning_pipeline {
-MOVEIT_CLASS_FORWARD(PlanningPipeline)
+MOVEIT_CLASS_FORWARD(PlanningPipeline);
 }
 
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
 namespace moveit {
@@ -108,8 +108,8 @@ constexpr InterfaceFlags UNKNOWN;
 constexpr InterfaceFlags START_IF_MASK({ READS_START, WRITES_PREV_END });
 constexpr InterfaceFlags END_IF_MASK({ READS_END, WRITES_NEXT_START });
 
-MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(Stage)
+MOVEIT_CLASS_FORWARD(Interface);
+MOVEIT_CLASS_FORWARD(Stage);
 class InterfaceState;
 using InterfaceStatePair = std::pair<const InterfaceState&, const InterfaceState&>;
 

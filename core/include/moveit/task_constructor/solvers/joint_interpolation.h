@@ -45,7 +45,7 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(JointInterpolationPlanner)
+MOVEIT_CLASS_FORWARD(JointInterpolationPlanner);
 
 /** Interpolate a trajectory between states in joint space
  *

@@ -18,13 +18,24 @@ jobs:
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: master-source
-            NAME: clang
-            CXX: clang++
+            CXXFLAGS: >-
+              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
           - IMAGE: noetic-source
+            CXX: clang++
             CLANG_TIDY: true
+            CXXFLAGS: >-
+              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
+          - IMAGE: noetic-source
+            NAME: asan
+            DOCKER_RUN_OPTS: >-
+              -e PRELOAD=libasan.so.5
+              -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions"
+            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
+
     env:
       CATKIN_LINT: true
-      CXXFLAGS: "-Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wno-deprecated-copy"
       UNDERLAY: /root/ws_moveit/install
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -58,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v2
         if: failure()
         with:
-          name: test-results
+          name: test-results-${{ matrix.env.IMAGE }}${{ matrix.env.NAME && '-' || ''}}${{ matrix.env.NAME }}
           path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
       - name: Collect coverage information
         uses: rhaschke/lcov-action@master
