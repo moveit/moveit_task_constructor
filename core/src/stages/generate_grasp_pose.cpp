@@ -40,6 +40,7 @@
 #include <rviz_marker_tools/marker_creation.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
@@ -81,12 +82,39 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	else {
 		// check availability of eef pose
 		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
-	}
 
+		try {
+			// try named joint pose
+			const std::string& name = props.get<std::string>("pregrasp");
+			std::map<std::string, double> m;
+			if (!jmg->getVariableDefaultPositions(name, m))
+				errors.push_back(*this, "unknown end effector pose: " + name);
+			if (errors)
+				throw errors;
+			return;
+		} catch (const boost::bad_any_cast&) {
+		}
+		try {
+			// try RobotState
+			const moveit_msgs::RobotState& msg = props.get<moveit_msgs::RobotState>("pregrasp");
+			if (!msg.is_diff)
+				throw InitStageException(*this, "Expecting a diff state");
+
+			// validate specified joints
+			const auto& accepted = jmg->getJointModelNames();
+			for (const auto& name : msg.joint_state.name)
+				if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
+					errors.push_back(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
+			for (const auto& name : msg.multi_dof_joint_state.joint_names)
+				if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
+					errors.push_back(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
+			if (errors)
+				throw errors;
+			return;
+		} catch (const boost::bad_any_cast&) {
+		}
+		errors.push_back(*this, "pregrasp invalid data type");
+	}
 	if (errors)
 		throw errors;
 }
@@ -123,7 +151,17 @@ void GenerateGraspPose::compute() {
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	try {
+		// try named joint pose
+		robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	} catch (const boost::bad_any_cast&) {
+	}
+	try {
+		// try RobotState
+		const moveit_msgs::RobotState& robot_state_msg = props.get<moveit_msgs::RobotState>("pregrasp");
+		robotStateMsgToRobotState(robot_state_msg, robot_state);
+	} catch (const boost::bad_any_cast&) {
+	}
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
