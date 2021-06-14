@@ -126,14 +126,7 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s) {
 	const std::string& object = props.get<std::string>("object");
 	if (!scene->knowsFrameTransform(object)) {
 		const std::string msg = "object '" + object + "' not in scene";
-		if (storeFailures()) {
-			InterfaceState state(scene);
-			SubTrajectory solution;
-			solution.markAsFailure();
-			solution.setComment(msg);
-			spawn(std::move(state), std::move(solution));
-		} else
-			ROS_WARN_STREAM_NAMED("GenerateGraspPose", msg);
+		spawn(InterfaceState{ scene }, SubTrajectory::failure(msg));
 		return;
 	}
 
@@ -154,9 +147,7 @@ void GenerateGraspPose::compute() {
 	try {
 		applyPreGrasp(robot_state, jmg, props.property("pregrasp"));
 	} catch (const moveit::Exception& e) {
-		SubTrajectory failure;
-		failure.markAsFailure(std::string{ "invalid pregrasp: " } + e.what());
-		spawn(InterfaceState{ scene }, std::move(failure));
+		spawn(InterfaceState{ scene }, SubTrajectory::failure(std::string{ "invalid pregrasp: " } + e.what()));
 		return;
 	}
 
