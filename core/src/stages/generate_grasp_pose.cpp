@@ -74,7 +74,14 @@ static void applyPreGrasp(moveit::core::RobotState& state, const moveit::core::J
 	try {
 		// try RobotState
 		const moveit_msgs::RobotState& robot_state_msg = boost::any_cast<moveit_msgs::RobotState>(diff_property.value());
-		// might throw on invalid message
+		if (!robot_state_msg.is_diff)
+			throw moveit::Exception{ "RobotState message must be a diff" };
+		const auto& accepted = jmg->getJointModelNames();
+		for (const auto& joint_name_list :
+		     { robot_state_msg.joint_state.name, robot_state_msg.multi_dof_joint_state.joint_names })
+			for (const auto& name : joint_name_list)
+				if (std::find(accepted.cbegin(), accepted.cend(), name) == accepted.cend())
+					throw moveit::Exception("joint '" + name + "' is not part of group '" + jmg->getName() + "'");
 		robotStateMsgToRobotState(robot_state_msg, state);
 		return;
 	} catch (const boost::bad_any_cast&) {
