@@ -207,10 +207,9 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
                                         const InterfaceState* internal_to, InterfaceState* new_from,
                                         InterfaceState* new_to) {
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	auto findExternal = [this](const InterfaceState* internal,
-	                           const InterfaceState* replacement) -> const InterfaceState* {
+	auto findExternal = [this](const InterfaceState* internal) -> const InterfaceState* {
 		auto it = internalToExternalMap().find(internal);
-		if (it != internalToExternalMap().end() && (!replacement || &*it->second == replacement)) {
+		if (it != internalToExternalMap().end()) {
 			return &*it->second;
 		}
 
@@ -218,8 +217,18 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	};
 
 	// external states, nullptr if they don't exist yet
-	const InterfaceState* external_from{ findExternal(internal_from, new_from) };
-	const InterfaceState* external_to{ findExternal(internal_to, new_to) };
+	const InterfaceState* external_from{ findExternal(internal_from) };
+	const InterfaceState* external_to{ findExternal(internal_to) };
+
+	// TODO(v4hn) rethink this. ComputeIK is exactly this case. Do I want to support an n:m mapping from internal to
+	// external?
+	if ((new_from && external_from && external_from != new_from) || (new_to && external_to && external_to != new_to)) {
+		ROS_ERROR_STREAM_NAMED("Container", "Container '" << name_ << "' tried to lift a modified solution from child '"
+		                                                  << solution->creator()->name()
+		                                                  << "', but a different one already exists. Children's "
+		                                                     "InterfaceStates can only ever match one ");
+		return;
+	}
 
 	// computeCost
 	// If there are no external states known yet, we can pass internal_{from/to} here
