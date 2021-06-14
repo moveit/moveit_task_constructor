@@ -59,6 +59,30 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(nam
 	p.declare<boost::any>("grasp", "grasp posture");
 }
 
+static void applyPreGrasp(moveit::core::RobotState& state, const moveit::core::JointModelGroup* jmg,
+                          const Property& diff_property) {
+	try {
+		// try named joint pose
+		const std::string& diff_state_name{ boost::any_cast<std::string>(diff_property.value()) };
+		if (!state.setToDefaultValues(jmg, diff_state_name)) {
+			throw moveit::Exception{ "unknown state '" + diff_state_name + "'" };
+		}
+		return;
+	} catch (const boost::bad_any_cast&) {
+	}
+
+	try {
+		// try RobotState
+		const moveit_msgs::RobotState& robot_state_msg = boost::any_cast<moveit_msgs::RobotState>(diff_property.value());
+		// might throw on invalid message
+		robotStateMsgToRobotState(robot_state_msg, state);
+		return;
+	} catch (const boost::bad_any_cast&) {
+	}
+
+	throw moveit::Exception{ "no named pose or RobotState message" };
+}
+
 void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	InitStageException errors;
 	try {
@@ -77,44 +101,20 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	props.get<std::string>("object");
 	// check availability of eef
 	const std::string& eef = props.get<std::string>("eef");
-	if (!robot_model->hasEndEffector(eef))
+	if (!robot_model->hasEndEffector(eef)) {
 		errors.push_back(*this, "unknown end effector: " + eef);
-	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-
-		try {
-			// try named joint pose
-			const std::string& name = props.get<std::string>("pregrasp");
-			std::map<std::string, double> m;
-			if (!jmg->getVariableDefaultPositions(name, m))
-				errors.push_back(*this, "unknown end effector pose: " + name);
-			if (errors)
-				throw errors;
-			return;
-		} catch (const boost::bad_any_cast&) {
-		}
-		try {
-			// try RobotState
-			const moveit_msgs::RobotState& msg = props.get<moveit_msgs::RobotState>("pregrasp");
-			if (!msg.is_diff)
-				throw InitStageException(*this, "Expecting a diff state");
-
-			// validate specified joints
-			const auto& accepted = jmg->getJointModelNames();
-			for (const auto& name : msg.joint_state.name)
-				if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
-					errors.push_back(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
-			for (const auto& name : msg.multi_dof_joint_state.joint_names)
-				if (std::find(accepted.begin(), accepted.end(), name) == accepted.end())
-					errors.push_back(*this, "Joint '" + name + "' is not part of group '" + jmg->getName() + "'");
-			if (errors)
-				throw errors;
-			return;
-		} catch (const boost::bad_any_cast&) {
-		}
-		errors.push_back(*this, "pregrasp invalid data type");
+		throw errors;
 	}
+
+	// check availability of eef pose
+	const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+	moveit::core::RobotState test_state{ robot_model };
+	try {
+		applyPreGrasp(test_state, jmg, props.property("pregrasp"));
+	} catch (const moveit::Exception& e) {
+		errors.push_back(*this, std::string{ "invalid pregrasp: " } + e.what());
+	}
+
 	if (errors)
 		throw errors;
 }
@@ -152,15 +152,12 @@ void GenerateGraspPose::compute() {
 
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
 	try {
-		// try named joint pose
-		robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
-	} catch (const boost::bad_any_cast&) {
-	}
-	try {
-		// try RobotState
-		const moveit_msgs::RobotState& robot_state_msg = props.get<moveit_msgs::RobotState>("pregrasp");
-		robotStateMsgToRobotState(robot_state_msg, robot_state);
-	} catch (const boost::bad_any_cast&) {
+		applyPreGrasp(robot_state, jmg, props.property("pregrasp"));
+	} catch (const moveit::Exception& e) {
+		SubTrajectory failure;
+		failure.markAsFailure(std::string{ "invalid pregrasp: " } + e.what());
+		spawn(InterfaceState{ scene }, std::move(failure));
+		return;
 	}
 
 	geometry_msgs::PoseStamped target_pose_msg;
