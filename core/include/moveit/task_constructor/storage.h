@@ -314,6 +314,12 @@ public:
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
+	static SubTrajectory failure(const std::string& msg) {
+		SubTrajectory s;
+		s.markAsFailure(msg);
+		return s;
+	}
+
 private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
