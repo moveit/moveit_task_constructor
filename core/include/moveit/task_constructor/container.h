@@ -55,7 +55,8 @@ public:
 	Stage* findChild(const std::string& name) const;
 
 	/** Callback function type used by traverse functions
-	 *  The callback should return false if traversal should be stopped. */
+	 *  Receives currently visited Stage and current depth in hierarchy
+	 *  If callback returns false, traversal is stopped. */
 	using StageCallback = std::function<bool(const Stage&, unsigned int)>;
 	/// traverse direct children of this container, calling the callback for each of them
 	bool traverseChildren(const StageCallback& processor) const;
