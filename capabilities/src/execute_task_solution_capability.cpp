@@ -100,8 +100,13 @@ void ExecuteTaskSolutionCapability::initialize() {
 
 void ExecuteTaskSolutionCapability::goalCallback(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
-	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
+	std::thread{ std::bind(&ExecuteTaskSolutionCapability::onGoalCallback, this, std::placeholders::_1), goal_handle }
+	    .detach();
+}
 
+void ExecuteTaskSolutionCapability::onGoalCallback(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
+	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
 	const auto& goal = goal_handle->get_goal();
 	if (!context_->plan_execution_) {
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::CONTROL_FAILED;

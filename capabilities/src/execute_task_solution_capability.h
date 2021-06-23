@@ -65,6 +65,8 @@ private:
 
 	void goalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
 
+	void onGoalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
+
 	rclcpp_action::CancelResponse
 	preemptCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
 

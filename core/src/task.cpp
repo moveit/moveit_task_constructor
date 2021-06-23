@@ -281,9 +281,10 @@ moveit_msgs::msg::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 	auto ac = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node, "execute_task_solution");
 	ac->wait_for_action_server();
+	auto impl = pimpl();
 
 	moveit_task_constructor_msgs::action::ExecuteTaskSolution::Goal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
+	s.fillMessage(goal.solution, impl->introspection_.get());
 	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
 
 	moveit_msgs::msg::MoveItErrorCodes error_code;
@@ -301,9 +302,17 @@ moveit_msgs::msg::MoveItErrorCodes Task::execute(const SolutionBase& s) {
 	}
 
 	auto result_future = ac->async_get_result(goal_handle);
-	if (rclcpp::spin_until_future_complete(node, result_future) != rclcpp::FutureReturnCode::SUCCESS) {
-		RCLCPP_ERROR(node->get_logger(), "Get result call failed");
-		return error_code;
+	while (result_future.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
+		if (impl->preempt_requested_) {
+			auto cancel_future = ac->async_cancel_goal(goal_handle);
+			if (rclcpp::spin_until_future_complete(node, cancel_future) != rclcpp::FutureReturnCode::SUCCESS) {
+				RCLCPP_ERROR(node->get_logger(), "Could not preempt execution");
+				return error_code;
+			} else {
+				error_code.val = moveit_msgs::msg::MoveItErrorCodes::PREEMPTED;
+				return error_code;
+			}
+		}
 	}
 
 	auto result = result_future.get();
