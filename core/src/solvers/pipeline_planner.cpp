@@ -172,10 +172,9 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
 	// optionally compute timing to move the eef with constant speed
-	if (req.max_cartesian_speed > 0.0)
-	{
-	trajectory_processing::setMaxCartesianEndEffectorSpeed(*result, req.max_cartesian_speed,
-															req.cartesian_speed_end_effector_link);
+	if (req.max_cartesian_speed > 0.0) {
+		trajectory_processing::setMaxCartesianEndEffectorSpeed(*result, req.max_cartesian_speed,
+		                                                       req.cartesian_speed_end_effector_link);
 	}
 	return success;
 }
@@ -202,10 +201,9 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
 	// optionally compute timing to move the eef with constant speed
-	if (req.max_cartesian_speed > 0.0)
-	{
-	trajectory_processing::setMaxCartesianEndEffectorSpeed(*result, req.max_cartesian_speed,
-															req.cartesian_speed_end_effector_link);
+	if (req.max_cartesian_speed > 0.0) {
+		trajectory_processing::setMaxCartesianEndEffectorSpeed(*result, req.max_cartesian_speed,
+		                                                       req.cartesian_speed_end_effector_link);
 	}
 	return success;
 }

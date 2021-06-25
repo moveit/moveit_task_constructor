@@ -47,7 +47,8 @@ PlannerInterface::PlannerInterface() {
 	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
 	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 	p.declare<double>("max_cartesian_speed", 0.0, "maximum cartesian end-effector speed");
-	p.declare<std::string>("cartesian_speed_end_effector_link", "end_effector_link", "end-effector link with limited the velocity");
+	p.declare<std::string>("cartesian_speed_end_effector_link", "end_effector_link",
+	                       "end-effector link with limited the velocity");
 }
 }  // namespace solvers
 }  // namespace task_constructor
