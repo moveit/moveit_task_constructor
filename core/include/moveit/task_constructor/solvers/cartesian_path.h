@@ -59,6 +59,11 @@ public:
 	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
 	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
 
+	void setMaxCartesianSpeed(double max) { setProperty("max_cartesian_speed", max); }
+	void setCartesianSpeedLimitedLink(std::string limited_link) {
+		setProperty("cartesian_speed_limited_link", limited_link);
+	}
+
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,

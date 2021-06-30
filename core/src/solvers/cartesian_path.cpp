@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/cartesian_speed.h>
 #if MOVEIT_MASTER
 #include <moveit/robot_state/cartesian_interpolator.h>
 #endif
@@ -105,9 +106,22 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 		for (const auto& waypoint : trajectory)
 			result->addSuffixWayPoint(waypoint, 0.0);
 
-		trajectory_processing::IterativeParabolicTimeParameterization timing;
-		timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-		                         props.get<double>("max_acceleration_scaling_factor"));
+		// optionally compute timing to move the eef with constant speed
+		if (props.get<double>("max_cartesian_speed") > 0.0) {
+			if (trajectory_processing::limitMaxCartesianLinkSpeed(
+			        *result, props.get<double>("max_cartesian_speed"),
+			        props.get<std::string>("cartesian_speed_limited_link"))) {
+				ROS_INFO_STREAM("successfully set max " << props.get<double>("max_cartesian_speed") << " [m/s] for link "
+				                                        << props.get<std::string>("cartesian_speed_limited_link"));
+			} else {
+				ROS_ERROR_STREAM("failed to set max speed for link_ "
+				                 << props.get<std::string>("cartesian_speed_limited_link"));
+			}
+		} else {
+			trajectory_processing::IterativeParabolicTimeParameterization timing;
+			timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+			                         props.get<double>("max_acceleration_scaling_factor"));
+		}
 	}
 
 	return achieved_fraction >= props.get<double>("min_fraction");
