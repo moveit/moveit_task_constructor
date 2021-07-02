@@ -196,7 +196,7 @@ protected:
 	Container container;
 	InterfacePtr dummy;
 
-	InitTest() : ::testing::Test(), dummy(new Interface) {}
+	InitTest() : ::testing::Test{}, robot_model{ getModel() }, dummy{ new Interface } {}
 
 	void pushInterface(bool start = true, bool end = true) {
 		// pretend, that the container is connected
