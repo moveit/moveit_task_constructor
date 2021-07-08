@@ -725,13 +725,13 @@ TEST(Fallback, ActiveChildReset) {
 	Task t;
 	t.setRobotModel(getModel());
 
-	t.add(std::make_unique<GeneratorMockup>(std::initializer_list<double>({ 0.0, 0.0 })));
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 0.0, INF, 0.0 } }));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ForwardMockup>(std::initializer_list<double>({ INF, 0.0 })));
-	fallbacks->add(std::make_unique<ForwardMockup>(std::initializer_list<double>({ 0.0, INF })));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
 	t.add(std::move(fallbacks));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_EQ(t.numSolutions(), 2u);
+	EXPECT_EQ(t.numSolutions(), 4u);
 }
