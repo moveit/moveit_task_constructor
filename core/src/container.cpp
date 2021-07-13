@@ -819,6 +819,9 @@ bool Fallbacks::canCompute() const {
 		if (child->canCompute())
 			return true;
 
+		if (!Stage::solutions().empty())
+			return false;  // we are done as soon as a child has found solutions
+
 		// active child failed, continue with next
 		auto next = child->it();
 		++next;
