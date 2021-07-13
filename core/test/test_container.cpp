@@ -730,8 +730,10 @@ TEST(Fallback, ActiveChildReset) {
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
+	auto first = fallbacks->findChild("FWD1");
 	t.add(std::move(fallbacks));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_EQ(t.numSolutions(), 4u);
+	EXPECT_EQ(t.numSolutions(), 2u);
+	EXPECT_EQ(first->solutions().size(), 2u);
 }
