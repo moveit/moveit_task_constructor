@@ -87,6 +87,8 @@ namespace move_group {
 ExecuteTaskSolutionCapability::ExecuteTaskSolutionCapability() : MoveGroupCapability("ExecuteTaskSolution") {}
 
 void ExecuteTaskSolutionCapability::initialize() {
+	action_callback_group_ =
+	    context_->moveit_cpp_->getNode()->create_callback_group(rclcpp::CallbackGroupType::Reentrant);
 	// configure the action server
 	as_ = rclcpp_action::create_server<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    context_->moveit_cpp_->getNode(), "execute_task_solution",
@@ -95,18 +97,14 @@ void ExecuteTaskSolutionCapability::initialize() {
 	    ActionServerType::CancelCallback(
 	        std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this, std::placeholders::_1)),
 	    ActionServerType::AcceptedCallback(
-	        std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1)));
+	        std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1)),
+	    rcl_action_server_get_default_options(), action_callback_group_);
 }
 
 void ExecuteTaskSolutionCapability::goalCallback(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
-	std::thread{ std::bind(&ExecuteTaskSolutionCapability::onGoalCallback, this, std::placeholders::_1), goal_handle }
-	    .detach();
-}
-
-void ExecuteTaskSolutionCapability::onGoalCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
 	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
+
 	const auto& goal = goal_handle->get_goal();
 	if (!context_->plan_execution_) {
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::CONTROL_FAILED;

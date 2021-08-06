@@ -65,8 +65,6 @@ private:
 
 	void goalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
 
-	void onGoalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
-
 	rclcpp_action::CancelResponse
 	preemptCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
 
@@ -77,6 +75,7 @@ private:
 	}
 
 	ActionServerType::SharedPtr as_;
+	rclcpp::CallbackGroup::SharedPtr action_callback_group_;
 };
 
 }  // namespace move_group
