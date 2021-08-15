@@ -671,7 +671,7 @@ TEST(Task, timeout) {
 	EXPECT_EQ(t.solutions().size(), 2u);
 }
 
-TEST(Fallback, failing) {
+TEST(Fallback, failingNoSolutions) {
 	resetMockupIds();
 	Task t;
 	t.setRobotModel(getModel());
@@ -681,6 +681,22 @@ TEST(Fallback, failing) {
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0), 0));
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0), 0));
+	t.add(std::move(fallback));
+
+	EXPECT_FALSE(t.plan());
+	EXPECT_EQ(t.solutions().size(), 0u);
+}
+
+TEST(Fallback, failingWithFailedSolutions) {
+	resetMockupIds();
+	Task t;
+	t.setRobotModel(getModel());
+
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(INF)));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(INF)));
 	t.add(std::move(fallback));
 
 	EXPECT_FALSE(t.plan());
