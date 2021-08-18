@@ -55,6 +55,24 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
+TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
+	t.add(std::make_unique<GeneratorMockup>(std::list<double>{ 0.0, 1.0 }));
+
+	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
+	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 0.0 }));
+	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ 0.0, INF }));
+	auto fwd1 = fallbacks->findChild("FWD1");
+	auto fwd2 = fallbacks->findChild("FWD2");
+	t.add(std::move(fallbacks));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_EQ(t.numSolutions(), 2u);
+	ASSERT_EQ(fwd1->solutions().size(), 1u);
+	EXPECT_EQ(fwd1->solutions().front()->cost(), 1.0);
+	ASSERT_EQ(fwd2->solutions().size(), 1u);
+	EXPECT_EQ(fwd2->solutions().front()->cost(), 0.0);
+}
+
 TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 0.0, INF, 0.0 } }));
 
