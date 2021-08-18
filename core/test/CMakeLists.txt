@@ -18,6 +18,9 @@ if (CATKIN_ENABLE_TESTING)
 	catkin_add_gtest(${PROJECT_NAME}-test-serial test_serial.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-serial ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
 
+	catkin_add_gtest(${PROJECT_NAME}-test-fallback test_fallback.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-fallback ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
+
 	catkin_add_gtest(${PROJECT_NAME}-test-properties test_properties.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-properties ${PROJECT_NAME} gtest_main)
 
