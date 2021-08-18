@@ -17,18 +17,9 @@ using namespace moveit::task_constructor;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
-struct TestBase : public testing::Test
-{
-	Task t;
-	TestBase() {
-		resetMockupIds();
-		t.setRobotModel(getModel());
-	}
-};
+using FallbacksFixturePropagate = TaskTestBase;
 
-using FallbacksFixture = TestBase;
-
-TEST_F(FallbacksFixture, failingNoSolutions) {
+TEST_F(FallbacksFixturePropagate, failingNoSolutions) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -40,7 +31,7 @@ TEST_F(FallbacksFixture, failingNoSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixture, failingWithFailedSolutions) {
+TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -52,20 +43,7 @@ TEST_F(FallbacksFixture, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixture, DISABLED_ConnectStageInsideFallbacks) {
-	t.add(std::make_unique<GeneratorMockup>());
-
-	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ConnectMockup>());
-	t.add(std::move(fallbacks));
-
-	t.add(std::make_unique<GeneratorMockup>());
-
-	EXPECT_TRUE(t.plan());
-	EXPECT_EQ(t.numSolutions(), 1u);
-}
-
-TEST_F(FallbacksFixture, ComputeFirstSuccessfulStageOnly) {
+TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -77,7 +55,7 @@ TEST_F(FallbacksFixture, ComputeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST_F(FallbacksFixture, ActiveChildReset) {
+TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 0.0, INF, 0.0 } }));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -89,4 +67,19 @@ TEST_F(FallbacksFixture, ActiveChildReset) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.numSolutions(), 2u);
 	EXPECT_EQ(first->solutions().size(), 2u);
+}
+
+using FallbacksFixtureConnect = TaskTestBase;
+
+TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
+	fallbacks->add(std::make_unique<ConnectMockup>());
+	t.add(std::move(fallbacks));
+
+	t.add(std::make_unique<GeneratorMockup>());
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_EQ(t.numSolutions(), 1u);
 }
