@@ -57,6 +57,19 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 1.0 }, 2));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
+	t.add(std::move(fallback));
+
+	EXPECT_TRUE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 1u);
+	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
+}
+
 TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
