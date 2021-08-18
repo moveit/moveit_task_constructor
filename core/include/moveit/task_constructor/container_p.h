@@ -227,10 +227,13 @@ public:
 protected:
 	void validateInterfaces(const StagePrivate& child, InterfaceFlags& external, bool first = false) const;
 
-private:
 	/// callback for new externally received states
 	template <typename Interface::Direction>
-	void onNewExternalState(Interface::iterator external, bool updated);
+	void propagateStateToChildren(Interface::iterator external, bool updated);
+
+private:
+	// override for custom behavior on received interface states
+	virtual void initializeExternalInterfaces(InterfaceFlags expected);
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 

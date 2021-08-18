@@ -678,17 +678,21 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	if (exceptions)
 		throw exceptions;
 
+	initializeExternalInterfaces(expected);
+
+	required_interface_ = expected;
+}
+
+void ParallelContainerBasePrivate::initializeExternalInterfaces(InterfaceFlags expected) {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (expected & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState<Interface::FORWARD>(external, updated);
+		   this->propagateStateToChildren<Interface::FORWARD>(external, updated);
 		}));
 	if (expected & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
-			this->onNewExternalState<Interface::BACKWARD>(external, updated);
+		   this->propagateStateToChildren<Interface::BACKWARD>(external, updated);
 		}));
-
-	required_interface_ = expected;
 }
 
 void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child, InterfaceFlags& external,
@@ -723,7 +727,7 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, bool updated) {
+void ParallelContainerBasePrivate::propagateStateToChildren(Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
 		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
 }
