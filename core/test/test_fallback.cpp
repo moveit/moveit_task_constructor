@@ -17,6 +17,20 @@ using namespace moveit::task_constructor;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
+using FallbacksFixtureGenerator = TaskTestBase;
+
+TEST_F(FallbacksFixtureGenerator, stayWithFirstSuccessful) {
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(INF)));
+	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(1.0)));
+	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(2.0)));
+	t.add(std::move(fallback));
+
+	EXPECT_TRUE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 1u);
+	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
+}
+
 using FallbacksFixturePropagate = TaskTestBase;
 
 TEST_F(FallbacksFixturePropagate, failingNoSolutions) {
@@ -89,7 +103,7 @@ TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
 
 using FallbacksFixtureConnect = TaskTestBase;
 
-TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
+TEST_F(FallbacksFixtureConnect, ConnectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
