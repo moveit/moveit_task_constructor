@@ -17,11 +17,18 @@ using namespace moveit::task_constructor;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
-TEST(Fallback, failingNoSolutions) {
-	resetMockupIds();
+struct TestBase : public testing::Test
+{
 	Task t;
-	t.setRobotModel(getModel());
+	TestBase() {
+		resetMockupIds();
+		t.setRobotModel(getModel());
+	}
+};
 
+using FallbacksFixture = TestBase;
+
+TEST_F(FallbacksFixture, failingNoSolutions) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -33,11 +40,7 @@ TEST(Fallback, failingNoSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST(Fallback, failingWithFailedSolutions) {
-	resetMockupIds();
-	Task t;
-	t.setRobotModel(getModel());
-
+TEST_F(FallbacksFixture, failingWithFailedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -49,11 +52,7 @@ TEST(Fallback, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST(Fallback, DISABLED_ConnectStageInsideFallbacks) {
-	resetMockupIds();
-	Task t;
-	t.setRobotModel(getModel());
-
+TEST_F(FallbacksFixture, DISABLED_ConnectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -66,11 +65,7 @@ TEST(Fallback, DISABLED_ConnectStageInsideFallbacks) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST(Fallback, ComputeFirstSuccessfulStageOnly) {
-	resetMockupIds();
-	Task t;
-	t.setRobotModel(getModel());
-
+TEST_F(FallbacksFixture, ComputeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -82,11 +77,7 @@ TEST(Fallback, ComputeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST(Fallback, ActiveChildReset) {
-	resetMockupIds();
-	Task t;
-	t.setRobotModel(getModel());
-
+TEST_F(FallbacksFixture, ActiveChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 0.0, INF, 0.0 } }));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
