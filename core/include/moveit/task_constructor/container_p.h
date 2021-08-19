@@ -131,7 +131,7 @@ public:
 	inline const auto& externalToInternalMap() const { return internal_external_.by<EXTERNAL>(); }
 
 	/// called by a (direct) child when a solution failed
-	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to);
+	virtual void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to);
 
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
@@ -155,6 +155,8 @@ protected:
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
 	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
+	/// non-template version
+	void copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target, bool updated);
 	/// lift solution from internal to external level
 	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
 	                  const InterfaceState* internal_to);
@@ -236,6 +238,37 @@ private:
 	virtual void initializeExternalInterfaces(InterfaceFlags expected);
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
+
+class FallbacksPrivate : public ParallelContainerBasePrivate
+{
+	friend class Fallbacks;
+
+public:
+	FallbacksPrivate(Fallbacks* me, const std::string& name);
+
+protected:
+	void computeFromExternal();
+	void computeGenerate();
+
+	struct ExternalState
+	{
+		ExternalState(Interface::iterator e, Interface::Direction d, container_type::const_iterator c)
+		  : external_state(e), dir(d), stage(c) {}
+
+		Interface::iterator external_state;
+		Interface::Direction dir;
+		container_type::const_iterator stage;
+	};
+	std::deque<ExternalState> pending_states_;
+	container_type::const_iterator current_generator_;
+
+private:
+	void initializeExternalInterfaces(InterfaceFlags expected) override;
+	template <typename Interface::Direction>
+	void onNewExternalState(Interface::iterator external, bool updated);
+	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+};
+PIMPL_FUNCTIONS(Fallbacks)
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate
 {

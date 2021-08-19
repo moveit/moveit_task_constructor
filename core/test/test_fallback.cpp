@@ -17,7 +17,7 @@ using namespace moveit::task_constructor;
 
 using FallbacksFixtureGenerator = TaskTestBase;
 
-TEST_F(FallbacksFixtureGenerator, DISABLED_stayWithFirstSuccessful) {
+TEST_F(FallbacksFixtureGenerator, stayWithFirstSuccessful) {
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(INF)));
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(1.0)));
@@ -55,7 +55,7 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStageOnly) {
+TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -117,7 +117,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
 	// check that first solution is not marked as pruned
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -129,7 +129,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -141,7 +141,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ActiveChildReset) {
+TEST_F(FallbacksFixturePropagate, activeChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, INF, 3.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");

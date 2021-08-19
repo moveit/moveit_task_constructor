@@ -209,6 +209,14 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
 }
 
+void ContainerBasePrivate::copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target,
+                                     bool updated) {
+	if (dir == Interface::FORWARD)
+		copyState<Interface::FORWARD>(external, target, updated);
+	else
+		copyState<Interface::BACKWARD>(external, target, updated);
+}
+
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
                                         const InterfaceState* internal_to) {
 	computeCost(*internal_from, *internal_to, *solution);
@@ -800,42 +808,140 @@ void Alternatives::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
 }
 
+Fallbacks::Fallbacks(const std::string& name) : Fallbacks(new FallbacksPrivate(this, name)) {}
+
+Fallbacks::Fallbacks(FallbacksPrivate* impl) : ParallelContainerBase(impl) {}
+
 void Fallbacks::reset() {
-	active_child_ = nullptr;
 	ParallelContainerBase::reset();
 }
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ParallelContainerBase::init(robot_model);
-	active_child_ = pimpl()->children().front().get();
 }
 
 bool Fallbacks::canCompute() const {
-	while (active_child_) {
-		StagePrivate* child = active_child_->pimpl();
-		if (child->canCompute())
-			return true;
+	auto impl { pimpl() };
 
-		// active child failed, continue with next
-		auto next = child->it();
-		++next;
-		if (next == pimpl()->children().end())
-			active_child_ = nullptr;
+	if (impl->requiredInterface() == GENERATE) {
+		// current_generator_ is fixed if it produced solutions before
+		if( !solutions().empty() )
+			return (*impl->current_generator_)->pimpl()->canCompute();
 		else
-			active_child_ = next->get();
+			// we still have children to try
+			return impl->current_generator_ != impl->children().end();
 	}
-	return false;
+	else
+		return !pimpl()->pending_states_.empty();
 }
 
 void Fallbacks::compute() {
-	if (!active_child_)
-		return;
+	auto impl { pimpl() };
 
-	active_child_->pimpl()->runCompute();
+	if(impl->requiredInterface() == GENERATE)
+		impl->computeGenerate();
+	else
+		impl->computeFromExternal();
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
+}
+
+FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
+   : ParallelContainerBasePrivate(me, name) {}
+
+void FallbacksPrivate::initializeExternalInterfaces(InterfaceFlags expected) {
+	if (expected & READS_START)
+		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+		   this->onNewExternalState<Interface::FORWARD>(external, updated);
+		}));
+	if (expected & READS_END)
+		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+		   this->onNewExternalState<Interface::BACKWARD>(external, updated);
+		}));
+
+	// we've got to set this somewhere once the interface flags are known.
+	// so we might as well do it here
+	if(expected == GENERATE)
+		current_generator_ = children().begin();
+}
+
+void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	// only react to failure if it's the last possible candidate failing
+	// otherwise there might still be a feasible solution
+	if(&child == &*children().back())
+		ContainerBasePrivate::onNewFailure(child, from, to);
+}
+
+void FallbacksPrivate::computeGenerate() {
+	if(solutions_.empty())
+		// move to first generator that can run
+		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute())
+			++current_generator_;
+
+	if(current_generator_ == children().end())
+		return;
+
+	// run ALL possible computations (on new state)
+	// this is needed to decide whether it should be passed to the next child too
+	while ((*current_generator_)->pimpl()->canCompute()){
+		(*current_generator_)->pimpl()->runCompute();
+	}
+}
+
+template <typename Interface::Direction dir>
+void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool updated) {
+	// TODO(v4hn): updated is not implemented
+	if(updated){
+		ROS_DEBUG_NAMED("Fallback", "updating external states is not supported in Fallbacks");
+		return;
+	}
+
+	pending_states_.push_back(ExternalState(external, dir, children().begin()));
+}
+
+void FallbacksPrivate::computeFromExternal(){
+	assert(!pending_states_.empty());
+	auto spec { pending_states_.front() };
+
+	pending_states_.pop_front();
+
+	ROS_DEBUG_STREAM_NAMED("Fallback", "Push external state to '" << (*spec.stage)->name() << "'");
+	// feed a new state
+	copyState(spec.dir,
+	          spec.external_state,
+	          (*spec.stage)->pimpl()->pullInterface(spec.dir),
+	          false);
+
+	const auto& stage { (*spec.stage)->pimpl() };
+
+	try {
+		// run ALL possible computations (on new state)
+		// this is needed to decide whether it should be passed to the next child too
+		while (stage->canCompute()){
+			stage->runCompute();
+		}
+	} catch (const Property::error& e) {
+		stage->me()->reportPropertyError(e);
+	}
+
+	auto has_solutions{ [](const InterfaceState& state, Interface::Direction dir){
+			return dir == Interface::FORWARD
+			      ? !state.outgoingTrajectories().empty()
+			      : !state.incomingTrajectories().empty();
+		} };
+
+	if(!has_solutions(*spec.external_state, spec.dir)){
+		ROS_DEBUG_STREAM_NAMED("Fallback", "Child '" << (*spec.stage)->name() << "' failed to generate a solution, schedule state with next child (if any)");
+		if(++spec.stage != children().cend())
+			pending_states_.push_back(spec);
+		else
+			// prune solution path if there is no way to extend external_state through Fallbacks
+			ContainerBasePrivate::onNewFailure(*children().back(),
+			                                   spec.dir == Interface::FORWARD ? &*spec.external_state : nullptr,
+			                                   spec.dir == Interface::BACKWARD ? nullptr : &*spec.external_state);
+	}
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
