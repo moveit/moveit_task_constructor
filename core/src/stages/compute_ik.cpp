@@ -405,7 +405,7 @@ void ComputeIK::compute() {
 
 			// set scene's robot state
 			robot_state::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
-			solution_state.setJointGroupPositions(jmg, ik_solutions.back().data());
+			solution_state.setJointGroupPositions(jmg, ik_solutions[i].data());
 			solution_state.update();
 
 			InterfaceState state(solution_scene);
