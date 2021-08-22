@@ -37,7 +37,9 @@
 #include <moveit/task_constructor/stages/generate_place_pose.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
+
 #include <rviz_marker_tools/marker_creation.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/robot_state/attached_body.h>
@@ -63,7 +65,7 @@ void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
 	std::string msg;
 	if (!scene->getCurrentState().hasAttachedBody(object))
 		msg = "'" + object + "' is not an attached object";
-	if (scene->getCurrentState().getAttachedBody(object)->getFixedTransforms().empty())
+	if (scene->getCurrentState().getAttachedBody(object)->getShapes().empty())
 		msg = "'" + object + "' has no associated shapes";
 	if (!msg.empty()) {
 		if (storeFailures()) {

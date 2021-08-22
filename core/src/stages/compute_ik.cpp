@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
+#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -295,7 +296,12 @@ void ComputeIK::compute() {
 				ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
 				return;
 			}
-			const EigenSTL::vector_Isometry3d& tf = attached->getFixedTransforms();
+			const EigenSTL::vector_Isometry3d& tf =
+#if MOVEIT_HAS_OBJECT_POSE
+			    attached->getShapePosesInLinkFrame();
+#else
+			    attached->getFixedTransforms();
+#endif
 			if (tf.empty()) {
 				ROS_WARN_STREAM_NAMED("ComputeIK", "Attached body doesn't have shapes.");
 				return;

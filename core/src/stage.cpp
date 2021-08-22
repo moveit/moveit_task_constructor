@@ -38,6 +38,8 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <ros/console.h>
@@ -811,14 +813,23 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
+		const std::string& from_object_name = from_object_pair.first;
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
-		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_pair.first);
+		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_name);
 		if (!to_object) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object_pair.first);
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object_name);
 			return false;
 		}
+
+#if MOVEIT_HAS_OBJECT_POSE
+		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4)) {
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_name);
+			return false;  // transforms do not match
+		}
+#endif
+
 		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object_pair.first);
+			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object_name);
 			return false;  // shapes not matching
 		}
 
@@ -826,7 +837,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		          to_it = to_object->shape_poses_.cbegin();
 		     from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_pair.first);
+				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different shape pose: " << from_object_name);
 				return false;  // transforms do not match
 			}
 	}
@@ -857,16 +868,24 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 			                                            << to_object->getAttachedLinkName());
 			return false;  // links not matching
 		}
-		if (from_object->getFixedTransforms().size() != to_object->getFixedTransforms().size()) {
+		if (from_object->getShapes().size() != to_object->getShapes().size()) {
 			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object->getName());
 			return false;  // shapes not matching
 		}
 
-		for (auto from_it = from_object->getFixedTransforms().cbegin(),
-		          from_end = from_object->getFixedTransforms().cend(), to_it = to_object->getFixedTransforms().cbegin();
-		     from_it != from_end; ++from_it, ++to_it)
+#if MOVEIT_HAS_OBJECT_POSE
+		auto from_it = from_object->getShapePosesInLinkFrame().cbegin();
+		auto from_end = from_object->getShapePosesInLinkFrame().cend();
+		auto to_it = to_object->getShapePosesInLinkFrame().cbegin();
+#else
+		auto from_it = from_object->getFixedTransforms().cbegin();
+		auto from_end = from_object->getFixedTransforms().cend();
+		auto to_it = to_object->getFixedTransforms().cbegin();
+#endif
+		for (; from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object->getName());
+				ROS_DEBUG_STREAM_NAMED("Connecting",
+				                       name() << ": different pose of attached object shape: " << from_object->getName());
 				return false;  // transforms do not match
 			}
 	}
