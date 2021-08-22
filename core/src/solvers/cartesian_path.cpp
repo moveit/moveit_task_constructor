@@ -37,9 +37,11 @@
 */
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 #include <moveit/robot_state/cartesian_interpolator.h>
 #endif
 
@@ -89,7 +91,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),

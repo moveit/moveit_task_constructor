@@ -36,11 +36,11 @@
 
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/stage.h>
-
-#include <moveit/robot_trajectory/robot_trajectory.h>
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/collision_detection/collision_common.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <Eigen/Geometry>
 
@@ -196,14 +196,14 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	auto check_distance{ [=](const InterfaceState* state, const moveit::core::RobotState& robot) {
 		collision_detection::DistanceResult result;
 		if (with_world)
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_COLLISION_ENV
 			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);
 #else
 			state->scene()->getCollisionWorld()->distanceRobot(request, result, *state->scene()->getCollisionRobot(),
 			                                                   robot);
 #endif
 		else
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_COLLISION_ENV
 			state->scene()->getCollisionEnv()->distanceSelf(request, result, robot);
 #else
 			state->scene()->getCollisionRobot()->distanceSelf(request, result, robot);

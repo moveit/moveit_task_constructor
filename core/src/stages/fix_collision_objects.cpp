@@ -37,8 +37,9 @@
 */
 
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
-
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/task_constructor/cost_terms.h>
 
@@ -116,7 +117,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	bool failure = false;
 	while (!failure) {
 		res.clear();
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_COLLISION_ENV
 		scene.getCollisionEnv()->checkRobotCollision(req, res, scene.getCurrentState(),
 		                                             scene.getAllowedCollisionMatrix());
 #else
