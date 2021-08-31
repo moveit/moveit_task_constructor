@@ -57,25 +57,57 @@ void export_solvers(py::module& m) {
 	    .def_property_readonly("properties", py::overload_cast<>(&PlannerInterface::properties),
 	                           py::return_value_policy::reference_internal);
 
-	properties::class_<PipelinePlanner, PlannerInterface>(m, "PipelinePlanner")
-	    .property<std::string>("planner")
-	    .property<uint>("num_planning_attempts")
-	    .property<moveit_msgs::WorkspaceParameters>("workspace_parameters")
-	    .property<double>("goal_joint_tolerance")
-	    .property<double>("goal_position_tolerance")
-	    .property<double>("goal_orientation_tolerance")
-	    .property<bool>("display_motion_plans")
-	    .property<bool>("publish_planning_requests")
+	properties::class_<PipelinePlanner, PlannerInterface>(m, "PipelinePlanner", R"pbdoc(
+			Use MoveIt's PlanningPipeline to plan a trajectory between to scenes.
+		)pbdoc")
+	    .property<std::string>("planner", R"pbdoc(
+			str: Planner ID.
+		)pbdoc")
+	    .property<uint>("num_planning_attempts", R"pbdoc(
+			uint: Number of planning attempts.
+		)pbdoc")
+	    .property<moveit_msgs::WorkspaceParameters>("workspace_parameters", R"pbdoc(
+				moveit_msgs::WorkspaceParameters: Workspace_parameters.
+		)pbdoc")
+	    .property<double>("goal_joint_tolerance", R"pbdoc(
+			double: Tolerance for reaching joint goals.
+		)pbdoc")
+	    .property<double>("goal_position_tolerance", R"pbdoc(
+			double: Tolerance for reaching position goals.
+		)pbdoc")
+	    .property<double>("goal_orientation_tolerance", R"pbdoc(
+			double: Tolerance for reaching orientation goals.
+		)pbdoc")
+	    .property<bool>("display_motion_plans", R"pbdoc(
+			bool: Publish generated solutions via a topic.
+		)pbdoc")
+	    .property<bool>("publish_planning_requests", R"pbdoc(
+			bool: Publish motion planning requests via a topic.
+		)pbdoc")
 	    .def(py::init<>());
 
-	properties::class_<JointInterpolationPlanner, PlannerInterface>(m, "JointInterpolationPlanner")
-	    .property<double>("max_step")
+	properties::class_<JointInterpolationPlanner, PlannerInterface>(m, "JointInterpolationPlanner", R"pbdoc(
+			Interpolate a trajectory between states in joint space.
+			Fails if direct joint space interpolation fails.
+		)pbdoc")
+	    .property<double>("max_step", R"pbdoc(
+			double: Maximum joint step.
+		)pbdoc")
 	    .def(py::init<>());
 
-	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath")
-	    .property<double>("step_size")
-	    .property<double>("jump_threshold")
-	    .property<double>("min_fraction")
+	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath", R"pbdoc(
+			Use MoveIt's computeCartesianPath() to
+			generate a straigh-line path between two scenes.
+		)pbdoc")
+	    .property<double>("step_size", R"pbdoc(
+			double: Step size between consecutive waypoints.
+		)pbdoc")
+	    .property<double>("jump_threshold", R"pbdoc(
+			double: Acceptable fraction of mean joint motion per step.
+		)pbdoc")
+	    .property<double>("min_fraction", R"pbdoc(
+			double: Fraction of motion required for success.
+		)pbdoc")
 	    .def(py::init<>());
 }
 }  // namespace python

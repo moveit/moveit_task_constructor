@@ -172,8 +172,8 @@ void export_core(pybind11::module& m) {
 	auto either_way = py::classh<PropagatingEitherWay, Stage, PyPropagatingEitherWay<>>(m, "PropagatingEitherWay")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingEitherWay"))
 		.def("restrictDirection", &PropagatingEitherWay::restrictDirection)
-		.def("computeForward", &PropagatingEitherWay::computeForward)
-		.def("computeBackward", &PropagatingEitherWay::computeBackward)
+		.def("computeForward", &PropagatingEitherWay::computeForward, "compute forward")
+		.def("computeBackward", &PropagatingEitherWay::computeBackward, "compute backward")
 		//.def("sendForward", &PropagatingEitherWay::sendForward)
 		//.def("sendBackward", &PropagatingEitherWay::sendBackward)
 		;
@@ -199,7 +199,7 @@ void export_core(pybind11::module& m) {
 
 	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
-		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage)
+		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage, "Set the reference to the Monitored Stage.")
 		.def("_onNewSolution", &PubMonitoringGenerator::onNewSolution)
 		;
 
@@ -226,8 +226,16 @@ void export_core(pybind11::module& m) {
 
 	py::classh<ParallelContainerBase, ContainerBase>(m, "ParallelContainerBase");
 
-	py::classh<Alternatives, ParallelContainerBase>(m, "Alternatives")
-		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"));
+	py::classh<Alternatives, ParallelContainerBase>(m, "Alternatives", R"pbdoc(
+		Plan for different alternatives in parallel.
+		Solution of all children are reported - sorted by cost.
+
+	)pbdoc")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"), R"pbdoc(
+
+			Args:
+				Name (str): Name of the object
+		)pbdoc");
 
 	py::classh<Fallbacks, ParallelContainerBase>(m, "Fallbacks")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("fallbacks"));
@@ -237,15 +245,31 @@ void export_core(pybind11::module& m) {
 
 	py::classh<WrapperBase, ParallelContainerBase>(m, "WrapperBase");
 
-	py::classh<Task>(m, "Task")
+	py::classh<Task>(m, "Task", R"pbdoc(
+			A Task is the root of a tree of stages.
+
+			Implementation detail:
+			A tasks wraps a single container
+			(by default a SerialContainer),
+			which serves as the root of all stages.
+		)pbdoc")
 		.def(py::init<const std::string&, bool>(), py::arg("ns") = std::string(), py::arg("introspection") = true)
 		.def(py::init<const std::string&, bool, ContainerBase::pointer&&>(),
 		     py::arg("ns") = std::string(), py::arg("introspection") = true, py::arg("container"))
 		// read-only access to properties + solutions
-		.def_property_readonly("properties", py::overload_cast<>(&Task::properties))
-		.def_property_readonly("solutions", &Task::solutions)
-		.def_property_readonly("failures", &Task::failures)
-		.def_property("name", &Task::name, &Task::setName)
+		.def_property_readonly("properties", py::overload_cast<>(&Task::properties), R"pbdoc(
+			Access the property map of the task.
+		)pbdoc")
+		.def_property_readonly("solutions", &Task::solutions, R"pbdoc(
+			Access the solutions of the task, once the sub stage hierarchy has been
+			traversed and planned.
+		)pbdoc")
+		.def_property_readonly("failures", &Task::failures, R"pbdoc(
+			Inspect failures that occurred during the planning phase.
+		)pbdoc")
+		.def_property("name", &Task::name, &Task::setName, R"pbdoc(
+			Set the name property of the task.
+		)pbdoc")
 		.def("loadRobotModel", &Task::loadRobotModel)
 		.def("enableIntrospection", &Task::enableIntrospection, py::arg("enabled") = true)
 		.def("clear", &Task::clear)

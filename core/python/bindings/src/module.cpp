@@ -46,15 +46,24 @@ void export_stages(pybind11::module& m);
 }  // namespace moveit
 
 PYBIND11_MODULE(pymoveit_mtc, m) {
-	m.doc() = "MoveIt Task Constructor";
+	// pybind11::options options;
+	// options.show_user_defined_docstrings();
+	auto msub = m.def_submodule("core", "MoveIt Task Contructor Core");
+	msub.doc() = R"pbdoc(
+		Core components such as base types of stage-
+		and planner classes.
+	)pbdoc";
 
-	auto msub = m.def_submodule("core");
-	msub.doc() = "MTC core components";
 	moveit::python::export_properties(msub);
 	moveit::python::export_solvers(msub);
 	moveit::python::export_core(msub);
 
-	msub = m.def_submodule("stages");
-	msub.doc() = "MTC stages";
+	msub = m.def_submodule("stages", "MoveIt Task Constructor Stages");
+	msub.doc() = R"pbdoc(
+		Contains all stages that
+		are available to the user.
+ 		The arrangement of stages
+		define the task to be carried out.
+	)pbdoc";
 	moveit::python::export_stages(msub);
 }

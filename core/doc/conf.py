@@ -34,10 +34,20 @@ extensions = [
 
 autosummary_generate = True
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
-html_show_sourcelink = True  # Remove 'view source code' from top of page (for html, not python)
+# Remove 'view source code' from top of page (for html, not python)
+html_show_sourcelink = True
 autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
-set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
+# Enable 'expensive' imports for sphinx_autodoc_typehints
+set_type_checking_flag = True
 add_module_names = False
+
+# Look for the function signature in the first line of the docstring.
+autodoc_docstring_signature = True
+
+# Interpret docstring formatting as to Google code style conventions.
+# https://google.github.io/styleguide/pyguide.html#Comments
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
 
 
 # Add any paths that contain templates here, relative to this directory.

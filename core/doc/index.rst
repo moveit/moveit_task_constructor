@@ -1,11 +1,15 @@
+MoveIt Task Constructor Documentation
+=====================================
+
+The MoveIt Task Constructor planning framework
+constructs a task hierarchy of interrelated planning stages.
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
 
-   moveit.task_constructor.core
-   moveit.task_constructor.stages
    pymoveit_mtc.core
    pymoveit_mtc.stages
