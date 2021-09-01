@@ -106,8 +106,10 @@ void Interface::add(InterfaceState& state) {
 		it->priority_ = InterfaceState::Priority(1, state.incomingTrajectories().front()->cost());
 	else if (!state.outgoingTrajectories().empty())
 		it->priority_ = InterfaceState::Priority(1, state.outgoingTrajectories().front()->cost());
-	else  // otherwise, assume priority was well defined before
-		assert(it->priority_.enabled() && it->priority_.depth() >= 1u);
+	else {  // otherwise, assume priority was well defined before
+		assert(it->priority_.enabled());
+		assert(it->priority_.depth() >= 1u);
+	}
 
 	// move list node into interface's state list (sorted by priority)
 	moveFrom(it, container);
