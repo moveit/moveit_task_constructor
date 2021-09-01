@@ -640,7 +640,6 @@ void SerialContainer::compute() {
 			if (!stage->pimpl()->canCompute())
 				continue;
 
-			ROS_DEBUG("Computing stage '%s'", stage->name().c_str());
 			stage->pimpl()->runCompute();
 		} catch (const Property::error& e) {
 			stage->reportPropertyError(e);
