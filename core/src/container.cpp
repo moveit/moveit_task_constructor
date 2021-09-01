@@ -123,10 +123,15 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 		case CONNECT:
 			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
 				auto cimpl = conn->pimpl();
-				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from))
+				ROS_DEBUG_STREAM_NAMED("Connecting", "'" << child.name() << "' generated a failure");
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from)) {
+					ROS_DEBUG_STREAM_NAMED("Connecting", "prune backward branch");
 					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to))
+				}
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to)) {
+					ROS_DEBUG_STREAM_NAMED("Connecting", "prune forward branch");
 					setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
+				}
 			}
 			break;
 	}
