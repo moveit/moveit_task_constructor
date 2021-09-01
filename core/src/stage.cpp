@@ -716,6 +716,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 			// remove all pending pairs involving this state
 			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
 		else
+			// TODO(v4hn): If a state becomes reenabled, this skips all previously removed pairs, right?
 			pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
