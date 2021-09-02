@@ -235,7 +235,7 @@ protected:
 
 private:
 	// override for custom behavior on received interface states
-	virtual void initializeExternalInterfaces(InterfaceFlags expected);
+	virtual void initializeExternalInterfaces();
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
@@ -263,7 +263,7 @@ protected:
 	container_type::const_iterator current_generator_;
 
 private:
-	void initializeExternalInterfaces(InterfaceFlags expected) override;
+	void initializeExternalInterfaces() override;
 	template <typename Interface::Direction>
 	void onNewExternalState(Interface::iterator external, bool updated);
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;

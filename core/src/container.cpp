@@ -686,18 +686,18 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	if (exceptions)
 		throw exceptions;
 
-	initializeExternalInterfaces(expected);
-
 	required_interface_ = expected;
+
+	initializeExternalInterfaces();
 }
 
-void ParallelContainerBasePrivate::initializeExternalInterfaces(InterfaceFlags expected) {
+void ParallelContainerBasePrivate::initializeExternalInterfaces() {
 	// States received by the container need to be copied to all children's pull interfaces.
-	if (expected & READS_START)
+	if (requiredInterface() & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
 		   this->propagateStateToChildren<Interface::FORWARD>(external, updated);
 		}));
-	if (expected & READS_END)
+	if (requiredInterface() & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
 		   this->propagateStateToChildren<Interface::BACKWARD>(external, updated);
 		}));
@@ -851,19 +851,19 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
    : ParallelContainerBasePrivate(me, name) {}
 
-void FallbacksPrivate::initializeExternalInterfaces(InterfaceFlags expected) {
-	if (expected & READS_START)
+void FallbacksPrivate::initializeExternalInterfaces() {
+	if (requiredInterface() & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
 		   this->onNewExternalState<Interface::FORWARD>(external, updated);
 		}));
-	if (expected & READS_END)
+	if (requiredInterface() & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
 		   this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		}));
 
 	// we've got to set this somewhere once the interface flags are known.
 	// so we might as well do it here
-	if(expected == GENERATE)
+	if(requiredInterface() == GENERATE)
 		current_generator_ = children().begin();
 }
 
