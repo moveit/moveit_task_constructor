@@ -867,11 +867,11 @@ void FallbacksPrivate::initializeExternalInterfaces(InterfaceFlags expected) {
 		current_generator_ = children().begin();
 }
 
-void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	// only react to failure if it's the last possible candidate failing
-	// otherwise there might still be a feasible solution
-	if(&child == &*children().back())
-		ContainerBasePrivate::onNewFailure(child, from, to);
+void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
+	// This override is deliberately empty.
+	// The method prunes solution paths when a child failed to find a valid solution for it,
+	// but in Fallbacks the next child might still yield a successful solution
+	// Thus pruning must only occur once the last child is exhausted (inside computeFromExternal)
 }
 
 void FallbacksPrivate::computeGenerate() {
