@@ -883,11 +883,7 @@ void FallbacksPrivate::computeGenerate() {
 	if(current_generator_ == children().end())
 		return;
 
-	// run ALL possible computations (on new state)
-	// this is needed to decide whether it should be passed to the next child too
-	while ((*current_generator_)->pimpl()->canCompute()){
-		(*current_generator_)->pimpl()->runCompute();
-	}
+	(*current_generator_)->pimpl()->runCompute();
 }
 
 template <typename Interface::Direction dir>
