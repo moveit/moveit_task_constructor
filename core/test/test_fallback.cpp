@@ -37,8 +37,8 @@ TEST_F(FallbacksFixturePropagate, failingNoSolutions) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(0.0)));
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
-	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0), 0));
-	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0), 0));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts({}), 0));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts({}), 0));
 	t.add(std::move(fallback));
 
 	EXPECT_FALSE(t.plan());
@@ -70,11 +70,11 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 }
 
 TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
-	t.add(std::make_unique<GeneratorMockup>(std::list<double>{ 1.0, 2.0 }));
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 10.0 }));
-	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ 20.0, INF }));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts({ INF, 10.0 })));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts({ 20.0, INF })));
 	auto fwd1 = fallbacks->findChild("FWD1");
 	auto fwd2 = fallbacks->findChild("FWD2");
 	t.add(std::move(fallbacks));
@@ -89,7 +89,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
-	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 1.0 }, 2));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts({ INF, 1.0 }), 2));
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
 	t.add(std::move(fallback));
 
@@ -101,7 +101,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
-	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ 1.0, INF }, 2));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts({ 1.0, INF }), 2));
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
 	t.add(std::move(fallback));
 
@@ -110,7 +110,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 }
 
 TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
-	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 1.0, INF, 3.0 } }));
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, INF, 3.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(10.0)));
