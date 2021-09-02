@@ -643,14 +643,9 @@ bool SerialContainer::canCompute() const {
 
 void SerialContainer::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		try {
-			if (!stage->pimpl()->canCompute())
-				continue;
-
-			stage->pimpl()->runCompute();
-		} catch (const Property::error& e) {
-			stage->reportPropertyError(e);
-		}
+		if (!stage->pimpl()->canCompute())
+			continue;
+		stage->pimpl()->runCompute();
 	}
 }
 
@@ -781,11 +776,7 @@ bool WrapperBase::canCompute() const {
 }
 
 void WrapperBase::compute() {
-	try {
-		wrapped()->pimpl()->runCompute();
-	} catch (const Property::error& e) {
-		wrapped()->reportPropertyError(e);
-	}
+	wrapped()->pimpl()->runCompute();
 }
 
 bool Alternatives::canCompute() const {
@@ -797,11 +788,7 @@ bool Alternatives::canCompute() const {
 
 void Alternatives::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		try {
-			stage->pimpl()->runCompute();
-		} catch (const Property::error& e) {
-			stage->reportPropertyError(e);
-		}
+		stage->pimpl()->runCompute();
 	}
 }
 
@@ -840,11 +827,7 @@ void Fallbacks::compute() {
 	if (!active_child_)
 		return;
 
-	try {
-		active_child_->pimpl()->runCompute();
-	} catch (const Property::error& e) {
-		active_child_->reportPropertyError(e);
-	}
+	active_child_->pimpl()->runCompute();
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
@@ -894,11 +877,7 @@ bool Merger::canCompute() const {
 
 void Merger::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		try {
-			stage->pimpl()->runCompute();
-		} catch (const Property::error& e) {
-			stage->reportPropertyError(e);
-		}
+		stage->pimpl()->runCompute();
 	}
 }
 
