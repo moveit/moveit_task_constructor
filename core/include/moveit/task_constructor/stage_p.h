@@ -152,7 +152,11 @@ public:
 	void runCompute() {
 		ROS_DEBUG_STREAM_NAMED("Stage", "Computing stage '" << name() << "'");
 		auto compute_start_time = std::chrono::steady_clock::now();
-		compute();
+		try {
+			compute();
+		} catch (const Property::error& e) {
+			me()->reportPropertyError(e);
+		}
 		auto compute_stop_time = std::chrono::steady_clock::now();
 		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
