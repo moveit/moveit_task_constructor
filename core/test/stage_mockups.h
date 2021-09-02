@@ -7,6 +7,7 @@
 #include "models.h"
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -127,6 +128,14 @@ struct TaskTestBase : public testing::Test
 		t.setRobotModel(getModel());
 	}
 };
+
+#define EXPECT_COSTS(value, matcher)                                           \
+	{                                                                           \
+		std ::vector<double> costs;                                              \
+		std::transform(value.begin(), value.end(), std::back_inserter(costs),    \
+		               [](const SolutionBaseConstPtr& s) { return s->cost(); }); \
+		EXPECT_THAT(costs, matcher);                                             \
+	}
 
 }  // namespace task_constructor
 }  // namespace moveit

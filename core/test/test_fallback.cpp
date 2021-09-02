@@ -70,21 +70,19 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 }
 
 TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
-	t.add(std::make_unique<GeneratorMockup>(std::list<double>{ 0.0, 1.0 }));
+	t.add(std::make_unique<GeneratorMockup>(std::list<double>{ 1.0, 2.0 }));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 0.0 }));
-	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ 0.0, INF }));
+	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 10.0 }));
+	fallbacks->add(std::make_unique<ForwardMockup>(std::list<double>{ 20.0, INF }));
 	auto fwd1 = fallbacks->findChild("FWD1");
 	auto fwd2 = fallbacks->findChild("FWD2");
 	t.add(std::move(fallbacks));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_EQ(t.numSolutions(), 2u);
-	ASSERT_EQ(fwd1->solutions().size(), 1u);
-	EXPECT_EQ(fwd1->solutions().front()->start()->priority().cost(), 1.0);
-	ASSERT_EQ(fwd2->solutions().size(), 1u);
-	EXPECT_EQ(fwd2->solutions().front()->start()->priority().cost(), 0.0);
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(12, 21));
+	EXPECT_EQ(fwd1->solutions().size(), 1u);
+	EXPECT_EQ(fwd2->solutions().size(), 1u);
 }
 
 TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
@@ -96,8 +94,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
 	t.add(std::move(fallback));
 
 	EXPECT_TRUE(t.plan());
-	ASSERT_EQ(t.solutions().size(), 1u);
-	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
 TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
@@ -109,22 +106,23 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 	t.add(std::move(fallback));
 
 	EXPECT_TRUE(t.plan());
-	ASSERT_EQ(t.solutions().size(), 1u);
-	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
 TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
-	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 0.0, INF, 0.0 } }));
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts{ { 1.0, INF, 3.0 } }));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
-	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
-	auto first = fallbacks->findChild("FWD1");
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(10.0)));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(20.0)));
+	auto fwd1 = fallbacks->findChild("FWD1");
+	auto fwd2 = fallbacks->findChild("FWD2");
 	t.add(std::move(fallbacks));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_EQ(t.numSolutions(), 2u);
-	EXPECT_EQ(first->solutions().size(), 2u);
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 13));
+	EXPECT_COSTS(fwd1->solutions(), testing::ElementsAre(10, 10));
+	EXPECT_COSTS(fwd2->solutions(), testing::IsEmpty());
 }
 
 using FallbacksFixtureConnect = TaskTestBase;
