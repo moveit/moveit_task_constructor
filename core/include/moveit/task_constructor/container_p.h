@@ -248,8 +248,6 @@ public:
 
 protected:
 	void computeFromExternal();
-	void computeGenerate();
-
 	struct ExternalState
 	{
 		ExternalState(Interface::iterator e, Interface::Direction d, container_type::const_iterator c)
@@ -260,6 +258,9 @@ protected:
 		container_type::const_iterator stage;
 	};
 	std::deque<ExternalState> pending_states_;
+	StagePrivate* current_stage_;
+
+	void computeGenerate();
 	container_type::const_iterator current_generator_;
 
 private:

@@ -818,6 +818,7 @@ void Fallbacks::reset() {
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ParallelContainerBase::init(robot_model);
+	pimpl()->current_generator_ = pimpl()->children().begin();
 }
 
 bool Fallbacks::canCompute() const {
@@ -832,7 +833,7 @@ bool Fallbacks::canCompute() const {
 			return impl->current_generator_ != impl->children().end();
 	}
 	else
-		return !pimpl()->pending_states_.empty();
+		return !impl->pending_states_.empty();
 }
 
 void Fallbacks::compute() {
@@ -849,22 +850,19 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 }
 
 FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
-   : ParallelContainerBasePrivate(me, name) {}
+   : ParallelContainerBasePrivate(me, name) {
+	current_stage_ = nullptr;
+}
 
 void FallbacksPrivate::initializeExternalInterfaces() {
 	if (requiredInterface() & READS_START)
 		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
-		   this->onNewExternalState<Interface::FORWARD>(external, updated);
-		}));
+		                  this->onNewExternalState<Interface::FORWARD>(external, updated);
+		               }));
 	if (requiredInterface() & READS_END)
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
-		   this->onNewExternalState<Interface::BACKWARD>(external, updated);
-		}));
-
-	// we've got to set this somewhere once the interface flags are known.
-	// so we might as well do it here
-	if(requiredInterface() == GENERATE)
-		current_generator_ = children().begin();
+		                this->onNewExternalState<Interface::BACKWARD>(external, updated);
+		             }));
 }
 
 void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
@@ -877,8 +875,10 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 void FallbacksPrivate::computeGenerate() {
 	if(solutions_.empty())
 		// move to first generator that can run
-		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute())
+		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute()) {
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_generator_)->name() << "' can't compute, trying next one.");
 			++current_generator_;
+		}
 
 	if(current_generator_ == children().end())
 		return;
@@ -890,7 +890,7 @@ template <typename Interface::Direction dir>
 void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	// TODO(v4hn): updated is not implemented
 	if(updated){
-		ROS_DEBUG_NAMED("Fallback", "updating external states is not supported in Fallbacks");
+		ROS_DEBUG_NAMED("Fallbacks", "updating external states is not supported in Fallbacks");
 		return;
 	}
 
@@ -899,44 +899,46 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 
 void FallbacksPrivate::computeFromExternal(){
 	assert(!pending_states_.empty());
-	auto spec { pending_states_.front() };
 
-	pending_states_.pop_front();
+	if(!current_stage_) {
+		auto spec { pending_states_.front() };
 
-	ROS_DEBUG_STREAM_NAMED("Fallback", "Push external state to '" << (*spec.stage)->name() << "'");
-	// feed a new state
-	copyState(spec.dir,
-	          spec.external_state,
-	          (*spec.stage)->pimpl()->pullInterface(spec.dir),
-	          false);
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*spec.stage)->name() << "'");
+		// feed a new state
+		copyState(spec.dir,
+		          spec.external_state,
+		          (*spec.stage)->pimpl()->pullInterface(spec.dir),
+		          false);
 
-	const auto& stage { (*spec.stage)->pimpl() };
-
-	try {
-		// run ALL possible computations (on new state)
-		// this is needed to decide whether it should be passed to the next child too
-		while (stage->canCompute()){
-			stage->runCompute();
-		}
-	} catch (const Property::error& e) {
-		stage->me()->reportPropertyError(e);
+		current_stage_ = (*spec.stage)->pimpl();
 	}
 
-	auto has_solutions{ [](const InterfaceState& state, Interface::Direction dir){
-			return dir == Interface::FORWARD
-			      ? !state.outgoingTrajectories().empty()
-			      : !state.incomingTrajectories().empty();
-		} };
+	if(current_stage_->canCompute())
+		current_stage_->runCompute();
+	else {
+		auto spec { pending_states_.front() };
+		current_stage_ = nullptr;
+		pending_states_.pop_front();
 
-	if(!has_solutions(*spec.external_state, spec.dir)){
-		ROS_DEBUG_STREAM_NAMED("Fallback", "Child '" << (*spec.stage)->name() << "' failed to generate a solution, schedule state with next child (if any)");
-		if(++spec.stage != children().cend())
-			pending_states_.push_back(spec);
-		else
-			// prune solution path if there is no way to extend external_state through Fallbacks
-			ContainerBasePrivate::onNewFailure(*children().back(),
-			                                   spec.dir == Interface::FORWARD ? &*spec.external_state : nullptr,
-			                                   spec.dir == Interface::BACKWARD ? nullptr : &*spec.external_state);
+		auto has_solutions{ [](const InterfaceState& state, Interface::Direction dir){
+				return dir == Interface::FORWARD
+				      ? !state.outgoingTrajectories().empty()
+				      : !state.incomingTrajectories().empty();
+			} };
+
+		if(!has_solutions(*spec.external_state, spec.dir)){
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*spec.stage)->name() << "' failed to generate a solution, schedule state with next child (if any)");
+			if(++spec.stage != children().cend())
+				pending_states_.push_back(spec);
+			else
+				// prune solution path if there is no way to extend external_state through Fallbacks
+				ContainerBasePrivate::onNewFailure(*children().back(),
+				                                   spec.dir == Interface::FORWARD ? &*spec.external_state : nullptr,
+				                                   spec.dir == Interface::BACKWARD ? nullptr : &*spec.external_state);
+		}
+		// if we did not compute a child this call, try again
+		if(!pending_states_.empty())
+			computeFromExternal();
 	}
 }
 
