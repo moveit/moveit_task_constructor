@@ -16,7 +16,7 @@ jobs:
         env:
           - IMAGE: melodic-source
             NAME: ccov
-            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS="--coverage"
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: master-source
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
