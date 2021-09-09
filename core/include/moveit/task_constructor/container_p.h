@@ -263,8 +263,8 @@ protected:
 	ordered<ExternalState> pending_states_;
 	ExternalState current_external_state_;
 
-	void computeGenerate();
-	container_type::const_iterator current_generator_;
+	inline void computeGenerate();
+	mutable container_type::const_iterator current_generator_;
 
 private:
 	void initializeExternalInterfaces() override;

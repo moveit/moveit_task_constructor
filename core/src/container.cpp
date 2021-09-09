@@ -828,11 +828,16 @@ bool Fallbacks::canCompute() const {
 
 	if (impl->requiredInterface() == GENERATE) {
 		// current_generator_ is fixed if it produced solutions before
-		if( !solutions().empty() )
+		if (!solutions().empty())
 			return (*impl->current_generator_)->pimpl()->canCompute();
-		else
-			// we still have children to try
+		else {
+			// move to first generator that can run
+			while(impl->current_generator_ != impl->children().end() && !(*impl->current_generator_)->pimpl()->canCompute()) {
+				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*impl->current_generator_)->name() << "' can't compute, trying next one.");
+				++impl->current_generator_;
+			}
 			return impl->current_generator_ != impl->children().end();
+		}
 	}
 	else
 		return !impl->pending_states_.empty() || impl->current_external_state_.stage != impl->children().cend();
@@ -873,16 +878,7 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 }
 
 void FallbacksPrivate::computeGenerate() {
-	if(solutions_.empty())
-		// move to first generator that can run
-		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute()) {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_generator_)->name() << "' can't compute, trying next one.");
-			++current_generator_;
-		}
-
-	if(current_generator_ == children().end())
-		return;
-
+	assert(current_generator_ != children().end());
 	(*current_generator_)->pimpl()->runCompute();
 }
 
