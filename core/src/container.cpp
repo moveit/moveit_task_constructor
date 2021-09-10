@@ -817,8 +817,10 @@ void Fallbacks::reset() {
 }
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
+	auto& impl{ *pimpl() };
 	ParallelContainerBase::init(robot_model);
-	pimpl()->current_generator_ = pimpl()->children().begin();
+	impl.current_generator_ = impl.children().begin();
+	impl.current_external_state_.stage = impl.children().cend();
 }
 
 bool Fallbacks::canCompute() const {
@@ -850,9 +852,7 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 }
 
 FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
-   : ParallelContainerBasePrivate(me, name) {
-	current_stage_ = nullptr;
-}
+   : ParallelContainerBasePrivate(me, name) {}
 
 void FallbacksPrivate::initializeExternalInterfaces() {
 	if (requiredInterface() & READS_START)
@@ -894,48 +894,47 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 		return;
 	}
 
-	pending_states_.push_back(ExternalState(external, dir, children().begin()));
+	pending_states_.push(ExternalState(external, dir, children().cbegin()));
 }
 
 void FallbacksPrivate::computeFromExternal(){
 	assert(!pending_states_.empty());
+	if(current_external_state_.stage == children().cend()) {
+		current_external_state_ = pending_states_.pop();
 
-	if(!current_stage_) {
-		auto spec { pending_states_.front() };
-
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*spec.stage)->name() << "'");
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_external_state_.stage)->name() << "'");
 		// feed a new state
-		copyState(spec.dir,
-		          spec.external_state,
-		          (*spec.stage)->pimpl()->pullInterface(spec.dir),
+		copyState(current_external_state_.dir,
+		          current_external_state_.external_state,
+		          (*current_external_state_.stage)->pimpl()->pullInterface(current_external_state_.dir),
 		          false);
-
-		current_stage_ = (*spec.stage)->pimpl();
 	}
 
-	if(current_stage_->canCompute())
-		current_stage_->runCompute();
+	auto& stage{ current_external_state_.stage };
+	auto& state{ current_external_state_.external_state };
+	auto dir { current_external_state_.dir };
+	if((*stage)->pimpl()->canCompute())
+		(*stage)->pimpl()->runCompute();
 	else {
-		auto spec { pending_states_.front() };
-		current_stage_ = nullptr;
-		pending_states_.pop_front();
-
-		auto has_solutions{ [](const InterfaceState& state, Interface::Direction dir){
-				return dir == Interface::FORWARD
-				      ? !state.outgoingTrajectories().empty()
-				      : !state.incomingTrajectories().empty();
+		auto has_solutions{ [](const InterfaceState& s, Interface::Direction d){
+				return d == Interface::FORWARD
+				      ? !s.outgoingTrajectories().empty()
+				      : !s.incomingTrajectories().empty();
 			} };
 
-		if(!has_solutions(*spec.external_state, spec.dir)){
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*spec.stage)->name() << "' failed to generate a solution, schedule state with next child (if any)");
-			if(++spec.stage != children().cend())
-				pending_states_.push_back(spec);
-			else
-				// prune solution path if there is no way to extend external_state through Fallbacks
+		if(!has_solutions(*state, dir)){
+			if(++stage != children().cend()){
+				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
+				pending_states_.push(current_external_state_);
+			}
+			else {
+				ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
 				ContainerBasePrivate::onNewFailure(*children().back(),
-				                                   spec.dir == Interface::FORWARD ? &*spec.external_state : nullptr,
-				                                   spec.dir == Interface::BACKWARD ? nullptr : &*spec.external_state);
+				                                   dir == Interface::FORWARD ? &*state : nullptr,
+				                                   dir == Interface::BACKWARD ? nullptr : &*state);
+			}
 		}
+		current_external_state_.stage = children().cend();
 		// if we did not compute a child this call, try again
 		if(!pending_states_.empty())
 			computeFromExternal();

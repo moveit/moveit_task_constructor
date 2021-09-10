@@ -169,6 +169,7 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
+		iterator() = default;
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }

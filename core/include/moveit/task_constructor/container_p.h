@@ -250,15 +250,18 @@ protected:
 	void computeFromExternal();
 	struct ExternalState
 	{
+		ExternalState() = default;
 		ExternalState(Interface::iterator e, Interface::Direction d, container_type::const_iterator c)
 		  : external_state(e), dir(d), stage(c) {}
 
 		Interface::iterator external_state;
 		Interface::Direction dir;
 		container_type::const_iterator stage;
+
+		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
 	};
-	std::deque<ExternalState> pending_states_;
-	StagePrivate* current_stage_;
+	ordered<ExternalState> pending_states_;
+	ExternalState current_external_state_;
 
 	void computeGenerate();
 	container_type::const_iterator current_generator_;
