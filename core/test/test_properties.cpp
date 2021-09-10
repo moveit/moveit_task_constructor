@@ -133,7 +133,7 @@ TEST(Property, storeInMsg) {
 	STORABLE_PROPERTY(int, 42);
 	STORABLE_PROPERTY(double, 42);
 	STORABLE_PROPERTY(stages::Connect::MergeMode, stages::Connect::WAYPOINTS);
-	//	STORABLE_PROPERTY(double, M_PI);
+	STORABLE_PROPERTY(double, M_PI);
 
 	STORABLE_PROPERTY(geometry_msgs::PoseStamped, []() {
 		geometry_msgs::PoseStamped msg;

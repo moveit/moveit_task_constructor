@@ -128,6 +128,17 @@ public:
 	}
 };
 
+template <typename T, typename SFINAE = void>
+struct oss_configure
+{
+	static void setprecision(std::ostringstream& oss) {}
+};
+template <typename T>
+struct oss_configure<T, std::enable_if_t<std::is_floating_point<T>::value>>
+{
+	static void setprecision(std::ostringstream& oss) { oss << std::setprecision(std::numeric_limits<T>::digits10 + 1); }
+};
+
 /** Serialization based on std::[io]stringstream */
 template <typename T>
 class PropertySerializerStream : public PropertySerializerBase
@@ -138,6 +149,7 @@ public:
 	template <typename Q = T>
 	static std::enable_if_t<hasInsertionOperator<Q>::value, std::string> serialize(const boost::any& value) {
 		std::ostringstream oss;
+		oss_configure<Q>::setprecision(oss);
 		oss << boost::any_cast<T>(value);
 		return oss.str();
 	}
