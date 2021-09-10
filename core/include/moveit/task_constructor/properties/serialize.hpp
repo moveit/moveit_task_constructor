@@ -51,8 +51,6 @@
 
 #include <moveit_task_constructor_msgs/Property.h>
 
-#include "base64.hpp"
-
 namespace moveit {
 namespace task_constructor {
 
@@ -110,15 +108,14 @@ public:
 	static std::string serialize(const boost::any& value) {
 		T message{ boost::any_cast<T>(value) };
 		uint32_t serial_size = ros::serialization::serializationLength(message);
-		std::unique_ptr<uint8_t[]> buffer(new uint8_t[serial_size]);
-		ros::serialization::OStream stream(buffer.get(), serial_size);
+		std::string buffer(serial_size, '\0');
+		ros::serialization::OStream stream(reinterpret_cast<uint8_t*>(&buffer.front()), serial_size);
 		ros::serialization::serialize(stream, message);
-		return reinterpret_cast<const char*>(base64::encode(buffer.get(), serial_size).c_str());
+		return buffer;
 	}
 
 	static boost::any deserialize(const std::string& wired) {
-		auto decoded{ base64::decode(wired.data(), wired.size()) };
-		ros::serialization::IStream stream(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(decoded.data())),
+		ros::serialization::IStream stream(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(&wired.front())),
 		                                   wired.size());
 		T message;
 		ros::serialization::deserialize(stream, message);
