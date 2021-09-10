@@ -59,20 +59,25 @@ class Property;
 // has*Operator<T>::value is true iff operator<< resp. operator>> is available for T.
 // This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
 template <typename T, typename = std::ostream&>
-struct IsStreamSerializable : std::false_type
+struct hasInsertionOperator : std::false_type
 {};
 
 template <typename T>
-struct IsStreamSerializable<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type
+struct hasInsertionOperator<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type
 {};
 
 template <typename T, typename = std::istream&>
-struct IsStreamDeserializable : std::false_type
+struct hasExtractionOperator : std::false_type
 {};
 
 template <typename T>
-struct IsStreamDeserializable<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type
+struct hasExtractionOperator<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type
 {};
+
+template <typename T>
+inline constexpr bool IsStreamDeserializable() {
+	return hasInsertionOperator<T>::value && hasExtractionOperator<T>::value;
+}
 
 class PropertySerializerBase
 {
@@ -131,13 +136,13 @@ public:
 	static const char* typeName() { return typeid(T).name(); }
 
 	template <typename Q = T>
-	static std::enable_if_t<IsStreamSerializable<Q>::value, std::string> serialize(const boost::any& value) {
+	static std::enable_if_t<hasInsertionOperator<Q>::value, std::string> serialize(const boost::any& value) {
 		std::ostringstream oss;
 		oss << boost::any_cast<T>(value);
 		return oss.str();
 	}
 	template <typename Q = T>
-	static std::enable_if_t<IsStreamDeserializable<Q>::value, boost::any> deserialize(const std::string& wired) {
+	static std::enable_if_t<IsStreamDeserializable<Q>(), boost::any> deserialize(const std::string& wired) {
 		std::istringstream iss(wired);
 		T value;
 		iss >> value;
@@ -146,11 +151,11 @@ public:
 
 	/** fallback, if no serialization/deserialization is available **/
 	template <typename Q = T>
-	static std::enable_if_t<!IsStreamSerializable<Q>::value, std::string> serialize(const boost::any& value) {
+	static std::enable_if_t<!hasInsertionOperator<Q>::value, std::string> serialize(const boost::any& value) {
 		return dummySerialize(value);
 	}
 	template <typename Q = T>
-	static std::enable_if_t<!IsStreamDeserializable<Q>::value, boost::any> deserialize(const std::string& wire) {
+	static std::enable_if_t<!IsStreamDeserializable<Q>(), boost::any> deserialize(const std::string& wire) {
 		return dummyDeserialize(wire);
 	}
 };
