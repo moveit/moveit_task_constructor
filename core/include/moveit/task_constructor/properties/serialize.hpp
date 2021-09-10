@@ -48,7 +48,7 @@
 #include <functional>
 #include <sstream>
 #include <ros/serialization.h>
-
+#include <sensor_msgs/JointState.h>
 #include <moveit_task_constructor_msgs/Property.h>
 
 namespace moveit {
@@ -164,6 +164,39 @@ class PropertySerializer
 public:
 	PropertySerializer() {
 		this->insert(typeid(T), this->typeName(), &PropertySerializer::serialize, &PropertySerializer::deserialize);
+	}
+};
+
+template <>
+class PropertySerializer<std::map<std::string, double>> : public PropertySerializerROS<sensor_msgs::JointState>
+{
+	using T = std::map<std::string, double>;
+	using BaseT = PropertySerializerROS<sensor_msgs::JointState>;
+
+public:
+	PropertySerializer() { insert(typeid(T), this->typeName(), &serialize, &deserialize); }
+
+	static const char* typeName() { return typeid(T).name(); }
+
+	static std::string serialize(const boost::any& value) {
+		T values = boost::any_cast<T>(value);
+		sensor_msgs::JointState state;
+		state.name.reserve(values.size());
+		state.position.reserve(values.size());
+		for (const auto& p : values) {
+			state.name.push_back(p.first);
+			state.position.push_back(p.second);
+		}
+		return BaseT::serialize(state);
+	}
+
+	static boost::any deserialize(const std::string& wired) {
+		auto state = boost::any_cast<sensor_msgs::JointState>(BaseT::deserialize(wired));
+		assert(state.position.size() == state.name.size());
+		T values;
+		for (size_t i = 0; i < state.name.size(); ++i)
+			values.insert(std::make_pair(state.name[i], state.position[i]));
+		return values;
 	}
 };
 

@@ -38,8 +38,6 @@
 
 #include <moveit/task_constructor/properties.h>
 
-#include <sensor_msgs/JointState.h>
-
 #include <boost/format.hpp>
 #include <functional>
 #include <ros/console.h>
@@ -90,44 +88,6 @@ public:
 };
 
 static PropertyTypeRegistry REGISTRY_SINGLETON;
-
-class JointMapSerializer : public PropertySerializerBase
-{
-	using T = std::map<std::string, double>;
-
-public:
-	JointMapSerializer() {
-		PropertySerializer<sensor_msgs::JointState>();
-		insert(typeid(T), typeid(T).name(), &serialize, &deserialize);
-	}
-
-protected:
-	static std::string serialize(const boost::any& value) {
-		sensor_msgs::JointState state;
-		for (const auto& p : boost::any_cast<T>(value)) {
-			state.name.push_back(p.first);
-			state.position.push_back(p.second);
-		}
-		return REGISTRY_SINGLETON.entry(typeid(sensor_msgs::JointState)).serialize_(state);
-	}
-
-	static boost::any deserialize(const std::string& wired) {
-		auto state{ boost::any_cast<sensor_msgs::JointState>(
-			 REGISTRY_SINGLETON.entry(typeid(sensor_msgs::JointState)).deserialize_(wired)) };
-		assert(state.position.size() >= state.name.size());
-		T joint_map;
-		for (size_t i = 0; i < state.name.size(); ++i)
-			joint_map.insert(std::make_pair(state.name[i], state.position[i]));
-		return joint_map;
-	}
-};
-
-static bool _REGISTRY_INITIALIZER{ []() {
-	PropertySerializer<std::string>();
-	PropertySerializer<int>();
-	JointMapSerializer();
-	return true;
-}() };
 
 bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::string& type_name,
                                   PropertySerializerBase::SerializeFunction serialize,
