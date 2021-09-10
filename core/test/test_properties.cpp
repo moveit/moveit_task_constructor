@@ -89,12 +89,13 @@ TEST(Property, anytype) {
 }
 
 TEST(Property, serialize_basic) {
-	EXPECT_TRUE(hasInsertionOperator<int>::value);
-	EXPECT_TRUE(hasExtractionOperator<int>::value);
-	EXPECT_TRUE(hasInsertionOperator<double>::value);
-	EXPECT_TRUE(hasExtractionOperator<double>::value);
-	EXPECT_TRUE(hasInsertionOperator<std::string>::value);
-	EXPECT_TRUE(hasExtractionOperator<std::string>::value);
+	EXPECT_TRUE(IsStreamSerializable<int>::value);
+	EXPECT_TRUE(IsStreamSerializable<double>::value);
+	EXPECT_TRUE(IsStreamSerializable<std::string>::value);
+
+	EXPECT_TRUE(IsStreamDeserializable<int>::value);
+	EXPECT_TRUE(IsStreamDeserializable<double>::value);
+	EXPECT_TRUE(IsStreamDeserializable<std::string>::value);
 }
 
 TEST(Property, serialize) {

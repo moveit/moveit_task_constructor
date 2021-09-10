@@ -83,7 +83,7 @@ std::basic_string<T> encode(const T* bytes_to_encode, uint32_t in_len) {
 			ret += '=';
 	}
 
-	return std::move(ret);
+	return ret;
 }
 
 template <typename T = char>
@@ -126,7 +126,7 @@ std::basic_string<T> decode(const T* encoded_string, int64_t in_len) {
 			ret += char_array_3[j];
 	}
 
-	return std::move(ret);
+	return ret;
 }
 
 };  // namespace base64
