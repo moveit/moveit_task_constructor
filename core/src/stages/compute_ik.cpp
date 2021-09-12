@@ -306,24 +306,26 @@ void ComputeIK::compute() {
 	bool colliding =
 	    !ignore_collisions && isTargetPoseCollidingInEEF(scene, sandbox_state, target_pose, link, &collisions);
 
-	// markers used for failures
-	std::deque<visualization_msgs::Marker> failure_markers;
 	// frames at target pose and ik frame
-	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "target frame");
-	rviz_marker_tools::appendFrame(failure_markers, ik_pose_msg, 0.1, "ik frame");
+	std::deque<visualization_msgs::Marker> frame_markers;
+	rviz_marker_tools::appendFrame(frame_markers, target_pose_msg, 0.1, "target frame");
+	rviz_marker_tools::appendFrame(frame_markers, ik_pose_msg, 0.1, "ik frame");
+	// end-effector markers
+	std::deque<visualization_msgs::Marker> eef_markers;
 	// visualize placed end-effector
-	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& /*name*/) {
+	auto appender = [&eef_markers](visualization_msgs::Marker& marker, const std::string& /*name*/) {
 		marker.ns = "ik target";
 		marker.color.a *= 0.5;
-		failure_markers.push_back(marker);
+		eef_markers.push_back(marker);
 	};
 	const auto& links_to_visualize = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
 	                                     ->getParentJointModel()
 	                                     ->getDescendantLinkModels();
 	if (colliding) {
 		SubTrajectory solution;
+		std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 		generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
-		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
+		std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
 		solution.markAsFailure();
 		// TODO: visualize collisions
 		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
@@ -384,10 +386,7 @@ void ComputeIK::compute() {
 			planning_scene::PlanningScenePtr solution_scene = scene->diff();
 			SubTrajectory solution;
 			solution.setComment(s.comment());
-
-			// frames at target pose and ik frame
-			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
-			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
+			std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 
 			if (succeeded && i + 1 == ik_solutions.size())
 				// compute cost as distance to compare_pose
@@ -402,6 +401,10 @@ void ComputeIK::compute() {
 
 			InterfaceState state(solution_scene);
 			forwardProperties(*s.start(), state);
+
+			// ik target link placement
+			std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
+
 			spawn(std::move(state), std::move(solution));
 		}
 
@@ -418,9 +421,17 @@ void ComputeIK::compute() {
 
 		solution.markAsFailure();
 		solution.setComment(s.comment() + " no IK found");
+		std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 
 		// ik target link placement
-		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
+		std_msgs::ColorRGBA tint_color;
+		tint_color.r = 1.0;
+		tint_color.g = 0.0;
+		tint_color.b = 0.0;
+		tint_color.a = 0.5;
+		for (auto& marker : eef_markers)
+			marker.color = tint_color;
+		std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
 
 		spawn(InterfaceState(scene), std::move(solution));
 	}
