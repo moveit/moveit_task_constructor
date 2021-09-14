@@ -835,7 +835,7 @@ bool Fallbacks::canCompute() const {
 			return impl->current_generator_ != impl->children().end();
 	}
 	else
-		return !impl->pending_states_.empty();
+		return !impl->pending_states_.empty() || impl->current_external_state_.stage != impl->children().cend();
 }
 
 void Fallbacks::compute() {
@@ -898,7 +898,7 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 }
 
 void FallbacksPrivate::computeFromExternal(){
-	assert(!pending_states_.empty());
+	assert(!pending_states_.empty() || current_external_state_.stage != children().cend());
 	if(current_external_state_.stage == children().cend()) {
 		current_external_state_ = pending_states_.pop();
 
@@ -913,32 +913,40 @@ void FallbacksPrivate::computeFromExternal(){
 	auto& stage{ current_external_state_.stage };
 	auto& state{ current_external_state_.external_state };
 	auto dir { current_external_state_.dir };
-	if((*stage)->pimpl()->canCompute())
+	if((*stage)->pimpl()->canCompute()) {
 		(*stage)->pimpl()->runCompute();
-	else {
-		auto has_solutions{ [](const InterfaceState& s, Interface::Direction d){
-				return d == Interface::FORWARD
-				      ? !s.outgoingTrajectories().empty()
-				      : !s.incomingTrajectories().empty();
-			} };
-
-		if(!has_solutions(*state, dir)){
-			if(++stage != children().cend()){
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
-				pending_states_.push(current_external_state_);
-			}
-			else {
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
-				ContainerBasePrivate::onNewFailure(*children().back(),
-				                                   dir == Interface::FORWARD ? &*state : nullptr,
-				                                   dir == Interface::BACKWARD ? nullptr : &*state);
-			}
-		}
-		current_external_state_.stage = children().cend();
-		// if we did not compute a child this call, try again
-		if(!pending_states_.empty())
-			computeFromExternal();
+		return;
 	}
+
+	auto has_solutions{ [](const InterfaceState& s, Interface::Direction d){
+			   const auto& trajectories { d == Interface::FORWARD
+					   ? s.outgoingTrajectories()
+					   : s.incomingTrajectories() };
+				return std::find_if(trajectories.cbegin(), trajectories.cend(), [](const auto& t){ return !t->isFailure();}) != trajectories.cend();
+	}};
+
+	if(!has_solutions(*state, dir)){
+		auto next_stage = std::next(stage);
+		if(next_stage != children().cend()){
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
+			++stage;
+			pending_states_.push(current_external_state_);
+		}
+		else {
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
+			ContainerBasePrivate::onNewFailure(*children().back(),
+			                                   dir == Interface::FORWARD ? &*state : nullptr,
+			                                   dir == Interface::BACKWARD ? nullptr : &*state);
+		}
+	}
+	else {
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' produced a solution, not invoking further fallbacks");
+	}
+	// invalidate current_external_state_ after we processed it
+	current_external_state_.stage = children().cend();
+	// if we did not compute a child this call, try again
+	if(!pending_states_.empty())
+		computeFromExternal();
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
