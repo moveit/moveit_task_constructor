@@ -179,6 +179,7 @@ void TaskDisplay::calculateOffsetPosition() {
 void TaskDisplay::update(float wall_dt, float ros_dt) {
 	requestPanel();
 	Display::update(wall_dt, ros_dt);
+	calculateOffsetPosition();
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
 
