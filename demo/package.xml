@@ -2,7 +2,7 @@
 <package format="2">
   <name>moveit_task_constructor_demo</name>
   <version>0.0.1</version>
-  <description>The moveit_task_constructor_demo package</description>
+  <description>demo tasks illustrating various capabilities of MTC.</description>
 
   <author email="simongold@picknik.ai">simon Goldstein</author>
   <author email="henningkayser@picknik.ai">Henning Kayser</author>
