@@ -121,9 +121,14 @@ public:
 	InterfacePtr pendingBackward() const { return pending_backward_; }
 	InterfacePtr pendingForward() const { return pending_forward_; }
 
+	// tags for internal_external_ bimap
+	struct INTERNAL
+	{};
+	struct EXTERNAL
+	{};
 	// map InterfaceStates from children to external InterfaceStates of the container
-	const auto& internalToExternalMap() const { return internal_external_.left; }
-	const auto& externalToInternalMap() const { return internal_external_.right; }
+	inline const auto& internalToExternalMap() const { return internal_external_.by<INTERNAL>(); }
+	inline const auto& externalToInternalMap() const { return internal_external_.by<EXTERNAL>(); }
 
 	/// called by a (direct) child when a solution failed
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to);
@@ -155,8 +160,8 @@ protected:
 	                  const InterfaceState* internal_to);
 
 	/// protected writable overloads
-	inline auto& internalToExternalMap() { return internal_external_.left; }
-	inline auto& ExternalToInternalMap() { return internal_external_.right; }
+	inline auto& internalToExternalMap() { return internal_external_.by<INTERNAL>(); }
+	inline auto& externalToInternalMap() { return internal_external_.by<EXTERNAL>(); }
 
 	// set in resolveInterface()
 	InterfaceFlags required_interface_;
@@ -165,8 +170,8 @@ private:
 	container_type children_;
 
 	// map start/end states of children (internal) to corresponding states in our external interfaces
-	boost::bimap<boost::bimaps::unordered_set_of<const InterfaceState*>,
-	             boost::bimaps::unordered_multiset_of<const InterfaceState*>>
+	boost::bimap<boost::bimaps::unordered_set_of<boost::bimaps::tagged<const InterfaceState*, INTERNAL>>,
+	             boost::bimaps::unordered_multiset_of<boost::bimaps::tagged<const InterfaceState*, EXTERNAL>>>
 	    internal_external_;
 
 	/* TODO: these interfaces don't need to be priority-sorted.

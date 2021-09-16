@@ -159,13 +159,14 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
 	if (parent()) {
 		auto external{ internalToExternalMap().find(s) };
-		if (external != internalToExternalMap().end()) {
-			// only escalate if there is no enabled alternative child
-			auto internals{ externalToInternalMap().equal_range(external->second) };
-			auto is_enabled = [](auto&& state_pair) { return state_pair.second->priority().enabled(); };
+		if (external != internalToExternalMap().end()) {  // do we have an external state?
+			// only escalate if there is no other *enabled* internal state connected to the same external one
+			// all internal states linked to external
+			auto internals{ externalToInternalMap().equal_range(external->get<EXTERNAL>()) };
+			auto is_enabled = [](const auto& ext_int_pair) { return ext_int_pair.second->priority().enabled(); };
 			auto other_path{ std::find_if(internals.first, internals.second, is_enabled) };
 			if (other_path == internals.second)
-				parent()->pimpl()->setStatus<dir>(external->second, status);
+				parent()->pimpl()->setStatus<dir>(external->get<EXTERNAL>(), status);
 			return;
 		}
 	}
@@ -175,6 +176,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
 	// when new states arrive in a Connecting stage.
 	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	// For details, see: https://github.com/ros-planning/moveit_task_constructor/pull/221
 	if (status == InterfaceState::DISABLED_FAILED)
 		status = InterfaceState::DISABLED;  // only the first state is marked as FAILED
 
