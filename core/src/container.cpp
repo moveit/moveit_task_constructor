@@ -162,7 +162,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	}
 
 	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
-	if (parent()) {
+	if (parent() && trajectories<dir>(*s).empty()) {
 		auto external{ internalToExternalMap().find(s) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
