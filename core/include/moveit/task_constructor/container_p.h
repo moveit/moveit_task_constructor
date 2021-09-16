@@ -151,6 +151,8 @@ protected:
 	/// Set ENABLED / PRUNED status of the solution tree starting from s into given direction
 	template <Interface::Direction dir>
 	void setStatus(const InterfaceState* s, InterfaceState::Status status);
+	/// non-template version
+	void setStatus(Interface::Direction dir, const InterfaceState* s, InterfaceState::Status status);
 
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
@@ -260,8 +262,7 @@ protected:
 
 		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
 	};
-	ordered<ExternalState> pending_states_;
-	ExternalState current_external_state_;
+	ordered<ExternalState> pending_states_;  // pending external states for a PROPAGATE interface
 
 	inline void computeGenerate();
 	mutable container_type::const_iterator current_generator_;
