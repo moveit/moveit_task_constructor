@@ -944,9 +944,9 @@ void FallbacksPrivate::computePropagate(){
 		}
 		else {
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
-			ContainerBasePrivate::onNewFailure(*children().back(),
-			                                   dir == Interface::FORWARD ? &*state : nullptr,
-			                                   dir == Interface::BACKWARD ? nullptr : &*state);
+			parent()->pimpl()->onNewFailure(*me(),
+			                                dir == Interface::FORWARD ? &*state : nullptr,
+			                                dir == Interface::BACKWARD ? nullptr : &*state);
 		}
 	}
 	else {
