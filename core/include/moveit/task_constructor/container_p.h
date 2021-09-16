@@ -270,6 +270,13 @@ protected:
 
 		inline void print(std::ostream& os = std::cout) const;
 
+		template <Interface::Direction d>
+		inline ordered<ExternalState>& queue() {
+			size_t idx{ static_cast<size_t>(d) };
+			assert(idx < 2);
+			return pending_states_[idx];
+		}
+
 	private:
 		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
 		size_t current_queue_{ 0 };  ///< which queue to check on next pop
