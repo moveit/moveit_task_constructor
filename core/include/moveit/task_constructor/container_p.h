@@ -247,7 +247,7 @@ public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
 
 protected:
-	void computeFromExternal();
+	void computePropagate();
 	struct ExternalState
 	{
 		ExternalState() = default;

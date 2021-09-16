@@ -826,30 +826,44 @@ void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 bool Fallbacks::canCompute() const {
 	auto impl { pimpl() };
 
-	if (impl->requiredInterface() == GENERATE) {
-		// current_generator_ is fixed if it produced solutions before
-		if (!solutions().empty())
-			return (*impl->current_generator_)->pimpl()->canCompute();
-		else {
-			// move to first generator that can run
-			while(impl->current_generator_ != impl->children().end() && !(*impl->current_generator_)->pimpl()->canCompute()) {
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*impl->current_generator_)->name() << "' can't compute, trying next one.");
-				++impl->current_generator_;
+	switch (impl->requiredInterface()) {
+		case GENERATE:
+			// current_generator_ is fixed if it produced solutions before
+			if (!solutions().empty())
+				return (*impl->current_generator_)->pimpl()->canCompute();
+			else {
+				// move to first generator that can run
+				while(impl->current_generator_ != impl->children().end() && !(*impl->current_generator_)->pimpl()->canCompute()) {
+					ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*impl->current_generator_)->name() << "' can't compute, trying next one.");
+					++impl->current_generator_;
+				}
+				return impl->current_generator_ != impl->children().end();
 			}
-			return impl->current_generator_ != impl->children().end();
-		}
+			break;
+		case PROPAGATE_FORWARDS:
+		case PROPAGATE_BACKWARDS:
+		case CONNECT:
+			return !impl->pending_states_.empty() || impl->current_external_state_.stage != impl->children().cend();
+		default:
+			assert(false);
 	}
-	else
-		return !impl->pending_states_.empty() || impl->current_external_state_.stage != impl->children().cend();
 }
 
 void Fallbacks::compute() {
 	auto impl { pimpl() };
 
-	if(impl->requiredInterface() == GENERATE)
-		impl->computeGenerate();
-	else
-		impl->computeFromExternal();
+	switch (impl->requiredInterface()) {
+		case GENERATE:
+			impl->computeGenerate();
+			break;
+		case PROPAGATE_FORWARDS:
+		case PROPAGATE_BACKWARDS:
+		case CONNECT:
+			impl->computePropagate();
+			break;
+		default:
+			assert(false);
+	}
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
@@ -874,7 +888,7 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 	// This override is deliberately empty.
 	// The method prunes solution paths when a child failed to find a valid solution for it,
 	// but in Fallbacks the next child might still yield a successful solution
-	// Thus pruning must only occur once the last child is exhausted (inside computeFromExternal)
+	// Thus pruning must only occur once the last child is exhausted (inside computePropagate)
 }
 
 void FallbacksPrivate::computeGenerate() {
@@ -893,7 +907,7 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 	pending_states_.push(ExternalState(external, dir, children().cbegin()));
 }
 
-void FallbacksPrivate::computeFromExternal(){
+void FallbacksPrivate::computePropagate(){
 	assert(!pending_states_.empty() || current_external_state_.stage != children().cend());
 	if(current_external_state_.stage == children().cend()) {
 		current_external_state_ = pending_states_.pop();
@@ -942,7 +956,7 @@ void FallbacksPrivate::computeFromExternal(){
 	current_external_state_.stage = children().cend();
 	// if we did not compute a child this call, try again
 	if(!pending_states_.empty())
-		computeFromExternal();
+		computePropagate();
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
