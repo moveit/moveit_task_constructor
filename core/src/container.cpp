@@ -827,6 +827,7 @@ void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	auto& impl{ *pimpl() };
 	ParallelContainerBase::init(robot_model);
 	impl.current_generator_ = impl.children().begin();
+	impl.current_pending_ = impl.pending_states_.end();
 }
 
 bool Fallbacks::canCompute() const {
@@ -849,7 +850,7 @@ bool Fallbacks::canCompute() const {
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:
 		case CONNECT:
-			return !impl->pending_states_.empty() && !impl->pending_states_.front().external_state->priority().failed();
+			return !impl->pending_states_.empty();
 		default:
 			assert(false);
 	}
@@ -937,9 +938,13 @@ void FallbacksPrivate::computePropagate(){
 	while (!pending_states_.empty()) {
 		printPending();
 
-		auto current = pending_states_.begin();
-		if (!current->external_state->priority().enabled())
-			return;
+		// If we have a currently active pending state, proceed with this one
+		// even if pending_states_.front() might be different meanwhile.
+		// This is important as we need to feed states one by one to the children.
+		// Otherwise we cannot know if a child is exhausted on a specific input state.
+		if (current_pending_ == pending_states_.end())
+			current_pending_ = pending_states_.begin();
+		auto current = current_pending_;
 
 		auto pushState = [this](const ExternalState& ext) {
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state (" << ext.external_state->priority()
@@ -978,11 +983,13 @@ void FallbacksPrivate::computePropagate(){
 				                                current->dir == Interface::FORWARD ? &*current->external_state : nullptr,
 				                                current->dir == Interface::BACKWARD ? nullptr : &*current->external_state);
 				pending_states_.erase(current);
+				current_pending_ = pending_states_.end();
 			}
 		}
 		else {
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << child->name() << "' exhausted, but produced solutions before, not invoking further fallbacks");
 			pending_states_.erase(current);
+			current_pending_ = pending_states_.end();
 		}
 		// continue processing with next pending state as we didn't runCompute() yet
 	}

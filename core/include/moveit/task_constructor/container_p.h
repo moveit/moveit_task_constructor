@@ -263,7 +263,7 @@ protected:
 		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
 	};
 	ordered<ExternalState> pending_states_;  // pending external states for a PROPAGATE interface
-
+	ordered<ExternalState>::iterator current_pending_;  // currently active pending state
 	inline void computeGenerate();
 	mutable container_type::const_iterator current_generator_;
 
