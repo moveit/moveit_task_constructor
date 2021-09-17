@@ -902,6 +902,15 @@ void FallbacksPrivate::computeGenerate() {
 	(*current_generator_)->pimpl()->runCompute();
 }
 
+inline void FallbacksPrivate::printPending(const char* comment) const {
+	ROSCONSOLE_DEFINE_LOCATION(true, ::ros::console::levels::Debug, ROSCONSOLE_NAME_PREFIX ".Fallbacks");
+	if (ROS_UNLIKELY(__rosconsole_define_location__enabled)) {
+		std::cout << name() << ": " << comment;
+		std::for_each(pending_states_.begin(), pending_states_.end(), [](const auto& e) { std::cout << e.external_state->priority() << " "; });
+		std::cout << std::endl;
+	}
+}
+
 template <typename Interface::Direction dir>
 void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	if (updated) {
@@ -911,6 +920,7 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 			return;  // already processed
 
 		pending_states_.update(it);  // update sorting pos of this single item
+		printPending("after update: ");
 
 		// update prio of linked internal states as well
 		ContainerBasePrivate::copyState<dir>(external, InterfacePtr(), updated);
@@ -920,10 +930,13 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 	// remember external state for later processing by children.
 	// children().end() indicates that the states wasn't yet forwarded to any child
 	pending_states_.push(ExternalState(external, dir, children().cend()));
+	printPending("after push: ");
 }
 
 void FallbacksPrivate::computePropagate(){
 	while (!pending_states_.empty()) {
+		printPending();
+
 		auto current = pending_states_.begin();
 		if (!current->external_state->priority().enabled())
 			return;

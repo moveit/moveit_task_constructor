@@ -272,6 +272,8 @@ private:
 	template <typename Interface::Direction>
 	void onNewExternalState(Interface::iterator external, bool updated);
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+	// print pending states for debugging
+	void printPending(const char* comment = "pending: ") const;
 };
 PIMPL_FUNCTIONS(Fallbacks)
 
