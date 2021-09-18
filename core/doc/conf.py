@@ -33,7 +33,9 @@ extensions = [
 ]
 
 autosummary_generate = True
-autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+# Only add class doc in docstring as this is needed to clean up the
+# constructor signature
+autoclass_content = "class"
 # Remove 'view source code' from top of page (for html, not python)
 html_show_sourcelink = True
 autodoc_inherit_docstrings = True  # If no docstring, inherit from base class

@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
+#include <moveit/planning_scene/planning_scene.h>
 #include <moveit_msgs/PlanningScene.h>
 #include <pybind11/stl.h>
 
@@ -127,13 +128,32 @@ void export_stages(pybind11::module& m) {
 	// clang-format on
 
 	properties::class_<CurrentState, Stage>(m, "CurrentState", R"pbdoc(
+			CurrentState(self, name)
+
 			Fetch the current PlanningScene state via get_planning_scene service.
+
+			::
+
+				# create a stage instance
+				currentState = CurrentState('current state')
+
 		)pbdoc")
-	    .def(py::init<const std::string&>(), py::arg("name") = std::string("current state"),
-	         "class CurrentState(self, name)");
+	    .def(py::init<const std::string&>(), py::arg("name") = std::string("current state"));
 
 	properties::class_<FixedState, Stage>(m, "FixedState", R"pbdoc(
-			Spawn a pre - defined PlanningScene state.
+			FixedState(self, name)
+
+			Spawn a pre-defined PlanningScene state.
+
+			::
+
+				# create a stage instance
+				fixedState = FixedState('fixed state')
+
+		)pbdoc")
+	    .def("setState", &FixedState::setState, R"pbdoc(
+			Use a planning scene pointer to specify which state the Fixed State
+			stage should have.
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fixed state"));
 
@@ -148,24 +168,27 @@ void export_stages(pybind11::module& m) {
 	;
 
 	properties::class_<ComputeIK, Stage>(m, "ComputeIK", R"pbdoc(
-			Wrapper for any pose generator stage to compute IK poses
-			for a cartesian pose.
+			ComputeIK(self, name, stage)
 
-			The wrapper reads a target_pose from the interface state of
-			solutions provided by the wrapped stage.
-			This Cartesian pose (PoseStamped msg) is used as a goal pose
-			for inverse kinematics.
+			Wrapper for any pose generator stage to compute the inverse
+			kinematics for a pose in Cartesian space.
+
+			The wrapper reads a ``target_pose`` from the interface state of
+			solutions provided by the wrapped stage. This cartesian pose
+			(``PoseStamped`` msg) is used as a goal pose for inverse
+			kinematics.
 
 			Usually, the end effector's parent link or the group's tip link
-			is used as the IK frame, which should be moved to the goal frame.
-			However, any other IK frame can be defined (which is linked to the tip of the group).
+			is used as the inverse kinematics frame, which should be
+			moved to the goal frame. However, any other inverse kinematics
+			frame can be defined (which is linked to the tip of the group).
 
-			Properties of the internally received InterfaceState can be
-			forwarded to the newly generated, externally exposed InterfaceState.
+			Properties of the internally received ``InterfaceState`` can be
+			forwarded to the newly generated, externally exposed ``InterfaceState``.
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
-			str: Specify which end effector should
-			be used.
+			str: Specify which end effector of the active planning group
+			should be used.
 		)pbdoc")
 	    .property<std::string>("group", R"pbdoc(
 			str: Specify which planning group
@@ -173,7 +196,7 @@ void export_stages(pybind11::module& m) {
 		)pbdoc")
 	    .property<std::string>("default_pose", R"pbdoc(
 			str: Default joint pose of the active group
-			(defines cost of IK).
+			(defines cost of the inverse kinematics).
 		)pbdoc")
 	    .property<uint32_t>("max_ik_solutions", R"pbdoc(
 			int: Set the maximum number of inverse
@@ -184,15 +207,19 @@ void export_stages(pybind11::module& m) {
 			the planning scene are allowed.
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
-			geometry_msgs/PoseStamped: Specify the frame with respect
+			PoseStamped_ : Specify the frame with respect
 			to which the inverse kinematics should be calculated.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("target_pose", R"pbdoc(
-			geometry_msgs/PoseStamped: Specify the pose on which
+			PoseStamped_ : Specify the pose on which
 			the inverse kinematics should be
 			calculated on. Since this property should almost always be set
 			in the Interface State which is sent by the child,
 			if possible, avoid setting it manually.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    // methods of base class py::class_ need to be called last!
 	    .def(py::init<const std::string&, Stage::pointer&&>());
@@ -232,13 +259,30 @@ void export_stages(pybind11::module& m) {
 			Move specified joint variables by given amount.
 		)pbdoc");
 
-	py::enum_<stages::Connect::MergeMode>(m, "MergeMode")
+	py::enum_<stages::Connect::MergeMode>(m, "MergeMode", R"pbdoc(
+		)pbdoc")
 	    .value("SEQUENTIAL", stages::Connect::MergeMode::SEQUENTIAL)
 	    .value("WAYPOINTS", stages::Connect::MergeMode::WAYPOINTS);
 	PropertyConverter<stages::Connect::MergeMode>();
 
 	properties::class_<Connect, Stage>(m, "Connect", R"pbdoc(
-			Connect arbitrary InterfaceStates by motion planning
+			Connect(self, name, planners)
+
+			Connect arbitrary InterfaceStates by motion planning.
+			You can specify the planning groups and the planners you
+			want to utilize:
+
+			::
+
+				# Create a planner instance
+				samplingPlanner = PipelinePlanner()
+				# Specify group-planner combinations
+				planners = [
+					('foo_group', samplingPlanner),
+					('bar_group', samplingPlanner)
+				]
+				# create a stage instance
+				connect = Connect('connect', planners)
 
 			The states may differ in various planning groups.
 			To connect both states, the planners provided for
@@ -247,6 +291,7 @@ void export_stages(pybind11::module& m) {
 			planning group. Finally, an attempt is made to merge the
 			sub trajectories of individual planning results.
 			If this fails, the sequential planning result is returned.
+
 		)pbdoc")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         py::arg("name") = std::string("connect"), py::arg("planners"));
@@ -260,13 +305,29 @@ void export_stages(pybind11::module& m) {
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fix collisions"));
 
-	properties::class_<GenerateGraspPose, MonitoringGenerator>(m, "GenerateGraspPose")
-	    .property<std::string>("object")
-	    .property<std::string>("eef")
-	    .property<std::string>("pregrasp")
-	    .property<std::string>("grasp")
-	    .property<double>("angle_delta")
-	    .def(py::init<const std::string&>());
+	properties::class_<GenerateGraspPose, MonitoringGenerator>(m, "GenerateGraspPose", R"pbdoc(
+			GenerateGraspPose(name)
+
+			GenerateGraspPose stage derives from monitoring generator and can
+			be used to generate poses for grasping. Set the desired attributes
+			of the grasp using the stages properties.
+		)pbdoc")
+	    .property<std::string>("object", R"pbdoc(
+			str: Name of the Object in the planning scene, which should be grasped.
+		)pbdoc")
+	    .property<std::string>("eef", R"pbdoc(
+			str: Name of the end effector that should be used for grasping.
+		)pbdoc")
+	    .property<std::string>("pregrasp", R"pbdoc(
+			str: Name of the pre-grasp pose.
+		)pbdoc")
+	    .property<std::string>("grasp", R"pbdoc(
+			str: Name of the grasp pose.
+		)pbdoc")
+	    .property<double>("angle_delta", R"pbdoc(
+			double: Angular step distance in rad with which positions around the object are sampled.
+		)pbdoc")
+	    .def(py::init<const std::string&>(), py::arg("name") = std::string("Generate Grasp Pose"));
 
 	properties::class_<GeneratePose, MonitoringGenerator>(m, "GeneratePose")
 	    .property<geometry_msgs::PoseStamped>("pose")

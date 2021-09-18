@@ -50,7 +50,9 @@ PYBIND11_MODULE(pymoveit_mtc, m) {
 	// options.show_user_defined_docstrings();
 	auto msub = m.def_submodule("core", "MoveIt Task Contructor Core");
 	msub.doc() = R"pbdoc(
-		Core components such as base types of stage-
+		This python package contains
+		core components such as
+		base types of stage-
 		and planner classes.
 	)pbdoc";
 
@@ -60,9 +62,13 @@ PYBIND11_MODULE(pymoveit_mtc, m) {
 
 	msub = m.def_submodule("stages", "MoveIt Task Constructor Stages");
 	msub.doc() = R"pbdoc(
-		Contains all stages that
+		This python package contains
+		all stages that
 		are available to the user.
- 		The arrangement of stages
+		To use a stage, create an instance, then
+		add it to the task hierarchy at the
+		desired spot.
+ 		The arrangement of stages in the hierarchy
 		define the task to be carried out.
 	)pbdoc";
 	moveit::python::export_stages(msub);
