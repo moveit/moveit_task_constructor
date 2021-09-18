@@ -225,15 +225,7 @@ Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription
 		desc.name = stage.name();
 		desc.flags = stage.pimpl()->interfaceFlags();
 
-		// fill stage properties
-		for (const auto& pair : stage.properties()) {
-			moveit_task_constructor_msgs::Property p;
-			p.name = pair.first;
-			p.description = pair.second.description();
-			p.type = pair.second.typeName();
-			p.value = pair.second.serialize();
-			desc.properties.push_back(p);
-		}
+		stage.properties().fillMsgs(desc.properties);
 
 		auto it = impl->stage_to_id_map_.find(stage.pimpl()->parent()->pimpl());
 		assert(it != impl->stage_to_id_map_.cend());

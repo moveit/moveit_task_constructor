@@ -230,6 +230,27 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	return std::make_shared<SubTrajectory>(trajectory);
 }
+
+const std::vector<std::pair<Connect::MergeMode, std::string>> MERGE_MODE_MAP{ { Connect::SEQUENTIAL, "SEQUENTIAL" },
+	                                                                           { Connect::WAYPOINTS, "WAYPOINTS" } };
+
+std::ostream& operator<<(std::ostream& s, const Connect::MergeMode& mode) {
+	s << MERGE_MODE_MAP.at(mode).second;
+	return s;
+}
+
+std::istream& operator>>(std::istream& s, Connect::MergeMode& mode) {
+	std::string word;
+	s >> word;
+	for (const auto& m : MERGE_MODE_MAP)
+		if (m.second == word) {
+			mode = m.first;
+			return s;
+		}
+	s.setstate(std::ios::failbit);
+	return s;
+}
+
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

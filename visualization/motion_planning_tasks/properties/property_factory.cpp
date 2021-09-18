@@ -43,28 +43,30 @@
 #include <rviz/properties/property_tree_model.h>
 #include <rviz/properties/string_property.h>
 #include <rviz/properties/float_property.h>
+#include <rviz/properties/vector_property.h>
+
+#include <geometry_msgs/Vector3Stamped.h>
 
 namespace mtc = ::moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-static rviz::StringProperty* stringFactory(const QString& name, mtc::Property& mtc_prop,
-                                           const planning_scene::PlanningScene* /*unused*/,
-                                           rviz::DisplayContext* /*unused*/) {
-	std::string value;
-	if (!mtc_prop.value().empty())
-		value = boost::any_cast<std::string>(mtc_prop.value());
-	rviz::StringProperty* rviz_prop =
+namespace {
+
+rviz::Property* stringFactory(const QString& name, mtc::Property& mtc_prop,
+                              const planning_scene::PlanningScene* /*scene*/, rviz::DisplayContext* /*context*/) {
+	std::string value{ mtc_prop.defined() ? mtc_prop.value<std::string>() : "" };
+	auto* rviz_prop =
 	    new rviz::StringProperty(name, QString::fromStdString(value), QString::fromStdString(mtc_prop.description()));
 	QObject::connect(rviz_prop, &rviz::StringProperty::changed,
 	                 [rviz_prop, &mtc_prop]() { mtc_prop.setValue(rviz_prop->getStdString()); });
 	return rviz_prop;
 }
+
 template <typename T>
-static rviz::FloatProperty* floatFactory(const QString& name, mtc::Property& mtc_prop,
-                                         const planning_scene::PlanningScene* /*unused*/,
-                                         rviz::DisplayContext* /*unused*/) {
-	T value = !mtc_prop.value().empty() ? boost::any_cast<T>(mtc_prop.value()) : T();
+static rviz::Property* floatFactory(const QString& name, mtc::Property& mtc_prop,
+                                    const planning_scene::PlanningScene* /*unused*/, rviz::DisplayContext* /*unused*/) {
+	T value{ mtc_prop.defined() ? mtc_prop.value<T>() : static_cast<T>(0.0) };
 	rviz::FloatProperty* rviz_prop =
 	    new rviz::FloatProperty(name, value, QString::fromStdString(mtc_prop.description()));
 	QObject::connect(rviz_prop, &rviz::FloatProperty::changed,
@@ -72,11 +74,26 @@ static rviz::FloatProperty* floatFactory(const QString& name, mtc::Property& mtc
 	return rviz_prop;
 }
 
+rviz::Property* vector3Factory(const QString& name, mtc::Property& mtc_prop,
+                               const planning_scene::PlanningScene* /*scene*/, rviz::DisplayContext* /*context*/) {
+	auto value{ mtc_prop.defined() ? mtc_prop.value<geometry_msgs::Vector3Stamped>() : geometry_msgs::Vector3Stamped{} };
+
+	auto* rviz_prop =
+	    new rviz::VectorProperty(name, Ogre::Vector3::ZERO, QString::fromStdString(mtc_prop.description()));
+	rviz_prop->setVector(Ogre::Vector3{ static_cast<Ogre::Real>(value.vector.x), static_cast<Ogre::Real>(value.vector.y),
+	                                    static_cast<Ogre::Real>(value.vector.z) });
+
+	return rviz_prop;
+}
+
+}  // namespace
+
 PropertyFactory::PropertyFactory() {
-	// register some standard types
+	// register standard types
+	registerType<std::string>(&stringFactory);
 	registerType<float>(&floatFactory<float>);
 	registerType<double>(&floatFactory<double>);
-	registerType<std::string>(&stringFactory);
+	registerType<geometry_msgs::Vector3Stamped>(&vector3Factory);
 }
 
 PropertyFactory& PropertyFactory::instance() {

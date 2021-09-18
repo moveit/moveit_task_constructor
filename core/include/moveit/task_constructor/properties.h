@@ -45,7 +45,10 @@
 #include <vector>
 #include <functional>
 #include <sstream>
-#include <ros/serialization.h>
+
+#include <moveit_task_constructor_msgs/Property.h>
+
+#include "properties/serialize.hpp"
 
 namespace moveit {
 namespace task_constructor {
@@ -81,13 +84,40 @@ public:
 	Property();
 
 	/// base class for Property exceptions
-	class error;
+	class error : public std::runtime_error
+	{
+	protected:
+		std::string property_name_;
+		std::string msg_;
+
+	public:
+		explicit error(const std::string& msg);
+		const std::string& name() const { return property_name_; }
+		void setName(const std::string& name);
+		const char* what() const noexcept override { return msg_.c_str(); }
+	};
+
 	/// exception thrown when accessing an undeclared property
-	class undeclared;
+	class undeclared : public Property::error
+	{
+	public:
+		explicit undeclared(const std::string& name);
+	};
+
 	/// exception thrown when accessing an undefined property
-	class undefined;
+	class undefined : public Property::error
+	{
+	public:
+		explicit undefined();
+		explicit undefined(const std::string& name);
+	};
+
 	/// exception thrown when trying to set a value not matching the declared type
-	class type_error;
+	class type_error : public Property::error
+	{
+	public:
+		explicit type_error(const std::string& current_type, const std::string& declared_type);
+	};
 
 	using SourceFlags = uint;
 	/// function callback used to initialize property value from another PropertyMap
@@ -101,18 +131,39 @@ public:
 	/// reset to default value (which can be empty)
 	void reset();
 
-	/// the current value defined or will the fallback be used?
-	inline bool defined() const { return !value_.empty(); }
+	/// is a value defined?
+	inline bool defined() const { return !(value_.empty() && default_.empty()); }
 
-	/// get current value (or default if not defined)
+	/// is a non-default value set?
+	inline bool hasCurrentValue() const { return !value_.empty(); }
+
+	/// get current value (or default if not set)
 	inline const boost::any& value() const { return value_.empty() ? default_ : value_; }
-	inline boost::any& value() { return value_.empty() ? default_ : value_; }
+
+	/// get typed value of property. Throws bad_any_cast on type mismatch, undefined if !defined().
+	template <typename T>
+	inline const T& value() const {
+		const boost::any& v{ value() };
+		if (v.empty())
+			throw Property::undefined();
+		return boost::any_cast<const T&>(value());
+	}
+
 	/// get default value
 	const boost::any& defaultValue() const { return default_; }
+	const boost::any& currentValue() const { return value_; }
+	boost::any& currentValue() { return value_; };
 
 	/// serialize value using registered functions
 	static std::string serialize(const boost::any& value);
 	static boost::any deserialize(const std::string& type_name, const std::string& wire);
+
+	template <typename T>
+	static T deserialize(const moveit_task_constructor_msgs::Property& property_msg) {
+		PropertySerializer<T>();
+		return boost::any_cast<T>(deserialize(property_msg.type, property_msg.value));
+	}
+
 	std::string serialize() const { return serialize(value()); }
 
 	/// get description text
@@ -130,6 +181,12 @@ public:
 	/// configure initialization from source using given other property name
 	Property& configureInitFrom(SourceFlags source, const std::string& name);
 
+	void fillMsg(moveit_task_constructor_msgs::Property& msg) const {
+		msg.description = description();
+		msg.type = typeName();
+		msg.value = serialize();
+	}
+
 private:
 	std::string description_;
 	const type_info& type_info_;
@@ -140,112 +197,6 @@ private:
 	SourceFlags source_flags_ = 0;
 	SourceFlags initialized_from_;
 	InitializerFunction initializer_;
-};
-
-class Property::error : public std::runtime_error
-{
-protected:
-	std::string property_name_;
-	std::string msg_;
-
-public:
-	explicit error(const std::string& msg);
-	const std::string& name() const { return property_name_; }
-	void setName(const std::string& name);
-	const char* what() const noexcept override { return msg_.c_str(); }
-};
-class Property::undeclared : public Property::error
-{
-public:
-	explicit undeclared(const std::string& name, const std::string& msg = "undeclared");
-};
-class Property::undefined : public Property::error
-{
-public:
-	explicit undefined(const std::string& name, const std::string& msg = "undefined");
-};
-class Property::type_error : public Property::error
-{
-public:
-	explicit type_error(const std::string& current_type, const std::string& declared_type);
-};
-
-// hasSerialize<T>::value provides a true/false constexpr depending on whether operator<< is supported.
-// This uses SFINAE, extracted from https://jguegant.github.io/blogs/tech/sfinae-introduction.html
-template <typename T, typename = std::ostream&>
-struct hasSerialize : std::false_type
-{};
-
-template <typename T>
-struct hasSerialize<T, decltype(std::declval<std::ostream&>() << std::declval<T>())> : std::true_type
-{};
-
-template <typename T, typename = std::istream&>
-struct hasDeserialize : std::false_type
-{};
-
-template <typename T>
-struct hasDeserialize<T, decltype(std::declval<std::istream&>() >> std::declval<T&>())> : std::true_type
-{};
-
-class PropertySerializerBase
-{
-public:
-	using SerializeFunction = std::string (*)(const boost::any&);
-	using DeserializeFunction = boost::any (*)(const std::string&);
-
-	static std::string dummySerialize(const boost::any& /*unused*/) { return ""; }
-	static boost::any dummyDeserialize(const std::string& /*unused*/) { return boost::any(); }
-
-protected:
-	static bool insert(const std::type_index& type_index, const std::string& type_name, SerializeFunction serialize,
-	                   DeserializeFunction deserialize);
-};
-
-/// utility class to register serializer/deserializer functions for a property of type T
-template <typename T>
-class PropertySerializer : protected PropertySerializerBase
-{
-public:
-	PropertySerializer() { insert(typeid(T), typeName<T>(), &serialize, &deserialize); }
-
-	template <class Q = T>
-	static typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type typeName() {
-		return ros::message_traits::DataType<T>::value();
-	}
-
-	template <class Q = T>
-	static typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type typeName() {
-		return typeid(T).name();
-	}
-
-private:
-	/** Serialization based on std::[io]stringstream */
-	template <class Q = T>
-	static typename std::enable_if<hasSerialize<Q>::value, std::string>::type serialize(const boost::any& value) {
-		std::ostringstream oss;
-		oss << boost::any_cast<T>(value);
-		return oss.str();
-	}
-	template <class Q = T>
-	static typename std::enable_if<hasSerialize<Q>::value && hasDeserialize<Q>::value, boost::any>::type
-	deserialize(const std::string& wired) {
-		std::istringstream iss(wired);
-		T value;
-		iss >> value;
-		return value;
-	}
-
-	/** No serialization available */
-	template <class Q = T>
-	static typename std::enable_if<!hasSerialize<Q>::value, std::string>::type serialize(const boost::any& value) {
-		return dummySerialize(value);
-	}
-	template <class Q = T>
-	static typename std::enable_if<!hasSerialize<Q>::value || !hasDeserialize<Q>::value, boost::any>::type
-	deserialize(const std::string& wire) {
-		return dummyDeserialize(wire);
-	}
 };
 
 /** PropertyMap is map of (name, Property) pairs.
@@ -288,6 +239,9 @@ public:
 	Property& property(const std::string& name);
 	const Property& property(const std::string& name) const { return const_cast<PropertyMap*>(this)->property(name); }
 
+	void fillMsgs(std::vector<moveit_task_constructor_msgs::Property>& msgs) const;
+	void fromMsgs(std::vector<moveit_task_constructor_msgs::Property>& msgs);
+
 	using iterator = std::map<std::string, Property>::iterator;
 	using const_iterator = std::map<std::string, Property>::const_iterator;
 
@@ -295,11 +249,12 @@ public:
 	iterator end() { return props_.end(); }
 	const_iterator begin() const { return props_.begin(); }
 	const_iterator end() const { return props_.end(); }
+	size_t size() const { return props_.size(); }
 
 	/// allow initialization from given source for listed properties - always using the same name
 	void configureInitFrom(Property::SourceFlags source, const std::set<std::string>& properties = {});
 
-	/// set (and, if neccessary, declare) the value of a property
+	/// set (and, if necessary, declare) the value of a property
 	template <typename T>
 	void set(const std::string& name, const T& value) {
 		auto it = props_.find(name);
@@ -318,19 +273,15 @@ public:
 	/// Get the value of a property. Throws undeclared if unknown name
 	const boost::any& get(const std::string& name) const;
 
-	/// Get typed value of property. Throws undeclared, undefined, or bad_any_cast.
+	/// Get typed value of property. Throws undeclared or bad_any_cast.
 	template <typename T>
 	const T& get(const std::string& name) const {
-		const boost::any& value = get(name);
-		if (value.empty())
-			throw Property::undefined(name);
-		return boost::any_cast<const T&>(value);
-	}
-	/// get typed value of property, using fallback if undefined. Throws bad_any_cast on type mismatch.
-	template <typename T>
-	const T& get(const std::string& name, const T& fallback) const {
-		const boost::any& value = get(name);
-		return (value.empty()) ? fallback : boost::any_cast<const T&>(value);
+		try {
+			return property(name).value<T>();
+		} catch (Property::undefined& e) {
+			e.setName(name);
+			throw e;
+		}
 	}
 
 	/// count number of defined properties from given list

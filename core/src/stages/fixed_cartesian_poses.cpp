@@ -57,10 +57,10 @@ FixedCartesianPoses::FixedCartesianPoses(const std::string& name) : MonitoringGe
 
 void FixedCartesianPoses::addPose(const geometry_msgs::PoseStamped& pose) {
 	moveit::task_constructor::Property& poses = properties().property("poses");
-	if (!poses.defined())
-		poses.setValue(PosesList({ pose }));
+	if (!poses.hasCurrentValue())
+		poses.setCurrentValue(PosesList({ pose }));
 	else
-		boost::any_cast<PosesList&>(poses.value()).push_back(pose);
+		boost::any_cast<PosesList&>(poses.currentValue()).push_back(pose);
 }
 
 void FixedCartesianPoses::reset() {

@@ -37,6 +37,7 @@
 */
 
 #include <moveit/task_constructor/properties.h>
+
 #include <boost/format.hpp>
 #include <functional>
 #include <ros/console.h>
@@ -54,7 +55,7 @@ class PropertyTypeRegistry
 		PropertySerializerBase::SerializeFunction serialize_;
 		PropertySerializerBase::DeserializeFunction deserialize_;
 	};
-	Entry dummy_;
+	const Entry dummy_;
 
 	// map from type_info to corresponding converter functions
 	using RegistryMap = std::map<std::type_index, Entry>;
@@ -85,6 +86,7 @@ public:
 		return it->second->second;
 	}
 };
+
 static PropertyTypeRegistry REGISTRY_SINGLETON;
 
 bool PropertyTypeRegistry::insert(const std::type_index& type_index, const std::string& type_name,
@@ -120,7 +122,7 @@ Property::Property() : Property(typeid(boost::any), "", boost::any()) {}
 
 void Property::setValue(const boost::any& value) {
 	setCurrentValue(value);
-	default_ = value_;
+	setDefaultValue(value_);
 	initialized_from_ = 0;
 }
 
@@ -193,7 +195,7 @@ Property& Property::configureInitFrom(SourceFlags source, const std::string& nam
 Property& PropertyMap::declare(const std::string& name, const Property::type_info& type_info,
                                const std::string& description, const boost::any& default_value) {
 	auto it_inserted = props_.insert(std::make_pair(name, Property(type_info, description, default_value)));
-	// if name was already declared, the new declaration should match in type (except it was boost::any)
+	// if name was already declared, the new declaration should match in type (except if it was boost::any)
 	if (!it_inserted.second && it_inserted.first->second.type_info_ != typeid(boost::any) &&
 	    type_info != it_inserted.first->second.type_info_)
 		throw Property::type_error(type_info.name(), it_inserted.first->second.type_info_.name());
@@ -210,6 +212,22 @@ Property& PropertyMap::property(const std::string& name) {
 	if (it == props_.end())
 		throw Property::undeclared(name);
 	return it->second;
+}
+
+void PropertyMap::fillMsgs(std::vector<moveit_task_constructor_msgs::Property>& msgs) const {
+	msgs.reserve(size());
+	for (const auto& pair : *this) {
+		msgs.emplace_back();
+		msgs.back().name = pair.first;
+		pair.second.fillMsg(msgs.back());
+	}
+}
+
+void PropertyMap::fromMsgs(std::vector<moveit_task_constructor_msgs::Property>& msgs) {
+	for (const auto& p : msgs) {
+		boost::any value{ Property::deserialize(p.type, p.value) };
+		declare(p.name, value.type(), p.description, value);
+	}
 }
 
 void PropertyMap::exposeTo(PropertyMap& other, const std::set<std::string>& properties) const {
@@ -239,7 +257,7 @@ void PropertyMap::set<boost::any>(const std::string& name, const boost::any& val
 	auto range = props_.equal_range(name);
 	if (range.first == range.second) {  // name is not yet declared
 		if (value.empty())
-			throw Property::undeclared(name, "trying to set undeclared property '" + name + "' with NULL value");
+			throw std::runtime_error("trying to set undeclared property '" + name + "' with NULL value");
 		auto it = props_.insert(range.first, std::make_pair(name, Property(value.type(), "", boost::any())));
 		it->second.setValue(value);
 	} else
@@ -257,7 +275,7 @@ const boost::any& PropertyMap::get(const std::string& name) const {
 size_t PropertyMap::countDefined(const std::vector<std::string>& list) const {
 	size_t count = 0u;
 	for (const std::string& name : list) {
-		if (!get(name).empty())
+		if (!property(name).defined())
 			++count;
 	}
 	return count;
@@ -308,11 +326,13 @@ void Property::error::setName(const std::string& name) {
 	msg_ = "Property '" + name + "': " + std::runtime_error::what();
 }
 
-Property::undeclared::undeclared(const std::string& name, const std::string& msg) : Property::error(msg) {
+Property::undeclared::undeclared(const std::string& name) : Property::error("undeclared") {
 	setName(name);
 }
 
-Property::undefined::undefined(const std::string& name, const std::string& msg) : Property::error(msg) {
+Property::undefined::undefined() : Property::error("undefined") {}
+
+Property::undefined::undefined(const std::string& name) : Property::undefined() {
 	setName(name);
 }
 
