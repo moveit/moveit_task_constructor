@@ -712,7 +712,7 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
-		if (it->priority().status() == InterfaceState::DISABLED)
+		if (it->priority().pruned())
 			// remove all pending pairs involving this state
 			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
 		else

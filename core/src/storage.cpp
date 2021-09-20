@@ -148,7 +148,7 @@ std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio)
 	// maps InterfaceState::Status values to output (color-changing) prefix
 	static const char* prefix[] = {
 		"\033[32me:",  // ENABLED - green
-		"\033[33md:",  // DISABLED - yellow
+		"\033[33md:",  // PRUNED - yellow
 		"\033[31mf:",  // FAILED - red
 	};
 	static const char* color_reset = "\033[m";

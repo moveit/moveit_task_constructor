@@ -148,7 +148,7 @@ protected:
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
-	/// Set ENABLED / DISABLED status of the solution tree starting from s into given direction
+	/// Set ENABLED / PRUNED status of the solution tree starting from s into given direction
 	template <Interface::Direction dir>
 	void setStatus(const InterfaceState* s, InterfaceState::Status status);
 
