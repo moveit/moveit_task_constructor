@@ -1,7 +1,13 @@
 #pragma once
 
-#include <moveit/task_constructor/stage_p.h>
+#include <moveit/task_constructor/task.h>
+
 #include <moveit/planning_scene/planning_scene.h>
+
+#include "models.h"
+
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -112,6 +118,24 @@ struct BackwardMockup : public PropagatorMockup
 
 // reset ids of all Mockup types (used to generate unique stage names)
 void resetMockupIds();
+
+// provide a basic test fixture that prepares a Task
+struct TaskTestBase : public testing::Test
+{
+	Task t;
+	TaskTestBase() {
+		resetMockupIds();
+		t.setRobotModel(getModel());
+	}
+};
+
+#define EXPECT_COSTS(value, matcher)                                           \
+	{                                                                           \
+		std ::vector<double> costs;                                              \
+		std::transform(value.begin(), value.end(), std::back_inserter(costs),    \
+		               [](const SolutionBaseConstPtr& s) { return s->cost(); }); \
+		EXPECT_THAT(costs, matcher);                                             \
+	}
 
 }  // namespace task_constructor
 }  // namespace moveit
