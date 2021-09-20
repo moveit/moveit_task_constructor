@@ -144,7 +144,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 		return;  // nothing changing
 
 	// if we should disable the state, only do so when there is no enabled alternative path
-	if (status == InterfaceState::DISABLED) {
+	if (status == InterfaceState::PRUNED) {
 		auto solution_is_enabled = [](auto&& solution) {
 			return state<opposite<dir>()>(*solution)->priority().enabled();
 		};
@@ -177,13 +177,13 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	}
 
 	// To break symmetry between both ends of a partial solution sequence that gets disabled,
-	// we mark the first state with FAILED and all other states down the tree only with DISABLED.
-	// This allows us to re-enable the FAILED side, while not (yet) consider the DISABLED states again,
+	// we mark the first state with FAILED and all other states down the tree only with PRUNED.
+	// This allows us to re-enable the FAILED side, while not (yet) consider the PRUNED states again,
 	// when new states arrive in a Connecting stage.
-	// All DISABLED states are only re-enabled if the FAILED state actually gets connected.
+	// All PRUNED states are only re-enabled if the FAILED state actually gets connected.
 	// For details, see: https://github.com/ros-planning/moveit_task_constructor/pull/221
 	if (status == InterfaceState::Status::FAILED)
-		status = InterfaceState::Status::DISABLED;  // only the first state is marked as FAILED
+		status = InterfaceState::Status::PRUNED;  // only the first state is marked as FAILED
 
 	// traverse solution tree
 	for (const SolutionBase* successor : trajectories<dir>(*s))
