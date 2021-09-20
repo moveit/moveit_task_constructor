@@ -19,7 +19,7 @@ constexpr double INF = std::numeric_limits<double>::infinity();
 
 using FallbacksFixtureGenerator = TaskTestBase;
 
-TEST_F(FallbacksFixtureGenerator, stayWithFirstSuccessful) {
+TEST_F(FallbacksFixtureGenerator, DISABLED_stayWithFirstSuccessful) {
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(INF)));
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(1.0)));
@@ -57,7 +57,7 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
+TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -69,7 +69,7 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
+TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutionOnly) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0 })));
 	// duplicate generator solutions with resulting costs: 4, 2 | 3, 1
 	t.add(std::make_unique<ForwardMockup>(PredefinedCosts({ 2.0, 0.0, 2.0, 0.0 }), 2));
@@ -83,7 +83,7 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(113, 124, 211, 222));
 }
 
-TEST_F(FallbacksFixturePropagate, UpdateSolutionOrder) {
+TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
 	t.add(std::make_unique<BackwardMockup>(PredefinedCosts({ 10.0, 0.0 })));
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 	// available solutions (sorted) in individual runs of fallbacks: 1 | 11, 2 | 2, 11
@@ -102,7 +102,7 @@ TEST_F(FallbacksFixturePropagate, UpdateSolutionOrder) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(2));  // expecting less costly solution as result
 }
 
-TEST_F(FallbacksFixturePropagate, MultipleActivePendingStates) {
+TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0, 3.0 })));
 	// use a fallback container to delay computation: the 1st child never succeeds, but only the 2nd
 	auto inner = std::make_unique<Fallbacks>("Inner");
@@ -119,7 +119,7 @@ TEST_F(FallbacksFixturePropagate, MultipleActivePendingStates) {
 	// check that first solution is not marked as pruned
 }
 
-TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
+TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -131,7 +131,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
+TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -143,7 +143,7 @@ TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
+TEST_F(FallbacksFixturePropagate, DISABLED_ActiveChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, INF, 3.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -161,7 +161,7 @@ TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
 
 using FallbacksFixtureConnect = TaskTestBase;
 
-TEST_F(FallbacksFixtureConnect, ConnectStageInsideFallbacks) {
+TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
