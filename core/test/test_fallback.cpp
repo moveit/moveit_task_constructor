@@ -57,19 +57,6 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
-	t.add(std::make_unique<GeneratorMockup>());
-
-	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
-	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 1.0 }, 2));
-	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
-	t.add(std::move(fallback));
-
-	EXPECT_TRUE(t.plan());
-	ASSERT_EQ(t.solutions().size(), 1u);
-	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
-}
-
 TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
@@ -95,9 +82,35 @@ TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.numSolutions(), 2u);
 	ASSERT_EQ(fwd1->solutions().size(), 1u);
-	EXPECT_EQ(fwd1->solutions().front()->cost(), 1.0);
+	EXPECT_EQ(fwd1->solutions().front()->start()->priority().cost(), 1.0);
 	ASSERT_EQ(fwd2->solutions().size(), 1u);
-	EXPECT_EQ(fwd2->solutions().front()->cost(), 0.0);
+	EXPECT_EQ(fwd2->solutions().front()->start()->priority().cost(), 0.0);
+}
+
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ INF, 1.0 }, 2));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
+	t.add(std::move(fallback));
+
+	EXPECT_TRUE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 1u);
+	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
+}
+
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
+	t.add(std::make_unique<GeneratorMockup>());
+
+	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
+	fallback->add(std::make_unique<ForwardMockup>(std::list<double>{ 1.0, INF }, 2));
+	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
+	t.add(std::move(fallback));
+
+	EXPECT_TRUE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 1u);
+	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
 }
 
 TEST_F(FallbacksFixturePropagate, ActiveChildReset) {
