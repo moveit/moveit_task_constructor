@@ -820,22 +820,15 @@ void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	auto& impl{ *pimpl() };
 	ParallelContainerBase::init(robot_model);
 	impl.current_generator_ = impl.children().begin();
-	impl.current_external_state_.stage = impl.children().cend();
 }
 
 bool Fallbacks::canCompute() const {
 	auto impl { pimpl() };
 
-	if (impl->requiredInterface() == GENERATE) {
-		// current_generator_ is fixed if it produced solutions before
-		if( !solutions().empty() )
-			return (*impl->current_generator_)->pimpl()->canCompute();
-		else
-			// we still have children to try
-			return impl->current_generator_ != impl->children().end();
-	}
+	if (impl->requiredInterface() == GENERATE)
+		return const_cast<FallbacksPrivate*>(impl)->seekToNextGenerator();
 	else
-		return !impl->pending_states_.empty() || impl->current_external_state_.stage != impl->children().cend();
+		return const_cast<FallbacksPrivate*>(impl)->seekToNextIncoming();
 }
 
 void Fallbacks::compute() {
@@ -849,6 +842,20 @@ void Fallbacks::compute() {
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
+}
+
+void FallbacksPrivate::IncomingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction d){
+	size_t queue_idx{ static_cast<size_t>(d) };
+	assert(queue_idx < 2);
+	pending_states_[queue_idx].push(state);
+}
+
+std::pair<FallbacksPrivate::ExternalState,Interface::Direction>
+FallbacksPrivate::IncomingStates::pop(){
+	auto job{ std::make_pair(pending_states_[current_queue_].pop(), static_cast<Interface::Direction>(current_queue_)) };
+	if(!pending_states_[!current_queue_].empty())
+		current_queue_ = !current_queue_;
+	return job;
 }
 
 FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
@@ -872,6 +879,18 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 	// Thus pruning must only occur once the last child is exhausted (inside computeFromExternal)
 }
 
+bool FallbacksPrivate::seekToNextGenerator() {
+	// current_generator_ is fixed if it produced solutions before
+	if (solutions_.empty()){
+		// move to first generator that can run
+		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute()) {
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_generator_)->name() << "' can't compute, trying next one.");
+			++current_generator_;
+		}
+	}
+	return current_generator_ != children().end() && (*current_generator_)->pimpl()->canCompute();
+}
+
 void FallbacksPrivate::computeGenerate() {
 	if(solutions_.empty())
 		// move to first generator that can run
@@ -886,6 +905,28 @@ void FallbacksPrivate::computeGenerate() {
 	(*current_generator_)->pimpl()->runCompute();
 }
 
+bool FallbacksPrivate::seekToNextIncoming() {
+	while(!incoming_.empty() && !current_incoming_.valid){
+		std::tie(current_incoming_.state, current_incoming_.dir) = incoming_.pop();
+
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_incoming_.state.stage)->name() << "'");
+		// feed a new state
+		copyState(current_incoming_.dir,
+		          current_incoming_.state.external_state,
+		          (*current_incoming_.state.stage)->pimpl()->pullInterface(current_incoming_.dir),
+		          false);
+
+		current_incoming_.valid = (*current_incoming_.state.stage)->pimpl()->canCompute();
+
+		if(!current_incoming_.valid && std::next(current_incoming_.state.stage) != children().end()){
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_incoming_.state.stage)->name() << "' cannot compute on new state, schedule state with next child");
+			++current_incoming_.state.stage;
+			incoming_.push(current_incoming_.state, current_incoming_.dir);
+		}
+	}
+	return current_incoming_.valid;
+}
+
 template <typename Interface::Direction dir>
 void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	// TODO(v4hn): updated is not implemented
@@ -894,29 +935,17 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 		return;
 	}
 
-	pending_states_.push(ExternalState(external, dir, children().cbegin()));
+	incoming_.push(ExternalState{ external, children().cbegin() }, dir);
 }
 
 void FallbacksPrivate::computeFromExternal(){
-	assert(!pending_states_.empty() || current_external_state_.stage != children().cend());
-	if(current_external_state_.stage == children().cend()) {
-		current_external_state_ = pending_states_.pop();
+	assert(current_incoming_.valid);
 
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_external_state_.stage)->name() << "'");
-		// feed a new state
-		copyState(current_external_state_.dir,
-		          current_external_state_.external_state,
-		          (*current_external_state_.stage)->pimpl()->pullInterface(current_external_state_.dir),
-		          false);
-	}
+	auto& stage{ current_incoming_.state.stage };
+	auto& state{ current_incoming_.state.external_state };
+	auto dir { current_incoming_.dir };
 
-	auto& stage{ current_external_state_.stage };
-	auto& state{ current_external_state_.external_state };
-	auto dir { current_external_state_.dir };
-	if((*stage)->pimpl()->canCompute()) {
-		(*stage)->pimpl()->runCompute();
-		return;
-	}
+	(*stage)->pimpl()->runCompute();
 
 	auto has_solutions{ [](const InterfaceState& s, Interface::Direction d){
 			   const auto& trajectories { d == Interface::FORWARD
@@ -925,12 +954,17 @@ void FallbacksPrivate::computeFromExternal(){
 				return std::find_if(trajectories.cbegin(), trajectories.cend(), [](const auto& t){ return !t->isFailure();}) != trajectories.cend();
 	}};
 
-	if(!has_solutions(*state, dir)){
-		auto next_stage = std::next(stage);
-		if(next_stage != children().cend()){
+	if(!(*stage)->pimpl()->canCompute()) {
+		current_incoming_.valid = false;
+		if(has_solutions(*state, dir)){
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' produced a solution, not invoking further fallbacks");
+			return;
+		}
+
+		if(std::next(current_incoming_.state.stage) != children().end()){
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
-			++stage;
-			pending_states_.push(current_external_state_);
+			++current_incoming_.state.stage;
+			incoming_.push(current_incoming_.state, current_incoming_.dir);
 		}
 		else {
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
@@ -939,14 +973,6 @@ void FallbacksPrivate::computeFromExternal(){
 			                                dir == Interface::BACKWARD ? nullptr : &*state);
 		}
 	}
-	else {
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' produced a solution, not invoking further fallbacks");
-	}
-	// invalidate current_external_state_ after we processed it
-	current_external_state_.stage = children().cend();
-	// if we did not compute a child this call, try again
-	if(!pending_states_.empty())
-		computeFromExternal();
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}

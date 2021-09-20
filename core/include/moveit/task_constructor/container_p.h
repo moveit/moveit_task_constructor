@@ -247,24 +247,42 @@ public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
 
 protected:
-	void computeFromExternal();
 	struct ExternalState
 	{
 		ExternalState() = default;
-		ExternalState(Interface::iterator e, Interface::Direction d, container_type::const_iterator c)
-		  : external_state(e), dir(d), stage(c) {}
+		ExternalState(Interface::iterator e, container_type::const_iterator c) : external_state(e), stage(c) {}
 
 		Interface::iterator external_state;
-		Interface::Direction dir;
 		container_type::const_iterator stage;
 
 		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
 	};
-	ordered<ExternalState> pending_states_;
-	ExternalState current_external_state_;
 
-	void computeGenerate();
+	inline void computeGenerate();
+	void computeFromExternal();
+
+	class IncomingStates
+	{
+	public:
+		std::pair<ExternalState, Interface::Direction> pop();
+		inline void push(const ExternalState& job, Interface::Direction d);
+		inline bool empty() { return pending_states_[0].empty() && pending_states_[1].empty(); }
+
+	private:
+		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
+		size_t current_queue_{ 0 };  ///< which queue to check on next pop
+	} incoming_;
+
+	struct
+	{
+		bool valid{ false };
+		ExternalState state;
+		Interface::Direction dir;
+	} current_incoming_;
+	bool seekToNextIncoming();
+
 	container_type::const_iterator current_generator_;
+	bool seekToNextGenerator();
 
 private:
 	void initializeExternalInterfaces() override;
