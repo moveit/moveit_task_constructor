@@ -149,7 +149,7 @@ std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio)
 	static const char* prefix[] = {
 		"\033[32me:",  // ENABLED - green
 		"\033[33md:",  // DISABLED - yellow
-		"\033[31mf:",  // DISABLED_FAILED - red
+		"\033[31mf:",  // FAILED - red
 	};
 	static const char* color_reset = "\033[m";
 	os << prefix[prio.status()] << prio.depth() << ":" << prio.cost() << color_reset;
