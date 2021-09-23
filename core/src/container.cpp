@@ -827,19 +827,33 @@ void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 bool Fallbacks::canCompute() const {
 	auto impl { pimpl() };
 
-	if (impl->requiredInterface() == GENERATE)
+	switch(impl->requiredInterface()) {
+	case GENERATE:
 		return const_cast<FallbacksPrivate*>(impl)->seekToNextGenerator();
-	else
+	case PROPAGATE_FORWARDS:
+	case PROPAGATE_BACKWARDS:
+	case CONNECT:
 		return const_cast<FallbacksPrivate*>(impl)->seekToNextPending();
+	default:
+		assert(false);
+	}
 }
 
 void Fallbacks::compute() {
 	auto impl { pimpl() };
 
-	if(impl->requiredInterface() == GENERATE)
+	switch(impl->requiredInterface()) {
+	case GENERATE:
 		impl->computeGenerate();
-	else
+		break;
+	case PROPAGATE_FORWARDS:
+	case PROPAGATE_BACKWARDS:
+	case CONNECT:
 		impl->computeFromExternal();
+		break;
+	default:
+		assert(false);
+	}
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
