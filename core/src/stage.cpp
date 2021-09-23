@@ -722,10 +722,10 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			// Don't re-enable states that are marked DISABLED
+			// Don't re-enable states that are marked PRUNED
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
 				// re-enable the opposing state oit if its status is FAILED
-				if (oit->priority().status() == InterfaceState::Status::FAILED)
+				if (oit->priority().failed())
 					oit->owner()->updatePriority(&*oit,
 					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
