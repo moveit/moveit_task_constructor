@@ -868,9 +868,15 @@ void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState
 
 std::pair<FallbacksPrivate::ExternalState,Interface::Direction>
 FallbacksPrivate::PendingStates::pop(){
+	if(pending_states_[current_queue_].empty())
+		current_queue_ = 1 - current_queue_;
+	// Did you call pop when this->empty() == false?
+	assert(!pending_states_[current_queue_].empty());
+
 	auto job{ std::make_pair(pending_states_[current_queue_].pop(), static_cast<Interface::Direction>(current_queue_)) };
-	if(!pending_states_[!current_queue_].empty())
-		current_queue_ = !current_queue_;
+
+	current_queue_ = 1 - current_queue_;
+
 	return job;
 }
 
