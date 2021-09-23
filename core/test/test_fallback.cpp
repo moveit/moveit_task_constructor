@@ -67,7 +67,7 @@ TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutionOnly) {
+TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0 })));
 	// duplicate generator solutions with resulting costs: 4, 2 | 3, 1
 	t.add(std::make_unique<ForwardMockup>(PredefinedCosts({ 2.0, 0.0, 2.0, 0.0 }), 2));
@@ -81,6 +81,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutio
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(113, 124, 211, 222));
 }
 
+// requires individual job control in Fallbacks's children
 TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
 	t.add(std::make_unique<BackwardMockup>(PredefinedCosts({ 10.0, 0.0 })));
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
@@ -100,6 +101,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(2));  // expecting less costly solution as result
 }
 
+// requires individual job control in Fallbacks's children
 TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0, 3.0 })));
 	// use a fallback container to delay computation: the 1st child never succeeds, but only the 2nd
