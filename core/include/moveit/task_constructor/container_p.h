@@ -261,25 +261,27 @@ protected:
 	inline void computeGenerate();
 	void computeFromExternal();
 
-	class IncomingStates
+	class PendingStates
 	{
 	public:
 		std::pair<ExternalState, Interface::Direction> pop();
 		inline void push(const ExternalState& job, Interface::Direction d);
 		inline bool empty() { return pending_states_[0].empty() && pending_states_[1].empty(); }
 
+		inline void print(std::ostream& os = std::cout) const;
+
 	private:
 		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
 		size_t current_queue_{ 0 };  ///< which queue to check on next pop
-	} incoming_;
+	} pending_;
 
 	struct
 	{
 		bool valid{ false };
 		ExternalState state;
 		Interface::Direction dir;
-	} current_incoming_;
-	bool seekToNextIncoming();
+	} current_pending_;
+	bool seekToNextPending();
 
 	container_type::const_iterator current_generator_;
 	bool seekToNextGenerator();
@@ -289,6 +291,9 @@ private:
 	template <typename Interface::Direction>
 	void onNewExternalState(Interface::iterator external, bool updated);
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+
+	// print pending states for debugging
+	void printPending(const char* comment = "pending: ") const;
 };
 PIMPL_FUNCTIONS(Fallbacks)
 

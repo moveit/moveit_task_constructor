@@ -828,7 +828,7 @@ bool Fallbacks::canCompute() const {
 	if (impl->requiredInterface() == GENERATE)
 		return const_cast<FallbacksPrivate*>(impl)->seekToNextGenerator();
 	else
-		return const_cast<FallbacksPrivate*>(impl)->seekToNextIncoming();
+		return const_cast<FallbacksPrivate*>(impl)->seekToNextPending();
 }
 
 void Fallbacks::compute() {
@@ -844,14 +844,14 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
 }
 
-void FallbacksPrivate::IncomingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction d){
+void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction d){
 	size_t queue_idx{ static_cast<size_t>(d) };
 	assert(queue_idx < 2);
 	pending_states_[queue_idx].push(state);
 }
 
 std::pair<FallbacksPrivate::ExternalState,Interface::Direction>
-FallbacksPrivate::IncomingStates::pop(){
+FallbacksPrivate::PendingStates::pop(){
 	auto job{ std::make_pair(pending_states_[current_queue_].pop(), static_cast<Interface::Direction>(current_queue_)) };
 	if(!pending_states_[!current_queue_].empty())
 		current_queue_ = !current_queue_;
@@ -870,6 +870,39 @@ void FallbacksPrivate::initializeExternalInterfaces() {
 		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
 		                this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		             }));
+}
+
+inline void FallbacksPrivate::printPending(const char* comment) const {
+	ROSCONSOLE_DEFINE_LOCATION(true, ::ros::console::levels::Debug, ROSCONSOLE_NAME_PREFIX ".Fallbacks");
+	if (ROS_UNLIKELY(__rosconsole_define_location__enabled)) {
+		std::stringstream ss;
+		ss << name() << ": " << comment << "\n";
+		pending_.print(ss);
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", ss.str());
+	}
+}
+
+inline void FallbacksPrivate::PendingStates::print(std::ostream& os) const {
+	static const char* color_reset = "\033[m";
+
+	auto print_priorities{ [&](const char* prefix, size_t queue_idx){
+		os << color_reset;
+		if(queue_idx == current_queue_)
+			os << "*";
+		os << prefix;
+		if(pending_states_[queue_idx].empty()){
+			os << "<none>";
+		}
+		else {
+			for(const auto& e : pending_states_[queue_idx])
+				os << e.external_state->priority() << " ";
+		}
+		os << "\n";
+		}};
+
+	print_priorities("starts: ", 0);
+	print_priorities("ends: ", 1);
+	os << std::flush;
 }
 
 void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
@@ -905,26 +938,26 @@ void FallbacksPrivate::computeGenerate() {
 	(*current_generator_)->pimpl()->runCompute();
 }
 
-bool FallbacksPrivate::seekToNextIncoming() {
-	while(!incoming_.empty() && !current_incoming_.valid){
-		std::tie(current_incoming_.state, current_incoming_.dir) = incoming_.pop();
+bool FallbacksPrivate::seekToNextPending() {
+	while(!pending_.empty() && !current_pending_.valid){
+		std::tie(current_pending_.state, current_pending_.dir) = pending_.pop();
 
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_incoming_.state.stage)->name() << "'");
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_pending_.state.stage)->name() << "'");
 		// feed a new state
-		copyState(current_incoming_.dir,
-		          current_incoming_.state.external_state,
-		          (*current_incoming_.state.stage)->pimpl()->pullInterface(current_incoming_.dir),
+		copyState(current_pending_.dir,
+		          current_pending_.state.external_state,
+		          (*current_pending_.state.stage)->pimpl()->pullInterface(current_pending_.dir),
 		          false);
 
-		current_incoming_.valid = (*current_incoming_.state.stage)->pimpl()->canCompute();
+		current_pending_.valid = (*current_pending_.state.stage)->pimpl()->canCompute();
 
-		if(!current_incoming_.valid && std::next(current_incoming_.state.stage) != children().end()){
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_incoming_.state.stage)->name() << "' cannot compute on new state, schedule state with next child");
-			++current_incoming_.state.stage;
-			incoming_.push(current_incoming_.state, current_incoming_.dir);
+		if(!current_pending_.valid && std::next(current_pending_.state.stage) != children().end()){
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_pending_.state.stage)->name() << "' cannot compute on new state, schedule state with next child");
+			++current_pending_.state.stage;
+			pending_.push(current_pending_.state, current_pending_.dir);
 		}
 	}
-	return current_incoming_.valid;
+	return current_pending_.valid;
 }
 
 template <typename Interface::Direction dir>
@@ -935,15 +968,16 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 		return;
 	}
 
-	incoming_.push(ExternalState{ external, children().cbegin() }, dir);
+	pending_.push(ExternalState{ external, children().cbegin() }, dir);
+	printPending("after push: ");
 }
 
 void FallbacksPrivate::computeFromExternal(){
-	assert(current_incoming_.valid);
+	assert(current_pending_.valid);
 
-	auto& stage{ current_incoming_.state.stage };
-	auto& state{ current_incoming_.state.external_state };
-	auto dir { current_incoming_.dir };
+	auto& stage{ current_pending_.state.stage };
+	auto& state{ current_pending_.state.external_state };
+	auto dir { current_pending_.dir };
 
 	(*stage)->pimpl()->runCompute();
 
@@ -955,16 +989,16 @@ void FallbacksPrivate::computeFromExternal(){
 	}};
 
 	if(!(*stage)->pimpl()->canCompute()) {
-		current_incoming_.valid = false;
+		current_pending_.valid = false;
 		if(has_solutions(*state, dir)){
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' produced a solution, not invoking further fallbacks");
 			return;
 		}
 
-		if(std::next(current_incoming_.state.stage) != children().end()){
+		if(std::next(current_pending_.state.stage) != children().end()){
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
-			++current_incoming_.state.stage;
-			incoming_.push(current_incoming_.state, current_incoming_.dir);
+			++current_pending_.state.stage;
+			pending_.push(current_pending_.state, current_pending_.dir);
 		}
 		else {
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
@@ -973,6 +1007,8 @@ void FallbacksPrivate::computeFromExternal(){
 			                                dir == Interface::BACKWARD ? nullptr : &*state);
 		}
 	}
+
+	printPending("after compute: ");
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
