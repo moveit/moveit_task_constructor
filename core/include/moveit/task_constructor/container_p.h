@@ -277,17 +277,20 @@ protected:
 			return pending_states_[idx];
 		}
 
+		inline auto& current() { return current_; }
+
 	private:
 		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
 		size_t current_queue_{ 0 };  ///< which queue to check on next pop
+		struct
+		{
+			bool valid{ false };
+			ExternalState state;
+			Interface::Direction dir;
+		} current_;
+
 	} pending_;
 
-	struct
-	{
-		bool valid{ false };
-		ExternalState state;
-		Interface::Direction dir;
-	} current_pending_;
 	bool seekToNextPending();
 
 	container_type::const_iterator current_generator_;
@@ -299,6 +302,7 @@ private:
 	void onNewExternalState(Interface::iterator external, bool updated);
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
 
+	void advanceCurrentStateToNextChild();
 	// print pending states for debugging
 	void printPending(const char* comment = "pending: ") const;
 };

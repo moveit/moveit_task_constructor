@@ -922,8 +922,14 @@ inline void FallbacksPrivate::PendingStates::print(std::ostream& os) const {
 		os << "\n";
 		}};
 
-	print_priorities("starts: ", 0);
-	print_priorities("ends: ", 1);
+	os << color_reset << "active: ";
+	if (current_.valid)
+		os << current_.state.external_state->priority();
+	else
+		os << "<none>";
+	os << "\n";
+	print_priorities("pending starts: ", 0);
+	print_priorities("pending ends: ", 1);
 	os << std::flush;
 }
 
@@ -961,25 +967,23 @@ void FallbacksPrivate::computeGenerate() {
 }
 
 bool FallbacksPrivate::seekToNextPending() {
-	while(!pending_.empty() && !current_pending_.valid){
-		std::tie(current_pending_.state, current_pending_.dir) = pending_.pop();
+	auto& current{ pending_.current() };
+	while(!pending_.empty() && !current.valid){
+		std::tie(current.state, current.dir) = pending_.pop();
 
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current_pending_.state.stage)->name() << "'");
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state to '" << (*current.state.stage)->name() << "'");
 		// feed a new state
-		copyState(current_pending_.dir,
-		          current_pending_.state.external_state,
-		          (*current_pending_.state.stage)->pimpl()->pullInterface(current_pending_.dir),
+		copyState(current.dir,
+		          current.state.external_state,
+		          (*current.state.stage)->pimpl()->pullInterface(current.dir),
 		          false);
 
-		current_pending_.valid = (*current_pending_.state.stage)->pimpl()->canCompute();
+		current.valid = (*current.state.stage)->pimpl()->canCompute();
 
-		if(!current_pending_.valid && std::next(current_pending_.state.stage) != children().end()){
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_pending_.state.stage)->name() << "' cannot compute on new state, schedule state with next child");
-			++current_pending_.state.stage;
-			pending_.push(current_pending_.state, current_pending_.dir);
-		}
+		if(!current.valid)
+			advanceCurrentStateToNextChild();
 	}
-	return current_pending_.valid;
+	return current.valid;
 }
 
 template <typename Interface::Direction dir>
@@ -995,6 +999,7 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 
 		// update prio of linked internal states as well
 		ContainerBasePrivate::copyState<dir>(external, InterfacePtr(), updated);
+		printPending("after update: ");
 		return;
 	}
 
@@ -1003,11 +1008,12 @@ void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool upd
 }
 
 void FallbacksPrivate::computeFromExternal(){
-	assert(current_pending_.valid);
+	auto& current{ pending_.current() };
+	assert(current.valid);
 
-	auto& stage{ current_pending_.state.stage };
-	auto& state{ current_pending_.state.external_state };
-	auto dir { current_pending_.dir };
+	auto& stage{ current.state.stage };
+	auto& state{ current.state.external_state };
+	auto dir { current.dir };
 
 	(*stage)->pimpl()->runCompute();
 
@@ -1019,26 +1025,36 @@ void FallbacksPrivate::computeFromExternal(){
 	}};
 
 	if(!(*stage)->pimpl()->canCompute()) {
-		current_pending_.valid = false;
+		current.valid = false;
 		if(has_solutions(*state, dir)){
 			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' produced a solution, not invoking further fallbacks");
 			return;
 		}
 
-		if(std::next(current_pending_.state.stage) != children().end()){
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*stage)->name() << "' failed to generate a solution, schedule state with next child");
-			++current_pending_.state.stage;
-			pending_.push(current_pending_.state, current_pending_.dir);
-		}
-		else {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
-			parent()->pimpl()->onNewFailure(*me(),
-			                                dir == Interface::FORWARD ? &*state : nullptr,
-			                                dir == Interface::BACKWARD ? nullptr : &*state);
-		}
+		advanceCurrentStateToNextChild();
 	}
 
 	printPending("after compute: ");
+}
+
+void FallbacksPrivate::advanceCurrentStateToNextChild() {
+	auto& current { pending_.current() };
+
+	// the current child must be exhausted
+	assert(!current.valid);
+
+	if(std::next(current.state.stage) != children().end()){
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current.state.stage)->name() << "' failed to generate a solution, schedule state with next child");
+		++current.state.stage;
+		pending_.push(current.state, current.dir);
+	}
+	else {
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "State failed to extend through any child, prune path");
+		parent()->pimpl()->onNewFailure(*me(),
+		                                current.dir == Interface::FORWARD ? &*current.state.external_state : nullptr,
+		                                current.dir == Interface::BACKWARD ? nullptr : &*current.state.external_state);
+	}
+
 }
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
