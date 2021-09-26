@@ -15,8 +15,6 @@
 
 using namespace moveit::task_constructor;
 
-constexpr double INF = std::numeric_limits<double>::infinity();
-
 using FallbacksFixtureGenerator = TaskTestBase;
 
 TEST_F(FallbacksFixtureGenerator, DISABLED_stayWithFirstSuccessful) {
