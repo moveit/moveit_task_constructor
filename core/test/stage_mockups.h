@@ -127,6 +127,12 @@ struct TaskTestBase : public testing::Test
 		resetMockupIds();
 		t.setRobotModel(getModel());
 	}
+
+	template <typename C, typename S>
+	auto add(C& container, S* stage) -> S* {
+		container.add(Stage::pointer(stage));
+		return stage;
+	}
 };
 
 #define EXPECT_COSTS(value, matcher)                                           \

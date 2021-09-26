@@ -42,36 +42,25 @@ struct Connect : stages::Connect
 constexpr double INF = std::numeric_limits<double>::infinity();
 unsigned int Connect::id_ = 0;
 
-struct TestBase : public testing::Test
+struct TestBase : public TaskTestBase
 {
-	Task task;
-	TestBase() {
-		resetMockupIds();
-		Connect::id_ = 0;
-		task.setRobotModel(getModel());
-	}
-
-	template <typename C, typename S>
-	auto add(C& container, S* stage) -> S* {
-		container.add(Stage::pointer(stage));
-		return stage;
-	}
+	TestBase() { Connect::id_ = 0; }
 };
 
 using ConnectConnect = TestBase;
 // https://github.com/ros-planning/moveit_task_constructor/issues/182
 TEST_F(ConnectConnect, SuccSucc) {
-	add(task, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
-	add(task, new Connect());
-	add(task, new GeneratorMockup({ 10.0, 20.0 }));
-	add(task, new Connect());
-	add(task, new GeneratorMockup({ 0.0 }));
+	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
+	add(t, new Connect());
+	add(t, new GeneratorMockup({ 10.0, 20.0 }));
+	add(t, new Connect());
+	add(t, new GeneratorMockup({ 0.0 }));
 
-	EXPECT_TRUE(task.plan());
-	ASSERT_EQ(task.solutions().size(), 3u * 2u);
+	EXPECT_TRUE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 3u * 2u);
 	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
 	auto expected_cost = expected_costs.begin();
-	for (const auto& s : task.solutions()) {
+	for (const auto& s : t.solutions()) {
 		EXPECT_EQ(s->cost(), *expected_cost);
 		++expected_cost;
 	}
@@ -79,59 +68,59 @@ TEST_F(ConnectConnect, SuccSucc) {
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/218
 TEST_F(ConnectConnect, FailSucc) {
-	add(task, new GeneratorMockup());
-	add(task, new Connect({ INF }, true));
-	add(task, new GeneratorMockup());
-	add(task, new Connect());
-	add(task, new GeneratorMockup());
-	add(task, new ForwardMockup(PredefinedCosts::constant(0.0), 0));
+	add(t, new GeneratorMockup());
+	add(t, new Connect({ INF }, true));
+	add(t, new GeneratorMockup());
+	add(t, new Connect());
+	add(t, new GeneratorMockup());
+	add(t, new ForwardMockup(PredefinedCosts::constant(0.0), 0));
 
-	EXPECT_FALSE(task.plan());
+	EXPECT_FALSE(t.plan());
 }
 
 using Pruning = TestBase;
 TEST_F(Pruning, PropagatorFailure) {
-	auto back = add(task, new BackwardMockup());
-	add(task, new GeneratorMockup({ 0 }));
-	add(task, new ForwardMockup({ INF }));
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
 
-	EXPECT_FALSE(task.plan());
-	ASSERT_EQ(task.solutions().size(), 0u);
+	EXPECT_FALSE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 0u);
 	// ForwardMockup fails, so the backward stage should never compute
 	EXPECT_EQ(back->runs_, 0u);
 }
 
 TEST_F(Pruning, PruningMultiForward) {
-	add(task, new BackwardMockup());
-	add(task, new BackwardMockup());
-	add(task, new GeneratorMockup());
+	add(t, new BackwardMockup());
+	add(t, new BackwardMockup());
+	add(t, new GeneratorMockup());
 	// spawn two solutions for the only incoming state
-	add(task, new ForwardMockup(PredefinedCosts{ { 0.0, 0.0 } }, 2));
+	add(t, new ForwardMockup(PredefinedCosts{ { 0.0, 0.0 } }, 2));
 	// fail to extend the second solution
-	add(task, new ForwardMockup({ 0, INF }));
+	add(t, new ForwardMockup({ 0, INF }));
 
-	EXPECT_TRUE(task.plan());
+	EXPECT_TRUE(t.plan());
 
 	// the second (infeasible) solution in the last stage must not disable
 	// the earlier partial solution just because they share stage solutions
-	ASSERT_EQ(task.solutions().size(), 1u);
-	EXPECT_EQ((*task.solutions().begin())->cost(), 0u);
+	ASSERT_EQ(t.solutions().size(), 1u);
+	EXPECT_EQ((*t.solutions().begin())->cost(), 0u);
 }
 
 TEST_F(Pruning, ConnectConnectForward) {
-	add(task, new GeneratorMockup());
-	auto c1 = add(task, new Connect({ INF, 0 }));  // 1st attempt is a failue
-	add(task, new GeneratorMockup({ 0, 10, 20 }));
-	add(task, new ForwardMockup());
-	auto c2 = add(task, new Connect());
-	add(task, new GeneratorMockup({ 1, 2, 3 }));
+	add(t, new GeneratorMockup());
+	auto c1 = add(t, new Connect({ INF, 0 }));  // 1st attempt is a failue
+	add(t, new GeneratorMockup({ 0, 10, 20 }));
+	add(t, new ForwardMockup());
+	auto c2 = add(t, new Connect());
+	add(t, new GeneratorMockup({ 1, 2, 3 }));
 
-	task.plan();
+	t.plan();
 
-	ASSERT_EQ(task.solutions().size(), 3u * 2u);
+	ASSERT_EQ(t.solutions().size(), 3u * 2u);
 	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
 	auto expected_cost = expected_costs.begin();
-	for (const auto& s : task.solutions()) {
+	for (const auto& s : t.solutions()) {
 		EXPECT_EQ(s->cost(), *expected_cost);
 		++expected_cost;
 	}
@@ -140,19 +129,19 @@ TEST_F(Pruning, ConnectConnectForward) {
 }
 
 TEST_F(Pruning, ConnectConnectBackward) {
-	add(task, new GeneratorMockup({ 1, 2, 3 }));
-	auto c1 = add(task, new Connect());
-	add(task, new BackwardMockup());
-	add(task, new GeneratorMockup({ 0, INF, 10, 20 }));  // 2nd is a dummy to postpone creation of 3rd
-	auto c2 = add(task, new Connect({ INF, 0 }));  // 1st attempt is a failure
-	add(task, new GeneratorMockup());
+	add(t, new GeneratorMockup({ 1, 2, 3 }));
+	auto c1 = add(t, new Connect());
+	add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0, INF, 10, 20 }));  // 2nd is a dummy to postpone creation of 3rd
+	auto c2 = add(t, new Connect({ INF, 0 }));  // 1st attempt is a failure
+	add(t, new GeneratorMockup());
 
-	task.plan();
+	t.plan();
 
-	ASSERT_EQ(task.solutions().size(), 3u * 2u);
+	ASSERT_EQ(t.solutions().size(), 3u * 2u);
 	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
 	auto expected_cost = expected_costs.begin();
-	for (const auto& s : task.solutions()) {
+	for (const auto& s : t.solutions()) {
 		EXPECT_EQ(s->cost(), *expected_cost);
 		++expected_cost;
 	}
@@ -161,14 +150,14 @@ TEST_F(Pruning, ConnectConnectBackward) {
 }
 
 TEST_F(Pruning, PropagateIntoContainer) {
-	add(task, new BackwardMockup({ INF }));
-	add(task, new GeneratorMockup({ 0 }));
+	add(t, new BackwardMockup({ INF }));
+	add(t, new GeneratorMockup({ 0 }));
 
-	auto inner = add(task, new SerialContainer());
+	auto inner = add(t, new SerialContainer());
 	auto con = add(*inner, new Connect());
 	add(*inner, new GeneratorMockup({ 0 }));
 
-	EXPECT_FALSE(task.plan());
+	EXPECT_FALSE(t.plan());
 
 	// the failure in the backward stage (outside the container)
 	// should prune the expected computation of con inside the container
@@ -176,45 +165,45 @@ TEST_F(Pruning, PropagateIntoContainer) {
 }
 
 TEST_F(Pruning, PropagateFromContainerPull) {
-	auto back = add(task, new BackwardMockup());
-	add(task, new BackwardMockup());
-	add(task, new GeneratorMockup({ 0 }));
+	auto back = add(t, new BackwardMockup());
+	add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
 
-	auto inner = add(task, new SerialContainer());
+	auto inner = add(t, new SerialContainer());
 	add(*inner, new ForwardMockup());
 	add(*inner, new ForwardMockup({ INF }));
 
-	EXPECT_FALSE(task.plan());
+	EXPECT_FALSE(t.plan());
 
 	// the failure inside the container should prune computing of back
 	EXPECT_EQ(back->runs_, 0u);
 }
 
 TEST_F(Pruning, PropagateFromContainerPush) {
-	auto inner = add(task, new SerialContainer());
+	auto inner = add(t, new SerialContainer());
 	add(*inner, new BackwardMockup({ INF }));
 
-	add(task, new GeneratorMockup({ 0 }));
-	auto con = add(task, new Connect());
-	add(task, new GeneratorMockup({ 0 }));
+	add(t, new GeneratorMockup({ 0 }));
+	auto con = add(t, new Connect());
+	add(t, new GeneratorMockup({ 0 }));
 
-	EXPECT_FALSE(task.plan());
+	EXPECT_FALSE(t.plan());
 
 	// the failure inside container should prune computing of con
 	EXPECT_EQ(con->calls_, 0u);
 }
 
 TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
-	auto back = add(task, new BackwardMockup());
-	add(task, new GeneratorMockup({ 0 }));
-	auto inner = add(task, new Alternatives());
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	auto inner = add(t, new Alternatives());
 
 	add(*inner, new ForwardMockup({ INF }));
 	auto serial = add(*inner, new SerialContainer());
 	add(*serial, new Connect());
 	add(*serial, new GeneratorMockup({ 0 }));
 
-	EXPECT_TRUE(task.plan());
+	EXPECT_TRUE(t.plan());
 
 	// the failure in one branch of Alternatives must not prune computing back
 	EXPECT_EQ(back->runs_, 1u);
