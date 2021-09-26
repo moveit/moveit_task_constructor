@@ -1,6 +1,7 @@
 #pragma once
 
 #include <moveit/task_constructor/task.h>
+#include <moveit/task_constructor/cost_terms.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -30,6 +31,8 @@ struct PredefinedCosts : CostTerm
 	double operator()(const SolutionSequence& /*s*/, std::string& /*comment*/) const override { return cost(); }
 	double operator()(const WrappedSolution& /*s*/, std::string& /*comment*/) const override { return cost(); }
 };
+
+constexpr double INF{ std::numeric_limits<double>::infinity() };
 
 struct GeneratorMockup : public Generator
 {
