@@ -223,6 +223,9 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 			if (scene->knowsFrameTransform(ik_pose_msg.header.frame_id)) {
 				// get IK frame in planning frame
 				Eigen::Isometry3d ik_frame_eigen_world = scene->getFrameTransform(ik_pose_msg.header.frame_id);
+				// get IK pose in IK frame
+				Eigen::Isometry3d ik_pose_eigen;
+				tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose_eigen);
 				// determine IK link from group
 				if (!(link = jmg->getOnlyOneEndEffectorTip())) {
 					solution.markAsFailure("missing ik_frame");
@@ -231,8 +234,8 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 				ik_pose_msg.header.frame_id = link->getName();
 				// get planning group tip frame in planning frame
 				Eigen::Isometry3d link_pose_eigen = scene->getCurrentState().getGlobalLinkTransform(link);
-				// get IK frame in planning group tip frame
-				Eigen::Isometry3d ik_pose_eigen = link_pose_eigen.inverse() * ik_frame_eigen_world;
+				// get IK pose in planning group tip frame
+				ik_pose_eigen = link_pose_eigen.inverse() * ik_frame_eigen_world * ik_pose_eigen;
 				tf::poseEigenToMsg(ik_pose_eigen, ik_pose_msg.pose);
 			}
 			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
