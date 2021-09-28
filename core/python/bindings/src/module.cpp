@@ -46,8 +46,10 @@ void export_stages(pybind11::module& m);
 }  // namespace moveit
 
 PYBIND11_MODULE(pymoveit_mtc, m) {
-	// pybind11::options options;
-	// options.show_user_defined_docstrings();
+	// disable function signatures in generated documentation
+	pybind11::options options;
+	options.disable_function_signatures();
+
 	auto msub = m.def_submodule("core", "MoveIt Task Contructor Core");
 	msub.doc() = R"pbdoc(
 		This python package contains

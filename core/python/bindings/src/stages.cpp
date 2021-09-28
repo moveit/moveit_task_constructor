@@ -80,50 +80,73 @@ std::vector<T> elementOrList(const py::object& arg) {
 void export_stages(pybind11::module& m) {
 	// clang-format off
 	properties::class_<ModifyPlanningScene, Stage>(m, "ModifyPlanningScene", R"pbdoc(
+			ModifyPlanningScene(self, name)
+
 			Allows modification of the planning scene.
 			This stage takes the incoming planning scene and applies previously scheduled changes to it, for example:
 				- Modify allowed collision matrix, enabling or disabling collision pairs.
 				- Attach or detach objects to robot links.
 				- Spawn or remove objects.
-		)pbdoc")
-		.def(py::init<const std::string&>(), py::arg("name") = std::string("modify planning scene"), R"pbdoc(
-			Args:
-				Name (str): Name of the stage.
 
-			Returns:
-				None
+			Args:
+				name (str): Name of the stage.
 		)pbdoc")
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("modify planning scene"))
 		.def("attachObject", &ModifyPlanningScene::attachObject, R"pbdoc(
-
 			Args:
-				Name (str): Name of the object.
-				Link (str): Name of the link, to which
-							the object should be attached.
-
+				name (str): Name of the object
+				link (str): Name of the link, to which
+					the object should be attached.
 			Returns:
 				None
-
 		)pbdoc")
 		.def("detachObject", &ModifyPlanningScene::detachObject, R"pbdoc(
 			Detach an object from a robot link.
+
+			Args:
+				name (str): Object name that should be detached.
+				link (str): Link name from which the object should be detached.
+			Returns:
+				None
 		)pbdoc")
 		.def("attachObjects", [](ModifyPlanningScene& self, const py::object& names,
 		                         const std::string& attach_link, bool attach) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, attach);
 		}, py::arg("names"), py::arg("attach_link"), py::arg("attach") = true, R"pbdoc(
 			Attach multiple objects to a robot link.
+
+			Args:
+				names (list): Objects that should be attached.
+				attach_link (str): Link to which the objects should be attached.
+				attach (bool): Set to true to attach the objects.
+			Returns:
+				None
 		)pbdoc")
 		.def("detachObjects", [](ModifyPlanningScene& self, const py::object& names,
 		                         const std::string& attach_link) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, false);
 		}, py::arg("names"), py::arg("attach_link"), R"pbdoc(
 			Detach multiple objects from a robot link.
+
+			Args:
+				names (list): Objects that should be attached.
+				attach_link (str): Link from which the objects should be detached.
+			Returns:
+				None
 		)pbdoc")
 		.def("allowCollisions", [](ModifyPlanningScene& self,
 	        const py::object& first, const py::object& second, bool enable_collision) {
 			self.allowCollisions(elementOrList<std::string>(first), elementOrList<std::string>(second), enable_collision);
 		}, py::arg("first"), py::arg("second"), py::arg("enable_collision") = true, R"pbdoc(
 			Allow or disable collisions between links and objects.
+
+			Args:
+				first (str): Name of the first object or link.
+				second (str): Name of the second object or link.
+				enable_collision (bool): Set to true to enable collisions checks;
+					set to false to disable collision checks.
+			Returns:
+				None
 		)pbdoc");
 	// clang-format on
 
@@ -132,11 +155,16 @@ void export_stages(pybind11::module& m) {
 
 			Fetch the current PlanningScene state via get_planning_scene service.
 
+			Args:
+				name (str): Name of the stage.
+
 			::
+
+				task = core.Task()
 
 				# create a stage instance
 				currentState = CurrentState('current state')
-
+				task.add(currentState)
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("current state"));
 
@@ -145,15 +173,25 @@ void export_stages(pybind11::module& m) {
 
 			Spawn a pre-defined PlanningScene state.
 
+			Args:
+				name (str): Name of the stage.
+
 			::
+
+				task = core.Task()
 
 				# create a stage instance
 				fixedState = FixedState('fixed state')
-
+				task.add(fixedState)
 		)pbdoc")
 	    .def("setState", &FixedState::setState, R"pbdoc(
+			setState(self, scene)
+
 			Use a planning scene pointer to specify which state the Fixed State
 			stage should have.
+
+			Args:
+				scene (PlanningScenePtr): The desired planning scene state.
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fixed state"));
 
@@ -185,6 +223,23 @@ void export_stages(pybind11::module& m) {
 
 			Properties of the internally received ``InterfaceState`` can be
 			forwarded to the newly generated, externally exposed ``InterfaceState``.
+
+			Args:
+				name (str): Name of the stage.
+				stage: Stage that contains the robot state for IK calculation.
+
+			::
+
+				# create a task
+				task = core.Task()
+
+				# get the current robot state
+				currentState = stages.CurrentState("current state")
+
+				# calculate the inverse kinematics for the current robot state
+				computeIK = stages.ComputeIK("compute IK", currentState)
+				task.add(computeIK)
+
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
 			str: Specify which end effector of the active planning group
@@ -224,45 +279,166 @@ void export_stages(pybind11::module& m) {
 	    // methods of base class py::class_ need to be called last!
 	    .def(py::init<const std::string&, Stage::pointer&&>());
 
-	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo")
-	    .property<std::string>("group")
-	    .property<geometry_msgs::PoseStamped>("ik_frame")
-	    .property<moveit_msgs::Constraints>("path_constraints")
+	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo", R"pbdoc(
+		MoveTo(self, name, planner)
+
+		Compute a trajectory between the robot state from the
+		interface state of the preceeding stage and a specified
+		goal.
+
+		Args:
+			name (str): Name of the stage.
+			planner (PlannerInterface): Planner that is used to compute the path of motion.
+
+		::
+
+			# create a planner instance
+			jointspace = core.JointInterpolationPlanner()
+
+			# specify planning group
+			group = "foo_robot"
+
+			# create a task
+			task = core.Task()
+
+			# get the current robot state
+			currentState = stages.CurrentState("current state")
+			task.add(currentState)
+
+			# moveTo named posture, using joint-space interplation
+			move = stages.MoveTo("moveTo ready", jointspace)
+			move.group = group
+			move.setGoal("ready")
+			task.add(move)
+	)pbdoc")
+	    .property<std::string>("group", R"pbdoc(
+			str: Planning group which should be utilized for planning and execution.
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
+			PoseStamped_ : IK reference frame for the goal pose.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
+
+		)pbdoc")
+	    .property<moveit_msgs::Constraints>("path_constraints", R"pbdoc(
+			Constraints_ : Set path constraints via the corresponding moveit message type.
+
+			.. _Constraints: https://docs.ros.org/en/api/moveit_msgs/html/msg/Constraints.html
+		)pbdoc")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
-	    .def("setGoal", py::overload_cast<const geometry_msgs::PoseStamped&>(&MoveTo::setGoal))
-	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal))
-	    .def("setGoal", py::overload_cast<const moveit_msgs::RobotState&>(&MoveTo::setGoal))
-	    .def("setGoal", py::overload_cast<const std::map<std::string, double>&>(&MoveTo::setGoal))
-	    .def("setGoal", py::overload_cast<const std::string&>(&MoveTo::setGoal));
+	    .def("setGoal", py::overload_cast<const geometry_msgs::PoseStamped&>(&MoveTo::setGoal), R"pbdoc(
+			setGoal(self, goal)
+
+			Args:
+				goal (PoseStamped_): Desired configuration.
+
+			Returns:
+				None
+
+			Move link to a given pose.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
+		)pbdoc")
+	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal), R"pbdoc(
+			Args:
+				goal (PointStamped_): Desired configuration.
+
+			Returns:
+				None
+
+			Move link to given point, keeping current orientation.
+
+			.. _PointStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PointStamped.html
+		)pbdoc")
+	    .def("setGoal", py::overload_cast<const moveit_msgs::RobotState&>(&MoveTo::setGoal), R"pbdoc(
+			Args:
+				goal (RobotState_): Desired configuration.
+
+			Returns:
+				None
+
+			Move joints specified in msg to their target values.
+
+			.. _RobotState: https://docs.ros.org/en/noetic/api/moveit_msgs/html/msg/RobotState.html
+		)pbdoc")
+	    .def("setGoal", py::overload_cast<const std::map<std::string, double>&>(&MoveTo::setGoal), R"pbdoc(
+			Args:
+				goal (dict): Desired configuration given in joint - value mappings.
+
+			Returns:
+				None
+
+			Move joints by name to their mapped target value.
+		)pbdoc")
+	    .def("setGoal", py::overload_cast<const std::string&>(&MoveTo::setGoal), R"pbdoc(
+			Args:
+				goal (str): Desired configuration as a name of a known pose.
+
+			Returns:
+				None
+
+			Move joint model group to given named pose.
+		)pbdoc");
 
 	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative", R"pbdoc(
+			MoveRelative(self, name, planner)
+
 			Perform a Cartesian motion relative to some link .
+
+			Args:
+				name (str): Name of the stage.
+				planner (PlannerInterface): Planner that is used to compute the path of motion.
 		)pbdoc")
-	    .property<std::string>("group")
-	    .property<geometry_msgs::PoseStamped>("ik_frame")
-	    .property<double>("min_distance")
-	    .property<double>("max_distance")
+	    .property<std::string>("group", R"pbdoc(
+			str: Planning group which should be utilized for planning and execution.
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
+			PoseStamped_ : IK reference frame for the goal pose.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
+		)pbdoc")
+	    .property<double>("min_distance", R"pbdoc(
+
+		)pbdoc")
+	    .property<double>("max_distance", R"pbdoc(
+
+		)pbdoc")
 	    .property<moveit_msgs::Constraints>("path_constraints", R"pbdoc(
-			These are the path constraints.
+			Constraints_ : These are the path constraints.
+
+			.. _Constraints: https://docs.ros.org/en/api/moveit_msgs/html/msg/Constraints.html
 		)pbdoc")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
 	    .def("setDirection", py::overload_cast<const geometry_msgs::TwistStamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-			Perform twist motion on specified link.
+				setDirection(self, twist)
+
+				Perform twist motion on specified link.
+
+				Args:
+				 	twist (Twist_): Use a Twist message as movement direction description.
+
+				.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const geometry_msgs::Vector3Stamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-			Translate link along given direction.
+				Translate link along given direction.
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const std::map<std::string, double>&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-			Move specified joint variables by given amount.
+				Move specified joint variables by given amount.
 		)pbdoc");
 
 	py::enum_<stages::Connect::MergeMode>(m, "MergeMode", R"pbdoc(
+			Define the merge strategy to use when performing planning operations
+			with e.g. the connect stage.
 		)pbdoc")
-	    .value("SEQUENTIAL", stages::Connect::MergeMode::SEQUENTIAL)
-	    .value("WAYPOINTS", stages::Connect::MergeMode::WAYPOINTS);
+	    .value("SEQUENTIAL", stages::Connect::MergeMode::SEQUENTIAL, R"pbdoc(
+			Store sequential trajectories.
+		)pbdoc")
+	    .value("WAYPOINTS", stages::Connect::MergeMode::WAYPOINTS, R"pbdoc(
+			Join trajectories by their waypoints.
+		)pbdoc");
 	PropertyConverter<stages::Connect::MergeMode>();
 
 	properties::class_<Connect, Stage>(m, "Connect", R"pbdoc(
@@ -270,7 +446,19 @@ void export_stages(pybind11::module& m) {
 
 			Connect arbitrary InterfaceStates by motion planning.
 			You can specify the planning groups and the planners you
-			want to utilize:
+			want to utilize.
+
+			The states may differ in various planning groups.
+			To connect both states, the planners provided for
+			individual sub groups are applied in the specified order.
+			Each planner only plan for joints within the corresponding
+			planning group. Finally, an attempt is made to merge the
+			sub trajectories of individual planning results.
+			If this fails, the sequential planning result is returned.
+
+ 			Args:
+				Name (str): Name of the stage.
+				Planners (list): List of the planner - group associations.
 
 			::
 
@@ -283,22 +471,27 @@ void export_stages(pybind11::module& m) {
 				]
 				# create a stage instance
 				connect = Connect('connect', planners)
-
-			The states may differ in various planning groups.
-			To connect both states, the planners provided for
-			individual sub groups are applied in the specified order.
-			Each planner only plan for joints within the corresponding
-			planning group. Finally, an attempt is made to merge the
-			sub trajectories of individual planning results.
-			If this fails, the sequential planning result is returned.
-
 		)pbdoc")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         py::arg("name") = std::string("connect"), py::arg("planners"));
 
 	properties::class_<FixCollisionObjects, Stage>(m, "FixCollisionObjects", R"pbdoc(
+			FixCollisionObjects(self, name)
+
 			Test for collisions and find a correction for applicable objects.
 			Move the objects out of the way along the correction direction.
+
+ 			Args:
+				name (str): Name of the stage.
+
+			::
+
+				task = core.Task()
+
+				# check for collisions and find corrections
+				fixCollisionObjects = stages.FixCollisionObjects("FixCollisionObjects")
+				task.add(fixCollisionObjects)
+
 		)pbdoc")
 	    .property<double>("max_penetration", R"pbdoc(
 			Cutoff length up to which collision objects get fixed.
@@ -311,6 +504,10 @@ void export_stages(pybind11::module& m) {
 			GenerateGraspPose stage derives from monitoring generator and can
 			be used to generate poses for grasping. Set the desired attributes
 			of the grasp using the stages properties.
+
+			Args:
+				name (str): Name of the stage.
+
 		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
 			str: Name of the Object in the planning scene, which should be grasped.
@@ -329,8 +526,23 @@ void export_stages(pybind11::module& m) {
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("Generate Grasp Pose"));
 
-	properties::class_<GeneratePose, MonitoringGenerator>(m, "GeneratePose")
-	    .property<geometry_msgs::PoseStamped>("pose")
+	properties::class_<GeneratePose, MonitoringGenerator>(m, "GeneratePose", R"pbdoc(
+		GeneratePose(self, name)
+
+		Monitoring generator stage which can be used to generate a pose, based on solutions provided
+		by the monitored stage.
+
+		Args:
+			name (str): Name of the stage.
+
+		::
+
+			task = core.Task()
+
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("pose", R"pbdoc(
+
+		)pbdoc")
 	    .def(py::init<const std::string&>());
 
 	properties::class_<Pick, Stage>(m, "Pick", R"pbdoc(
