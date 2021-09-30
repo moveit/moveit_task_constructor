@@ -213,7 +213,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (value.empty()) {  // property undefined
 			// determine IK link from group
 			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				solution.markAsFailure("No unique end effector tip");
+				solution.markAsFailure("missing ik_frame");
 				return false;
 			}
 			ik_pose_msg.header.frame_id = link->getName();
