@@ -80,19 +80,38 @@ std::vector<T> elementOrList(const py::object& arg) {
 void export_stages(pybind11::module& m) {
 	// clang-format off
 	properties::class_<ModifyPlanningScene, Stage>(m, "ModifyPlanningScene", R"pbdoc(
-			ModifyPlanningScene(self, name)
+		ModifyPlanningScene(self, name)
 
-			Allows modification of the planning scene.
-			This stage takes the incoming planning scene and applies previously scheduled changes to it, for example:
-				- Modify allowed collision matrix, enabling or disabling collision pairs.
-				- Attach or detach objects to robot links.
-				- Spawn or remove objects.
+		Allows modification of the planning scene.
+		This stage takes the incoming planning scene and applies previously scheduled changes to it, for example:
+			- Modify allowed collision matrix, enabling or disabling collision pairs.
+			- Attach or detach objects to robot links.
+			- Spawn or remove objects.
 
-			Args:
-				name (str): Name of the stage.
+		Args:
+			name (str): Name of the stage.
+
+		::
+
+			task = core.Task()
+
+			# Specify a grasp object by the known name
+			graspObject = "sampleObject"
+
+			# allow collisions
+			allowCollision = stages.ModifyPlanningScene("allow object - hand collision")
+			allowCollision.allowCollisions(
+				graspObject,
+				"right_fingers",
+				True
+			)
+			task.add(allowCollision)
+
 		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("modify planning scene"))
 		.def("attachObject", &ModifyPlanningScene::attachObject, R"pbdoc(
+			attachObject(self, name, link)
+
 			Args:
 				name (str): Name of the object
 				link (str): Name of the link, to which
@@ -101,6 +120,8 @@ void export_stages(pybind11::module& m) {
 				None
 		)pbdoc")
 		.def("detachObject", &ModifyPlanningScene::detachObject, R"pbdoc(
+			detachObject(self, name, link)
+
 			Detach an object from a robot link.
 
 			Args:
@@ -113,6 +134,8 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link, bool attach) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, attach);
 		}, py::arg("names"), py::arg("attach_link"), py::arg("attach") = true, R"pbdoc(
+			attachObjects(self, attach_link, attach)
+
 			Attach multiple objects to a robot link.
 
 			Args:
@@ -126,6 +149,8 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, false);
 		}, py::arg("names"), py::arg("attach_link"), R"pbdoc(
+			detachObjects(self, attach_link)
+
 			Detach multiple objects from a robot link.
 
 			Args:
@@ -138,6 +163,8 @@ void export_stages(pybind11::module& m) {
 	        const py::object& first, const py::object& second, bool enable_collision) {
 			self.allowCollisions(elementOrList<std::string>(first), elementOrList<std::string>(second), enable_collision);
 		}, py::arg("first"), py::arg("second"), py::arg("enable_collision") = true, R"pbdoc(
+			allowCollisions(self, first, second, enable_collision)
+
 			Allow or disable collisions between links and objects.
 
 			Args:
@@ -388,6 +415,27 @@ void export_stages(pybind11::module& m) {
 			Args:
 				name (str): Name of the stage.
 				planner (PlannerInterface): Planner that is used to compute the path of motion.
+
+			::
+
+				# Planning group
+				group = "panda_arm"
+
+				# Cartesian planner
+				cartesian = core.CartesianPath()
+
+				task = core.Task()
+
+				# start from current robot state
+				task.add(stages.CurrentState("current state"))
+
+				# move along x
+				move = stages.MoveRelative("x +0.2", cartesian)
+				move.group = group
+				header = Header(frame_id="world")
+				move.setDirection(Vector3Stamped(header=header, vector=Vector3(0.2, 0, 0)))
+				task.add(move)
+
 		)pbdoc")
 	    .property<std::string>("group", R"pbdoc(
 			str: Planning group which should be utilized for planning and execution.
@@ -398,10 +446,10 @@ void export_stages(pybind11::module& m) {
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .property<double>("min_distance", R"pbdoc(
-
+			double: Set the minimum distance to move.
 		)pbdoc")
 	    .property<double>("max_distance", R"pbdoc(
-
+			double: Set the maximum distance to move.
 		)pbdoc")
 	    .property<moveit_msgs::Constraints>("path_constraints", R"pbdoc(
 			Constraints_ : These are the path constraints.
@@ -422,10 +470,14 @@ void export_stages(pybind11::module& m) {
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const geometry_msgs::Vector3Stamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
+				setDirection(self, direction)
+
 				Translate link along given direction.
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const std::map<std::string, double>&>(&MoveRelative::setDirection),
 	         R"pbdoc(
+				setDirection(self, joint_deltas)
+
 				Move specified joint variables by given amount.
 		)pbdoc");
 
@@ -546,47 +598,122 @@ void export_stages(pybind11::module& m) {
 	    .def(py::init<const std::string&>());
 
 	properties::class_<Pick, Stage>(m, "Pick", R"pbdoc(
-			Specialization of PickPlaceBase to realize picking
+			Pick(self, grasp_generator, name)
+
+			Args:
+				grasp_generator ():
+				name (str): Name of the stage.
+
+			The Pick stage is a specialization of the PickPlaceBase class, which
+			wraps the pipeline to pick or place an object with a given end effector.
+
+			Picking consist of the following sub stages:
+
+				- Linearly approaching the object along an approach direction/twist "grasp" end effector posture
+				- Attach the object
+				- Lift along a given direction/twist
+
+			The end effector postures corresponding to pre-grasp and grasp as well
+			as the end effector's cartesian pose needs to be provided by an external
+			grasp stage.
 		)pbdoc")
-	    .property<std::string>("object")
-	    .property<std::string>("eef")
-	    .property<std::string>("eef_frame")
-	    .property<std::string>("eef_group")
-	    .property<std::string>("eef_parent_group")
+	    .property<std::string>("object", R"pbdoc(
+			Name of object to pick.
+		)pbdoc")
+	    .property<std::string>("eef", R"pbdoc(
+			End effector name.
+		)pbdoc")
+	    .property<std::string>("eef_frame", R"pbdoc(
+			Name of the end effector frame.
+		)pbdoc")
+	    .property<std::string>("eef_group", R"pbdoc(
+			Joint model group of the end effector.
+		)pbdoc")
+	    .property<std::string>("eef_parent_group", R"pbdoc(
+			Joint model group of the eef's parent.
+		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("grasp_generator"),
 	         py::arg("name") = std::string("pick"))
-	    .def("setApproachMotion", &Pick::setApproachMotion)
+	    .def("setApproachMotion", &Pick::setApproachMotion, R"pbdoc(
+
+		)pbdoc")
 	    .def("setLiftMotion",
-	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Pick::setLiftMotion))
-	    .def("setLiftMotion", py::overload_cast<const std::map<std::string, double>&>(&Pick::setLiftMotion));
+	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Pick::setLiftMotion), R"pbdoc(
+
+		)pbdoc")
+	    .def("setLiftMotion", py::overload_cast<const std::map<std::string, double>&>(&Pick::setLiftMotion), R"pbdoc(
+
+		)pbdoc");
 
 	properties::class_<Place, Stage>(m, "Place", R"pbdoc(
-			Specialization of PickPlaceBase to realize placing
+			Place(self, place_generator, name)
+
+			Args:
+				place_generator ():
+				name (str): Name of the stage.
+
+			The Place stage is a specialization of the PickPlaceBase class, which
+			wraps the pipeline to pick or place an object with a given end effector.
+
+			Placing consist of the inverse order of stages:
+
+				- Place down along a given direction
+				- Detach the object
+				- Linearly retract end effector
+
+			The end effector postures corresponding to pre-grasp and grasp as well
+			as the end effector's Cartesian pose needs to be provided by an external
+			grasp stage.
 		)pbdoc")
-	    .property<std::string>("object")
-	    .property<std::string>("eef")
-	    .property<std::string>("eef_frame")
-	    .property<std::string>("eef_group")
-	    .property<std::string>("eef_parent_group")
+	    .property<std::string>("object", R"pbdoc(
+			Name of object to pick.
+		)pbdoc")
+	    .property<std::string>("eef", R"pbdoc(
+			End effector name.
+		)pbdoc")
+	    .property<std::string>("eef_frame", R"pbdoc(
+			Name of the end effector frame.
+		)pbdoc")
+	    .property<std::string>("eef_group", R"pbdoc(
+			Joint model group of the end effector.
+		)pbdoc")
+	    .property<std::string>("eef_parent_group", R"pbdoc(
+			Joint model group of the eef's parent.
+		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("place_generator"),
 	         py::arg("name") = std::string("place"));
 
 	properties::class_<SimpleGrasp, Stage>(m, "SimpleGrasp", R"pbdoc(
 			Specialization of SimpleGraspBase to realize grasping
 		)pbdoc")
-	    .property<std::string>("eef")
-	    .property<std::string>("object")
+	    .property<std::string>("eef", R"pbdoc(
+
+		)pbdoc")
+	    .property<std::string>("object", R"pbdoc(
+
+		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("pose_generator"),
 	         py::arg("name") = std::string("grasp generator"))
-	    .def<void (SimpleGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleGrasp::setIKFrame)
-	    .def<void (SimpleGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame)
-	    .def<void (SimpleGrasp::*)(const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame);
+	    .def<void (SimpleGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
+
+		)pbdoc")
+	    .def<void (SimpleGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame,
+	                                                                              R"pbdoc(
+
+		)pbdoc")
+	    .def<void (SimpleGrasp::*)(const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
+
+		)pbdoc");
 
 	properties::class_<SimpleUnGrasp, Stage>(m, "SimpleUnGrasp", R"pbdoc(
 			Specialization of SimpleGraspBase to realize ungrasping
 		)pbdoc")
-	    .property<std::string>("eef")
-	    .property<std::string>("object")
+	    .property<std::string>("eef", R"pbdoc(
+
+		)pbdoc")
+	    .property<std::string>("object", R"pbdoc(
+
+		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("pose_generator"),
 	         py::arg("name") = std::string("place generator"));
 }
