@@ -33,6 +33,9 @@ if (CATKIN_ENABLE_TESTING)
 	mtc_add_gmock(test_cost_queue.cpp)
 	mtc_add_gmock(test_interface_state.cpp)
 
+	add_rostest_gtest(${PROJECT_NAME}-test-move-to move_to.test test_move_to.cpp)
+	target_link_libraries(${PROJECT_NAME}-test-move-to ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
+
 	# building these integration tests works without moveit config packages
 	add_executable(pick_ur5 pick_ur5.cpp)
 	target_link_libraries(pick_ur5 ${PROJECT_NAME}_stages gtest)
