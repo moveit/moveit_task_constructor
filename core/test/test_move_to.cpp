@@ -70,7 +70,7 @@ TEST_F(PandaMoveTo, stateTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-TEST_F(PandaMoveTo, DISABLED_pointTarget) {
+TEST_F(PandaMoveTo, pointTarget) {
 	move_to->setGoal([this]() {
 		RobotState state{ scene->getCurrentState() };
 		state.setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "extended");
@@ -83,7 +83,7 @@ TEST_F(PandaMoveTo, DISABLED_pointTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-TEST_F(PandaMoveTo, DISABLED_poseTarget) {
+TEST_F(PandaMoveTo, poseTarget) {
 	move_to->setGoal([this]() {
 		RobotState state{ scene->getCurrentState() };
 		state.setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "extended");
