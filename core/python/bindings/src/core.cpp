@@ -190,11 +190,67 @@ void export_core(pybind11::module& m) {
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("PropagatingBackward"))
 		;
 
-	properties::class_<Generator, Stage, PyGenerator<>>(m, "Generator")
+	properties::class_<Generator, Stage, PyGenerator<>>(m, "Generator", R"pbdoc(
+			Generator(self, name)
+
+			Args:
+				name (str): Name of the stage.
+
+			Derive from this stage to implement a custom stage
+			that spawns a solution. When traversing through the whole
+			task hierarchy, the ``compute()`` function of this generator stage
+			gets called as many times as the ``canCompute()`` returns ``true``.
+
+			::
+
+				class PyGenerator(core.Generator):
+					""" Implements a custom 'Generator' stage with 3 compute() calls."""
+
+					max_calls = 3
+
+					def __init__(self, name="Generator"):
+						core.Generator.__init__(self, name)
+						self.reset()
+
+					def init(self, robot_model):
+						self.ps = PlanningScene(robot_model)
+
+					def reset(self):
+						core.Generator.reset(self)
+						self.num = self.max_calls
+
+					def canCompute(self):
+						return self.num > 0
+
+					def compute(self):
+						self.num = self.num - 1
+						self.spawn(core.InterfaceState(self.ps), self.num)
+
+		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
-		.def("canCompute", &Generator::canCompute)
-		.def("compute", &Generator::compute)
-		.def("spawn", [](Generator& self, InterfaceState& state, double cost) { self.spawn(std::move(state), cost); })
+		.def("canCompute", &Generator::canCompute, R"pbdoc(
+			canCompute(self)
+
+			Returns:
+				bool: Should ``compute()`` be called?
+
+			Guard for the ``compute()`` function.
+		)pbdoc")
+		.def("compute", &Generator::compute, R"pbdoc(
+			compute(self)
+
+			Implement the stage's logic here. To interface with other stages,
+			spwan an ``InterfaceState``.
+		)pbdoc")
+		.def("spawn", [](Generator& self, InterfaceState& state, double cost) { self.spawn(std::move(state), cost); }, R"pbdoc(
+			spawn(self, state, cost)
+
+			Args:
+				state (obj): The Interface State that should be used.
+				cost (double): The cost associated with that solution.
+
+			Spawn an interface state that gets forwarded to the next stage.
+		)pbdoc")
 		;
 
 	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator")
@@ -206,7 +262,9 @@ void export_core(pybind11::module& m) {
 	py::classh<ContainerBase, Stage>(m, "ContainerBase")
 		.def("add", &ContainerBase::add)
 		.def("insert", &ContainerBase::insert, py::arg("stage"), py::arg("before") = -1)
-		.def("remove", py::overload_cast<int>(&ContainerBase::remove), "Remove child stage by index")
+		.def("remove", py::overload_cast<int>(&ContainerBase::remove), R"pbdoc(
+			Remove child stage by index.
+		)pbdoc")
 		.def("clear", &ContainerBase::clear)
 		.def("__len__", &ContainerBase::numChildren)
 		.def("__getitem__", [](const ContainerBase &c, const std::string &name) -> Stage* {
@@ -227,31 +285,227 @@ void export_core(pybind11::module& m) {
 	py::classh<ParallelContainerBase, ContainerBase>(m, "ParallelContainerBase");
 
 	py::classh<Alternatives, ParallelContainerBase>(m, "Alternatives", R"pbdoc(
+		Alternatives(self, name)
+
+		Args:
+			name (str): Name of the stage.
+
 		Plan for different alternatives in parallel.
 		Solution of all children are reported - sorted by cost.
 
+		::
+
+			from moveit.task_constructor import core, stages
+			import rospy
+			import time
+			import numpy as np
+
+			from moveit.python_tools import roscpp_init
+
+			roscpp_init("mtc_tutorial")
+
+			jointPlanner = core.JointInterpolationPlanner()
+
+			task = core.Task()
+
+			# start from current robot state
+			currentState = stages.CurrentState("current state")
+			task.add(currentState)
+
+			alternatives = core.Alternatives('Alternatives')
+
+			goalConfig1 = {
+				'panda_joint1': 1.0,
+				'panda_joint2': -1.0,
+				'panda_joint3': 0.0,
+				'panda_joint4': -2.5,
+				'panda_joint5': 1.0,
+				'panda_joint6': 1.0,
+				'panda_joint7': 1.0,
+			}
+
+			goalConfig2 = {
+				'panda_joint1': -3.0,
+				'panda_joint2': -1.0,
+				'panda_joint3': 0.0,
+				'panda_joint4': -2.0,
+				'panda_joint5': 1.0,
+				'panda_joint6': 2.0,
+				'panda_joint7': 0.5,
+			}
+
+			# first motion plan to compare
+			moveTo1 = stages.MoveTo('Move To Goal Configuration 1', jointPlanner)
+			moveTo1.group = 'panda_arm'
+			moveTo1.setGoal(goalConfig1)
+			alternatives.insert(moveTo1)
+
+			# second motion plan to compare
+			moveTo2 = stages.MoveTo('Move To Goal Configuration 2', jointPlanner)
+			moveTo2.group = 'panda_arm'
+			moveTo2.setGoal(goalConfig2)
+			alternatives.insert(moveTo2)
+
+			task.add(alternatives)
+
+			if task.plan():
+				task.publish(task.solutions[0])
+			time.sleep(1)
 	)pbdoc")
-		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"), R"pbdoc(
+		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"));
 
-			Args:
-				Name (str): Name of the object
-		)pbdoc");
+	py::classh<Fallbacks, ParallelContainerBase>(m, "Fallbacks", R"pbdoc(
+		Fallbacks(self, name)
 
-	py::classh<Fallbacks, ParallelContainerBase>(m, "Fallbacks")
+		Args:
+			name (str): Name of the stage.
+
+		Plan for different alternatives in sequence.
+		Try to find feasible solutions using first child.
+		Only if this fails, proceed to the next child trying
+		an alternative planning strategy.
+		All solutions of the last active child are reported.
+
+		::
+
+			from moveit.task_constructor import core, stages
+			from moveit.python_tools import roscpp_init
+			import rospy
+			import time
+
+			roscpp_init("mtc_tutorial")
+
+			# use cartesian and joint interpolation planners
+			cartesianPlanner = core.CartesianPath()
+			jointPlanner = core.JointInterpolationPlanner()
+
+			# initialize the mtc task
+			task = core.Task()
+
+			# add the current planning scene state to the task hierarchy
+			currentState = stages.CurrentState("Current State")
+			task.add(currentState)
+
+			# create a fallback container to fall back to a different planner
+			# if motion generation fails with the primary one
+			fallbacks = core.Fallbacks('Fallbacks')
+
+			# primary motion plan
+			moveTo1 = stages.MoveTo('Move To Goal Configuration 1', cartesianPlanner)
+			moveTo1.group = 'panda_arm'
+			moveTo1.setGoal('extended')
+			fallbacks.insert(moveTo1)
+
+			# fallback motion plan
+			moveTo2 = stages.MoveTo('Move To Goal Configuration 2', jointPlanner)
+			moveTo2.group = 'panda_arm'
+			moveTo2.setGoal('extended')
+			fallbacks.insert(moveTo2)
+
+			# add the fallback container to the task hierarchy
+			task.add(fallbacks)
+
+			if task.plan():
+				task.publish(task.solutions[0])
+			time.sleep(1)
+	)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("fallbacks"));
 
-	py::classh<Merger, ParallelContainerBase>(m, "Merger")
+	py::classh<Merger, ParallelContainerBase>(m, "Merger", R"pbdoc(
+		Merger(self, name)
+
+		Args:
+			name (str): Name of the stage.
+
+		Plan for different sub tasks in parallel and finally merge
+		all sub solutions into a single trajectory
+
+		::
+
+			from moveit.task_constructor import core, stages
+			from moveit.python_tools import roscpp_init
+			import rospy
+			import time
+
+			roscpp_init("mtc_tutorial")
+
+			# use the joint interpolation planner
+			planner = core.JointInterpolationPlanner()
+
+			# the task will contain our stages
+			task = core.Task()
+
+			# start from current robot state
+			currentState = stages.CurrentState("current state")
+			task.add(currentState)
+
+			# the merger plans for two parallel execution paths
+			merger = core.Merger('Merger')
+
+			# first simultaneous execution
+			moveTo1 = stages.MoveTo('Move To Home', planner)
+			moveTo1.group = 'hand'
+			moveTo1.setGoal('close')
+			merger.insert(moveTo1)
+
+			# second simultaneous execution
+			moveTo2 = stages.MoveTo('Move To Ready', planner)
+			moveTo2.group = 'panda_arm'
+			moveTo2.setGoal('extended')
+			merger.insert(moveTo2)
+
+			# add the merger stage to the task hierarchy
+			task.add(merger)
+
+			if task.plan():
+				task.publish(task.solutions[0])
+			time.sleep(1)
+
+	)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("merger"));
 
-	py::classh<WrapperBase, ParallelContainerBase>(m, "WrapperBase");
+	py::classh<WrapperBase, ParallelContainerBase>(m, "WrapperBase", R"pbdoc(
+		WrapperBase(self, name, child)
+
+		Args:
+			name (str): Name of the stage.
+			child (obj): Wrapped stage.
+
+		A wrapper wraps a single child stage, which can be
+		accessed via ``wrapped()``. Implementations of this
+		interface need to implement ``onNewSolution()``, which
+		is called when the child has generated a new solution.
+		The wrapper may reject the solution or create one or
+		multiple derived solutions, potentially adapting the cost,
+		as well as its start and end states.
+	)pbdoc");
 
 	py::classh<Task>(m, "Task", R"pbdoc(
-			A Task is the root of a tree of stages.
+			Task(self, ns, introspection)
 
-			Implementation detail:
-			A tasks wraps a single container
+			Args:
+				ns (str): Namespace of the task.
+				introspection (bool): Enable introspection.
+
+			A task is the root of a tree of stages by
+			wrapping a single container
 			(by default a SerialContainer),
 			which serves as the root of all stages.
+
+			::
+
+				# Create a task
+				task = core.Task()
+
+				# add some stages e.g. currentState
+				currentState = stages.CurrentState("current state")
+				task.add(currentState)
+
+				# compute the stages that the task contains.
+				if task.plan():
+					# publish to the ros network
+					task.publish(task.solutions[0])
+
 		)pbdoc")
 		.def(py::init<const std::string&, bool>(), py::arg("ns") = std::string(), py::arg("introspection") = true)
 		.def(py::init<const std::string&, bool, ContainerBase::pointer&&>(),

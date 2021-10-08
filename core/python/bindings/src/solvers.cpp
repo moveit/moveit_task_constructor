@@ -87,26 +87,51 @@ void export_solvers(py::module& m) {
 	    .def(py::init<>());
 
 	properties::class_<JointInterpolationPlanner, PlannerInterface>(m, "JointInterpolationPlanner", R"pbdoc(
+			JointInterpolationPlanner(self)
+
 			Interpolate a trajectory between states in joint space.
 			Fails if direct joint space interpolation fails.
+
+			::
+
+				from moveit.task_constructor import core
+
+				# Instantiate joint interpolation planner
+				jointPlanner = core.JointInterpolationPlanner()
+				jointPlanner.max_step = 0.1
 		)pbdoc")
 	    .property<double>("max_step", R"pbdoc(
-			double: Maximum joint step.
+			double: Prevent large movements by specifying the maximum step distance
+				in joint space.
 		)pbdoc")
 	    .def(py::init<>());
 
 	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath", R"pbdoc(
-			Use MoveIt's computeCartesianPath() to
+			CartesianPath(self)
+
+			The planner uses MoveIt's ``computeCartesianPath()`` to
 			generate a straigh-line path between two scenes.
+
+			::
+
+				from moveit.task_constructor import core
+
+				# Instantiate cartesian path planner
+				cartesianPlanner = core.CartesianPath()
+				cartesianPlanner.step_size = 0.01
+				cartesianPlanner.jump_threshold = 0.0  # effectively disable jump threshold.
 		)pbdoc")
 	    .property<double>("step_size", R"pbdoc(
-			double: Step size between consecutive waypoints.
+			double: Specify the path interpolation resolution by adjusting the
+				step size between consecutive waypoints with this parameter.
 		)pbdoc")
 	    .property<double>("jump_threshold", R"pbdoc(
-			double: Acceptable fraction of mean joint motion per step.
+			double: Prevent jumps in inverse kinematic solutions by adjusting the
+				acceptable fraction of mean joint motion per step.
 		)pbdoc")
 	    .property<double>("min_fraction", R"pbdoc(
-			double: Fraction of motion required for success.
+			double: Lower threshold of minimum motion per step required for
+				success in planning.
 		)pbdoc")
 	    .def(py::init<>());
 }

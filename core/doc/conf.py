@@ -223,3 +223,6 @@ htmlhelp_basename = "mtcdoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {"https://docs.python.org/3": None}
+
+# Default options for generating documentation.
+autodoc_default_options = {"exclude-members": "ContainerBase, InitStageError"}
