@@ -290,25 +290,27 @@ void ComputeIK::compute() {
 		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
 			link = robot_model->getLinkModel(ik_pose_msg.header.frame_id);
 		} else {
-			const robot_state::AttachedBody* attached =
-			    sandbox_scene->getCurrentState().getAttachedBody(ik_pose_msg.header.frame_id);
-			if (!attached) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
-				return;
+			if (sandbox_scene->knowsFrameTransform(ik_pose_msg.header.frame_id)) {
+				// get IK frame in planning frame
+				Eigen::Isometry3d ik_frame_eigen_world = sandbox_scene->getFrameTransform(ik_pose_msg.header.frame_id);
+				// determine IK link from group
+				if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
+				                       jmg->getOnlyOneEndEffectorTip())) {
+					ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
+					return;
+				}
+				ik_pose_msg.header.frame_id = link->getName();
+				// get planning group tip frame in planning frame
+				Eigen::Isometry3d link_pose_eigen = sandbox_scene->getCurrentState().getGlobalLinkTransform(link);
+				// get IK pose in planning group tip frame
+				ik_pose = link_pose_eigen.inverse() * ik_frame_eigen_world * ik_pose;
+			} else {
+				ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK subframe");
 			}
-			const EigenSTL::vector_Isometry3d& tf = attached->getFixedTransforms();
-			if (tf.empty()) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Attached body doesn't have shapes.");
-				return;
-			}
-			// prepend link
-			link = attached->getAttachedLink();
-			ik_pose = tf[0] * ik_pose;
+			// transform target pose such that ik frame will reach there if link does
+			target_pose = target_pose * ik_pose.inverse();
 		}
-		// transform target pose such that ik frame will reach there if link does
-		target_pose = target_pose * ik_pose.inverse();
 	}
-
 	// validate placed link for collisions
 	collision_detection::CollisionResult collisions;
 	bool colliding = !ignore_collisions && isTargetPoseColliding(sandbox_scene, target_pose, link, &collisions);
