@@ -138,10 +138,26 @@ void export_core(pybind11::module& m) {
 		     py::keep_alive<0, 1>())
 		;
 
-	py::classh<InterfaceState>(m, "InterfaceState")
+	py::classh<InterfaceState>(m, "InterfaceState", R"pbdoc(
+		InterfaceState(self, scene)
+
+		Args:
+			scene (obj): Desired Planning Scene at the interface.
+
+		InterfaceState describes a potential start or goal state
+		for a planning stage. A start or goal state for planning
+		is essentially defined by the state of a planning scene.
+
+	)pbdoc")
 		.def(py::init<const planning_scene::PlanningScenePtr&>(), py::arg("scene"))
-		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties))
-		.def_property_readonly("scene", &InterfaceState::scene)
+		.def_property_readonly("properties", py::overload_cast<>(&InterfaceState::properties), R"pbdoc(
+			PropertyMap: Get access to the PropertyMap of the stage.
+				Notice that this is a read-only property.
+		)pbdoc")
+		.def_property_readonly("scene", &InterfaceState::scene, R"pbdoc(
+			PlanningScene: Get access to the planning scene of the interface stage.
+				Notice that this is a read-only property.
+		)pbdoc")
 		;
 
 	py::classh<moveit::core::MoveItErrorCode>(m, "MoveItErrorCode")
@@ -253,9 +269,74 @@ void export_core(pybind11::module& m) {
 		)pbdoc")
 		;
 
-	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator")
+	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator", R"pbdoc(
+		MonitoringGenerator(self, name)
+
+		Args:
+			name (str): Name of the stage.
+
+		Generator that monitors solutions of another stage to make reuse of them
+		Sometimes its necessary to reuse a previously planned solution, e.g. to
+		traverse it in reverse order or to access the state of another generator.
+		To this end, the present stage hooks into the onNewSolution() method of
+		the monitored stage and forwards it to this' class onNewSolution() method.
+
+		You may derive from this stage to implement your own stage generation logic.
+
+		::
+
+			class PyMonitoringGenerator(core.MonitoringGenerator):
+				""" Implements a custom 'MonitoringGenerator' stage."""
+
+				solution_multiplier = 2
+
+				def __init__(self, name="MonitoringGenerator"):
+					core.MonitoringGenerator.__init__(self, name)
+					self.reset()
+
+				def reset(self):
+					core.MonitoringGenerator.reset(self)
+					self.upstream_solutions = list()
+
+				def onNewSolution(self, sol):
+					self.upstream_solutions.append(sol)
+
+				def canCompute(self):
+					return bool(self.upstream_solutions)
+
+				def compute(self):
+					scene = self.upstream_solutions.pop(0).end.scene
+					for i in range(self.solution_multiplier):
+						self.spawn(core.InterfaceState(scene), i)
+
+		Upon creation of the stage, assign the monitored stage:
+
+		::
+
+			jointspace = core.JointInterpolationPlanner()
+
+			task = core.Task()
+			current = stages.CurrentState("current")
+			task.add(current)
+
+			connect = stages.Connect(planners=[('panda_arm', jointspace)])
+			task.add(connect)
+
+			mg = PyMonitoringGenerator("generator")
+			task.add(mg)
+
+			task["generator"].setMonitoredStage(task["current"])
+
+		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
-		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage, "Set the reference to the Monitored Stage.")
+		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage, R"pbdoc(
+			setMonitoredStage(self, stage)
+
+			Args:
+				stage (obj): Monitor solutions of this stage.
+
+			Set the reference to the Monitored Stage.
+		)pbdoc")
 		.def("_onNewSolution", &PubMonitoringGenerator::onNewSolution)
 		;
 

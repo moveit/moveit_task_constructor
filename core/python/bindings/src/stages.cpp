@@ -367,6 +367,8 @@ void export_stages(pybind11::module& m) {
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal), R"pbdoc(
+			setGoal(self, goal)
+
 			Args:
 				goal (PointStamped_): Desired configuration.
 

@@ -225,4 +225,6 @@ htmlhelp_basename = "mtcdoc"
 intersphinx_mapping = {"https://docs.python.org/3": None}
 
 # Default options for generating documentation.
-autodoc_default_options = {"exclude-members": "ContainerBase, InitStageError"}
+autodoc_default_options = {
+    "exclude-members": "ContainerBase, InitStageError, ParallelContainerBase, PlannerInterface, WrapperBase, PropagatingForward, PropagatingBackward"
+}

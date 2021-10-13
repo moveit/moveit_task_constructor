@@ -58,7 +58,33 @@ void export_solvers(py::module& m) {
 	                           py::return_value_policy::reference_internal);
 
 	properties::class_<PipelinePlanner, PlannerInterface>(m, "PipelinePlanner", R"pbdoc(
+			PipelinePlanner(self)
+
 			Use MoveIt's PlanningPipeline to plan a trajectory between to scenes.
+
+			::
+
+				# create and configure a planner instance
+				pipelinePlanner = core.PipelinePlanner()
+				pipelinePlanner.planner = 'PRMkConfigDefault'
+				pipelinePlanner.num_planning_attempts = 10
+
+				# specify planning group
+				group = "panda_arm"
+
+				# create a task
+				task = core.Task()
+
+				# get the current robot state
+				currentState = stages.CurrentState("current state")
+				task.add(currentState)
+
+				# moveTo named posture, using the pipeline planner interplation
+				move = stages.MoveTo("moveTo ready", pipelinePlanner)
+				move.group = group
+				move.setGoal("extended")
+				task.add(move)
+
 		)pbdoc")
 	    .property<std::string>("planner", R"pbdoc(
 			str: Planner ID.
