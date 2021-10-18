@@ -12,7 +12,7 @@
 	<build_depend>roscpp</build_depend>
 	<exec_depend>roscpp</exec_depend>
 
-	<depend>eigen_conversions</depend>
+	<depend>tf2_eigen</depend>
 	<depend>geometry_msgs</depend>
 	<depend>moveit_core</depend>
 	<depend>moveit_ros_planning</depend>
