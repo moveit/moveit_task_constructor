@@ -44,7 +44,7 @@
 #include <moveit/robot_state/robot_state.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <chrono>
 #include <functional>
 #include <iterator>
@@ -72,14 +72,14 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 void ComputeIK::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);
 }
 
 void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = frame;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	pose_msg.pose = tf2::toMsg(pose);
 	setTargetPose(pose_msg);
 }
 
@@ -259,7 +259,7 @@ void ComputeIK::compute() {
 		target_pose_msg.header.frame_id = scene->getPlanningFrame();
 
 	Eigen::Isometry3d target_pose;
-	tf::poseMsgToEigen(target_pose_msg.pose, target_pose);
+	tf2::fromMsg(target_pose_msg.pose, target_pose);
 	if (target_pose_msg.header.frame_id != scene->getPlanningFrame()) {
 		if (!scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
 			ROS_WARN_STREAM_NAMED("ComputeIK",
@@ -286,7 +286,7 @@ void ComputeIK::compute() {
 	} else {
 		ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
 			link = robot_model->getLinkModel(ik_pose_msg.header.frame_id);
 		} else {

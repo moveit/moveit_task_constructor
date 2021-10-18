@@ -3,7 +3,7 @@ project(moveit_task_constructor_core)
 
 find_package(Boost REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-	eigen_conversions
+	tf2_eigen
 	geometry_msgs
 	moveit_core
 	moveit_ros_planning

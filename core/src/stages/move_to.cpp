@@ -36,13 +36,13 @@
    Desc:    Move to joint-state or Cartesian goal pose
 */
 
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
+#include <tf2_eigen/tf2_eigen.h>
+
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/cost_terms.h>
-
-#include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <moveit/robot_state/conversions.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -70,7 +70,7 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 void MoveTo::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);
 }
 
@@ -145,7 +145,7 @@ bool MoveTo::getPoseGoal(const boost::any& goal, const planning_scene::PlanningS
                          Eigen::Isometry3d& target_eigen) {
 	try {
 		const geometry_msgs::PoseStamped& target = boost::any_cast<geometry_msgs::PoseStamped>(goal);
-		tf::poseMsgToEigen(target.pose, target_eigen);
+		tf2::fromMsg(target.pose, target_eigen);
 
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
@@ -161,7 +161,7 @@ bool MoveTo::getPointGoal(const boost::any& goal, const moveit::core::LinkModel*
 	try {
 		const geometry_msgs::PointStamped& target = boost::any_cast<geometry_msgs::PointStamped>(goal);
 		Eigen::Vector3d target_point;
-		tf::pointMsgToEigen(target.point, target_point);
+		tf2::fromMsg(target.point, target_point);
 
 		// transform target into global frame
 		const Eigen::Isometry3d& frame = scene->getFrameTransform(target.header.frame_id);
@@ -234,13 +234,13 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		// visualize plan with frame at target pose and frame at link
 		geometry_msgs::PoseStamped target;
 		target.header.frame_id = scene->getPlanningFrame();
-		tf::poseEigenToMsg(target_eigen, target.pose);
+		target.pose = tf2::toMsg(target_eigen);
 		rviz_marker_tools::appendFrame(solution.markers(), target, 0.1, "ik frame");
 		rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
 
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
+		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 		target_eigen = target_eigen * ik_pose.inverse();
 
 		// plan to Cartesian target

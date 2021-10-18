@@ -42,7 +42,7 @@
 #include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/kinematic_constraints/utils.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -181,7 +181,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 
 	geometry_msgs::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
-	tf::poseEigenToMsg(target_eigen, target.pose);
+	target.pose = tf2::toMsg(target_eigen);
 
 	req.goal_constraints.resize(1);
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
