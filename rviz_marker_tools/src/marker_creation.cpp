@@ -139,21 +139,17 @@ std_msgs::ColorRGBA getColor(Color color, double alpha) {
 }
 
 geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf2::convert(first, result_eigen);
+	tf2::fromMsg(first, result_eigen);
 	result_eigen = result_eigen * second;
-	tf2::convert(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf2::convert(second, result_eigen);
+	tf2::fromMsg(second, result_eigen);
 	result_eigen = first * result_eigen;
-	tf2::convert(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 void prepareMarker(vm::Marker& m, int marker_type) {
