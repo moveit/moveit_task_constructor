@@ -126,6 +126,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	aco.object.primitive_poses[0].orientation.w = 1.0;
 #endif
 #if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
+	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
 	aco.object.subframe_poses.resize(1, []() {
 		geometry_msgs::Pose p;
@@ -136,7 +137,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	return aco;
 }
 
-TEST_F(PandaMoveTo, DISABLED_poseIKFrameAttachedTarget) {
+TEST_F(PandaMoveTo, poseIKFrameAttachedTarget) {
 	const std::string ATTACHED_OBJECT{ "attached_object" };
 	scene->processAttachedCollisionObjectMsg(createAttachedObject(ATTACHED_OBJECT));
 
@@ -145,7 +146,9 @@ TEST_F(PandaMoveTo, DISABLED_poseIKFrameAttachedTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-TEST_F(PandaMoveTo, DISABLED_poseIKFrameAttachedSubframeTarget) {
+#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
+// If we don't have this, we also don't have subframe support
+TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	const std::string ATTACHED_OBJECT{ "attached_object" };
 	const std::string IK_FRAME{ ATTACHED_OBJECT + "/subframe" };
 
@@ -155,6 +158,7 @@ TEST_F(PandaMoveTo, DISABLED_poseIKFrameAttachedSubframeTarget) {
 	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", IK_FRAME));
 	EXPECT_ONE_SOLUTION;
 }
+#endif
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);

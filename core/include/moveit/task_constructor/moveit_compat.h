@@ -55,3 +55,20 @@
 
 // use object shape poses relative to a single object pose
 #define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
+
+#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)
+
+#if !MOVEIT_HAS_STATE_RIGID_PARENT_LINK
+#include <moveit/robot_state/robot_state.h>
+inline const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
+                                                                         std::string frame) {
+	const moveit::core::LinkModel* link{ nullptr };
+
+	if (state.hasAttachedBody(frame)) {
+		link = state.getAttachedBody(frame)->getAttachedLink();
+	} else if (state.getRobotModel()->hasLinkModel(frame))
+		link = state.getLinkModel(frame);
+
+	return state.getRobotModel()->getRigidlyConnectedParentLinkModel(link);
+}
+#endif
