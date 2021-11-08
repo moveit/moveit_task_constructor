@@ -302,13 +302,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 
 		double distance = 0.0;
-		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
-			if (use_rotation_distance) {
-				Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
-				distance = rotation.angle();
-			} else
-				distance = (reached_pose.translation() - link_pose.translation()).norm();
-		}
+		if (use_rotation_distance) {
+			Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
+			distance = rotation.angle();
+		} else
+			distance = (reached_pose.translation() - link_pose.translation()).norm();
 
 		// min_distance reached?
 		if (min_distance > 0.0) {
