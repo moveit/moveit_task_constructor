@@ -82,12 +82,20 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	kinematic_constraints::KinematicConstraintSet kcs(sandbox_scene->getRobotModel());
 	kcs.add(path_constraints, sandbox_scene->getTransforms());
 
-	auto is_valid = [&sandbox_scene, &kcs](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
-	                                       const double* joint_positions) {
+	moveit::core::RobotStatePtr last_failed;
+	auto is_valid = [&](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
+	                    const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) &&
-		       kcs.decide(*state).satisfied;
+		if (sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) ||
+		    !kcs.decide(*state).satisfied) {
+			if (!last_failed)
+				last_failed = std::make_shared<moveit::core::RobotState>(*state);
+			else
+				*last_failed = *state;
+			return false;
+		}
+		return true;
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
