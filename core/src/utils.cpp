@@ -1,7 +1,8 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2021, Hamburg University
+ *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2017, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,28 +33,32 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Michael 'v4hn' Goerner
-   Desc:   Provide test for MoveIt features
-*/
+/* Authors: Michael Goerner, Robert Haschke */
 
-#pragma once
+#include <moveit/robot_state/robot_state.h>
 
-#include <moveit/version.h>
+#include <moveit/task_constructor/moveit_compat.h>
 
-#define MOVEIT_VERSION_GE(major, minor, patch)                                                \
-	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
-	 major * 1'000'000 + minor * 1'000 + patch)
+namespace moveit {
+namespace task_constructor {
+namespace utils {
 
-// use collision env instead of collision robot/world
-#define MOVEIT_HAS_COLLISION_ENV MOVEIT_VERSION_GE(1, 1, 0)
+const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
+                                                                  std::string frame) {
+#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
+	return state.getRigidlyConnectedParentLinkModel(frame);
+#else
+	const moveit::core::LinkModel* link{ nullptr };
 
-// cartesian interpolator got separated from RobotState at some point
-#define MOVEIT_HAS_CARTESIAN_INTERPOLATOR MOVEIT_VERSION_GE(1, 1, 0)
+	if (state.hasAttachedBody(frame)) {
+		link = state.getAttachedBody(frame)->getAttachedLink();
+	} else if (state.getRobotModel()->hasLinkModel(frame))
+		link = state.getLinkModel(frame);
 
-// isEmpty got split off into its own header
-#define MOVEIT_HAS_MESSAGE_CHECKS MOVEIT_VERSION_GE(1, 1, 0)
+	return state.getRobotModel()->getRigidlyConnectedParentLinkModel(link);
+#endif
+}
 
-// use object shape poses relative to a single object pose
-#define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
-
-#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)
+}  // namespace utils
+}  // namespace task_constructor
+}  // namespace moveit

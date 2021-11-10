@@ -32,14 +32,26 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Robert Haschke
-   Desc:    Project-agnostic utility classes
+/* Authors: Robert Haschke, Michael 'v4hn' Goerner
+   Desc:    Miscellaneous utilities
 */
 
 #pragma once
 
+#include <string>
 #include <type_traits>
 #include <initializer_list>
+
+namespace moveit {
+
+namespace core {
+class LinkModel;
+class RobotState;
+}  // namespace core
+
+namespace task_constructor {
+
+namespace utils {
 
 /** template class to compose flags from enums in a type-safe fashion */
 template <typename Enum>
@@ -118,3 +130,9 @@ private:
 };
 
 #define DECLARE_FLAGS(Flags, Enum) using Flags = QFlags<Enum>;
+
+const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
+                                                                  std::string frame);
+}  // namespace utils
+}  // namespace task_constructor
+}  // namespace moveit

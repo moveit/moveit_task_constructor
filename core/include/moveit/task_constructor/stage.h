@@ -84,7 +84,7 @@ enum InterfaceFlag
 	GENERATE = WRITES_PREV_END | WRITES_NEXT_START,
 };
 
-using InterfaceFlags = Flags<InterfaceFlag>;
+using InterfaceFlags = utils::Flags<InterfaceFlag>;
 
 /** invert interface such that
  * - new end can connect to old start

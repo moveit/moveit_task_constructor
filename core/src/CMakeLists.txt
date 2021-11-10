@@ -28,6 +28,7 @@ add_library(${PROJECT_NAME}
 	stage.cpp
 	storage.cpp
 	task.cpp
+	utils.cpp
 
 	solvers/planner_interface.cpp
 	solvers/cartesian_path.cpp

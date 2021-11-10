@@ -43,6 +43,7 @@
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/moveit_compat.h>
+#include <moveit/task_constructor/utils.h>
 
 #include <rviz_marker_tools/marker_creation.h>
 
@@ -262,13 +263,8 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		add_frame(target, "target frame");
 		add_frame(ik_pose_world, "ik frame");
 
-		const moveit::core::LinkModel* parent {
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
-			scene->getCurrentState().getRigidlyConnectedParentLinkModel(ik_pose_msg.header.frame_id)
-#else
-			getRigidlyConnectedParentLinkModel(scene->getCurrentState(), ik_pose_msg.header.frame_id)
-#endif
-		};
+		const moveit::core::LinkModel* parent{ utils::getRigidlyConnectedParentLinkModel(scene->getCurrentState(),
+			                                                                              ik_pose_msg.header.frame_id) };
 
 		// transform target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d ik_pose;

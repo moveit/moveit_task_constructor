@@ -294,11 +294,7 @@ void ComputeIK::compute() {
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;
 
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
-		link = scene->getCurrentState().getRigidlyConnectedParentLinkModel(ik_pose_msg.header.frame_id);
-#else
-		link = getRigidlyConnectedParentLinkModel(scene->getCurrentState(), ik_pose_msg.header.frame_id);
-#endif
+		link = utils::getRigidlyConnectedParentLinkModel(scene->getCurrentState(), ik_pose_msg.header.frame_id);
 
 		// transform target pose such that ik frame will reach there if link does
 		target_pose = target_pose * ik_pose.inverse() * scene->getCurrentState().getFrameTransform(link->getName());
