@@ -636,6 +636,9 @@ void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
 	else
 		send<dir>(start, InterfaceState(end), std::move(trajectory));
 }
+// Explicitly instantiate templates for both directions
+template void PropagatingEitherWay::computeGeneric<Interface::FORWARD>(const InterfaceState& start);
+template void PropagatingEitherWay::computeGeneric<Interface::BACKWARD>(const InterfaceState& start);
 
 PropagatingForwardPrivate::PropagatingForwardPrivate(PropagatingForward* me, const std::string& name)
   : PropagatingEitherWayPrivate(me, PropagatingEitherWay::FORWARD, name) {
