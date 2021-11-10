@@ -5,6 +5,7 @@ add_library(${PROJECT_NAME}
 	${PROJECT_INCLUDE}/introspection.h
 	${PROJECT_INCLUDE}/marker_tools.h
 	${PROJECT_INCLUDE}/merge.h
+	${PROJECT_INCLUDE}/moveit_compat.h
 	${PROJECT_INCLUDE}/properties.h
 	${PROJECT_INCLUDE}/stage.h
 	${PROJECT_INCLUDE}/stage_p.h
