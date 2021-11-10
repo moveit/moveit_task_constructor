@@ -62,7 +62,7 @@ TEST_F(PandaMoveTo, mapTarget) {
 }
 
 TEST_F(PandaMoveTo, stateTarget) {
-	move_to->setGoal([]() {
+	move_to->setGoal([] {
 		moveit_msgs::RobotState state;
 		state.is_diff = true;
 		state.joint_state.name = { "panda_joint1", "panda_joint2" };
@@ -110,7 +110,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	aco.object.header.frame_id = aco.link_name;
 	aco.object.operation = aco.object.ADD;
 	aco.object.id = id;
-	aco.object.primitives.resize(1, []() {
+	aco.object.primitives.resize(1, [] {
 		shape_msgs::SolidPrimitive p;
 		p.type = p.SPHERE;
 		p.dimensions.resize(1);
@@ -128,7 +128,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 #if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
 	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
-	aco.object.subframe_poses.resize(1, []() {
+	aco.object.subframe_poses.resize(1, [] {
 		geometry_msgs::Pose p;
 		p.orientation.w = 1.0;
 		return p;
