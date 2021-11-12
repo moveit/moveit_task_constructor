@@ -287,31 +287,17 @@ void ComputeIK::compute() {
 		ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
 		Eigen::Isometry3d ik_pose;
 		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
-		if (robot_model->hasLinkModel(ik_pose_msg.header.frame_id)) {
-			link = robot_model->getLinkModel(ik_pose_msg.header.frame_id);
-		} else {
-			const robot_state::AttachedBody* attached =
-			    scene->getCurrentState().getAttachedBody(ik_pose_msg.header.frame_id);
-			if (!attached) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Unknown frame: " << ik_pose_msg.header.frame_id);
-				return;
-			}
-			const EigenSTL::vector_Isometry3d& tf =
-#if MOVEIT_HAS_OBJECT_POSE
-			    attached->getShapePosesInLinkFrame();
-#else
-			    attached->getFixedTransforms();
-#endif
-			if (tf.empty()) {
-				ROS_WARN_STREAM_NAMED("ComputeIK", "Attached body doesn't have shapes.");
-				return;
-			}
-			// prepend link
-			link = attached->getAttachedLink();
-			ik_pose = tf[0] * ik_pose;
+
+		if (!scene->getCurrentState().knowsFrameTransform(ik_pose_msg.header.frame_id)) {
+			ROS_WARN_STREAM_NAMED("ComputeIK", "ik frame unknown in robot: '" << ik_pose_msg.header.frame_id << "'");
+			return;
 		}
+		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;
+
+		link = utils::getRigidlyConnectedParentLinkModel(scene->getCurrentState(), ik_pose_msg.header.frame_id);
+
 		// transform target pose such that ik frame will reach there if link does
-		target_pose = target_pose * ik_pose.inverse();
+		target_pose = target_pose * ik_pose.inverse() * scene->getCurrentState().getFrameTransform(link->getName());
 	}
 
 	// validate placed link for collisions
@@ -323,7 +309,7 @@ void ComputeIK::compute() {
 	// markers used for failures
 	std::deque<visualization_msgs::Marker> failure_markers;
 	// frames at target pose and ik frame
-	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "ik frame");
+	rviz_marker_tools::appendFrame(failure_markers, target_pose_msg, 0.1, "target frame");
 	rviz_marker_tools::appendFrame(failure_markers, ik_pose_msg, 0.1, "ik frame");
 	// visualize placed end-effector
 	auto appender = [&failure_markers](visualization_msgs::Marker& marker, const std::string& /*name*/) {

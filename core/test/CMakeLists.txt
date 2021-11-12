@@ -9,17 +9,29 @@ if (CATKIN_ENABLE_TESTING)
 	add_library(gtest_utils gtest_value_printers.cpp models.cpp stage_mockups.cpp)
 	target_link_libraries(gtest_utils ${PROJECT_NAME})
 
-	macro(mtc_add_test TYPE FILE)
-	    string(REGEX REPLACE "\.cpp$" "" TEST_NAME ${FILE})
-	    string(REGEX REPLACE "_" "-" TEST_NAME ${TEST_NAME})
-	    _catkin_add_google_test(${TYPE} ${PROJECT_NAME}-${TEST_NAME} ${FILE})
-	    target_link_libraries(${PROJECT_NAME}-${TEST_NAME} ${PROJECT_NAME} ${PROJECT_NAME}_stages ${ARGN} gtest_utils gtest_main)
+	macro(mtc_add_test TYPE)
+		# Split ARGN into .test file and other sources
+		set(TEST_FILE ${ARGN})
+		set(SOURCES ${ARGN})
+		list(FILTER TEST_FILE INCLUDE REGEX "\.test$")
+		list(FILTER SOURCES EXCLUDE REGEX "\.test$")
+		# Determine TARGET name from first source file
+		list(GET SOURCES 0 TEST_NAME)
+		string(REGEX REPLACE "\.cpp$" "" TEST_NAME ${TEST_NAME})
+		string(REGEX REPLACE "_" "-" TEST_NAME ${TEST_NAME})
+		# Configure build target
+		if(TEST_FILE) # Add rostest if .test file was specified
+			_add_rostest_google_test(${TYPE} ${PROJECT_NAME}-${TEST_NAME} ${TEST_FILE} ${SOURCES})
+		else()
+			_catkin_add_google_test(${TYPE} ${PROJECT_NAME}-${TEST_NAME} ${SOURCES})
+		endif()
+		target_link_libraries(${PROJECT_NAME}-${TEST_NAME} ${PROJECT_NAME} ${PROJECT_NAME}_stages gtest_utils gtest_main)
 	endmacro()
 	macro(mtc_add_gtest)
-	    mtc_add_test("gtest" ${ARGN})
+		mtc_add_test("gtest" ${ARGN})
 	endmacro()
 	macro(mtc_add_gmock)
-	    mtc_add_test("gmock" ${ARGN})
+		mtc_add_test("gmock" ${ARGN})
 	endmacro()
 
 	mtc_add_gtest(test_stage.cpp)
@@ -32,6 +44,8 @@ if (CATKIN_ENABLE_TESTING)
 	mtc_add_gmock(test_fallback.cpp)
 	mtc_add_gmock(test_cost_queue.cpp)
 	mtc_add_gmock(test_interface_state.cpp)
+
+	mtc_add_gtest(test_move_to.cpp move_to.test)
 
 	# building these integration tests works without moveit config packages
 	add_executable(pick_ur5 pick_ur5.cpp)

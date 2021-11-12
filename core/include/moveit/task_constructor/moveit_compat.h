@@ -55,3 +55,5 @@
 
 // use object shape poses relative to a single object pose
 #define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
+
+#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)

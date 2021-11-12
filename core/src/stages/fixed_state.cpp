@@ -43,7 +43,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-FixedState::FixedState(const std::string& name) : Generator(name) {
+FixedState::FixedState(const std::string& name, planning_scene::PlanningScenePtr scene)
+  : Generator(name), scene_(scene) {
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 }
 

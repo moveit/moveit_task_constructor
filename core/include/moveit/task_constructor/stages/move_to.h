@@ -99,7 +99,7 @@ protected:
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
 	bool getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
 	                 Eigen::Isometry3d& target_eigen);
-	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
+	bool getPointGoal(const boost::any& goal, const Eigen::Isometry3d& ik_pose,
 	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen);
 
 protected:

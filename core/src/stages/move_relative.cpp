@@ -193,24 +193,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
 		// Cartesian targets require an IK reference frame
-		geometry_msgs::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
-		const boost::any& value = props.get("ik_frame");
-		if (value.empty()) {  // property undefined
-			//  determine IK link from group
-			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				solution.markAsFailure("missing ik_frame");
-				return false;
-			}
-			ik_pose_msg.header.frame_id = link->getName();
-			ik_pose_msg.pose.orientation.w = 1.0;
-		} else {
-			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
-			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				solution.markAsFailure("unknown link for ik_frame: " + ik_pose_msg.header.frame_id);
-				return false;
-			}
-		}
+		Eigen::Isometry3d ik_pose_world;
+
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, solution, link, ik_pose_world))
+			return false;
 
 		bool use_rotation_distance = false;  // measure achieved distance as rotation?
 		Eigen::Vector3d linear;  // linear translation
@@ -291,9 +278,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
-		Eigen::Isometry3d ik_pose;
-		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
-		target_eigen = target_eigen * ik_pose.inverse();
+		target_eigen = target_eigen * scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
