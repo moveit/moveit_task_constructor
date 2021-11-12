@@ -208,44 +208,10 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		// What frame+offset in the robot should go there?
 		geometry_msgs::PoseStamped ik_pose_msg;
 
-		const boost::any& value = props.get("ik_frame");
-
-		auto get_tip{ [&jmg](std::string& out) {
-			// determine IK frame from group
-			std::vector<std::string> tips;
-			jmg->getEndEffectorTips(tips);
-			if (tips.size() != 1) {
-				return false;
-			}
-			out = tips[0];
-			return true;
-		} };
-
-		if (value.empty()) {  // property undefined
-			if (!get_tip(ik_pose_msg.header.frame_id)) {
-				solution.markAsFailure("missing ik_frame");
-				return false;
-			}
-			ik_pose_msg.pose.orientation.w = 1.0;
-		} else {
-			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
-			if (ik_pose_msg.header.frame_id.empty() && !get_tip(ik_pose_msg.header.frame_id)) {
-				solution.markAsFailure("frame_id of ik_frame is empty and no unique group tip was found");
-				return false;
-			} else if (!scene->knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-				std::stringstream ss;
-				ss << "ik_frame specified in unknown frame '" << ik_pose_msg << "'";
-				solution.markAsFailure(ss.str());
-				return false;
-			}
-		}
-
-		Eigen::Isometry3d ik_pose_world{ [&]() {
-			Eigen::Isometry3d t;
-			tf2::fromMsg(ik_pose_msg.pose, t);
-			t = scene->getFrameTransform(ik_pose_msg.header.frame_id) * t;
-			return t;
-		}() };
+		const moveit::core::LinkModel* link;
+		Eigen::Isometry3d ik_pose_world;
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, solution, link, ik_pose_world))
+			return false;
 
 		if (!getPoseGoal(goal, scene, target) && !getPointGoal(goal, ik_pose_world, scene, target)) {
 			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
@@ -263,16 +229,11 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		add_frame(target, "target frame");
 		add_frame(ik_pose_world, "ik frame");
 
-		const moveit::core::LinkModel* parent{ utils::getRigidlyConnectedParentLinkModel(scene->getCurrentState(),
-			                                                                              ik_pose_msg.header.frame_id) };
-
 		// transform target pose such that ik frame will reach there if link does
-		Eigen::Isometry3d ik_pose;
-		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
-		target = target * ik_pose_world.inverse() * scene->getFrameTransform(parent->getName());
+		target = target * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
 
 		// plan to Cartesian target
-		success = planner_->plan(state.scene(), *parent, target, jmg, timeout, robot_trajectory, path_constraints);
+		success = planner_->plan(state.scene(), *link, target, jmg, timeout, robot_trajectory, path_constraints);
 	}
 
 	// store result

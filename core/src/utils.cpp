@@ -35,9 +35,14 @@
 
 /* Authors: Michael Goerner, Robert Haschke */
 
+#include <tf2_eigen/tf2_eigen.h>
+
 #include <moveit/robot_state/robot_state.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <moveit/task_constructor/moveit_compat.h>
+#include <moveit/task_constructor/properties.h>
+#include <moveit/task_constructor/storage.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -57,6 +62,50 @@ const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::
 
 	return state.getRobotModel()->getRigidlyConnectedParentLinkModel(link);
 #endif
+}
+
+bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
+                         const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
+                         const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame) {
+	auto get_tip = [&jmg]() -> const moveit::core::LinkModel* {
+		// determine IK frame from group
+		std::vector<const moveit::core::LinkModel*> tips;
+		jmg->getEndEffectorTips(tips);
+		if (tips.size() != 1) {
+			return nullptr;
+		}
+		return tips[0];
+	};
+
+	if (property.value().empty()) {  // property undefined
+		robot_link = get_tip();
+		if (!robot_link) {
+			solution.markAsFailure("missing ik_frame");
+			return false;
+		}
+		tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
+	} else {
+		auto ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(property.value());
+		if (ik_pose_msg.header.frame_id.empty()) {
+			if (!(robot_link = get_tip())) {
+				solution.markAsFailure("frame_id of ik_frame is empty and no unique group tip was found");
+				return false;
+			}
+			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
+			tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link) * tip_in_global_frame;
+		} else if (scene.knowsFrameTransform(ik_pose_msg.header.frame_id)) {
+			robot_link = getRigidlyConnectedParentLinkModel(scene.getCurrentState(), ik_pose_msg.header.frame_id);
+			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
+			tip_in_global_frame = scene.getFrameTransform(ik_pose_msg.header.frame_id) * tip_in_global_frame;
+		} else {
+			std::stringstream ss;
+			ss << "ik_frame specified in unknown frame '" << ik_pose_msg << "'";
+			solution.markAsFailure(ss.str());
+			return false;
+		}
+	}
+
+	return true;
 }
 
 }  // namespace utils

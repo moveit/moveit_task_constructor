@@ -42,14 +42,25 @@
 #include <type_traits>
 #include <initializer_list>
 
+#include <Eigen/Geometry>
+
+#include <moveit/macros/class_forward.h>
+
+namespace planning_scene {
+MOVEIT_CLASS_FORWARD(PlanningScene);
+}
+
 namespace moveit {
 
 namespace core {
-class LinkModel;
-class RobotState;
+MOVEIT_CLASS_FORWARD(LinkModel);
+MOVEIT_CLASS_FORWARD(JointModelGroup);
+MOVEIT_CLASS_FORWARD(RobotState);
 }  // namespace core
 
 namespace task_constructor {
+MOVEIT_CLASS_FORWARD(Property);
+MOVEIT_CLASS_FORWARD(SolutionBase);
 
 namespace utils {
 
@@ -133,6 +144,10 @@ private:
 
 const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
                                                                   std::string frame);
+
+bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
+                         const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
+                         const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame);
 }  // namespace utils
 }  // namespace task_constructor
 }  // namespace moveit
