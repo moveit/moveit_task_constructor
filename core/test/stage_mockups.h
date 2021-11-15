@@ -40,11 +40,13 @@ struct GeneratorMockup : public Generator
 
 	PredefinedCosts costs_;
 	size_t runs_{ 0 };
+	std::size_t solutions_per_compute_;
 
 	static unsigned int id_;
 
 	// default to one solution to avoid infinity loops
-	GeneratorMockup(PredefinedCosts&& costs = PredefinedCosts{ std::list<double>{ 0.0 }, true });
+	GeneratorMockup(PredefinedCosts&& costs = PredefinedCosts{ std::list<double>{ 0.0 }, true },
+	                std::size_t solutions_per_compute = 1);
 	GeneratorMockup(std::initializer_list<double> costs)
 	  : GeneratorMockup{ PredefinedCosts{ std::list<double>{ costs }, true } } {}
 
