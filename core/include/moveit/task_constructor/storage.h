@@ -85,6 +85,8 @@ public:
 		PRUNED,  // state is disabled because a required connected state failed
 		FAILED,  // state that failed, causing the whole partial solution to be disabled
 	};
+	static const char* STATUS_COLOR[];
+
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
@@ -220,6 +222,16 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
 std::ostream& operator<<(std::ostream& os, const Interface& interface);
+
+/// Find index of the iterator in the container. Counting starts at 1. Zero corresponds to not found.
+template <typename T>
+size_t getIndex(const T& container, typename T::const_iterator search) {
+	size_t index = 1;
+	for (typename T::const_iterator it = container.begin(), end = container.end(); it != end; ++it, ++index)
+		if (it == search)
+			return index;
+	return 0;
+}
 
 class CostTerm;
 class StagePrivate;

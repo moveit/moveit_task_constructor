@@ -759,9 +759,23 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 			}
 		}
 	}
-	// std::cerr << name_ << ": ";
-	// printPendingPairs(std::cerr);
-	// std::cerr << std::endl;
+#if 0
+	auto& os = std::cerr;
+	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
+		bool fw = (d == Interface::FORWARD);
+		if (fw)
+			os << "  " << std::setw(10) << std::left << this->name();
+		else
+			os << std::setw(12) << std::right << "";
+		if (dir != d)
+			os << (updated ? " !" : " +");
+		else
+			os << "  ";
+		os << (fw ? "↓ " : "↑ ") << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+	}
+	os << std::setw(15) << " ";
+	printPendingPairs(os) << std::endl;
+#endif
 }
 
 // Check whether there are pending feasible states that could connect to source.
@@ -802,24 +816,15 @@ void ConnectingPrivate::compute() {
 }
 
 std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
-	static const char* red = "\033[31m";
-	static const char* reset = "\033[m";
+	const char* reset = InterfaceState::STATUS_COLOR[3];
 	for (const auto& candidate : pending) {
-		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
-			os << " " << red;
-		// find indeces of InterfaceState pointers in start/end Interfaces
-		unsigned int first = 0, second = 0;
-		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
-			++first;
-			return &*candidate.first == s;
-		});
-		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
-			++second;
-			return &*candidate.second == s;
-		});
-		os << first << ":" << second << " ";
+		size_t first = getIndex(*starts(), candidate.first);
+		size_t second = getIndex(*ends(), candidate.second);
+		os << InterfaceState::STATUS_COLOR[candidate.first->priority().status()] << first << reset << ":"
+		   << InterfaceState::STATUS_COLOR[candidate.second->priority().status()] << second << reset << " ";
 	}
-	os << reset;
+	if (pending.empty())
+		os << "---";
 	return os;
 }
 

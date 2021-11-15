@@ -53,6 +53,35 @@ using namespace std::placeholders;
 namespace moveit {
 namespace task_constructor {
 
+// for debugging of how children interfaces evolve over time
+static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr) {
+	auto printPendingPairs = [](const StagePrivate* impl, std::ostream& os) -> std::ostream& {
+		if (auto conn = dynamic_cast<const ConnectingPrivate*>(impl))
+			conn->printPendingPairs(os);
+		return os;
+	};
+	static unsigned int id = 0;
+	const unsigned int width = 10;  // indentation of name
+	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	if (success)
+		os << ++id << ' ';
+	printPendingPairs(creator.pimpl(), os) << std::endl;
+
+	for (const auto& child : container.children()) {
+		auto cimpl = child->pimpl();
+		os << std::setw(width) << std::left << child->name();
+		if (!cimpl->starts() && !cimpl->ends())
+			os << "↕ " << std::endl;
+		if (cimpl->starts())
+			os << "↓ " << *child->pimpl()->starts() << std::endl;
+		if (cimpl->starts() && cimpl->ends())
+			os << std::setw(width) << "  ";
+		if (cimpl->ends())
+			os << "↑ " << *child->pimpl()->ends() << std::endl;
+	}
+}
+
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
   : StagePrivate(me, name)
   , required_interface_(UNKNOWN)
@@ -414,31 +443,6 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
-// for debugging of how children interfaces evolve over time
-static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
-                                    std::ostream& os = std::cerr) {
-	static unsigned int id = 0;
-	const unsigned int width = 10;  // indentation of name
-	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
-	if (success)
-		os << ++id << ' ';
-	if (const Connecting* conn = dynamic_cast<const Connecting*>(&creator))
-		conn->pimpl()->printPendingPairs(os);
-	os << std::endl;
-
-	for (const auto& child : container.pimpl()->children()) {
-		auto cimpl = child->pimpl();
-		os << std::setw(width) << std::left << child->name();
-		if (!cimpl->starts() && !cimpl->ends())
-			os << "↕ " << std::endl;
-		if (cimpl->starts())
-			os << "↓ " << *child->pimpl()->starts() << std::endl;
-		if (cimpl->starts() && cimpl->ends())
-			os << std::setw(width) << "  ";
-		if (cimpl->ends())
-			os << "↑ " << *child->pimpl()->ends() << std::endl;
-	}
-}
 /** Collect all partial solution sequences originating from start into given direction */
 template <Interface::Direction dir>
 struct SolutionCollector
@@ -537,7 +541,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 		}
 	}
-	// printChildrenInterfaces(*this, true, *current.creator());
+	// printChildrenInterfaces(*this->pimpl(), true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -874,6 +878,7 @@ void Fallbacks::compute() {
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
 	pimpl()->job_has_solutions_ = true;
+	// printChildrenInterfaces(*this->pimpl(), true, *s.creator());
 	liftSolution(s);
 }
 
@@ -915,11 +920,13 @@ void FallbacksPrivate::initializeExternalInterfaces() {
 	static_cast<Fallbacks*>(me())->replaceImpl();
 }
 
-void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
+void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
 	// This override is deliberately empty.
 	// The method prunes solution paths when a child failed to find a valid solution for it,
 	// but in Fallbacks the next child might still yield a successful solution
 	// Thus pruning must only occur once the last child is exhausted (inside computePropagate)
+	// printChildrenInterfaces(*this, false, child);
+	(void)child;
 }
 
 
