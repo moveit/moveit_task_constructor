@@ -775,11 +775,8 @@ void ConnectingPrivate::compute() {
 }
 
 std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
-	static const char* red = "\033[31m";
-	static const char* reset = "\033[m";
+	const char* reset = InterfaceState::STATUS_COLOR[3];
 	for (const auto& candidate : pending) {
-		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
-			os << " " << red;
 		// find indeces of InterfaceState pointers in start/end Interfaces
 		unsigned int first = 0, second = 0;
 		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
@@ -790,9 +787,9 @@ std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
 			++second;
 			return &*candidate.second == s;
 		});
-		os << first << ":" << second << " ";
+		os << InterfaceState::STATUS_COLOR[candidate.first->priority().status()] << first << reset << ":"
+		   << InterfaceState::STATUS_COLOR[candidate.second->priority().status()] << second << reset << " ";
 	}
-	os << reset;
 	return os;
 }
 

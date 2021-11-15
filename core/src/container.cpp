@@ -53,6 +53,9 @@ using namespace std::placeholders;
 namespace moveit {
 namespace task_constructor {
 
+static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr);
+
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
   : StagePrivate(me, name)
   , required_interface_(UNKNOWN)
@@ -375,8 +378,8 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 }
 
 // for debugging of how children interfaces evolve over time
-static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
-                                    std::ostream& os = std::cerr) {
+static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                                    std::ostream& os) {
 	static unsigned int id = 0;
 	const unsigned int width = 10;  // indentation of name
 	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
@@ -386,7 +389,7 @@ static void printChildrenInterfaces(const ContainerBase& container, bool success
 		conn->pimpl()->printPendingPairs(os);
 	os << std::endl;
 
-	for (const auto& child : container.pimpl()->children()) {
+	for (const auto& child : container.children()) {
 		auto cimpl = child->pimpl();
 		os << std::setw(width) << std::left << child->name();
 		if (!cimpl->starts() && !cimpl->ends())
