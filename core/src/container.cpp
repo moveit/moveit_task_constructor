@@ -107,6 +107,7 @@ void ContainerBasePrivate::compute() {
 }
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
 			// just ignore: the pair of (new) states isn't known to us anyway
@@ -114,22 +115,23 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 			break;
 
 		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
 			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
 			break;
 		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
 			setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
 			break;
 
 		case CONNECT:
 			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
 				auto cimpl = conn->pimpl();
-				ROS_DEBUG_STREAM_NAMED("Connecting", "'" << child.name() << "' generated a failure");
 				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from)) {
-					ROS_DEBUG_STREAM_NAMED("Connecting", "prune backward branch");
+					ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
 					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
 				}
 				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to)) {
-					ROS_DEBUG_STREAM_NAMED("Connecting", "prune forward branch");
+					ROS_DEBUG_STREAM_NAMED("Pruning", "prune forward branch");
 					setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
 				}
 			}
@@ -444,6 +446,9 @@ inline void updateStatePrios(const SolutionSequence::container_type& partial_sol
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
+	ROS_DEBUG_STREAM_NAMED("SerialContainer", "'" << this->name() << "' received solution of child stage '"
+	                                              << current.creator()->name() << "'");
+
 	// failures should never trigger this callback
 	assert(!current.isFailure());
 
