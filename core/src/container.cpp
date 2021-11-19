@@ -160,11 +160,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	}
 
 	// actually enable/disable the state
-	if (s->owner()) {
-		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
-	} else {
-		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
-	}
+	const_cast<InterfaceState*>(s)->updateStatus(status);
 
 	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
 	if (parent() && trajectories<dir>(*s).empty()) {
@@ -434,18 +430,15 @@ struct SolutionCollector
 	SolutionSequence::container_type trace;
 };
 
-inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
-	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
-		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
-		                               // update depth + cost, but keep current status
-		                               InterfaceState::Priority(prio, state->priority().status()));
-}
-
+// recursively update state priorities along solution path
 template <Interface::Direction dir>
-inline void updateStatePrios(const SolutionSequence::container_type& partial_solution_path,
-                             const InterfaceState::Priority& prio) {
-	for (const SolutionBase* solution : partial_solution_path)
-		updateStatePrio(state<dir>(*solution), prio);
+inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Priority& prio) {
+	InterfaceState::Priority priority(prio, s.priority().status());
+	if (s.priority() == priority)
+		return;
+	const_cast<InterfaceState&>(s).updatePriority(priority);
+	for (const SolutionBase* successor : trajectories<dir>(s))
+		updateStatePrios<dir>(*state<dir>(*successor), prio);
 }
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
@@ -496,10 +489,8 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 			if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
-				updateStatePrio(current.start(), prio);
-				updateStatePrio(current.end(), prio);
-				updateStatePrios<Interface::BACKWARD>(in.first, prio);
-				updateStatePrios<Interface::FORWARD>(out.first, prio);
+				updateStatePrios<Interface::BACKWARD>(*current.start(), prio);
+				updateStatePrios<Interface::FORWARD>(*current.end(), prio);
 			}
 		}
 	}

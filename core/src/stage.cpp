@@ -722,7 +722,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 				// but don't re-enable states that are marked DISABLED
 				// https://github.com/ros-planning/moveit_task_constructor/pull/221
 				if (oit->priority().status() == InterfaceState::Status::FAILED)
-					oit->owner()->updatePriority(&*oit,
+					oit->owner()->updatePriority(oit,
 					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
 				pending.insert(make_pair<other>(it, oit));
 			}

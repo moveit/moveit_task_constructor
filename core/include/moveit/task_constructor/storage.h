@@ -140,13 +140,21 @@ public:
 
 	/// states are ordered by priority
 	inline bool operator<(const InterfaceState& other) const { return this->priority_ < other.priority_; }
+
 	inline const Priority& priority() const { return priority_; }
+	/// Update priority and call owner's notify() if possible
+	void updatePriority(const InterfaceState::Priority& priority);
+	/// Update status, but keep current priority
+	void updateStatus(Status status);
+
 	Interface* owner() const { return owner_; }
 
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
 	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
+	// Set new priority without updating the owning interface (USE WITH CARE)
+	inline void setPriority(const Priority& prio) { priority_ = prio; }
 
 private:
 	planning_scene::PlanningSceneConstPtr scene_;
@@ -204,6 +212,8 @@ public:
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
+	/// more efficient variant of the above, because we can skip searching the state
+	void updatePriority(Interface::iterator it, const InterfaceState::Priority& priority);
 
 private:
 	const NotifyFunction notify_;

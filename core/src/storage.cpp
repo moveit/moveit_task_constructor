@@ -82,6 +82,17 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 	return cost() < other.cost();
 }
 
+void InterfaceState::updatePriority(const InterfaceState::Priority& priority) {
+	if (owner()) {
+		owner()->updatePriority(this, priority);
+	} else {
+		setPriority(priority);
+	}
+}
+void InterfaceState::updateStatus(Status status) {
+	updatePriority(InterfaceState::Priority(priority_, status));
+}
+
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
 
 // Announce a new InterfaceState
@@ -131,7 +142,11 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 
 	auto it = std::find(begin(), end(), state);  // find iterator to state
 	assert(it != end());  // state should be part of this interface
-	state->priority_ = priority;  // update priority
+	updatePriority(it, priority);
+}
+
+void Interface::updatePriority(Interface::iterator it, const InterfaceState::Priority& priority) {
+	it->priority_ = priority;  // update priority
 	update(it);  // update position in ordered list
 	if (notify_)
 		notify_(it, true);  // notify callback
