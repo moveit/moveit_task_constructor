@@ -733,17 +733,17 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	// std::cerr << std::endl;
 }
 
-// Check whether there are pending feasible states that could connect to source.
-// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+// Check whether there are pending feasible states (other than source) that could connect to target.
+// If not, we exhausted all solution candidates for target and thus should mark it as failure.
 template <Interface::Direction dir>
-inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const {
 	for (const auto& candidate : this->pending) {
 		static_assert(Interface::FORWARD == 0 && Interface::BACKWARD == 1,
 		              "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
-		const auto src = std::get<dir>(candidate);
-		const auto tgt = std::get<opposite<dir>()>(candidate);
+		const InterfaceState* src = &*std::get<dir>(candidate);
+		const InterfaceState* tgt = &*std::get<opposite<dir>()>(candidate);
 
-		if (&*src == source && tgt->priority().enabled())
+		if (tgt == target && src != source && src->priority().enabled())
 			return true;
 
 		// early stopping when only infeasible pairs are to come
@@ -753,8 +753,10 @@ inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source)
 	return false;
 }
 // explicitly instantiate templates for both directions
-template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
-template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* start,
+                                                                         const InterfaceState* end) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* end,
+                                                                          const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
 	// Do we still have feasible pending state pairs?

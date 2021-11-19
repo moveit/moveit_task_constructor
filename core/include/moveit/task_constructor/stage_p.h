@@ -330,7 +330,7 @@ public:
 
 	// Check whether there are pending feasible states that could connect to source
 	template <Interface::Direction dir>
-	bool hasPendingOpposites(const InterfaceState* source) const;
+	bool hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const;
 
 	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
 

@@ -118,25 +118,23 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 			break;
 
 		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
 			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
 			break;
 		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
 			setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
 			break;
 
 		case CONNECT:
 			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
+				// only prune if there are no opposite pending states
 				auto cimpl = conn->pimpl();
-				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from)) {
-					ROS_DEBUG_STREAM_NAMED("Pruning", "prune backward branch");
+				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to, from))
 					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-				}
-				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to)) {
-					ROS_DEBUG_STREAM_NAMED("Pruning", "prune forward branch");
+				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from, to))
 					setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
-				}
+			} else {  // other CONNECT-like stages, e.g. containers are always pruned
+				setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
+				setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
 			}
 			break;
 	}
