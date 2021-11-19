@@ -118,32 +118,32 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 			break;
 
 		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
+			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::FAILED);
 			break;
 		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
+			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::FAILED);
 			break;
 
 		case CONNECT:
-			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
-				// only prune if there are no opposite pending states
-				auto cimpl = conn->pimpl();
-				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to, from))
-					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from, to))
-					setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
-			} else {  // other CONNECT-like stages, e.g. containers are always pruned
-				setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-				setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
-			}
+			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::FAILED);
+			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::FAILED);
 			break;
 	}
 	// printChildrenInterfaces(*this, false, child);
 }
 
 template <Interface::Direction dir>
-void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
-	if (s->priority().status() == status)
+void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
+                                     InterfaceState::Status status) {
+	if (status != InterfaceState::Status::ENABLED && creator) {
+		if (const auto* conn = dynamic_cast<const Connecting*>(creator)) {
+			auto cimpl = conn->pimpl();
+			// if creator is a Connecting stage and target has enabled opposite states (other than source)
+			if (cimpl->hasPendingOpposites<dir>(source, target))
+				return;  // don't prune
+		}
+	}
+	if (target->priority().status() == status)
 		return;  // nothing changing
 
 	// Skip disabling the state, if there are alternative enabled solutions
@@ -151,18 +151,18 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 		auto solution_is_enabled = [](auto&& solution) {
 			return state<opposite<dir>()>(*solution)->priority().enabled();
 		};
-		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		const auto& alternatives = trajectories<opposite<dir>()>(*target);
 		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
 		if (alternative_path != alternatives.cend())
 			return;
 	}
 
 	// actually enable/disable the state
-	const_cast<InterfaceState*>(s)->updateStatus(status);
+	const_cast<InterfaceState*>(target)->updateStatus(status);
 
-	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
-	if (parent() && trajectories<dir>(*s).empty()) {
-		auto external{ internalToExternalMap().find(s) };
+	// if possible (i.e. if target has an external counterpart), escalate setStatus to external interface
+	if (parent() && trajectories<dir>(*target).empty()) {
+		auto external{ internalToExternalMap().find(target) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
 			// all internal states linked to external
@@ -170,7 +170,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 			auto is_enabled = [](const auto& ext_int_pair) { return ext_int_pair.second->priority().enabled(); };
 			auto other_path{ std::find_if(internals.first, internals.second, is_enabled) };
 			if (other_path == internals.second)
-				parent()->pimpl()->setStatus<dir>(external->get<EXTERNAL>(), status);
+				parent()->pimpl()->setStatus<dir>(nullptr, nullptr, external->get<EXTERNAL>(), status);
 			return;
 		}
 	}
@@ -185,18 +185,16 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 		status = InterfaceState::Status::PRUNED;  // only the first state is marked as FAILED
 
 	// traverse solution tree
-	for (const SolutionBase* successor : trajectories<dir>(*s))
-		setStatus<dir>(state<dir>(*successor), status);
+	for (const SolutionBase* successor : trajectories<dir>(*target))
+		setStatus<dir>(successor->creator(), target, state<dir>(*successor), status);
 }
-template void ContainerBasePrivate::setStatus<Interface::FORWARD>(const InterfaceState*, InterfaceState::Status);
-template void ContainerBasePrivate::setStatus<Interface::BACKWARD>(const InterfaceState*, InterfaceState::Status);
 
 template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
-	if (updated) {
+	if (updated) {  // propagate external state update to internal copies
 		auto internals{ externalToInternalMap().equal_range(&*external) };
 		for (auto& i = internals.first; i != internals.second; ++i) {
-			setStatus<dir>(i->second, external->priority().status());
+			setStatus<dir>(nullptr, nullptr, i->second, external->priority().status());
 		}
 		return;
 	}

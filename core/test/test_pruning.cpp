@@ -46,7 +46,7 @@ TEST_F(Pruning, PruningMultiForward) {
 
 // The 2nd failing FW attempt would prune the path through CON,
 // but shouldn't because there exist two more GEN2 solutions
-TEST_F(Pruning, DISABLED_NoPruningIfAlternativesExist) {
+TEST_F(Pruning, NoPruningIfAlternativesExist) {
 	add(t, new GeneratorMockup(PredefinedCosts({ 0.0 })));
 	add(t, new ConnectMockup());
 	add(t, new GeneratorMockup(std::list<double>{ 0, 10, 20, 30 }, 2));

@@ -148,9 +148,10 @@ protected:
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
-	/// Set ENABLED / PRUNED status of the solution tree starting from s into given direction
+	/// Set ENABLED/PRUNED/FAILED status of a solution branch starting from target into the given direction
 	template <Interface::Direction dir>
-	void setStatus(const InterfaceState* s, InterfaceState::Status status);
+	void setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
+	               InterfaceState::Status status);
 
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
