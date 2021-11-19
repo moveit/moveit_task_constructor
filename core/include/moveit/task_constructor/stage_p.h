@@ -310,18 +310,15 @@ public:
 		}
 		static inline bool less(const InterfaceState::Priority& lhsA, const InterfaceState::Priority& lhsB,
 		                        const InterfaceState::Priority& rhsA, const InterfaceState::Priority& rhsB) {
-			unsigned char lhs = (lhsA.enabled() << 1) | lhsB.enabled();  // combine bits into two-digit binary number
-			unsigned char rhs = (rhsA.enabled() << 1) | rhsB.enabled();
+			bool lhs = lhsA.enabled() && lhsB.enabled();
+			bool rhs = rhsA.enabled() && rhsB.enabled();
+
 			if (lhs == rhs)  // if enabled status is identical
 				return lhsA + lhsB < rhsA + rhsB;  // compare the sums of both contributions
-			// one of the states in each pair should be enabled
-			assert(lhs != 0b00 && rhs != 0b00);
-			// both states valid (b11)
-			if (lhs == 0b11)
-				return true;
-			if (rhs == 0b11)
-				return false;
-			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
+
+			// sort both-enabled pairs first
+			static_assert(true > false, "Comparing enabled states requires true > false");
+			return lhs > rhs;
 		}
 	};
 

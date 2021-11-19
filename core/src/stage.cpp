@@ -712,12 +712,7 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction other>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
-		if (it->priority().pruned())
-			// remove all pending pairs involving this state
-			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
-		else
-			// TODO(v4hn): If a state becomes reenabled, this skips all previously removed pairs, right?
-			pending.sort();
+		pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
@@ -752,7 +747,7 @@ inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source)
 			return true;
 
 		// early stopping when only infeasible pairs are to come
-		if (!std::get<0>(candidate)->priority().enabled())
+		if (!std::get<0>(candidate)->priority().enabled() || !std::get<1>(candidate)->priority().enabled())
 			break;
 	}
 	return false;

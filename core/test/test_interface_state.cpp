@@ -87,8 +87,11 @@ TEST(StatePairs, compare) {
 	EXPECT_TRUE(pair(Prio(1, 1), Prio(1, 1)) < pair(Prio(1, 0), Prio(0, 0)));
 
 	auto good = InterfaceState::Status::ENABLED;
-	auto bad = InterfaceState::Status::FAILED;
-	EXPECT_TRUE(pair(good, good) < pair(good, bad));
-	EXPECT_TRUE(pair(good, good) < pair(bad, good));
-	EXPECT_TRUE(pair(bad, good) < pair(good, bad));
+	auto good_good = pair(Prio(0, 10, good), Prio(0, 0, good));
+	ASSERT_TRUE(good_good > pair(good, good));  // a bad status should reverse this relation
+	for (auto bad : { InterfaceState::Status::FAILED, InterfaceState::Status::PRUNED }) {
+		EXPECT_TRUE(good_good < pair(bad, good));
+		EXPECT_TRUE(good_good < pair(good, bad));
+		EXPECT_TRUE(good_good < pair(bad, bad));
+	}
 }
