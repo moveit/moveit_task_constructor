@@ -192,8 +192,6 @@ public:
 	{
 		FORWARD,
 		BACKWARD,
-		START = FORWARD,
-		END = BACKWARD
 	};
 	using NotifyFunction = std::function<void(iterator, bool)>;
 	Interface(const NotifyFunction& notify = NotifyFunction());
