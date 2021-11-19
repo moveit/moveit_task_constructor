@@ -722,9 +722,10 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			// Don't re-enable states that are marked DISABLED
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is FAILED
+				// re-enable the opposing state oit if its status is FAILED,
+				// but don't re-enable states that are marked DISABLED
+				// https://github.com/ros-planning/moveit_task_constructor/pull/221
 				if (oit->priority().status() == InterfaceState::Status::FAILED)
 					oit->owner()->updatePriority(&*oit,
 					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
@@ -742,9 +743,9 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 template <Interface::Direction dir>
 inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
 	for (const auto& candidate : this->pending) {
-		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		static_assert(Interface::FORWARD == 0 && Interface::BACKWARD == 1,
+		              "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
 		const auto src = std::get<dir>(candidate);
-		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
 		const auto tgt = std::get<opposite<dir>()>(candidate);
 
 		if (&*src == source && tgt->priority().enabled())
