@@ -148,8 +148,8 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 	if (s->priority().status() == status)
 		return;  // nothing changing
 
-	// if we should disable the state, only do so when there is no enabled alternative path
-	if (status == InterfaceState::PRUNED) {
+	// Skip disabling the state, if there are alternative enabled solutions
+	if (status != InterfaceState::ENABLED) {
 		auto solution_is_enabled = [](auto&& solution) {
 			return state<opposite<dir>()>(*solution)->priority().enabled();
 		};
