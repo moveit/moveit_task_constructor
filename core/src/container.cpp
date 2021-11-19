@@ -109,29 +109,6 @@ void ContainerBasePrivate::compute() {
 	static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
-	switch (child.pimpl()->interfaceFlags()) {
-		case GENERATE:
-			// just ignore: the pair of (new) states isn't known to us anyway
-			// TODO: If child is a container, from and to might have associated solutions already!
-			break;
-
-		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::FAILED);
-			break;
-		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::FAILED);
-			break;
-
-		case CONNECT:
-			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::FAILED);
-			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::FAILED);
-			break;
-	}
-	// printChildrenInterfaces(*this, false, child);
-}
-
 template <Interface::Direction dir>
 void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
                                      InterfaceState::Status status) {
@@ -187,6 +164,29 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 	// traverse solution tree
 	for (const SolutionBase* successor : trajectories<dir>(*target))
 		setStatus<dir>(successor->creator(), target, state<dir>(*successor), status);
+}
+
+void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			// just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+			break;
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::FAILED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::FAILED);
+			break;
+
+		case CONNECT:
+			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::FAILED);
+			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::FAILED);
+			break;
+	}
+	// printChildrenInterfaces(*this, false, child);
 }
 
 template <Interface::Direction dir>
