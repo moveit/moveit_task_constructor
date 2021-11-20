@@ -161,8 +161,8 @@ std::ostream& operator<<(std::ostream& os, const Interface& interface) {
 }
 const char* InterfaceState::STATUS_COLOR[] = {
 	"\033[32m",  // ENABLED - green
-	"\033[33m",  // PRUNED - yellow
-	"\033[31m",  // FAILED - red
+	"\033[33m",  // ARMED - yellow
+	"\033[31m",  // PRUNED - red
 	"\033[m"  // reset
 };
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {

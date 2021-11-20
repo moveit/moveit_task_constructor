@@ -148,7 +148,7 @@ protected:
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
-	/// Set ENABLED/PRUNED/FAILED status of a solution branch starting from target into the given direction
+	/// Set ENABLED/PRUNED status of a solution branch starting from target into the given direction
 	template <Interface::Direction dir>
 	void setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
 	               InterfaceState::Status status);

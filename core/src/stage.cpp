@@ -718,10 +718,10 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		InterfacePtr other_interface = pullInterface(other);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is FAILED,
+				// re-enable the opposing state oit if its status is ARMED,
 				// but don't re-enable states that are marked DISABLED
 				// https://github.com/ros-planning/moveit_task_constructor/pull/221
-				if (oit->priority().status() == InterfaceState::Status::FAILED)
+				if (oit->priority().status() == InterfaceState::Status::ARMED)
 					oit->owner()->updatePriority(oit,
 					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
 				pending.insert(make_pair<other>(it, oit));

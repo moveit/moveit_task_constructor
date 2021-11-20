@@ -153,13 +153,12 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 	}
 
 	// To break symmetry between both ends of a partial solution sequence that gets disabled,
-	// we mark the first state with FAILED and all other states down the tree only with PRUNED.
-	// This allows us to re-enable the FAILED side, while not (yet) consider the PRUNED states again,
+	// we mark the first state with ARMED and all other states down the tree with PRUNED.
+	// This allows us to re-enable the ARMED state, but not the PRUNED states,
 	// when new states arrive in a Connecting stage.
-	// All PRUNED states are only re-enabled if the FAILED state actually gets connected.
-	// For details, see: https://github.com/ros-planning/moveit_task_constructor/pull/221
-	if (status == InterfaceState::Status::FAILED)
-		status = InterfaceState::Status::PRUNED;  // only the first state is marked as FAILED
+	// For details, https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+	if (status == InterfaceState::Status::ARMED)
+		status = InterfaceState::Status::PRUNED;  // only the first state is marked as ARMED
 
 	// traverse solution tree
 	for (const SolutionBase* successor : trajectories<dir>(*target))
@@ -175,15 +174,15 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 			break;
 
 		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::FAILED);
+			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::PRUNED);
 			break;
 		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::FAILED);
+			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::PRUNED);
 			break;
 
 		case CONNECT:
-			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::FAILED);
-			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::FAILED);
+			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::ARMED);
+			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::ARMED);
 			break;
 	}
 	// printChildrenInterfaces(*this, false, child);
