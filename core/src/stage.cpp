@@ -709,23 +709,25 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
-template <Interface::Direction other>
+template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
 		pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
-		InterfacePtr other_interface = pullInterface(other);
+		auto parent_pimpl = parent()->pimpl();
+		InterfacePtr other_interface = pullInterface(dir);
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is ARMED,
-				// but don't re-enable states that are marked DISABLED
-				// https://github.com/ros-planning/moveit_task_constructor/pull/221
-				if (oit->priority().status() == InterfaceState::Status::ARMED)
-					oit->owner()->updatePriority(oit,
-					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
-				pending.insert(make_pair<other>(it, oit));
-			}
+			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
+				continue;
+
+			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
+			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+			if (oit->priority().status() == InterfaceState::Status::ARMED)
+				parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+
+			// Remember all pending states, regardless of their status!
+			pending.insert(make_pair<dir>(it, oit));
 		}
 	}
 	// std::cerr << name_ << ": ";

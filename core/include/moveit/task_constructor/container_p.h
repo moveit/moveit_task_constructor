@@ -76,6 +76,7 @@ namespace task_constructor {
 class ContainerBasePrivate : public StagePrivate
 {
 	friend class ContainerBase;
+	friend class ConnectingPrivate;  // needs to call protected setStatus()
 	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
