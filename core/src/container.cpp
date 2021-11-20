@@ -443,10 +443,6 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	// failures should never trigger this callback
 	assert(!current.isFailure());
 
-	// states of solution must be active, otherwise this would not have been computed
-	assert(current.start()->priority().enabled());
-	assert(current.end()->priority().enabled());
-
 	auto impl = pimpl();
 	const Stage* creator = current.creator();
 	auto& children = impl->children();

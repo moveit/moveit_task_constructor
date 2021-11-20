@@ -717,6 +717,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		auto parent_pimpl = parent()->pimpl();
 		InterfacePtr other_interface = pullInterface(dir);
+		bool have_enabled_opposites = false;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
 				continue;
@@ -725,10 +726,15 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
 			if (oit->priority().status() == InterfaceState::Status::ARMED)
 				parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+			if (oit->priority().enabled())
+				have_enabled_opposites = true;
 
 			// Remember all pending states, regardless of their status!
 			pending.insert(make_pair<dir>(it, oit));
 		}
+		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
+			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
+			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
 	// std::cerr << name_ << ": ";
 	// printPendingPairs(std::cerr);
