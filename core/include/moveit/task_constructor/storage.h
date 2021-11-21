@@ -210,8 +210,6 @@ public:
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
-	/// more efficient variant of the above, because we can skip searching the state
-	void updatePriority(Interface::iterator it, const InterfaceState::Priority& priority);
 
 private:
 	const NotifyFunction notify_;

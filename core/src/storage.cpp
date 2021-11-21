@@ -142,11 +142,8 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 
 	auto it = std::find(begin(), end(), state);  // find iterator to state
 	assert(it != end());  // state should be part of this interface
-	updatePriority(it, priority);
-}
 
-void Interface::updatePriority(Interface::iterator it, const InterfaceState::Priority& priority) {
-	it->priority_ = priority;  // update priority
+	state->priority_ = priority;  // update priority
 	update(it);  // update position in ordered list
 	if (notify_)
 		notify_(it, true);  // notify callback
