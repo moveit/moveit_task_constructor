@@ -715,7 +715,7 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 template <Interface::Direction dir>
 void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
-		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
+		copyState<dir>(external, stage->pimpl()->pullInterface<dir>(), updated);
 }
 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}

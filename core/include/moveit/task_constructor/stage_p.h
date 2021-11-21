@@ -100,17 +100,9 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// direction-based access to pull/push interfaces
-	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
-	inline InterfacePtr pushInterface(Interface::Direction dir) {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
-	inline InterfaceConstPtr pullInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? starts_ : ends_;
-	}
-	inline InterfaceConstPtr pushInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
+	/// direction-based access to pull interface
+	template <Interface::Direction dir>
+	inline InterfacePtr pullInterface();
 
 	/// set parent of stage
 	/// enforce only one parent exists
@@ -203,6 +195,15 @@ private:
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::FORWARD>() {
+	return starts_;
+}
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::BACKWARD>() {
+	return ends_;
+}
 
 template <>
 inline void StagePrivate::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,

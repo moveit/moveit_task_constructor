@@ -713,9 +713,9 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	auto parent_pimpl = parent()->pimpl();
-	Interface::DisableNotify disable_source_interface(*pullInterface(dir));
+	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
 	if (updated) {
-		if (pullInterface(opposite<dir>())->notifyEnabled())  // suppress recursive loop
+		if (pullInterface<opposite<dir>()>()->notifyEnabled())  // suppress recursive loop
 		{
 			// If status has changed, propagate the update to the opposite side
 			auto status = it->priority().status();
@@ -747,7 +747,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 		pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
-		InterfacePtr other_interface = pullInterface(dir);
+		InterfacePtr other_interface = pullInterface<dir>();
 		bool have_enabled_opposites = false;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
