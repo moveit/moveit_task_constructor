@@ -711,11 +711,12 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 
 // TODO: bool updated -> uint_8 updated (bitfield of PRIORITY | STATUS)
 template <Interface::Direction dir>
-void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
+void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
 	auto parent_pimpl = parent()->pimpl();
 	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
 	if (updated) {
-		if (pullInterface<opposite<dir>()>()->notifyEnabled())  // suppress recursive loop
+		if (updated.testFlag(Interface::STATUS) &&  // only perform these costly operations if needed
+		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppress recursive loop
 		{
 			// If status has changed, propagate the update to the opposite side
 			auto status = it->priority().status();

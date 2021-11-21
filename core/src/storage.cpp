@@ -129,7 +129,7 @@ void Interface::add(InterfaceState& state) {
 	moveFrom(it, container);
 	// and finally call notify callback
 	if (notify_)
-		notify_(it, false);
+		notify_(it, UpdateFlags());
 }
 
 Interface::container_type Interface::remove(iterator it) {
@@ -140,7 +140,8 @@ Interface::container_type Interface::remove(iterator it) {
 }
 
 void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
-	if (priority == state->priority())
+	const auto old_prio = state->priority();
+	if (priority == old_prio)
 		return;  // nothing to do
 
 	auto it = std::find(begin(), end(), state);  // find iterator to state
@@ -148,8 +149,14 @@ void Interface::updatePriority(InterfaceState* state, const InterfaceState::Prio
 
 	state->priority_ = priority;  // update priority
 	update(it);  // update position in ordered list
-	if (notify_)
-		notify_(it, true);  // notify callback
+
+	if (notify_) {
+		UpdateFlags updated(Update::ALL);
+		if (old_prio.status() == priority.status())
+			updated &= ~STATUS;
+
+		notify_(it, updated);  // notify callback
+	}
 }
 
 std::ostream& operator<<(std::ostream& os, const Interface& interface) {

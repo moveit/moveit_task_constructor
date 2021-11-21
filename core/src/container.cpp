@@ -189,7 +189,8 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 }
 
 template <Interface::Direction dir>
-void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
+void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target,
+                                     Interface::UpdateFlags updated) {
 	if (updated) {  // propagate external state update to internal copies
 		auto internals{ externalToInternalMap().equal_range(&*external) };
 		for (auto& i = internals.first; i != internals.second; ++i) {
@@ -550,7 +551,7 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			starts_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::FORWARD>(it, target, updated);
 			}));
 	} catch (InitStageException& e) {
@@ -575,7 +576,7 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			ends_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::BACKWARD>(it, target, updated);
 			}));
 	} catch (InitStageException& e) {
@@ -670,11 +671,11 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (expected & READS_START)
-		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+		starts().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 			this->onNewExternalState<Interface::FORWARD>(external, updated);
 		}));
 	if (expected & READS_END)
-		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+		ends().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 			this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		}));
 
@@ -713,7 +714,7 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, bool updated) {
+void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, Interface::UpdateFlags updated) {
 	for (const Stage::pointer& stage : children())
 		copyState<dir>(external, stage->pimpl()->pullInterface<dir>(), updated);
 }

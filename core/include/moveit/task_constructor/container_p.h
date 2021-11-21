@@ -156,7 +156,7 @@ protected:
 
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
-	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
+	void copyState(Interface::iterator external, const InterfacePtr& target, Interface::UpdateFlags updated);
 	/// lift solution from internal to external level
 	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
 	                  const InterfaceState* internal_to);
@@ -230,9 +230,9 @@ protected:
 	void validateInterfaces(const StagePrivate& child, InterfaceFlags& external, bool first = false) const;
 
 private:
-	/// callback for new externally received states
+	/// notify callback for new externally received states
 	template <typename Interface::Direction>
-	void onNewExternalState(Interface::iterator external, bool updated);
+	void onNewExternalState(Interface::iterator external, Interface::UpdateFlags updated);
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 

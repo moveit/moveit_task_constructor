@@ -42,6 +42,7 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <moveit/task_constructor/utils.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -199,7 +200,14 @@ public:
 		FORWARD,
 		BACKWARD,
 	};
-	using NotifyFunction = std::function<void(iterator, bool)>;
+	enum Update
+	{
+		STATUS = 1 << 0,
+		PRIORITY = 1 << 1,
+		ALL = STATUS | PRIORITY,
+	};
+	using UpdateFlags = utils::Flags<Update>;
+	using NotifyFunction = std::function<void(iterator, UpdateFlags)>;
 
 	class DisableNotify
 	{

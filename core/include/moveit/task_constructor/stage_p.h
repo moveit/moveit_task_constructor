@@ -340,9 +340,9 @@ private:
 	template <Interface::Direction other>
 	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
 
-	// get informed when new start or end state becomes available
+	// notify callback to get informed about newly inserted (or updated) start or end states
 	template <Interface::Direction other>
-	void newState(Interface::iterator it, bool updated);
+	void newState(Interface::iterator it, Interface::UpdateFlags updated);
 
 	// ordered list of pending state pairs
 	ordered<StatePair> pending;
