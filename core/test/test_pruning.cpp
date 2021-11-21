@@ -91,6 +91,7 @@ TYPED_TEST(PruningContainerTests, ConnectReactivatesPrunedPaths) {
 }
 
 TEST_F(Pruning, ConnectConnectForward) {
+	add(t, new BackwardMockup());
 	add(t, new GeneratorMockup());
 	auto c1 = add(t, new ConnectMockup({ INF, 0, 0 }));  // 1st attempt is a failue
 	add(t, new GeneratorMockup({ 0, 10, 20 }));
@@ -112,6 +113,7 @@ TEST_F(Pruning, ConnectConnectForward) {
 }
 
 TEST_F(Pruning, ConnectConnectBackward) {
+	add(t, new BackwardMockup());
 	add(t, new GeneratorMockup({ 1, 2, 3 }));
 	auto c1 = add(t, new ConnectMockup());
 	add(t, new BackwardMockup());

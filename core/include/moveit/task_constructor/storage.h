@@ -200,6 +200,18 @@ public:
 		BACKWARD,
 	};
 	using NotifyFunction = std::function<void(iterator, bool)>;
+
+	class DisableNotify
+	{
+		Interface& if_;
+		Interface::NotifyFunction old_;
+
+	public:
+		DisableNotify(Interface& i) : if_(i) { old_.swap(if_.notify_); }
+		~DisableNotify() { old_.swap(if_.notify_); }
+	};
+	friend class DisableNotify;
+
 	Interface(const NotifyFunction& notify = NotifyFunction());
 
 	/// add a new InterfaceState
@@ -210,9 +222,10 @@ public:
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
+	inline bool notifyEnabled() const { return static_cast<bool>(notify_); }
 
 private:
-	const NotifyFunction notify_;
+	NotifyFunction notify_;
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)

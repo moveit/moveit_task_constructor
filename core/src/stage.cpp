@@ -709,13 +709,44 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
+// TODO: bool updated -> uint_8 updated (bitfield of PRIORITY | STATUS)
 template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (updated) {  // many pairs might be affected: resort
+	auto parent_pimpl = parent()->pimpl();
+	Interface::DisableNotify disable_source_interface(*pullInterface(dir));
+	if (updated) {
+		if (pullInterface(opposite<dir>())->notifyEnabled())  // suppress recursive loop
+		{
+			// If status has changed, propagate the update to the opposite side
+			auto status = it->priority().status();
+			if (status == InterfaceState::Status::PRUNED)  // PRUNED becomes ARMED on opposite side
+				status = InterfaceState::Status::ARMED;  // (only for pending state pairs)
+
+			for (const auto& candidate : this->pending) {
+				if (std::get<opposite<dir>()>(candidate) != it)  // only consider pairs with source state == state
+					continue;
+				auto oit = std::get<dir>(candidate);  // opposite target state
+				auto ostatus = oit->priority().status();
+				if (ostatus != status) {
+					if (status != InterfaceState::Status::ENABLED) {
+						// quicker check for hasPendingOpposites(): search in it->owner() for an enabled alternative
+						bool cancel = false;  // if found, cancel propagation of new status
+						for (const auto alternative : *it->owner())
+							if ((cancel = alternative->priority().enabled()))
+								break;
+						if (cancel)
+							continue;
+					}
+					// pass creator=nullptr to skip hasPendingOpposites() check
+					parent_pimpl->setStatus<opposite<dir>()>(nullptr, nullptr, &*oit, status);
+				}
+			}
+		}
+
+		// many pairs will have changed priorities: resort pending list
 		pending.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
-		auto parent_pimpl = parent()->pimpl();
 		InterfacePtr other_interface = pullInterface(dir);
 		bool have_enabled_opposites = false;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
