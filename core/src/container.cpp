@@ -165,6 +165,17 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 		setStatus<dir>(successor->creator(), target, state<dir>(*successor), status);
 }
 
+// recursively update state priorities along solution path
+template <Interface::Direction dir>
+inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Priority& prio) {
+	InterfaceState::Priority priority(prio, s.priority().status());
+	if (s.priority() == priority)
+		return;
+	const_cast<InterfaceState&>(s).updatePriority(priority);
+	for (const SolutionBase* successor : trajectories<dir>(s))
+		updateStatePrios<dir>(*state<dir>(*successor), prio);
+}
+
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
 	switch (child.pimpl()->interfaceFlags()) {
@@ -191,14 +202,20 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 template <Interface::Direction dir>
 void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target,
                                      Interface::UpdateFlags updated) {
-	if (updated) {  // propagate external state update to internal copies
-		auto internals{ externalToInternalMap().equal_range(&*external) };
-		for (auto& i = internals.first; i != internals.second; ++i) {
-			setStatus<dir>(nullptr, nullptr, i->second, external->priority().status());
-		}
+	if (updated) {
+		auto prio = external->priority();
+		auto internals = externalToInternalMap().equal_range(&*external);
+
+		if (updated.testFlag(Interface::Update::STATUS)) {  // propagate external status updates to internal copies
+			for (auto& i = internals.first; i != internals.second; ++i)
+				setStatus<dir>(nullptr, nullptr, i->second, prio.status());
+		} else if (updated.testFlag(Interface::Update::PRIORITY)) {
+			for (auto& i = internals.first; i != internals.second; ++i)
+				updateStatePrios<opposite<dir>()>(*i->second, prio);
+		} else
+			assert(false);  // Expecting either STATUS or PRIORITY updates, not both!
 		return;
 	}
-
 	// create a clone of external state within target interface (child's starts() or ends())
 	auto internal = states_.insert(states_.end(), InterfaceState(*external));
 	target->add(*internal);
@@ -425,17 +442,6 @@ struct SolutionCollector
 	const size_t max_depth;
 	SolutionSequence::container_type trace;
 };
-
-// recursively update state priorities along solution path
-template <Interface::Direction dir>
-inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Priority& prio) {
-	InterfaceState::Priority priority(prio, s.priority().status());
-	if (s.priority() == priority)
-		return;
-	const_cast<InterfaceState&>(s).updatePriority(priority);
-	for (const SolutionBase* successor : trajectories<dir>(s))
-		updateStatePrios<dir>(*state<dir>(*successor), prio);
-}
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
 	ROS_DEBUG_STREAM_NAMED("SerialContainer", "'" << this->name() << "' received solution of child stage '"
