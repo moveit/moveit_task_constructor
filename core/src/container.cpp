@@ -861,7 +861,7 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 }
 
 void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction dir){
-	assert(0 <= dir && dir < 2);
+	assert(static_cast<size_t>(dir) < 2);
 	pending_states_[dir].push(state);
 }
 

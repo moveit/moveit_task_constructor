@@ -242,13 +242,7 @@ PIMPL_FUNCTIONS(ParallelContainerBase)
 class FallbacksPrivate : public ParallelContainerBasePrivate
 {
 	friend class Fallbacks;
-	struct PendingStates;
-	friend std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& pending);
 
-public:
-	FallbacksPrivate(Fallbacks* me, const std::string& name);
-
-protected:
 	struct ExternalState
 	{
 		ExternalState() = default;
@@ -261,9 +255,6 @@ protected:
 		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
 	};
 
-	inline void computeGenerate();
-	void computeFromExternal();
-
 	struct PendingStates
 	{
 		std::pair<ExternalState, Interface::Direction> pop();
@@ -273,7 +264,7 @@ protected:
 		/// get pending states queue for a given direction
 		template <Interface::Direction dir>
 		inline ordered<ExternalState>& queue() {
-			static_assert(dir >= 0 && dir < 2, "Expecting dir = FORWARD | BACKWARD");
+			static_assert(static_cast<size_t>(dir) < 2, "Expecting dir = FORWARD | BACKWARD");
 			return pending_states_[dir];
 		}
 
@@ -289,6 +280,15 @@ protected:
 		} current_;
 
 	} pending_;
+
+	friend std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& pending);
+
+public:
+	FallbacksPrivate(Fallbacks* me, const std::string& name);
+
+protected:
+	inline void computeGenerate();
+	void computeFromExternal();
 
 	bool seekToNextPending();
 
