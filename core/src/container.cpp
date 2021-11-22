@@ -860,10 +860,9 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
 }
 
-void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction d){
-	size_t queue_idx{ static_cast<size_t>(d) };
-	assert(queue_idx < 2);
-	pending_states_[queue_idx].push(state);
+void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState& state, Interface::Direction dir){
+	assert(0 <= dir && dir < 2);
+	pending_states_[dir].push(state);
 }
 
 std::pair<FallbacksPrivate::ExternalState,Interface::Direction>
@@ -978,10 +977,10 @@ bool FallbacksPrivate::seekToNextPending() {
 		          (*current.state.stage)->pimpl()->pullInterface(current.dir),
 		          false);
 
-		current.valid = (*current.state.stage)->pimpl()->canCompute();
+		if ((current.valid = (*current.state.stage)->pimpl()->canCompute()))
+			break;
 
-		if(!current.valid)
-			advanceCurrentStateToNextChild();
+		advanceCurrentStateToNextChild();
 	}
 	return current.valid;
 }

@@ -229,7 +229,7 @@ public:
 protected:
 	void validateInterfaces(const StagePrivate& child, InterfaceFlags& external, bool first = false) const;
 
-	/// callback for new externally received states
+	/// notify callback for new states received on external interfaces
 	template <typename Interface::Direction>
 	void propagateStateToChildren(Interface::iterator external, bool updated);
 
@@ -250,7 +250,8 @@ protected:
 	struct ExternalState
 	{
 		ExternalState() = default;
-		ExternalState(Interface::iterator e, container_type::const_iterator c) : external_state(e), stage(c) {}
+		ExternalState(Interface::iterator state, container_type::const_iterator child)
+		  : external_state(state), stage(child) {}
 
 		Interface::iterator external_state;
 		container_type::const_iterator stage;
@@ -265,16 +266,16 @@ protected:
 	{
 	public:
 		std::pair<ExternalState, Interface::Direction> pop();
-		inline void push(const ExternalState& job, Interface::Direction d);
-		inline bool empty() { return pending_states_[0].empty() && pending_states_[1].empty(); }
+		inline void push(const ExternalState& job, Interface::Direction dir);
+		inline bool empty() const { return pending_states_[0].empty() && pending_states_[1].empty(); }
 
 		inline void print(std::ostream& os = std::cout) const;
 
-		template <Interface::Direction d>
+		/// get pending states queue for a given direction
+		template <Interface::Direction dir>
 		inline ordered<ExternalState>& queue() {
-			size_t idx{ static_cast<size_t>(d) };
-			assert(idx < 2);
-			return pending_states_[idx];
+			static_assert(dir >= 0 && dir < 2, "Expecting dir = FORWARD | BACKWARD");
+			return pending_states_[dir];
 		}
 
 		inline auto& current() { return current_; }
@@ -284,9 +285,9 @@ protected:
 		size_t current_queue_{ 0 };  ///< which queue to check on next pop
 		struct
 		{
-			bool valid{ false };
+			bool valid = false;
 			ExternalState state;
-			Interface::Direction dir;
+			Interface::Direction dir = Interface::FORWARD;
 		} current_;
 
 	} pending_;
