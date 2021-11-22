@@ -952,15 +952,8 @@ bool FallbacksPrivate::seekToNextGenerator() {
 }
 
 void FallbacksPrivate::computeGenerate() {
-	if(solutions_.empty())
-		// move to first generator that can run
-		while(current_generator_ != children().end() && !(*current_generator_)->pimpl()->canCompute()) {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_generator_)->name() << "' can't compute, trying next one.");
-			++current_generator_;
-		}
-
-	if(current_generator_ == children().end())
-		return;
+	if (!seekToNextGenerator())
+		return;  // cannot compute anything
 
 	(*current_generator_)->pimpl()->runCompute();
 }
