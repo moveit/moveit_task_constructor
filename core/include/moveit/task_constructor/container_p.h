@@ -242,6 +242,8 @@ PIMPL_FUNCTIONS(ParallelContainerBase)
 class FallbacksPrivate : public ParallelContainerBasePrivate
 {
 	friend class Fallbacks;
+	struct PendingStates;
+	friend std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& pending);
 
 public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
@@ -262,14 +264,11 @@ protected:
 	inline void computeGenerate();
 	void computeFromExternal();
 
-	class PendingStates
+	struct PendingStates
 	{
-	public:
 		std::pair<ExternalState, Interface::Direction> pop();
 		inline void push(const ExternalState& job, Interface::Direction dir);
 		inline bool empty() const { return pending_states_[0].empty() && pending_states_[1].empty(); }
-
-		inline void print(std::ostream& os = std::cout) const;
 
 		/// get pending states queue for a given direction
 		template <Interface::Direction dir>
@@ -280,7 +279,6 @@ protected:
 
 		inline auto& current() { return current_; }
 
-	private:
 		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
 		size_t current_queue_{ 0 };  ///< which queue to check on next pop
 		struct
@@ -308,6 +306,7 @@ private:
 	void printPending(const char* comment = "pending: ") const;
 };
 PIMPL_FUNCTIONS(Fallbacks)
+std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& pending);
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate
 {

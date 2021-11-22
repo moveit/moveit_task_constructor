@@ -894,42 +894,36 @@ void FallbacksPrivate::initializeExternalInterfaces() {
 }
 
 inline void FallbacksPrivate::printPending(const char* comment) const {
-	ROSCONSOLE_DEFINE_LOCATION(true, ::ros::console::levels::Debug, ROSCONSOLE_NAME_PREFIX ".Fallbacks");
-	if (ROS_UNLIKELY(__rosconsole_define_location__enabled)) {
-		std::stringstream ss;
-		ss << name() << ": " << comment << "\n";
-		pending_.print(ss);
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", ss.str());
-	}
+	ROS_DEBUG_STREAM_NAMED("Fallbacks", name() << ": " << comment << "\n" << pending_);
 }
 
-inline void FallbacksPrivate::PendingStates::print(std::ostream& os) const {
+std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& self) {
 	static const char* color_reset = "\033[m";
 
 	auto print_priorities{ [&](const char* prefix, size_t queue_idx){
 		os << color_reset;
-		if(queue_idx == current_queue_)
+		if(queue_idx == self.current_queue_)
 			os << "*";
 		os << prefix;
-		if(pending_states_[queue_idx].empty()){
+		if(self.pending_states_[queue_idx].empty()){
 			os << "<none>";
 		}
 		else {
-			for(const auto& e : pending_states_[queue_idx])
+			for(const auto& e : self.pending_states_[queue_idx])
 				os << e.external_state->priority() << " ";
 		}
 		os << "\n";
 		}};
 
 	os << color_reset << "active: ";
-	if (current_.valid)
-		os << current_.state.external_state->priority();
+	if (self.current_.valid)
+		os << self.current_.state.external_state->priority();
 	else
 		os << "<none>";
 	os << "\n";
 	print_priorities("pending starts: ", 0);
 	print_priorities("pending ends: ", 1);
-	os << std::flush;
+	return os;
 }
 
 void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
