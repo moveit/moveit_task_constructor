@@ -84,7 +84,7 @@ struct PruningContainerTests : public Pruning
 		EXPECT_EQ(t.solutions().size(), 1u);
 	}
 };
-using ContainerTypes = ::testing::Types<SerialContainer>;  // TODO: fails for Fallbacks!
+using ContainerTypes = ::testing::Types<SerialContainer, Fallbacks>;
 TYPED_TEST_SUITE(PruningContainerTests, ContainerTypes);
 TYPED_TEST(PruningContainerTests, ConnectReactivatesPrunedPaths) {
 	this->test();
