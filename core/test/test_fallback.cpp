@@ -174,16 +174,3 @@ TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 21, 22));
 }
-
-int main(int argc, char** argv) {
-	for (int i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "--debug") == 0) {
-			if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
-				ros::console::notifyLoggerLevelsChanged();
-			break;
-		}
-	}
-
-	testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
