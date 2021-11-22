@@ -280,7 +280,7 @@ protected:
 		inline auto& current() { return current_; }
 
 		ordered<ExternalState> pending_states_[2];  ///< separate queues for start / end states
-		size_t current_queue_{ 0 };  ///< which queue to check on next pop
+		Interface::Direction current_queue_ = Interface::FORWARD;  ///< which queue to check on next pop
 		struct
 		{
 			bool valid = false;

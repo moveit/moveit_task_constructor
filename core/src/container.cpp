@@ -868,13 +868,13 @@ void FallbacksPrivate::PendingStates::push(const FallbacksPrivate::ExternalState
 std::pair<FallbacksPrivate::ExternalState,Interface::Direction>
 FallbacksPrivate::PendingStates::pop(){
 	if(pending_states_[current_queue_].empty())
-		current_queue_ = 1 - current_queue_;
+		current_queue_ = static_cast<Interface::Direction>(1 - current_queue_);
 	// Did you call pop when this->empty() == false?
 	assert(!pending_states_[current_queue_].empty());
 
 	auto job{ std::make_pair(pending_states_[current_queue_].pop(), static_cast<Interface::Direction>(current_queue_)) };
 
-	current_queue_ = 1 - current_queue_;
+	current_queue_ = static_cast<Interface::Direction>(1 - current_queue_);
 
 	return job;
 }
@@ -900,7 +900,7 @@ inline void FallbacksPrivate::printPending(const char* comment) const {
 std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates& self) {
 	static const char* color_reset = "\033[m";
 
-	auto print_priorities{ [&](const char* prefix, size_t queue_idx){
+	auto print_priorities{ [&](const char* prefix, Interface::Direction queue_idx){
 		os << color_reset;
 		if(queue_idx == self.current_queue_)
 			os << "*";
@@ -921,8 +921,8 @@ std::ostream& operator<<(std::ostream& os, const FallbacksPrivate::PendingStates
 	else
 		os << "<none>";
 	os << "\n";
-	print_priorities("pending starts: ", 0);
-	print_priorities("pending ends: ", 1);
+	print_priorities("pending starts: ", Interface::FORWARD);
+	print_priorities("pending ends: ", Interface::BACKWARD);
 	return os;
 }
 
