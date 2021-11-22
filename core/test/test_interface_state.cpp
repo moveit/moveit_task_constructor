@@ -19,7 +19,7 @@ TEST(InterfaceStatePriority, compare) {
 	EXPECT_TRUE(Prio(1, 42) < Prio(0, 0));
 	EXPECT_TRUE(Prio(0, 0) < Prio(0, 42));  // at same depth, higher cost is larger
 
-	auto dstart = InterfaceState::Status::FAILED;
+	auto dstart = InterfaceState::Status::ARMED;
 	EXPECT_TRUE(Prio(0, 0, dstart) == Prio(0, 0, dstart));
 	EXPECT_TRUE(Prio(1, 0, dstart) < Prio(0, 0, dstart));
 	EXPECT_TRUE(Prio(1, 42, dstart) < Prio(0, 0, dstart));
@@ -68,7 +68,7 @@ TEST(Interface, update) {
 	i.updatePriority(*i.rbegin(), Prio(5, 0.0));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 5, 3 }));
 
-	i.updatePriority(*i.begin(), Prio(6, 0, InterfaceState::Status::FAILED));
+	i.updatePriority(*i.begin(), Prio(6, 0, InterfaceState::Status::ARMED));
 	EXPECT_THAT(i.depths(), ::testing::ElementsAreArray({ 3, 6 }));
 }
 
@@ -87,8 +87,11 @@ TEST(StatePairs, compare) {
 	EXPECT_TRUE(pair(Prio(1, 1), Prio(1, 1)) < pair(Prio(1, 0), Prio(0, 0)));
 
 	auto good = InterfaceState::Status::ENABLED;
-	auto bad = InterfaceState::Status::FAILED;
-	EXPECT_TRUE(pair(good, good) < pair(good, bad));
-	EXPECT_TRUE(pair(good, good) < pair(bad, good));
-	EXPECT_TRUE(pair(bad, good) < pair(good, bad));
+	auto good_good = pair(Prio(0, 10, good), Prio(0, 0, good));
+	ASSERT_TRUE(good_good > pair(good, good));  // a bad status should reverse this relation
+	for (auto bad : { InterfaceState::Status::ARMED, InterfaceState::Status::PRUNED }) {
+		EXPECT_TRUE(good_good < pair(bad, good));
+		EXPECT_TRUE(good_good < pair(good, bad));
+		EXPECT_TRUE(good_good < pair(bad, bad));
+	}
 }

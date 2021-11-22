@@ -100,17 +100,11 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// direction-based access to pull/push interfaces
-	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
-	inline InterfacePtr pushInterface(Interface::Direction dir) {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
-	inline InterfaceConstPtr pullInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? starts_ : ends_;
-	}
-	inline InterfaceConstPtr pushInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
+	/// direction-based access to pull interface
+	template <Interface::Direction dir>
+	inline InterfacePtr pullInterface();
+	/// non-template version
+	inline InterfacePtr pullInterface(Interface::Direction dir);
 
 	/// set parent of stage
 	/// enforce only one parent exists
@@ -203,6 +197,19 @@ private:
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::FORWARD>() {
+	return starts_;
+}
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::BACKWARD>() {
+	return ends_;
+}
+inline InterfacePtr StagePrivate::pullInterface(Interface::Direction dir) {
+	return dir == Interface::Direction::FORWARD ? pullInterface<Interface::Direction::FORWARD>() :
+	                                              pullInterface<Interface::Direction::BACKWARD>();
+}
 
 template <>
 inline void StagePrivate::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
@@ -310,18 +317,15 @@ public:
 		}
 		static inline bool less(const InterfaceState::Priority& lhsA, const InterfaceState::Priority& lhsB,
 		                        const InterfaceState::Priority& rhsA, const InterfaceState::Priority& rhsB) {
-			unsigned char lhs = (lhsA.enabled() << 1) | lhsB.enabled();  // combine bits into two-digit binary number
-			unsigned char rhs = (rhsA.enabled() << 1) | rhsB.enabled();
+			bool lhs = lhsA.enabled() && lhsB.enabled();
+			bool rhs = rhsA.enabled() && rhsB.enabled();
+
 			if (lhs == rhs)  // if enabled status is identical
 				return lhsA + lhsB < rhsA + rhsB;  // compare the sums of both contributions
-			// one of the states in each pair should be enabled
-			assert(lhs != 0b00 && rhs != 0b00);
-			// both states valid (b11)
-			if (lhs == 0b11)
-				return true;
-			if (rhs == 0b11)
-				return false;
-			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
+
+			// sort both-enabled pairs first
+			static_assert(true > false, "Comparing enabled states requires true > false");
+			return lhs > rhs;
 		}
 	};
 
@@ -333,7 +337,7 @@ public:
 
 	// Check whether there are pending feasible states that could connect to source
 	template <Interface::Direction dir>
-	bool hasPendingOpposites(const InterfaceState* source) const;
+	bool hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const;
 
 	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
 
@@ -342,9 +346,9 @@ private:
 	template <Interface::Direction other>
 	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
 
-	// get informed when new start or end state becomes available
+	// notify callback to get informed about newly inserted (or updated) start or end states
 	template <Interface::Direction other>
-	void newState(Interface::iterator it, bool updated);
+	void newState(Interface::iterator it, Interface::UpdateFlags updated);
 
 	// ordered list of pending state pairs
 	ordered<StatePair> pending;

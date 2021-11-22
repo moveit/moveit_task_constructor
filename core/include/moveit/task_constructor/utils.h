@@ -140,8 +140,6 @@ private:
 	Int i;
 };
 
-#define DECLARE_FLAGS(Flags, Enum) using Flags = QFlags<Enum>;
-
 const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
                                                                   std::string frame);
 

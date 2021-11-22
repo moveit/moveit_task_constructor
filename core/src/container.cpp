@@ -53,6 +53,9 @@ using namespace std::placeholders;
 namespace moveit {
 namespace task_constructor {
 
+static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                                    std::ostream& os = std::cerr);
+
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
   : StagePrivate(me, name)
   , required_interface_(UNKNOWN)
@@ -106,64 +109,37 @@ void ContainerBasePrivate::compute() {
 	static_cast<ContainerBase*>(me_)->compute();
 }
 
-void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	switch (child.pimpl()->interfaceFlags()) {
-		case GENERATE:
-			// just ignore: the pair of (new) states isn't known to us anyway
-			// TODO: If child is a container, from and to might have associated solutions already!
-			break;
-
-		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-			break;
-		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
-			break;
-
-		case CONNECT:
-			if (const Connecting* conn = dynamic_cast<const Connecting*>(&child)) {
-				auto cimpl = conn->pimpl();
-				ROS_DEBUG_STREAM_NAMED("Connecting", "'" << child.name() << "' generated a failure");
-				if (!cimpl->hasPendingOpposites<Interface::FORWARD>(from)) {
-					ROS_DEBUG_STREAM_NAMED("Connecting", "prune backward branch");
-					setStatus<Interface::BACKWARD>(from, InterfaceState::Status::FAILED);
-				}
-				if (!cimpl->hasPendingOpposites<Interface::BACKWARD>(to)) {
-					ROS_DEBUG_STREAM_NAMED("Connecting", "prune forward branch");
-					setStatus<Interface::FORWARD>(to, InterfaceState::Status::FAILED);
-				}
-			}
-			break;
-	}
-	// printChildrenInterfaces(*this, false, child);
-}
-
 template <Interface::Direction dir>
-void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::Status status) {
-	if (s->priority().status() == status)
+void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
+                                     InterfaceState::Status status) {
+	if (status != InterfaceState::Status::ENABLED && creator) {
+		if (const auto* conn = dynamic_cast<const Connecting*>(creator)) {
+			auto cimpl = conn->pimpl();
+			// if creator is a Connecting stage and target has enabled opposite states (other than source)
+			if (cimpl->hasPendingOpposites<dir>(source, target))
+				return;  // don't prune
+		}
+	}
+	if (target->priority().status() == status)
 		return;  // nothing changing
 
-	// if we should disable the state, only do so when there is no enabled alternative path
-	if (status == InterfaceState::PRUNED) {
+	// Skip disabling the state, if there are alternative enabled solutions
+	if (status != InterfaceState::ENABLED) {
 		auto solution_is_enabled = [](auto&& solution) {
 			return state<opposite<dir>()>(*solution)->priority().enabled();
 		};
-		const auto& alternatives = trajectories<opposite<dir>()>(*s);
+		const auto& alternatives = trajectories<opposite<dir>()>(*target);
 		auto alternative_path = std::find_if(alternatives.cbegin(), alternatives.cend(), solution_is_enabled);
 		if (alternative_path != alternatives.cend())
 			return;
 	}
 
 	// actually enable/disable the state
-	if (s->owner()) {
-		s->owner()->updatePriority(const_cast<InterfaceState*>(s), InterfaceState::Priority(s->priority(), status));
-	} else {
-		const_cast<InterfaceState*>(s)->priority_ = InterfaceState::Priority(s->priority(), status);
-	}
+	const_cast<InterfaceState*>(target)->updateStatus(status);
 
-	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
-	if (parent() && trajectories<dir>(*s).empty()) {
-		auto external{ internalToExternalMap().find(s) };
+	// if possible (i.e. if target has an external counterpart), escalate setStatus to external interface
+	if (parent() && trajectories<dir>(*target).empty()) {
+		auto external{ internalToExternalMap().find(target) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
 			// all internal states linked to external
@@ -171,39 +147,83 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 			auto is_enabled = [](const auto& ext_int_pair) { return ext_int_pair.second->priority().enabled(); };
 			auto other_path{ std::find_if(internals.first, internals.second, is_enabled) };
 			if (other_path == internals.second)
-				parent()->pimpl()->setStatus<dir>(external->get<EXTERNAL>(), status);
+				parent()->pimpl()->setStatus<dir>(nullptr, nullptr, external->get<EXTERNAL>(), status);
 			return;
 		}
 	}
 
 	// To break symmetry between both ends of a partial solution sequence that gets disabled,
-	// we mark the first state with FAILED and all other states down the tree only with PRUNED.
-	// This allows us to re-enable the FAILED side, while not (yet) consider the PRUNED states again,
+	// we mark the first state with ARMED and all other states down the tree with PRUNED.
+	// This allows us to re-enable the ARMED state, but not the PRUNED states,
 	// when new states arrive in a Connecting stage.
-	// All PRUNED states are only re-enabled if the FAILED state actually gets connected.
-	// For details, see: https://github.com/ros-planning/moveit_task_constructor/pull/221
-	if (status == InterfaceState::Status::FAILED)
-		status = InterfaceState::Status::PRUNED;  // only the first state is marked as FAILED
+	// For details, https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+	if (status == InterfaceState::Status::ARMED)
+		status = InterfaceState::Status::PRUNED;  // only the first state is marked as ARMED
 
 	// traverse solution tree
-	for (const SolutionBase* successor : trajectories<dir>(*s))
-		setStatus<dir>(state<dir>(*successor), status);
+	for (const SolutionBase* successor : trajectories<dir>(*target))
+		setStatus<dir>(successor->creator(), target, state<dir>(*successor), status);
 }
-template void ContainerBasePrivate::setStatus<Interface::FORWARD>(const InterfaceState*, InterfaceState::Status);
-template void ContainerBasePrivate::setStatus<Interface::BACKWARD>(const InterfaceState*, InterfaceState::Status);
+
+void ContainerBasePrivate::setStatus(Interface::Direction dir, const Stage* creator, const InterfaceState* source,
+                                     const InterfaceState* target, InterfaceState::Status status) {
+	if (dir == Interface::FORWARD)
+		setStatus<Interface::FORWARD>(creator, source, target, status);
+	else
+		setStatus<Interface::BACKWARD>(creator, source, target, status);
+}
+
+// recursively update state priorities along solution path
+template <Interface::Direction dir>
+inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Priority& prio) {
+	InterfaceState::Priority priority(prio, s.priority().status());
+	if (s.priority() == priority)
+		return;
+	const_cast<InterfaceState&>(s).updatePriority(priority);
+	for (const SolutionBase* successor : trajectories<dir>(s))
+		updateStatePrios<dir>(*state<dir>(*successor), prio);
+}
+
+void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
+	switch (child.pimpl()->interfaceFlags()) {
+		case GENERATE:
+			// just ignore: the pair of (new) states isn't known to us anyway
+			// TODO: If child is a container, from and to might have associated solutions already!
+			break;
+
+		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::PRUNED);
+			break;
+		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::PRUNED);
+			break;
+
+		case CONNECT:
+			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::ARMED);
+			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::ARMED);
+			break;
+	}
+	// printChildrenInterfaces(*this, false, child);
+}
 
 template <Interface::Direction dir>
-void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target, bool updated) {
+void ContainerBasePrivate::copyState(Interface::iterator external, const InterfacePtr& target,
+                                     Interface::UpdateFlags updated) {
 	if (updated) {
-		// update prio of all internal states linked to external
-		auto internals{ externalToInternalMap().equal_range(&*external) };
-		for (auto& i = internals.first; i != internals.second; ++i) {
-			// TODO: Not only update status, but full priority!
-			setStatus<dir>(i->second, external->priority().status());
-		}
+		auto prio = external->priority();
+		auto internals = externalToInternalMap().equal_range(&*external);
+
+		if (updated.testFlag(Interface::Update::STATUS)) {  // propagate external status updates to internal copies
+			for (auto& i = internals.first; i != internals.second; ++i)
+				setStatus<dir>(nullptr, nullptr, i->second, prio.status());
+		} else if (updated.testFlag(Interface::Update::PRIORITY)) {
+			for (auto& i = internals.first; i != internals.second; ++i)
+				updateStatePrios<opposite<dir>()>(*i->second, prio);
+		} else
+			assert(false);  // Expecting either STATUS or PRIORITY updates, not both!
 		return;
 	}
-
 	// create a clone of external state within target interface (child's starts() or ends())
 	auto internal = states_.insert(states_.end(), InterfaceState(*external));
 	target->add(*internal);
@@ -212,7 +232,7 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 }
 
 void ContainerBasePrivate::copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target,
-                                     bool updated) {
+                                     Interface::UpdateFlags updated) {
 	if (dir == Interface::FORWARD)
 		copyState<Interface::FORWARD>(external, target, updated);
 	else
@@ -383,8 +403,8 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 }
 
 // for debugging of how children interfaces evolve over time
-static void printChildrenInterfaces(const ContainerBase& container, bool success, const Stage& creator,
-                                    std::ostream& os = std::cerr) {
+static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                                    std::ostream& os) {
 	static unsigned int id = 0;
 	const unsigned int width = 10;  // indentation of name
 	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
@@ -394,7 +414,7 @@ static void printChildrenInterfaces(const ContainerBase& container, bool success
 		conn->pimpl()->printPendingPairs(os);
 	os << std::endl;
 
-	for (const auto& child : container.pimpl()->children()) {
+	for (const auto& child : container.children()) {
 		auto cimpl = child->pimpl();
 		os << std::setw(width) << std::left << child->name();
 		if (!cimpl->starts() && !cimpl->ends())
@@ -439,27 +459,12 @@ struct SolutionCollector
 	SolutionSequence::container_type trace;
 };
 
-inline void updateStatePrio(const InterfaceState* state, const InterfaceState::Priority& prio) {
-	if (state->owner())  // owner becomes NULL if state is removed from (pending) Interface list
-		state->owner()->updatePriority(const_cast<InterfaceState*>(state),
-		                               // update depth + cost, but keep current status
-		                               InterfaceState::Priority(prio, state->priority().status()));
-}
-
-template <Interface::Direction dir>
-inline void updateStatePrios(const SolutionSequence::container_type& partial_solution_path,
-                             const InterfaceState::Priority& prio) {
-	for (const SolutionBase* solution : partial_solution_path)
-		updateStatePrio(state<dir>(*solution), prio);
-}
-
 void SerialContainer::onNewSolution(const SolutionBase& current) {
+	ROS_DEBUG_STREAM_NAMED("SerialContainer", "'" << this->name() << "' received solution of child stage '"
+	                                              << current.creator()->name() << "'");
+
 	// failures should never trigger this callback
 	assert(!current.isFailure());
-
-	// states of solution must be active, otherwise this would not have been computed
-	assert(current.start()->priority().enabled());
-	assert(current.end()->priority().enabled());
 
 	auto impl = pimpl();
 	const Stage* creator = current.creator();
@@ -498,14 +503,12 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 			if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
-				updateStatePrio(current.start(), prio);
-				updateStatePrio(current.end(), prio);
-				updateStatePrios<Interface::BACKWARD>(in.first, prio);
-				updateStatePrios<Interface::FORWARD>(out.first, prio);
+				updateStatePrios<Interface::BACKWARD>(*current.start(), prio);
+				updateStatePrios<Interface::FORWARD>(*current.end(), prio);
 			}
 		}
 	}
-	// printChildrenInterfaces(*this, true, *current.creator());
+	// printChildrenInterfaces(*this->pimpl(), true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -570,7 +573,7 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			starts_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::FORWARD>(it, target, updated);
 			}));
 	} catch (InitStageException& e) {
@@ -595,7 +598,7 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			ends_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::BACKWARD>(it, target, updated);
 			}));
 	} catch (InitStageException& e) {
@@ -696,11 +699,11 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 void ParallelContainerBasePrivate::initializeExternalInterfaces() {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (requiredInterface() & READS_START)
-		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+		starts().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 		   this->propagateStateToChildren<Interface::FORWARD>(external, updated);
 		}));
 	if (requiredInterface() & READS_END)
-		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+		ends().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 		   this->propagateStateToChildren<Interface::BACKWARD>(external, updated);
 		}));
 }
@@ -737,9 +740,9 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::propagateStateToChildren(Interface::iterator external, bool updated) {
+void ParallelContainerBasePrivate::propagateStateToChildren(Interface::iterator external, Interface::UpdateFlags updated) {
 	for (const Stage::pointer& stage : children())
-		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
+		copyState<dir>(external, stage->pimpl()->pullInterface<dir>(), updated);
 }
 
 ParallelContainerBase::ParallelContainerBase(ParallelContainerBasePrivate* impl) : ContainerBase(impl) {}
@@ -884,11 +887,11 @@ FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
 
 void FallbacksPrivate::initializeExternalInterfaces() {
 	if (requiredInterface() & READS_START)
-		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+		starts().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 		                  this->onNewExternalState<Interface::FORWARD>(external, updated);
 		               }));
 	if (requiredInterface() & READS_END)
-		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+		ends().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
 		                this->onNewExternalState<Interface::BACKWARD>(external, updated);
 		             }));
 }
@@ -962,7 +965,7 @@ bool FallbacksPrivate::seekToNextPending() {
 		copyState(current.dir,
 		          current.state.external_state,
 		          (*current.state.stage)->pimpl()->pullInterface(current.dir),
-		          false);
+		          Interface::UpdateFlags());
 
 		if ((current.valid = (*current.state.stage)->pimpl()->canCompute()))
 			break;
@@ -973,7 +976,7 @@ bool FallbacksPrivate::seekToNextPending() {
 }
 
 template <typename Interface::Direction dir>
-void FallbacksPrivate::onNewExternalState(Interface::iterator external, bool updated) {
+void FallbacksPrivate::onNewExternalState(Interface::iterator external, Interface::UpdateFlags updated) {
 	if (updated) {
 		auto& queue{ pending_.queue<dir>() };
 		auto it = std::find_if(queue.begin(), queue.end(),

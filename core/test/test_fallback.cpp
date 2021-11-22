@@ -67,7 +67,7 @@ TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST_F(FallbacksFixturePropagate, ComputeFirstSuccessfulStagePerSolutionOnly) {
+TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStagePerSolutionOnly) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0 })));
 	// duplicate generator solutions with resulting costs: 4, 2 | 3, 1
 	t.add(std::make_unique<ForwardMockup>(PredefinedCosts({ 2.0, 0.0, 2.0, 0.0 }), 2));

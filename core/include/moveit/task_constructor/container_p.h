@@ -76,6 +76,7 @@ namespace task_constructor {
 class ContainerBasePrivate : public StagePrivate
 {
 	friend class ContainerBase;
+	friend class ConnectingPrivate;  // needs to call protected setStatus()
 	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
@@ -148,15 +149,21 @@ protected:
 		child->setNextStarts(allowed ? pending_forward_ : InterfacePtr());
 	}
 
-	/// Set ENABLED / PRUNED status of the solution tree starting from s into given direction
+	/// Set ENABLED/PRUNED status of a solution branch starting from target into the given direction
 	template <Interface::Direction dir>
-	void setStatus(const InterfaceState* s, InterfaceState::Status status);
+	void setStatus(const Stage* creator, const InterfaceState* source, const InterfaceState* target,
+	               InterfaceState::Status status);
+	/// non-template version
+	void setStatus(Interface::Direction dir, const Stage* creator, const InterfaceState* source,
+	               const InterfaceState* target, InterfaceState::Status status);
 
 	/// copy external_state to a child's interface and remember the link in internal_external map
 	template <Interface::Direction>
-	void copyState(Interface::iterator external, const InterfacePtr& target, bool updated);
+	void copyState(Interface::iterator external, const InterfacePtr& target, Interface::UpdateFlags updated);
 	/// non-template version
-	void copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target, bool updated);
+	void copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target,
+	               Interface::UpdateFlags updated);
+
 	/// lift solution from internal to external level
 	void liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
 	                  const InterfaceState* internal_to);
@@ -231,7 +238,7 @@ protected:
 
 	/// notify callback for new states received on external interfaces
 	template <typename Interface::Direction>
-	void propagateStateToChildren(Interface::iterator external, bool updated);
+	void propagateStateToChildren(Interface::iterator external, Interface::UpdateFlags updated);
 
 private:
 	// override for custom behavior on received interface states
@@ -298,7 +305,7 @@ protected:
 private:
 	void initializeExternalInterfaces() override;
 	template <typename Interface::Direction>
-	void onNewExternalState(Interface::iterator external, bool updated);
+	void onNewExternalState(Interface::iterator external, Interface::UpdateFlags updated);
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
 
 	void advanceCurrentStateToNextChild();

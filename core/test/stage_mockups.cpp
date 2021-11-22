@@ -46,8 +46,10 @@ double PredefinedCosts::cost() const {
 	return c;
 }
 
-GeneratorMockup::GeneratorMockup(PredefinedCosts&& costs)
-  : Generator{ "GEN" + std::to_string(++id_) }, costs_{ std::move(costs) } {}
+GeneratorMockup::GeneratorMockup(PredefinedCosts&& costs, std::size_t solutions_per_compute)
+  : Generator{ "GEN" + std::to_string(++id_) }
+  , costs_{ std::move(costs) }
+  , solutions_per_compute_{ solutions_per_compute } {}
 
 void GeneratorMockup::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ps_.reset(new planning_scene::PlanningScene(robot_model));
@@ -63,7 +65,8 @@ bool GeneratorMockup::canCompute() const {
 void GeneratorMockup::compute() {
 	++runs_;
 
-	spawn(InterfaceState(ps_), costs_.cost());
+	for (std::size_t i = 0; canCompute() && i < solutions_per_compute_; ++i)
+		spawn(InterfaceState(ps_), costs_.cost());
 }
 
 MonitoringGeneratorMockup::MonitoringGeneratorMockup(Stage* monitored, PredefinedCosts&& costs)

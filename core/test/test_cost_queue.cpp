@@ -5,6 +5,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
+#ifndef TYPED_TEST_SUITE
+#define TYPED_TEST_SUITE(SUITE, TYPES) TYPED_TEST_CASE(SUITE, TYPES)
+#endif
+
 namespace mtc = moveit::task_constructor;
 
 // type-trait functions for OrderedTest<T>
@@ -62,11 +66,7 @@ protected:
 };
 // set of template types to test for
 using TypeInstances = ::testing::Types<int, int*, mtc::SolutionBasePtr, mtc::SolutionBaseConstPtr>;
-#ifdef TYPED_TEST_SUITE
 TYPED_TEST_SUITE(ValueOrPointeeLessTest, TypeInstances);
-#else
-TYPED_TEST_CASE(ValueOrPointeeLessTest, TypeInstances);
-#endif
 TYPED_TEST(ValueOrPointeeLessTest, less) {
 	EXPECT_TRUE(this->less(2, 3));
 	EXPECT_FALSE(this->less(1, 1));
@@ -105,11 +105,7 @@ protected:
 		SCOPED_TRACE("pushAndValidate(" #cost ", " #__VA_ARGS__ ")"); \
 		this->pushAndValidate(cost, __VA_ARGS__);                     \
 	}
-#ifdef TYPED_TEST_SUITE
 TYPED_TEST_SUITE(OrderedTest, TypeInstances);
-#else
-TYPED_TEST_CASE(OrderedTest, TypeInstances);
-#endif
 TYPED_TEST(OrderedTest, sorting) {
 	pushAndValidate(2, { 2 });
 	pushAndValidate(1, { 1, 2 });
