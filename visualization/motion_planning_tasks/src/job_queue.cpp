@@ -35,7 +35,9 @@
 /* Author: Robert Haschke */
 
 #include "job_queue.h"
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.job_queue");
 
 namespace moveit {
 namespace tools {
@@ -71,7 +73,7 @@ void JobQueue::executeJobs() {
 		try {
 			fn();
 		} catch (std::exception& ex) {
-			ROS_ERROR("Exception caught executing main loop job: %s", ex.what());
+			RCLCPP_ERROR(LOGGER, "Exception caught executing main loop job: %s", ex.what());
 		}
 		ulock.lock();
 	}

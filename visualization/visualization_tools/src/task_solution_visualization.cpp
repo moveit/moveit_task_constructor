@@ -47,111 +47,122 @@
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit/trajectory_processing/trajectory_tools.h>
 
-#include <rviz/robot/robot.h>
-#include <rviz/robot/robot_link.h>
-#include <rviz/properties/property.h>
-#include <rviz/properties/int_property.h>
-#include <rviz/properties/string_property.h>
-#include <rviz/properties/bool_property.h>
-#include <rviz/properties/float_property.h>
-#include <rviz/properties/ros_topic_property.h>
-#include <rviz/properties/enum_property.h>
-#include <rviz/properties/editable_enum_property.h>
-#include <rviz/properties/color_property.h>
-#include <rviz/display.h>
-#include <rviz/display_context.h>
-#include <rviz/window_manager_interface.h>
-#include <rviz/panel_dock_widget.h>
+#include <rviz_default_plugins/robot/robot.hpp>
+#include <rviz_default_plugins/robot/robot_link.hpp>
+#include <rviz_common/properties/property.hpp>
+#include <rviz_common/properties/int_property.hpp>
+#include <rviz_common/properties/string_property.hpp>
+#include <rviz_common/properties/bool_property.hpp>
+#include <rviz_common/properties/float_property.hpp>
+#include <rviz_common/properties/ros_topic_property.hpp>
+#include <rviz_common/properties/enum_property.hpp>
+#include <rviz_common/properties/editable_enum_property.hpp>
+#include <rviz_common/properties/color_property.hpp>
+#include <rviz_common/display.hpp>
+#include <rviz_common/display_context.hpp>
+#include <rviz_common/window_manager_interface.hpp>
+#include <rviz_common/panel_dock_widget.hpp>
 
 #include <OgreSceneNode.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/lexical_cast.hpp>
+
+static const rclcpp::Logger LOGGER =
+    rclcpp::get_logger("moveit_task_constructor_visualization.task_solution_visualization");
 
 namespace moveit_rviz_plugin {
-TaskSolutionVisualization::TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display)
+TaskSolutionVisualization::TaskSolutionVisualization(rviz_common::properties::Property* parent,
+                                                     rviz_common::Display* display)
   : display_(display) {
 	// trajectory properties
-	interrupt_display_property_ = new rviz::BoolProperty("Interrupt Display", false,
-	                                                     "Immediately show newly planned trajectory, "
-	                                                     "interrupting the currently displayed one.",
-	                                                     parent);
+	interrupt_display_property_ = new rviz_common::properties::BoolProperty("Interrupt Display", false,
+	                                                                        "Immediately show newly planned trajectory, "
+	                                                                        "interrupting the currently displayed one.",
+	                                                                        parent);
 
-	loop_display_property_ = new rviz::BoolProperty(
+	loop_display_property_ = new rviz_common::properties::BoolProperty(
 	    "Loop Animation", false, "Indicates whether the last received path is to be animated in a loop", parent,
 	    SLOT(changedLoopDisplay()), this);
 
-	trail_display_property_ =
-	    new rviz::BoolProperty("Show Trail", false, "Show a path trail", parent, SLOT(changedTrail()), this);
+	trail_display_property_ = new rviz_common::properties::BoolProperty("Show Trail", false, "Show a path trail", parent,
+	                                                                    SLOT(changedTrail()), this);
 
 	state_display_time_property_ =
-	    new rviz::EditableEnumProperty("State Display Time", "0.05 s",
-	                                   "The amount of wall-time to wait in between displaying "
-	                                   "states along a received trajectory path",
-	                                   parent);
+	    new rviz_common::properties::EditableEnumProperty("State Display Time", "0.05 s",
+	                                                      "The amount of wall-time to wait in between displaying "
+	                                                      "states along a received trajectory path",
+	                                                      parent);
 	state_display_time_property_->addOptionStd("REALTIME");
 	state_display_time_property_->addOptionStd("0.05 s");
 	state_display_time_property_->addOptionStd("0.1 s");
 	state_display_time_property_->addOptionStd("0.5 s");
 
-	trail_step_size_property_ = new rviz::IntProperty(
+	trail_step_size_property_ = new rviz_common::properties::IntProperty(
 	    "Trail Step Size", 1, "Specifies the step size of the samples shown in the trajectory trail.", parent,
 	    SLOT(changedTrail()), this);
 	trail_step_size_property_->setMin(1);
 
 	// robot properties
-	robot_property_ = new rviz::Property("Robot", QString(), QString(), parent);
-	robot_visual_enabled_property_ = new rviz::BoolProperty("Show Robot Visual", true,
-	                                                        "Indicates whether the geometry of the robot as defined for "
-	                                                        "visualisation purposes should be displayed",
-	                                                        robot_property_, SLOT(changedRobotVisualEnabled()), this);
+	robot_property_ = new rviz_common::properties::Property("Robot", QString(), QString(), parent);
+	robot_visual_enabled_property_ =
+	    new rviz_common::properties::BoolProperty("Show Robot Visual", true,
+	                                              "Indicates whether the geometry of the robot as defined for "
+	                                              "visualisation purposes should be displayed",
+	                                              robot_property_, SLOT(changedRobotVisualEnabled()), this);
 
 	robot_collision_enabled_property_ =
-	    new rviz::BoolProperty("Show Robot Collision", false,
-	                           "Indicates whether the geometry of the robot as defined "
-	                           "for collision detection purposes should be displayed",
-	                           robot_property_, SLOT(changedRobotCollisionEnabled()), this);
+	    new rviz_common::properties::BoolProperty("Show Robot Collision", false,
+	                                              "Indicates whether the geometry of the robot as defined "
+	                                              "for collision detection purposes should be displayed",
+	                                              robot_property_, SLOT(changedRobotCollisionEnabled()), this);
 
-	robot_alpha_property_ = new rviz::FloatProperty("Robot Alpha", 0.5f, "Specifies the alpha for the robot links",
-	                                                robot_property_, SLOT(changedRobotAlpha()), this);
+	robot_alpha_property_ =
+	    new rviz_common::properties::FloatProperty("Robot Alpha", 0.5f, "Specifies the alpha for the robot links",
+	                                               robot_property_, SLOT(changedRobotAlpha()), this);
 	robot_alpha_property_->setMin(0.0);
 	robot_alpha_property_->setMax(1.0);
 
-	robot_color_property_ =
-	    new rviz::ColorProperty("Fixed Robot Color", QColor(150, 50, 150), "The color of the animated robot",
-	                            robot_property_, SLOT(changedRobotColor()), this);
+	robot_color_property_ = new rviz_common::properties::ColorProperty("Fixed Robot Color", QColor(150, 50, 150),
+	                                                                   "The color of the animated robot",
+	                                                                   robot_property_, SLOT(changedRobotColor()), this);
 
-	enable_robot_color_property_ = new rviz::BoolProperty("Use Fixed Robot Color", false,
-	                                                      "Specifies whether the fixed robot color should be used."
-	                                                      " If not, the original color is used.",
-	                                                      robot_property_, SLOT(enabledRobotColor()), this);
+	enable_robot_color_property_ =
+	    new rviz_common::properties::BoolProperty("Use Fixed Robot Color", false,
+	                                              "Specifies whether the fixed robot color should be used."
+	                                              " If not, the original color is used.",
+	                                              robot_property_, SLOT(enabledRobotColor()), this);
 
 	// planning scene properties
-	scene_enabled_property_ =
-	    new rviz::BoolProperty("Scene", true, "Show Planning Scene", parent, SLOT(changedSceneEnabled()), this);
+	scene_enabled_property_ = new rviz_common::properties::BoolProperty("Scene", true, "Show Planning Scene", parent,
+	                                                                    SLOT(changedSceneEnabled()), this);
 
-	scene_alpha_property_ = new rviz::FloatProperty("Scene Alpha", 0.9f, "Specifies the alpha for the scene geometry",
-	                                                scene_enabled_property_, SLOT(renderCurrentScene()), this);
+	scene_alpha_property_ =
+	    new rviz_common::properties::FloatProperty("Scene Alpha", 0.9f, "Specifies the alpha for the scene geometry",
+	                                               scene_enabled_property_, SLOT(renderCurrentScene()), this);
 	scene_alpha_property_->setMin(0.0);
 	scene_alpha_property_->setMax(1.0);
 
-	scene_color_property_ = new rviz::ColorProperty(
+	scene_color_property_ = new rviz_common::properties::ColorProperty(
 	    "Scene Color", QColor(50, 230, 50), "The color for the planning scene obstacles (if a color is not defined)",
 	    scene_enabled_property_, SLOT(renderCurrentScene()), this);
 
-	attached_body_color_property_ =
-	    new rviz::ColorProperty("Attached Body Color", QColor(150, 50, 150), "The color for the attached bodies",
-	                            scene_enabled_property_, SLOT(changedAttachedBodyColor()), this);
+	attached_body_color_property_ = new rviz_common::properties::ColorProperty(
+	    "Attached Body Color", QColor(150, 50, 150), "The color for the attached bodies", scene_enabled_property_,
+	    SLOT(changedAttachedBodyColor()), this);
 
-	octree_render_property_ = new rviz::EnumProperty("Voxel Rendering", "Occupied Voxels", "Select voxel type.",
-	                                                 scene_enabled_property_, SLOT(renderCurrentScene()), this);
+	octree_render_property_ =
+	    new rviz_common::properties::EnumProperty("Voxel Rendering", "Occupied Voxels", "Select voxel type.",
+	                                              scene_enabled_property_, SLOT(renderCurrentScene()), this);
 
 	octree_render_property_->addOption("Occupied Voxels", OCTOMAP_OCCUPIED_VOXELS);
 	octree_render_property_->addOption("Free Voxels", OCTOMAP_FREE_VOXELS);
 	octree_render_property_->addOption("All Voxels", OCTOMAP_FREE_VOXELS | OCTOMAP_OCCUPIED_VOXELS);
 
-	octree_coloring_property_ = new rviz::EnumProperty("Voxel Coloring", "Z-Axis", "Select voxel coloring mode",
-	                                                   scene_enabled_property_, SLOT(renderCurrentScene()), this);
+	octree_coloring_property_ =
+	    new rviz_common::properties::EnumProperty("Voxel Coloring", "Z-Axis", "Select voxel coloring mode",
+	                                              scene_enabled_property_, SLOT(renderCurrentScene()), this);
 
 	octree_coloring_property_->addOption("Z-Axis", OCTOMAP_Z_AXIS_COLOR);
 	octree_coloring_property_->addOption("Cell Probability", OCTOMAP_PROBABLILTY_COLOR);
@@ -174,7 +185,7 @@ TaskSolutionVisualization::~TaskSolutionVisualization() {
 		main_scene_node_->getCreator()->destroySceneNode(main_scene_node_);
 }
 
-void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context) {
+void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz_common::DisplayContext* context) {
 	// Save pointers for later use
 	parent_scene_node_ = scene_node;
 	context_ = context;
@@ -194,7 +205,7 @@ void TaskSolutionVisualization::onInitialize(Ogre::SceneNode* scene_node, rviz::
 
 	marker_visual_->onInitialize(main_scene_node_, context_);
 
-	rviz::WindowManagerInterface* window_context = context_->getWindowManager();
+	rviz_common::WindowManagerInterface* window_context = context_->getWindowManager();
 	if (window_context) {
 		slider_panel_ = new TaskSolutionPanel(window_context->getParentWindow());
 		slider_dock_panel_ = window_context->addPane(display_->getName() + " - Slider", slider_panel_);
@@ -209,10 +220,10 @@ void TaskSolutionVisualization::setName(const QString& name) {
 		slider_dock_panel_->setWindowTitle(name + " - Slider");
 }
 
-void TaskSolutionVisualization::onRobotModelLoaded(const robot_model::RobotModelConstPtr& robot_model) {
+void TaskSolutionVisualization::onRobotModelLoaded(const moveit::core::RobotModelConstPtr& robot_model) {
 	// Error check
 	if (!robot_model) {
-		ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot model found");
+		RCLCPP_ERROR(LOGGER, "No robot model found");
 		return;
 	}
 
@@ -268,8 +279,8 @@ void TaskSolutionVisualization::changedTrail() {
 	trail_.resize(t->getWayPointCount() / stepsize);
 	for (std::size_t i = 0; i < trail_.size(); i++) {
 		int waypoint_i = std::min(i * stepsize, t->getWayPointCount() - 1);  // limit to last trajectory point
-		rviz::Robot* r =
-		    new rviz::Robot(trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), nullptr);
+		rviz_default_plugins::robot::Robot* r = new rviz_default_plugins::robot::Robot(
+		    trail_scene_node_, context_, "Trail Robot " + boost::lexical_cast<std::string>(i), nullptr);
 		r->load(*scene_->getRobotModel()->getURDF());
 		r->setVisualVisible(robot_visual_enabled_property_->getBool());
 		r->setCollisionVisible(robot_collision_enabled_property_->getBool());
@@ -486,7 +497,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 	}
 
 	QColor attached_color = attached_body_color_property_->getColor();
-	std_msgs::ColorRGBA color;
+	std_msgs::msg::ColorRGBA color;
 	color.r = attached_color.redF();
 	color.g = attached_color.greenF();
 	color.b = attached_color.blueF();
@@ -506,16 +517,16 @@ void TaskSolutionVisualization::renderPlanningScene(const planning_scene::Planni
 		return;
 
 	QColor color = scene_color_property_->getColor();
-	rviz::Color env_color(color.redF(), color.greenF(), color.blueF());
+	Ogre::ColourValue env_color(color.redF(), color.greenF(), color.blueF());
 	color = attached_body_color_property_->getColor();
-	rviz::Color attached_color(color.redF(), color.greenF(), color.blueF());
+	Ogre::ColourValue attached_color(color.redF(), color.greenF(), color.blueF());
 
 	scene_render_->renderPlanningScene(
 	    scene, env_color, attached_color, static_cast<OctreeVoxelRenderMode>(octree_render_property_->getOptionInt()),
 	    static_cast<OctreeVoxelColorMode>(octree_coloring_property_->getOptionInt()), scene_alpha_property_->getFloat());
 }
 
-void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msgs::Solution& msg) {
+void TaskSolutionVisualization::showTrajectory(const moveit_task_constructor_msgs::msg::Solution& msg) {
 	DisplaySolutionPtr s(new DisplaySolution);
 	s->setFromMessage(scene_, msg);
 	showTrajectory(s, false);
@@ -565,12 +576,12 @@ void TaskSolutionVisualization::changedAttachedBodyColor() {
 	renderCurrentWayPoint();
 }
 
-void TaskSolutionVisualization::unsetRobotColor(rviz::Robot* robot) {
+void TaskSolutionVisualization::unsetRobotColor(rviz_default_plugins::robot::Robot* robot) {
 	for (auto& link : robot->getLinks())
 		link.second->unsetColor();
 }
 
-void TaskSolutionVisualization::setRobotColor(rviz::Robot* robot, const QColor& color) {
+void TaskSolutionVisualization::setRobotColor(rviz_default_plugins::robot::Robot* robot, const QColor& color) {
 	for (auto& link : robot->getLinks())
 		link.second->setColor(color.redF(), color.greenF(), color.blueF());
 }

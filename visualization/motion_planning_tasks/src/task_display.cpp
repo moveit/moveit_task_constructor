@@ -44,18 +44,21 @@
 #include <moveit/visualization_tools/task_solution_visualization.h>
 #include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/visualization_tools/display_solution.h>
-#include <moveit_task_constructor_msgs/GetSolution.h>
+#include <moveit_task_constructor_msgs/srv/get_solution.hpp>
 
 #include <moveit/rdf_loader/rdf_loader.h>
 #include <moveit/robot_model/robot_model.h>
 
-#include <rviz/display_context.h>
-#include <rviz/properties/string_property.h>
-#include <rviz/properties/ros_topic_property.h>
-#include <rviz/properties/status_property.h>
-#include <rviz/frame_manager.h>
+#include <rviz_common/display_context.hpp>
+#include <rviz_common/properties/string_property.hpp>
+#include <rviz_common/properties/ros_topic_property.hpp>
+#include <rviz_common/properties/status_property.hpp>
+#include <rviz_common/frame_manager_iface.hpp>
+#include <rosidl_runtime_cpp/traits.hpp>
 #include <OgreSceneNode.h>
 #include <QTimer>
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.task_display");
 
 namespace moveit_rviz_plugin {
 
@@ -71,12 +74,12 @@ TaskDisplay::TaskDisplay() : Display(), panel_requested_(false), received_task_d
 	connect(task_list_model_.get(), SIGNAL(dataChanged(QModelIndex, QModelIndex)), this,
 	        SLOT(onTaskDataChanged(QModelIndex, QModelIndex)));
 
-	robot_description_property_ = new rviz::StringProperty(
+	robot_description_property_ = new rviz_common::properties::StringProperty(
 	    "Robot Description", "robot_description", "The name of the ROS parameter where the URDF for the robot is loaded",
 	    this, SLOT(changedRobotDescription()), this);
 
-	task_solution_topic_property_ = new rviz::RosTopicProperty(
-	    "Task Solution Topic", "", ros::message_traits::datatype<moveit_task_constructor_msgs::Solution>(),
+	task_solution_topic_property_ = new rviz_common::properties::RosTopicProperty(
+	    "Task Solution Topic", "", rosidl_generator_traits::data_type<moveit_task_constructor_msgs::msg::Solution>(),
 	    "The topic on which task solutions (moveit_msgs::Solution messages) are received", this,
 	    SLOT(changedTaskSolutionTopic()), this);
 
@@ -84,7 +87,8 @@ TaskDisplay::TaskDisplay() : Display(), panel_requested_(false), received_task_d
 	connect(trajectory_visual_.get(), SIGNAL(activeStageChanged(size_t)), task_list_model_.get(),
 	        SLOT(highlightStage(size_t)));
 
-	tasks_property_ = new rviz::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
+	tasks_property_ =
+	    new rviz_common::properties::Property("Tasks", QVariant(), "Tasks received on monitored topic", this);
 }
 
 TaskDisplay::~TaskDisplay() {
@@ -94,6 +98,8 @@ TaskDisplay::~TaskDisplay() {
 
 void TaskDisplay::onInitialize() {
 	Display::onInitialize();
+	rviz_ros_node_ = context_->getRosNodeAbstraction();
+	task_solution_topic_property_->initialize(rviz_ros_node_);
 	trajectory_visual_->onInitialize(scene_node_, context_);
 	task_list_model_->setDisplayContext(context_);
 }
@@ -109,18 +115,19 @@ inline void TaskDisplay::requestPanel() {
 }
 
 void TaskDisplay::loadRobotModel() {
-	rdf_loader_.reset(new rdf_loader::RDFLoader(robot_description_property_->getStdString()));
+	rdf_loader_.reset(
+	    new rdf_loader::RDFLoader(rviz_ros_node_.lock()->get_raw_node(), robot_description_property_->getStdString()));
 
 	if (!rdf_loader_->getURDF()) {
-		this->setStatus(rviz::StatusProperty::Error, "Robot Model",
+		this->setStatus(rviz_common::properties::StatusProperty::Error, "Robot Model",
 		                "Failed to load from parameter " + robot_description_property_->getString());
 		return;
 	}
-	this->setStatus(rviz::StatusProperty::Ok, "Robot Model", "Successfully loaded");
+	this->setStatus(rviz_common::properties::StatusProperty::Ok, "Robot Model", "Successfully loaded");
 
 	const srdf::ModelSharedPtr& srdf =
 	    rdf_loader_->getSRDF() ? rdf_loader_->getSRDF() : srdf::ModelSharedPtr(new srdf::Model());
-	robot_model_.reset(new robot_model::RobotModel(rdf_loader_->getURDF(), srdf));
+	robot_model_.reset(new moveit::core::RobotModel(rdf_loader_->getURDF(), srdf));
 
 	// Send to child class
 	trajectory_visual_->onRobotModelLoaded(robot_model_);
@@ -139,11 +146,11 @@ void TaskDisplay::reset() {
 	trajectory_visual_->reset();
 }
 
-void TaskDisplay::save(rviz::Config config) const {
+void TaskDisplay::save(rviz_common::Config config) const {
 	Display::save(config);
 }
 
-void TaskDisplay::load(const rviz::Config& config) {
+void TaskDisplay::load(const rviz_common::Config& config) {
 	Display::load(config);
 }
 
@@ -170,7 +177,8 @@ void TaskDisplay::calculateOffsetPosition() {
 	Ogre::Vector3 position;
 	Ogre::Quaternion orientation;
 
-	context_->getFrameManager()->getTransform(robot_model_->getModelFrame(), ros::Time(0), position, orientation);
+	context_->getFrameManager()->getTransform(robot_model_->getModelFrame(), rclcpp::Time(0, 0, RCL_ROS_TIME), position,
+	                                          orientation);
 
 	scene_node_->setPosition(position);
 	scene_node_->setOrientation(orientation);
@@ -183,11 +191,6 @@ void TaskDisplay::update(float wall_dt, float ros_dt) {
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
 
-void TaskDisplay::setName(const QString& name) {
-	BoolProperty::setName(name);
-	trajectory_visual_->setName(name);
-}
-
 void TaskDisplay::changedRobotDescription() {
 	if (isEnabled())
 		reset();
@@ -195,28 +198,37 @@ void TaskDisplay::changedRobotDescription() {
 		loadRobotModel();
 }
 
-void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::TaskDescriptionConstPtr& msg) {
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr msg) {
+	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	requestPanel();
-	task_list_model_->processTaskDescriptionMessage(*msg, update_nh_,
-	                                                base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
+	task_list_model_->processTaskDescriptionMessage(*msg, base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
 
 	// Start listening to other topics if this is the first description
 	// Waiting for the description ensures we do not receive data that cannot be interpreted yet
 	if (!received_task_description_ && !msg->stages.empty()) {
+		auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+		if (!ros_node_abstraction) {
+			RCLCPP_INFO(LOGGER, "Unable to lock weak_ptr from DisplayContext in taskDescriptionCB");
+			return;
+		}
+		auto node = ros_node_abstraction->get_raw_node();
 		received_task_description_ = true;
-		task_statistics_sub = update_nh_.subscribe(base_ns_ + STATISTICS_TOPIC, 2, &TaskDisplay::taskStatisticsCB, this);
-		task_solution_sub = update_nh_.subscribe(base_ns_ + SOLUTION_TOPIC, 2, &TaskDisplay::taskSolutionCB, this);
+		task_statistics_sub = node->create_subscription<moveit_task_constructor_msgs::msg::TaskStatistics>(
+		    base_ns_ + STATISTICS_TOPIC, rclcpp::QoS(2).transient_local(),
+		    std::bind(&TaskDisplay::taskStatisticsCB, this, std::placeholders::_1));
+		task_solution_sub = node->create_subscription<moveit_task_constructor_msgs::msg::Solution>(
+		    base_ns_ + SOLUTION_TOPIC, rclcpp::QoS(2).transient_local(),
+		    std::bind(&TaskDisplay::taskSolutionCB, this, std::placeholders::_1));
 	}
 }
 
-void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::TaskStatisticsConstPtr& msg) {
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr msg) {
+	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	task_list_model_->processTaskStatisticsMessage(*msg);
 }
 
-void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionConstPtr& msg) {
-	setStatus(rviz::StatusProperty::Ok, "Task Monitor", "OK");
+void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr msg) {
+	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	try {
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);
 		if (s)
@@ -224,7 +236,7 @@ void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::SolutionCon
 		else
 			setSolutionStatus(false);
 	} catch (const std::invalid_argument& e) {
-		ROS_ERROR_STREAM(e.what());
+		RCLCPP_ERROR_STREAM(LOGGER, e.what());
 		setSolutionStatus(false, e.what());
 	}
 }
@@ -234,33 +246,41 @@ void TaskDisplay::changedTaskSolutionTopic() {
 	if (!trajectory_visual_->getScene())
 		return;
 
-	task_description_sub.shutdown();
-	task_statistics_sub.shutdown();
-	task_solution_sub.shutdown();
+	task_description_sub.reset();
+	task_statistics_sub.reset();
+	task_solution_sub.reset();
 
 	received_task_description_ = false;
 
 	// generate task monitoring topics from solution topic
 	const QString& solution_topic = task_solution_topic_property_->getString();
 	if (!solution_topic.endsWith(QString("/").append(SOLUTION_TOPIC))) {
-		setStatus(rviz::StatusProperty::Error, "Task Monitor",
+		setStatus(rviz_common::properties::StatusProperty::Error, "Task Monitor",
 		          QString("Invalid topic. Expecting a name ending on \"/%1\"").arg(SOLUTION_TOPIC));
 		return;
 	}
 
 	base_ns_ = solution_topic.toStdString().substr(0, solution_topic.length() - strlen(SOLUTION_TOPIC));
 
+	auto ros_node_abstraction = context_->getRosNodeAbstraction().lock();
+	if (!ros_node_abstraction) {
+		RCLCPP_INFO(LOGGER, "Unable to lock weak_ptr from DisplayContext in changedTaskSolutionTopic");
+		return;
+	}
 	// listen to task descriptions updates
-	task_description_sub = update_nh_.subscribe(base_ns_ + DESCRIPTION_TOPIC, 10, &TaskDisplay::taskDescriptionCB, this);
+	task_description_sub =
+	    ros_node_abstraction->get_raw_node()->create_subscription<moveit_task_constructor_msgs::msg::TaskDescription>(
+	        base_ns_ + DESCRIPTION_TOPIC, rclcpp::QoS(10).transient_local(),
+	        std::bind(&TaskDisplay::taskDescriptionCB, this, std::placeholders::_1));
 
-	setStatus(rviz::StatusProperty::Warn, "Task Monitor", "No messages received");
+	setStatus(rviz_common::properties::StatusProperty::Warn, "Task Monitor", "No messages received");
 }
 
 void TaskDisplay::setSolutionStatus(bool ok, const char* msg) {
 	if (ok)
-		setStatus(rviz::StatusProperty::Ok, "Solution", "Ok");
+		setStatus(rviz_common::properties::StatusProperty::Ok, "Solution", "Ok");
 	else
-		setStatus(rviz::StatusProperty::Warn, "Solution", msg ? msg : "Retrieval failed");
+		setStatus(rviz_common::properties::StatusProperty::Warn, "Solution", msg ? msg : "Retrieval failed");
 }
 
 void TaskDisplay::onTasksInserted(const QModelIndex& parent, int first, int last) {
@@ -270,7 +290,8 @@ void TaskDisplay::onTasksInserted(const QModelIndex& parent, int first, int last
 	TaskListModel* m = static_cast<TaskListModel*>(sender());
 	for (; first <= last; ++first) {
 		QModelIndex idx = m->index(first, 0, parent);
-		tasks_property_->addChild(new rviz::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()), first);
+		tasks_property_->addChild(
+		    new rviz_common::properties::Property(idx.data().toString(), idx.sibling(idx.row(), 1).data()), first);
 	}
 }
 
@@ -289,7 +310,7 @@ void TaskDisplay::onTaskDataChanged(const QModelIndex& topLeft, const QModelInde
 		return;  // only handle top-level items
 
 	for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
-		rviz::Property* child = tasks_property_->childAt(row);
+		rviz_common::properties::Property* child = tasks_property_->childAt(row);
 		assert(child);
 
 		if (topLeft.column() <= 0 && 0 <= bottomRight.column())  // name changed

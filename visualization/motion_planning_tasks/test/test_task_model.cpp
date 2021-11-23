@@ -40,7 +40,7 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/stages/current_state.h>
 
-#include <ros/init.h>
+#include <rclcpp/utilities.hpp>
 #include <gtest/gtest.h>
 #include <initializer_list>
 #include <qcoreapplication.h>
@@ -50,19 +50,18 @@ using namespace moveit::task_constructor;
 class TaskListModelTest : public ::testing::Test
 {
 protected:
-	ros::NodeHandle nh;
 	moveit_rviz_plugin::TaskListModel model;
 	int children = 0;
 	int num_inserts = 0;
 	int num_updates = 0;
 
-	moveit_task_constructor_msgs::TaskDescription genMsg(const std::string& name,
-	                                                     const std::string& task_id = std::string()) {
-		moveit_task_constructor_msgs::TaskDescription t;
+	moveit_task_constructor_msgs::msg::TaskDescription genMsg(const std::string& name,
+	                                                          const std::string& task_id = std::string()) {
+		moveit_task_constructor_msgs::msg::TaskDescription t;
 		uint id = 0, root_id;
 		t.task_id = task_id.empty() ? name : task_id;
 
-		moveit_task_constructor_msgs::StageDescription desc;
+		moveit_task_constructor_msgs::msg::StageDescription desc;
 		desc.parent_id = id;
 		desc.id = root_id = ++id;
 		desc.name = name;
@@ -129,7 +128,7 @@ protected:
 			SCOPED_TRACE("first i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
+			model.processTaskDescriptionMessage(genMsg("first"), "get_solution");
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);  // 1 notify for inserted task
@@ -143,7 +142,7 @@ protected:
 			SCOPED_TRACE("second i=" + std::to_string(i));
 			num_inserts = 0;
 			num_updates = 0;
-			model.processTaskDescriptionMessage(genMsg("second"), nh, "get_solution");  // 1 notify for inserted task
+			model.processTaskDescriptionMessage(genMsg("second"), "get_solution");  // 1 notify for inserted task
 
 			if (i == 0)
 				EXPECT_EQ(num_inserts, 1);
@@ -165,17 +164,13 @@ protected:
 TEST_F(TaskListModelTest, remoteTaskModel) {
 	children = 3;
 	planning_scene::PlanningSceneConstPtr scene;
-	moveit_rviz_plugin::RemoteTaskModel m(nh, "get_solution", scene, nullptr);
+	moveit_rviz_plugin::RemoteTaskModel m("get_solution", scene, nullptr);
 	m.processStageDescriptions(genMsg("first").stages);
 	SCOPED_TRACE("first");
 	validate(m, { "first" });
 }
 
 TEST_F(TaskListModelTest, localTaskModel) {
-	int argc = 0;
-	char* argv = nullptr;
-	ros::init(argc, &argv, "testLocalTaskModel");
-
 	children = 3;
 	const char* task_name = "task pipeline";
 	moveit_rviz_plugin::LocalTaskModel m(std::make_unique<SerialContainer>(task_name),
@@ -187,6 +182,9 @@ TEST_F(TaskListModelTest, localTaskModel) {
 		SCOPED_TRACE("localTaskModel");
 		validate(m, { task_name });
 	}
+	// There's a bug where cancelling the executor in IntrospectionPrivate is happening before the call to spin causing
+	// the it to stuck in the destructor when calling executor_thread_.join()
+	rclcpp::sleep_for(std::chrono::milliseconds(100));
 }
 
 TEST_F(TaskListModelTest, noChildren) {
@@ -202,13 +200,13 @@ TEST_F(TaskListModelTest, threeChildren) {
 TEST_F(TaskListModelTest, visitedPopulate) {
 	// first population without children
 	children = 0;
-	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
+	model.processTaskDescriptionMessage(genMsg("first"), "get_solution");
 	validate(model, { "first" });  // validation visits root node
 	EXPECT_EQ(num_inserts, 1);
 
 	children = 3;
 	num_inserts = 0;
-	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
+	model.processTaskDescriptionMessage(genMsg("first"), "get_solution");
 	validate(model, { "first" });
 	// second population with children should emit insert notifies for them
 	EXPECT_EQ(num_inserts, 3);
@@ -217,7 +215,7 @@ TEST_F(TaskListModelTest, visitedPopulate) {
 
 TEST_F(TaskListModelTest, deletion) {
 	children = 3;
-	model.processTaskDescriptionMessage(genMsg("first"), nh, "get_solution");
+	model.processTaskDescriptionMessage(genMsg("first"), "get_solution");
 	auto m = model.getModel(model.index(0, 0)).first;
 	int num_deletes = 0;
 	QObject::connect(m, &QObject::destroyed, [&num_deletes]() { ++num_deletes; });
@@ -232,6 +230,6 @@ TEST_F(TaskListModelTest, deletion) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "test_task_model");
+	rclcpp::init(argc, argv);
 	return RUN_ALL_TESTS();
 }

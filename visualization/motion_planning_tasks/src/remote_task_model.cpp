@@ -41,14 +41,15 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit_task_constructor_msgs/GetSolution.h>
-#include <rviz/properties/property_tree_model.h>
-#include <rviz/properties/string_property.h>
-#include <ros/console.h>
+#include <rviz_common/properties/property_tree_model.hpp>
+#include <rviz_common/properties/string_property.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <QApplication>
 #include <QPalette>
 #include <qglobal.h>
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.task_list_model");
 
 using namespace moveit::task_constructor;
 
@@ -69,12 +70,12 @@ struct RemoteTaskModel::Node
 	InterfaceFlags interface_flags_;
 	NodeFlags node_flags_;
 	std::unique_ptr<RemoteSolutionModel> solutions_;
-	std::unique_ptr<rviz::PropertyTreeModel> property_tree_;
+	std::unique_ptr<rviz_common::properties::PropertyTreeModel> property_tree_;
 	std::map<std::string, Property> properties_;
 
 	inline Node(Node* parent) : parent_(parent) {
 		solutions_.reset(new RemoteSolutionModel());
-		property_tree_.reset(new rviz::PropertyTreeModel(new rviz::Property()));
+		property_tree_.reset(new rviz_common::properties::PropertyTreeModel(new rviz_common::properties::Property()));
 	}
 
 	bool setName(const QString& name) {
@@ -84,18 +85,20 @@ struct RemoteTaskModel::Node
 		return true;
 	}
 
-	void setProperties(const std::vector<moveit_task_constructor_msgs::Property>& props,
-	                   const planning_scene::PlanningSceneConstPtr& scene_, rviz::DisplayContext* display_context_);
-	rviz::Property* createProperty(const moveit_task_constructor_msgs::Property& prop, rviz::Property* old,
-	                               const planning_scene::PlanningSceneConstPtr& scene_,
-	                               rviz::DisplayContext* display_context_);
+	void setProperties(const std::vector<moveit_task_constructor_msgs::msg::Property>& props,
+	                   const planning_scene::PlanningSceneConstPtr& scene_,
+	                   rviz_common::DisplayContext* display_context_);
+	rviz_common::properties::Property* createProperty(const moveit_task_constructor_msgs::msg::Property& prop,
+	                                                  rviz_common::properties::Property* old,
+	                                                  const planning_scene::PlanningSceneConstPtr& scene_,
+	                                                  rviz_common::DisplayContext* display_context_);
 };
 
-void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_constructor_msgs::Property>& props,
+void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_constructor_msgs::msg::Property>& props,
                                           const planning_scene::PlanningSceneConstPtr& scene_,
-                                          rviz::DisplayContext* display_context_) {
+                                          rviz_common::DisplayContext* display_context_) {
 	// insert properties in same order as reported in description
-	rviz::Property* root = property_tree_->getRoot();
+	rviz_common::properties::Property* root = property_tree_->getRoot();
 	int index = 0;  // current child index in root
 	for (const auto& prop : props) {
 		int num = root->numChildren();
@@ -108,11 +111,11 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 		num = root->numChildren();
 
 		// if names differ, insert a new child, otherwise reuse existing
-		rviz::Property* old_child = index < num ? root->childAt(index) : nullptr;
+		rviz_common::properties::Property* old_child = index < num ? root->childAt(index) : nullptr;
 		if (old_child && old_child->getName().toStdString() != prop.name)
 			old_child = nullptr;
 
-		rviz::Property* new_child = createProperty(prop, old_child, scene_, display_context_);
+		rviz_common::properties::Property* new_child = createProperty(prop, old_child, scene_, display_context_);
 		if (new_child != old_child)
 			root->addChild(new_child, index);
 		++index;
@@ -121,25 +124,26 @@ void RemoteTaskModel::Node::setProperties(const std::vector<moveit_task_construc
 	root->removeChildren(index, root->numChildren() - index);
 }
 
-rviz::Property* RemoteTaskModel::Node::createProperty(const moveit_task_constructor_msgs::Property& prop,
-                                                      rviz::Property* old,
-                                                      const planning_scene::PlanningSceneConstPtr& scene_,
-                                                      rviz::DisplayContext* display_context_) {
+rviz_common::properties::Property* RemoteTaskModel::Node::createProperty(
+    const moveit_task_constructor_msgs::msg::Property& prop, rviz_common::properties::Property* old,
+    const planning_scene::PlanningSceneConstPtr& scene_, rviz_common::DisplayContext* display_context_) {
 	auto& factory = PropertyFactory::instance();
 	// try to deserialize from msg (using registered functions)
 	boost::any value = Property::deserialize(prop.type, prop.value);
-	if (!value.empty()) {  // if successful, create rviz::Property from mtc::Property using factory methods
+	if (!value.empty()) {  // if successful, create rviz_common::properties::Property from mtc::Property using factory
+		                    // methods
 		auto it = properties_.insert(std::make_pair(prop.name, Property())).first;
 		it->second.setDescription(prop.description);
 		it->second.setValue(value);
-		if (rviz::Property* rviz_prop = factory.create(prop.name, it->second, scene_.get(), display_context_)) {
+		if (rviz_common::properties::Property* rviz_prop =
+		        factory.create(prop.name, it->second, scene_.get(), display_context_)) {
 			rviz_prop->setReadOnly(true);
 			return rviz_prop;
 		} else
 			properties_.erase(it);
 	}
 
-	// otherwise create default, read-only rviz::Property by parsing serialized YAML
+	// otherwise create default, read-only rviz_common::properties::Property by parsing serialized YAML
 	return factory.createDefault(prop.name, prop.type, prop.description, prop.value, old);
 }
 
@@ -149,7 +153,7 @@ RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex& index) const {
 		return root_;
 
 	if (index.model() != this) {
-		ROS_ERROR_NAMED("TaskModel", "invalid model in QModelIndex");
+		RCLCPP_ERROR(LOGGER, "invalid model in QModelIndex");
 		return nullptr;
 	}
 
@@ -180,13 +184,18 @@ QModelIndex RemoteTaskModel::index(const Node* n) const {
 	return QModelIndex();
 }
 
-RemoteTaskModel::RemoteTaskModel(ros::NodeHandle& nh, const std::string& service_name,
-                                 const planning_scene::PlanningSceneConstPtr& scene,
-                                 rviz::DisplayContext* display_context, QObject* parent)
+RemoteTaskModel::RemoteTaskModel(const std::string& service_name, const planning_scene::PlanningSceneConstPtr& scene,
+                                 rviz_common::DisplayContext* display_context, QObject* parent)
   : BaseTaskModel(scene, display_context, parent), root_(new Node(nullptr)) {
 	id_to_stage_[0] = root_;  // root node has ID 0
+	// Add random ID to prevent warnings about multiple publishers within the same node
+	rclcpp::NodeOptions options;
+	options.arguments({ "--ros-args", "-r",
+	                    "__node:=get_solution_node_" + std::to_string(reinterpret_cast<std::size_t>(this)), "-r",
+	                    "__ns:=/moveit_task_constructor/remote_task_model" });
+	node_ = rclcpp::Node::make_shared("_", options);
 	// service to request solutions
-	get_solution_client_ = nh.serviceClient<moveit_task_constructor_msgs::GetSolution>(service_name);
+	get_solution_client_ = node_->create_client<moveit_task_constructor_msgs::srv::GetSolution>(service_name);
 }
 
 RemoteTaskModel::~RemoteTaskModel() {
@@ -277,13 +286,14 @@ QModelIndex RemoteTaskModel::indexFromStageId(size_t id) const {
 	return n ? index(n) : QModelIndex();
 }
 
-void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msgs::TaskDescription::_stages_type& msg) {
+void RemoteTaskModel::processStageDescriptions(
+    const moveit_task_constructor_msgs::msg::TaskDescription::_stages_type& msg) {
 	// iterate over descriptions and create new / update existing nodes where needed
 	for (const auto& s : msg) {
 		// find parent node for stage s, this should always exist
 		auto parent_it = id_to_stage_.find(s.parent_id);
 		if (parent_it == id_to_stage_.end()) {
-			ROS_ERROR_NAMED("TaskListModel", "No parent found for stage %d (%s)", s.id, s.name.c_str());
+			RCLCPP_ERROR(LOGGER, "No parent found for stage %d (%s)", s.id, s.name.c_str());
 			continue;
 		}
 		Node* parent = parent_it->second;
@@ -336,13 +346,14 @@ void RemoteTaskModel::processStageDescriptions(const moveit_task_constructor_msg
 	}
 }
 
-void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs::TaskStatistics::_stages_type& msg) {
+void RemoteTaskModel::processStageStatistics(
+    const moveit_task_constructor_msgs::msg::TaskStatistics::_stages_type& msg) {
 	// iterate over statistics and update node's solutions where needed
 	for (const auto& s : msg) {
 		// find node for stage s, this should always exist
 		auto it = id_to_stage_.find(s.id);
 		if (it == id_to_stage_.end()) {
-			ROS_ERROR_NAMED("TaskListModel", "No stage %d", s.id);
+			RCLCPP_ERROR(LOGGER, "No stage %d", s.id);
 			continue;
 		}
 		Node* n = it->second;
@@ -356,14 +367,14 @@ void RemoteTaskModel::processStageStatistics(const moveit_task_constructor_msgs:
 	}
 }
 
-void RemoteTaskModel::setSolutionData(const moveit_task_constructor_msgs::SolutionInfo& info) {
+void RemoteTaskModel::setSolutionData(const moveit_task_constructor_msgs::msg::SolutionInfo& info) {
 	if (info.id == 0)
 		return;
 	if (RemoteSolutionModel* m = getSolutionModel(info.stage_id))
 		m->setSolutionData(info.id, info.cost, QString::fromStdString(info.comment));
 }
 
-DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg) {
+DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_constructor_msgs::msg::Solution& msg) {
 	DisplaySolutionPtr s(new DisplaySolution);
 	s->setFromMessage(scene_->diff(), msg);
 
@@ -416,18 +427,21 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 	if (it == id_to_solution_.cend()) {
 		// TODO: try to assemble (and cache) the solution from known leaves
 		// to avoid some communication overhead
-
 		DisplaySolutionPtr result;
 		if (!(flags_ & IS_DESTROYED)) {
-			// request solution via service
-			moveit_task_constructor_msgs::GetSolution srv;
-			srv.request.solution_id = id;
-			if (get_solution_client_.call(srv)) {
-				id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
-				return result;
+			if (get_solution_client_->service_is_ready()) {
+				// request solution via service
+				auto request = std::make_shared<moveit_task_constructor_msgs::srv::GetSolution::Request>();
+				request->solution_id = id;
+				auto result_future = get_solution_client_->async_send_request(request);
+				if (rclcpp::spin_until_future_complete(node_, result_future) == rclcpp::FutureReturnCode::SUCCESS) {
+					id_to_solution_[id] = result = processSolutionMessage(result_future.get()->solution);
+					return result;
+				}
 			}
 			// on failure mark remote task as destroyed: don't retrieve more solutions
-			get_solution_client_.shutdown();
+			get_solution_client_.reset();
+			node_.reset();
 			flags_ |= IS_DESTROYED;
 		}
 		return result;
@@ -435,7 +449,7 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 	return it->second;
 }
 
-rviz::PropertyTreeModel* RemoteTaskModel::getPropertyModel(const QModelIndex& index) {
+rviz_common::properties::PropertyTreeModel* RemoteTaskModel::getPropertyModel(const QModelIndex& index) {
 	Node* n = node(index);
 	if (!n)
 		return nullptr;

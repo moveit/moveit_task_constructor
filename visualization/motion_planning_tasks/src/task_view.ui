@@ -129,7 +129,7 @@
         </widget>
        </item>
        <item>
-        <widget class="rviz::PropertyTreeWidget" name="property_view"/>
+        <widget class="rviz_common::properties::PropertyTreeWidget" name="property_view"/>
        </item>
       </layout>
      </widget>
@@ -174,9 +174,9 @@
    <header>task_list_model.h</header>
   </customwidget>
   <customwidget>
-   <class>rviz::PropertyTreeWidget</class>
+   <class>rviz_common::properties::PropertyTreeWidget</class>
    <extends>QTreeView</extends>
-   <header location="global">rviz/properties/property_tree_widget.h</header>
+   <header location="global">rviz_common/properties/property_tree_widget.hpp</header>
   </customwidget>
   <customwidget>
    <class>moveit_rviz_plugin::SolutionListView</class>

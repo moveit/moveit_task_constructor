@@ -42,10 +42,10 @@
 #include <utils/flat_merge_proxy_model.h>
 
 #include <moveit/macros/class_forward.h>
-#include <ros/node_handle.h>
-#include <moveit_task_constructor_msgs/TaskDescription.h>
-#include <moveit_task_constructor_msgs/TaskStatistics.h>
-#include <moveit_task_constructor_msgs/Solution.h>
+#include <rclcpp/node.hpp>
+#include <moveit_task_constructor_msgs/msg/task_description.hpp>
+#include <moveit_task_constructor_msgs/msg/task_statistics.hpp>
+#include <moveit_task_constructor_msgs/msg/solution.hpp>
 
 #include <QAbstractItemModel>
 #include <QTreeView>
@@ -53,10 +53,12 @@
 #include <memory>
 #include <QPointer>
 
-namespace rviz {
+namespace rviz_common {
+namespace properties {
 class PropertyTreeModel;
+}
 class DisplayContext;
-}  // namespace rviz
+}  // namespace rviz_common
 
 namespace moveit_rviz_plugin {
 
@@ -74,7 +76,7 @@ class BaseTaskModel : public QAbstractItemModel
 protected:
 	unsigned int flags_ = 0;
 	planning_scene::PlanningSceneConstPtr scene_;
-	rviz::DisplayContext* display_context_;
+	rviz_common::DisplayContext* display_context_;
 
 public:
 	enum TaskModelFlag
@@ -85,7 +87,7 @@ public:
 		IS_RUNNING = 0x08,
 	};
 
-	BaseTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz::DisplayContext* display_context,
+	BaseTaskModel(const planning_scene::PlanningSceneConstPtr& scene, rviz_common::DisplayContext* display_context,
 	              QObject* parent = nullptr)
 	  : QAbstractItemModel(parent), scene_(scene), display_context_(display_context) {}
 
@@ -106,7 +108,7 @@ public:
 	virtual DisplaySolutionPtr getSolution(const QModelIndex& index) = 0;
 
 	/// get property model for given stage index
-	virtual rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) = 0;
+	virtual rviz_common::properties::PropertyTreeModel* getPropertyModel(const QModelIndex& index) = 0;
 };
 
 /** The TaskListModel maintains a list of multiple BaseTaskModels, local and/or remote.
@@ -124,7 +126,7 @@ class TaskListModel : public utils::FlatMergeProxyModel
 	// planning scene / robot model used by all tasks in this model
 	planning_scene::PlanningSceneConstPtr scene_;
 	// rviz::DisplayContext used to show (interactive) markers by the property models
-	rviz::DisplayContext* display_context_ = nullptr;
+	rviz_common::DisplayContext* display_context_ = nullptr;
 
 	// map from remote task IDs to (active) tasks
 	// if task is destroyed remotely, it is marked with flag IS_DESTROYED
@@ -146,7 +148,7 @@ public:
 	~TaskListModel() override;
 
 	void setScene(const planning_scene::PlanningSceneConstPtr& scene);
-	void setDisplayContext(rviz::DisplayContext* display_context);
+	void setDisplayContext(rviz_common::DisplayContext* display_context);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
 	int columnCount(const QModelIndex& /*parent*/ = QModelIndex()) const override { return 4; }
@@ -155,12 +157,12 @@ public:
 	QVariant data(const QModelIndex& index, int role) const override;
 
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg, ros::NodeHandle& nh,
+	void processTaskDescriptionMessage(const moveit_task_constructor_msgs::msg::TaskDescription& msg,
 	                                   const std::string& service_name);
 	/// process an incoming task description message - only call in Qt's main loop
-	void processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg);
+	void processTaskStatisticsMessage(const moveit_task_constructor_msgs::msg::TaskStatistics& msg);
 	/// process an incoming solution message - only call in Qt's main loop
-	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg);
+	DisplaySolutionPtr processSolutionMessage(const moveit_task_constructor_msgs::msg::Solution& msg);
 
 	/// insert a TaskModel, pos is relative to modelCount()
 	bool insertModel(BaseTaskModel* model, int pos = -1);
