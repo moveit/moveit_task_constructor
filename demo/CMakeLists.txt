@@ -1,48 +1,51 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.5)
 project(moveit_task_constructor_demo)
 
-if(NOT "${CMAKE_CXX_STANDARD}")
-  set(CMAKE_CXX_STANDARD 14)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(catkin REQUIRED COMPONENTS
-	roscpp
-	moveit_core
-	moveit_task_constructor_core
-	moveit_ros_planning_interface
-	rosparam_shortcuts
-)
+find_package(ament_cmake REQUIRED)
 
-catkin_package(
-	CATKIN_DEPENDS roscpp
-)
+find_package(rclcpp REQUIRED)
+find_package(moveit_core REQUIRED)
+find_package(moveit_task_constructor_core REQUIRED)
+find_package(moveit_task_constructor_msgs REQUIRED)
+find_package(moveit_ros_planning REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(rosparam_shortcuts REQUIRED)
 
-include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
-)
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+    rclcpp
+    moveit_core
+    moveit_task_constructor_core
+    moveit_task_constructor_msgs
+    moveit_ros_planning
+    moveit_ros_planning_interface
+    tf2_eigen
+    rosparam_shortcuts)
 
-add_library(${PROJECT_NAME}_pick_place_task src/pick_place_task.cpp)
-target_link_libraries(${PROJECT_NAME}_pick_place_task ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME}_pick_place_task ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_library(${PROJECT_NAME}_pick_place_task SHARED src/pick_place_task.cpp)
+ament_target_dependencies(${PROJECT_NAME}_pick_place_task ${THIS_PACKAGE_INCLUDE_DEPENDS})
 install(TARGETS ${PROJECT_NAME}_pick_place_task
-	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-	RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+	ARCHIVE DESTINATION lib
+	LIBRARY DESTINATION lib
+	RUNTIME DESTINATION lib/${PROJECT_NAME})
+
+include_directories(include)
 
 # declare a demo consisting of a single cpp file
 function(demo name)
 	add_executable(${PROJECT_NAME}_${name} src/${name}.cpp)
-	add_dependencies(${PROJECT_NAME}_${name} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-	target_link_libraries(${PROJECT_NAME}_${name} ${catkin_LIBRARIES})
+  ament_target_dependencies(${PROJECT_NAME}_${name} ${THIS_PACKAGE_INCLUDE_DEPENDS})
 	set_target_properties(${PROJECT_NAME}_${name} PROPERTIES OUTPUT_NAME ${name} PREFIX "")
 	install(TARGETS ${PROJECT_NAME}_${name}
-		ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-		LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-		RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+		ARCHIVE DESTINATION lib
+		LIBRARY DESTINATION lib
+		RUNTIME DESTINATION lib/${PROJECT_NAME}
 	)
 endfunction()
 
@@ -55,7 +58,10 @@ demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)
 
 install(DIRECTORY launch config
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  DESTINATION share/${PROJECT_NAME}
 )
 
-add_subdirectory(test)
+# TODO: Port tests
+# add_subdirectory(test)
+
+ament_package()

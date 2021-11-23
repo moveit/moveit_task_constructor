@@ -1,4 +1,4 @@
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -8,24 +8,23 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <moveit/task_constructor/cost_terms.h>
+#include <rosparam_shortcuts/rosparam_shortcuts.h>
 
 using namespace moveit::task_constructor;
 
 /* ComputeIK(FixedState) */
 int main(int argc, char** argv) {
-	ros::init(argc, argv, "mtc_tutorial");
-	ros::NodeHandle nh{ "~" };
-
-	ros::AsyncSpinner spinner{ 1 };
-	spinner.start();
+	rclcpp::init(argc, argv);
+	auto node = rclcpp::Node::make_shared("moveit_task_constructor_demo");
+	std::thread spinning_thread([node] { rclcpp::spin(node); });
 
 	Task t;
 	t.stages()->setName("clearance IK");
 
 	// announce new task (in case previous run was restarted)
-	ros::Duration(0.5).sleep();
+	rclcpp::sleep_for(std::chrono::milliseconds(500));
 
-	t.loadRobotModel();
+	t.loadRobotModel(node);
 	assert(t.getRobotModel()->getName() == "panda");
 
 	auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
@@ -33,10 +32,10 @@ int main(int argc, char** argv) {
 	robot_state.setToDefaultValues();
 	robot_state.setToDefaultValues(robot_state.getJointModelGroup("panda_arm"), "extended");
 
-	moveit_msgs::CollisionObject co;
+	moveit_msgs::msg::CollisionObject co;
 	co.id = "obstacle";
 	co.primitives.emplace_back();
-	co.primitives[0].type = shape_msgs::SolidPrimitive::SPHERE;
+	co.primitives[0].type = shape_msgs::msg::SolidPrimitive::SPHERE;
 	co.primitives[0].dimensions.resize(1);
 	co.primitives[0].dimensions[0] = 0.1;
 	co.header.frame_id = "world";
@@ -56,8 +55,10 @@ int main(int argc, char** argv) {
 	ik->setMaxIKSolutions(100);
 
 	auto cl_cost{ std::make_unique<cost::Clearance>() };
-	cl_cost->cumulative = nh.param("cumulative", false);  // sum up pairwise distances?
-	cl_cost->with_world = nh.param("with_world", true);  // consider distance to world objects?
+	cl_cost->cumulative = false;
+	rosparam_shortcuts::get(node, "cumulative", cl_cost->cumulative);  // sum up pairwise distances?
+	cl_cost->with_world = true;
+	rosparam_shortcuts::get(node, "with_world", cl_cost->cumulative);  // consider distance to world objects?
 	ik->setCostTerm(std::move(cl_cost));
 
 	t.add(std::move(ik));
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
 		std::cout << e << std::endl;
 	}
 
-	ros::waitForShutdown();
-
+	// Keep introspection alive
+	spinning_thread.join();
 	return 0;
 }
