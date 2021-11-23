@@ -159,6 +159,8 @@ class FallbacksPrivate;
  */
 class Fallbacks : public ParallelContainerBase
 {
+	inline void replaceImpl();
+
 public:
 	PRIVATE_CLASS(Fallbacks);
 	Fallbacks(const std::string& name = "fallbacks");

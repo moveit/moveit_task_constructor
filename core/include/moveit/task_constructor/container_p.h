@@ -241,41 +241,68 @@ private:
 };
 PIMPL_FUNCTIONS(ParallelContainerBase)
 
+/* The Fallbacks container needs to implement different behaviour based on its interface.
+ * Thus, we implement 3 different classes: for Generator, Propagator, and Connect-like interfaces.
+ * FallbacksPrivate is the common base class for all of them, defining the common API to be used
+ * by the Fallbacks container.
+ * The actual interface-specific class is instantiated in initializeExternalInterfaces()
+ * resp. Fallbacks::replaceImpl() when the actual interface is known. */
 class FallbacksPrivate : public ParallelContainerBasePrivate
 {
-	friend class Fallbacks;
-
 public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
+	FallbacksPrivate(FallbacksPrivate&& other);
 
-protected:
-	void computePropagate();
-	struct ExternalState
-	{
-		ExternalState() = default;
-		ExternalState(Interface::iterator e, Interface::Direction d, container_type::const_iterator c)
-		  : external_state(e), dir(d), stage(c) {}
-
-		Interface::iterator external_state;
-		Interface::Direction dir;
-		container_type::const_iterator stage;
-
-		inline bool operator<(const ExternalState& other) const { return *external_state < *other.external_state; }
-	};
-	ordered<ExternalState> pending_states_;  // pending external states for a PROPAGATE interface
-	ordered<ExternalState>::iterator current_pending_;  // currently active pending state
-	inline void computeGenerate();
-	mutable container_type::const_iterator current_generator_;
-
-private:
-	void initializeExternalInterfaces() override;
-	template <typename Interface::Direction>
-	void onNewExternalState(Interface::iterator external, bool updated);
+	// shared method overrides
+	void initializeExternalInterfaces() final;
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
-	// print pending states for debugging
-	void printPending(const char* comment = "pending: ") const;
+
+	// interface-specific methods
+	virtual void _init(){};
+	virtual bool _canCompute() const { return false; };
+	virtual void _compute(){};
 };
 PIMPL_FUNCTIONS(Fallbacks)
+
+/// Fallbacks implementation for GENERATOR interface
+struct FallbacksPrivateGenerator : FallbacksPrivate
+{
+	FallbacksPrivateGenerator(FallbacksPrivate&& old);
+	void _init() override { current_ = children().begin(); }
+	bool _canCompute() const override;
+	void _compute() override;
+
+	mutable container_type::const_iterator current_;  // currently active child generator
+};
+
+/// Fallbacks implementation for FORWARD or BACKWARD interface
+struct FallbacksPrivatePropagator : FallbacksPrivate
+{
+	FallbacksPrivatePropagator(FallbacksPrivate&& old);
+	void _init() override { current_ = pending_.end(); }
+	bool _canCompute() const override;
+	void _compute() override;
+
+	// interface notify() callback
+	void onNewExternalState(Interface::iterator external, bool updated);
+
+	// print pending states for debugging
+	void printPending(const char* comment = "pending: ") const;
+
+	struct Job
+	{
+		Job() = default;
+		Job(Interface::iterator state, container_type::const_iterator child) : external_state(state), stage(child) {}
+
+		Interface::iterator external_state;
+		container_type::const_iterator stage;
+
+		inline bool operator<(const Job& other) const { return *external_state < *other.external_state; }
+	};
+	Interface::Direction dir_;
+	ordered<Job> pending_;  // pending external states to process
+	ordered<Job>::iterator current_;  // currently active job
+};
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate
 {
