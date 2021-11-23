@@ -14,32 +14,36 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: melodic-source
+          # TODO: We have to use -Wno-redundant-decls since rosidl_generator_c is generating broken headers
+          - IMAGE: galactic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: master-source
+          - IMAGE: rolling-source
             CXXFLAGS: >-
-             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wno-redundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
-          - IMAGE: noetic-source
+          - IMAGE: rolling-source
             CXX: clang++
             CLANG_TIDY: true
             CXXFLAGS: >-
-             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wno-redundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
-          - IMAGE: noetic-source
+          # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
+          # see https://github.com/google/sanitizers/wiki/AddressSanitizer
+          - IMAGE: rolling-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
               -e PRELOAD=libasan.so.5
-              -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions"
+              -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions,fast_unwind_on_malloc=0"
             TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
 
     env:
-      CATKIN_LINT: true
       CLANG_TIDY_ARGS: --fix --fix-errors --format-style=file
-      DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
+      DOCKER_IMAGE: ghcr.io/ros-planning/moveit2:${{ matrix.env.IMAGE }}
       UNDERLAY: /root/ws_moveit/install
-      DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
+      # TODO: Port to ROS2
+      # DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
+      UPSTREAM_WORKSPACE: .repos
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: ${{ github.workspace }}/.work
       CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
@@ -48,7 +52,7 @@ jobs:
       CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
       CXX: ${{ matrix.env.CLANG_TIDY && 'clang++' }}
 
-    name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
+    name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
