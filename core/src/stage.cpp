@@ -42,7 +42,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
 
 #include <boost/format.hpp>
 
@@ -87,7 +87,7 @@ void InitStageException::append(InitStageException& other) {
 }
 
 const char* InitStageException::what() const noexcept {
-	static const char* msg = "Error initializing stage(s). ROS_ERROR_STREAM(e) for details.";
+	static const char* msg = "Error initializing stage(s). RCLCPP_ERROR_STREAM(e) for details.";
 	return msg;
 }
 
@@ -325,7 +325,7 @@ void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
-			ROS_DEBUG_STREAM_NAMED("Properties", "init '" << name() << "'");
+			RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Properties"), "init '" << name() << "'");
 			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 		} catch (const Property::error& e) {
 			std::ostringstream oss;
@@ -795,6 +795,7 @@ std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
 	os << reset;
 	return os;
 }
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("Connecting");
 
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}
 
@@ -809,7 +810,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
 	if (from->getWorld()->size() != to->getWorld()->size()) {
-		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of collision objects");
+		RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different number of collision objects");
 		return false;
 	}
 
@@ -819,19 +820,19 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
 		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_name);
 		if (!to_object) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object_name);
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": object missing: " << from_object_name);
 			return false;
 		}
 
 #if MOVEIT_HAS_OBJECT_POSE
 		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4)) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_name);
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object pose: " << from_object_name);
 			return false;  // transforms do not match
 		}
 #endif
 
 		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object_name);
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object shapes: " << from_object_name);
 			return false;  // shapes not matching
 		}
 
@@ -839,7 +840,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		          to_it = to_object->shape_poses_.cbegin();
 		     from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different shape pose: " << from_object_name);
+				RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different shape pose: " << from_object_name);
 				return false;  // transforms do not match
 			}
 	}
@@ -850,7 +851,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	from->getCurrentState().getAttachedBodies(from_attached);
 	to->getCurrentState().getAttachedBodies(to_attached);
 	if (from_attached.size() != to_attached.size()) {
-		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of objects");
+		RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different number of objects");
 		return false;
 	}
 
@@ -860,18 +861,18 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 			                       return object->getName() == from_object->getName();
 		                       });
 		if (it == to_attached.cend()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object->getName());
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": object missing: " << from_object->getName());
 			return false;
 		}
 		const moveit::core::AttachedBody* to_object = *it;
 		if (from_object->getAttachedLink() != to_object->getAttachedLink()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different attach links: " << from_object->getName()
-			                                            << " attached to " << from_object->getAttachedLinkName() << " / "
-			                                            << to_object->getAttachedLinkName());
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different attach links: " << from_object->getName() << " attached to "
+			                                   << from_object->getAttachedLinkName() << " / "
+			                                   << to_object->getAttachedLinkName());
 			return false;  // links not matching
 		}
 		if (from_object->getShapes().size() != to_object->getShapes().size()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object->getName());
+			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object shapes: " << from_object->getName());
 			return false;  // shapes not matching
 		}
 
@@ -886,8 +887,8 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 #endif
 		for (; from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting",
-				                       name() << ": different pose of attached object shape: " << from_object->getName());
+				RCLCPP_DEBUG_STREAM(LOGGER, name()
+				                                << ": different pose of attached object shape: " << from_object->getName());
 				return false;  // transforms do not match
 			}
 	}

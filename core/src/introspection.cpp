@@ -39,11 +39,11 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/storage.h>
-#include <moveit_task_constructor_msgs/Property.h>
+#include <moveit_task_constructor_msgs/msg/property.hpp>
 
-#include <ros/node_handle.h>
-#include <ros/publisher.h>
-#include <ros/service.h>
+#include <rclcpp/node.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/service.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <sstream>
@@ -64,34 +64,73 @@ std::string getTaskId(const TaskPrivate* task) {
 }
 }  // namespace
 
+/**
+ * A shared executor between all tasks' introspection, this class will keep track of the number of the added nodes and
+ * will only create a spinning thread when we have nodes in the executor, once all the nodes are removed from the
+ * executor it will stop the spinning thread, later on if a new node is added a spinning thread will be started again
+ */
+class IntrospectionExecutor
+{
+public:
+	void add_node(const rclcpp::Node::SharedPtr& node) {
+		std::call_once(once_flag_, [this] { executor_ = rclcpp::executors::SingleThreadedExecutor::make_unique(); });
+		std::lock_guard<std::mutex> lock(mutex_);
+		executor_->add_node(node);
+		if (nodes_count_++ == 0)
+			executor_thread_ = std::thread([this] { executor_->spin(); });
+	}
+
+	void remove_node(const rclcpp::Node::SharedPtr& node) {
+		std::lock_guard<std::mutex> lock(mutex_);
+		executor_->remove_node(node);
+		if (--nodes_count_ == 0) {
+			executor_->cancel();
+			if (executor_thread_.joinable())
+				executor_thread_.join();
+		}
+	}
+
+private:
+	rclcpp::executors::SingleThreadedExecutor::UniquePtr executor_;
+	std::thread executor_thread_;
+	size_t nodes_count_ = 0;
+	std::mutex mutex_;
+	std::once_flag once_flag_;
+};
+
 class IntrospectionPrivate
 {
 public:
-	IntrospectionPrivate(const TaskPrivate* task, Introspection* self)
-	  : nh_(std::string("~/") + task->ns())  // topics + services are advertised in private namespace
-	  , task_(task)
-	  , task_id_(getTaskId(task)) {
-		task_description_publisher_ =
-		    nh_.advertise<moveit_task_constructor_msgs::TaskDescription>(DESCRIPTION_TOPIC, 2, true);
+	IntrospectionPrivate(const TaskPrivate* task, Introspection* self) : task_(task), task_id_(getTaskId(task)) {
+		rclcpp::NodeOptions options;
+		options.arguments({ "--ros-args", "-r", "__node:=introspection_" + task_id_ });
+		node_ = rclcpp::Node::make_shared("_", task_->ns(), options);
+		executor_.add_node(node_);
+		task_description_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskDescription>(
+		    DESCRIPTION_TOPIC, rclcpp::QoS(2).transient_local());
 		// send reset message as early as possible to give subscribers time to see it
 		indicateReset();
 
-		task_statistics_publisher_ =
-		    nh_.advertise<moveit_task_constructor_msgs::TaskStatistics>(STATISTICS_TOPIC, 1, true);
-		solution_publisher_ = nh_.advertise<moveit_task_constructor_msgs::Solution>(SOLUTION_TOPIC, 1, true);
+		task_statistics_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskStatistics>(
+		    STATISTICS_TOPIC, rclcpp::QoS(1).transient_local());
+		solution_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::Solution>(
+		    SOLUTION_TOPIC, rclcpp::QoS(1).transient_local());
 
-		get_solution_service_ =
-		    nh_.advertiseService(std::string(GET_SOLUTION_SERVICE "_") + task_id_, &Introspection::getSolution, self);
-
+		get_solution_service_ = node_->create_service<moveit_task_constructor_msgs::srv::GetSolution>(
+		    std::string(GET_SOLUTION_SERVICE "_") + task_id_,
+		    std::bind(&Introspection::getSolution, self, std::placeholders::_1, std::placeholders::_2));
 		resetMaps();
 	}
-	~IntrospectionPrivate() { indicateReset(); }
+	~IntrospectionPrivate() {
+		indicateReset();
+		executor_.remove_node(node_);
+	}
 
 	void indicateReset() {
 		// send empty task description message to indicate reset
-		::moveit_task_constructor_msgs::TaskDescription msg;
+		::moveit_task_constructor_msgs::msg::TaskDescription msg;
 		msg.task_id = task_id_;
-		task_description_publisher_.publish(msg);
+		task_description_publisher_->publish(msg);
 	}
 
 	void resetMaps() {
@@ -102,21 +141,22 @@ public:
 		id_solution_bimap_.clear();
 	}
 
-	ros::NodeHandle nh_;
 	/// associated task
 	const TaskPrivate* task_;
 	const std::string task_id_;
 
 	/// publish task detailed description and current state
-	ros::Publisher task_description_publisher_;
-	ros::Publisher task_statistics_publisher_;
+	rclcpp::Publisher<moveit_task_constructor_msgs::msg::TaskDescription>::SharedPtr task_description_publisher_;
+	rclcpp::Publisher<moveit_task_constructor_msgs::msg::TaskStatistics>::SharedPtr task_statistics_publisher_;
 	/// publish new solutions
-	ros::Publisher solution_publisher_;
+	rclcpp::Publisher<moveit_task_constructor_msgs::msg::Solution>::SharedPtr solution_publisher_;
 	/// services to provide an individual Solution
-	ros::ServiceServer get_solution_service_;
+	rclcpp::Service<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_service_;
+	rclcpp::Node::SharedPtr node_;
+	inline static IntrospectionExecutor executor_;
 
 	/// mapping from stages to their id
-	std::map<const StagePrivate*, moveit_task_constructor_msgs::StageStatistics::_id_type> stage_to_id_map_;
+	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;
 	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
 };
 
@@ -127,13 +167,13 @@ Introspection::~Introspection() {
 }
 
 void Introspection::publishTaskDescription() {
-	::moveit_task_constructor_msgs::TaskDescription msg;
-	impl->task_description_publisher_.publish(fillTaskDescription(msg));
+	::moveit_task_constructor_msgs::msg::TaskDescription msg;
+	impl->task_description_publisher_->publish(fillTaskDescription(msg));
 }
 
 void Introspection::publishTaskState() {
-	::moveit_task_constructor_msgs::TaskStatistics msg;
-	impl->task_statistics_publisher_.publish(fillTaskStatistics(msg));
+	::moveit_task_constructor_msgs::msg::TaskStatistics msg;
+	impl->task_statistics_publisher_->publish(fillTaskStatistics(msg));
 }
 
 void Introspection::reset() {
@@ -145,7 +185,7 @@ void Introspection::registerSolution(const SolutionBase& s) {
 	solutionId(s);
 }
 
-void Introspection::fillSolution(moveit_task_constructor_msgs::Solution& msg, const SolutionBase& s) {
+void Introspection::fillSolution(moveit_task_constructor_msgs::msg::Solution& msg, const SolutionBase& s) {
 	s.fillMessage(msg, this);
 	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
 
@@ -153,9 +193,9 @@ void Introspection::fillSolution(moveit_task_constructor_msgs::Solution& msg, co
 }
 
 void Introspection::publishSolution(const SolutionBase& s) {
-	moveit_task_constructor_msgs::Solution msg;
+	moveit_task_constructor_msgs::msg::Solution msg;
 	fillSolution(msg, s);
-	impl->solution_publisher_.publish(msg);
+	impl->solution_publisher_->publish(msg);
 }
 
 void Introspection::publishAllSolutions(bool wait) {
@@ -178,13 +218,13 @@ const SolutionBase* Introspection::solutionFromId(uint id) const {
 	return it->second;
 }
 
-bool Introspection::getSolution(moveit_task_constructor_msgs::GetSolution::Request& req,
-                                moveit_task_constructor_msgs::GetSolution::Response& res) {
-	const SolutionBase* solution = solutionFromId(req.solution_id);
+bool Introspection::getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr req,
+                                const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr res) {
+	const SolutionBase* solution = solutionFromId(req->solution_id);
 	if (!solution)
 		return false;
 
-	fillSolution(res.solution, *solution);
+	fillSolution(res->solution, *solution);
 	return true;
 }
 
@@ -203,7 +243,7 @@ uint32_t Introspection::solutionId(const SolutionBase& s) {
 	return result.first->first;
 }
 
-void Introspection::fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::StageStatistics& s) {
+void Introspection::fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::msg::StageStatistics& s) {
 	// successful solutions
 	for (const auto& solution : stage.solutions())
 		s.solved.push_back(solutionId(*solution));
@@ -216,18 +256,18 @@ void Introspection::fillStageStatistics(const Stage& stage, moveit_task_construc
 	s.num_failed = stage.numFailures();
 }
 
-moveit_task_constructor_msgs::TaskDescription&
-Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription& msg) {
+moveit_task_constructor_msgs::msg::TaskDescription&
+Introspection::fillTaskDescription(moveit_task_constructor_msgs::msg::TaskDescription& msg) {
 	ContainerBase::StageCallback stage_processor = [this, &msg](const Stage& stage, unsigned int /*depth*/) -> bool {
 		// this method is called for each child stage of a given parent
-		moveit_task_constructor_msgs::StageDescription desc;
+		moveit_task_constructor_msgs::msg::StageDescription desc;
 		desc.id = stageId(&stage);
 		desc.name = stage.name();
 		desc.flags = stage.pimpl()->interfaceFlags();
 
 		// fill stage properties
 		for (const auto& pair : stage.properties()) {
-			moveit_task_constructor_msgs::Property p;
+			moveit_task_constructor_msgs::msg::Property p;
 			p.name = pair.first;
 			p.description = pair.second.description();
 			p.type = pair.second.typeName();
@@ -251,11 +291,11 @@ Introspection::fillTaskDescription(moveit_task_constructor_msgs::TaskDescription
 	return msg;
 }
 
-moveit_task_constructor_msgs::TaskStatistics&
-Introspection::fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& msg) {
+moveit_task_constructor_msgs::msg::TaskStatistics&
+Introspection::fillTaskStatistics(moveit_task_constructor_msgs::msg::TaskStatistics& msg) {
 	ContainerBase::StageCallback stage_processor = [this, &msg](const Stage& stage, unsigned int /*depth*/) -> bool {
 		// this method is called for each child stage of a given parent
-		moveit_task_constructor_msgs::StageStatistics stat;  // create new Stage msg
+		moveit_task_constructor_msgs::msg::StageStatistics stat;  // create new Stage msg
 		stat.id = stageId(&stage);
 		fillStageStatistics(stage, stat);
 

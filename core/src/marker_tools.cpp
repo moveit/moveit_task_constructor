@@ -1,7 +1,6 @@
 #include <moveit/task_constructor/marker_tools.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/robot_state.h>
-#include <eigen_conversions/eigen_msg.h>
 
 namespace vm = visualization_msgs;
 
@@ -17,7 +16,7 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scen
 	   const std::vector<std::string>* names = object_names.empty() ? &scene->getCollisionObjectMsg()
 	                                                              : &link_names;
 	   for (const auto &name : *names) {
-	      visualization_msgs::MarkerArray markers;
+	      visualization_msgs::msg::MarkerArray markers;
 	      robot_state.getRobotMarkers(markers, {name}, false);
 	      for (auto &marker : markers.markers)
 	         callback(marker, name);
@@ -25,8 +24,9 @@ void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scen
 	*/
 }
 
-visualization_msgs::Marker& createGeometryMarker(visualization_msgs::Marker& marker, const urdf::Geometry& geom,
-                                                 const urdf::Pose& pose, const urdf::Color& color) {
+visualization_msgs::msg::Marker& createGeometryMarker(visualization_msgs::msg::Marker& marker,
+                                                      const urdf::Geometry& geom, const urdf::Pose& pose,
+                                                      const urdf::Color& color) {
 	rviz_marker_tools::makeFromGeometry(marker, geom);
 	marker.pose.position.x = pose.position.x;
 	marker.pose.position.y = pose.position.y;
@@ -110,7 +110,7 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 	if (!model)
 		return;
 
-	visualization_msgs::Marker m;
+	visualization_msgs::msg::Marker m;
 	m.header.frame_id = robot_state.getRobotModel()->getModelFrame();
 
 	// code adapted from rviz::RobotLink::createVisual() / createCollision()

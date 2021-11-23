@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <rclcpp/node.hpp>
 #include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
@@ -58,20 +59,25 @@ public:
 	struct Specification
 	{
 		moveit::core::RobotModelConstPtr model;
-		std::string ns{ "move_group" };
+		std::string ns{ "ompl" };
 		std::string pipeline{ "ompl" };
 		std::string adapter_param{ "request_adapters" };
 	};
 
-	static planning_pipeline::PlanningPipelinePtr create(const moveit::core::RobotModelConstPtr& model) {
+	static planning_pipeline::PlanningPipelinePtr create(const rclcpp::Node::SharedPtr& node,
+	                                                     const moveit::core::RobotModelConstPtr& model) {
 		Specification spec;
 		spec.model = model;
-		return create(spec);
+		return create(node, spec);
 	}
 
-	static planning_pipeline::PlanningPipelinePtr create(const Specification& spec);
+	static planning_pipeline::PlanningPipelinePtr create(const rclcpp::Node::SharedPtr& node, const Specification& spec);
 
-	PipelinePlanner(const std::string& pipeline = "ompl");
+	/**
+	 *
+	 * @param node used to load the parameters for the planning pipeline
+	 */
+	PipelinePlanner(const rclcpp::Node::SharedPtr& node, const std::string& pipeline = "ompl");
 
 	PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline);
 
@@ -81,16 +87,17 @@ public:
 
 	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
 	          const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
 	          const Eigen::Isometry3d& target, const core::JointModelGroup* jmg, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 protected:
 	std::string pipeline_name_;
 	planning_pipeline::PlanningPipelinePtr planner_;
+	rclcpp::Node::SharedPtr node_;
 };
 }  // namespace solvers
 }  // namespace task_constructor

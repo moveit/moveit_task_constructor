@@ -57,9 +57,9 @@ public:
 	void setAngleDelta(double delta) { setProperty("angle_delta", delta); }
 
 	void setPreGraspPose(const std::string& pregrasp) { properties().set("pregrasp", pregrasp); }
-	void setPreGraspPose(const moveit_msgs::RobotState& pregrasp) { properties().set("pregrasp", pregrasp); }
+	void setPreGraspPose(const moveit_msgs::msg::RobotState& pregrasp) { properties().set("pregrasp", pregrasp); }
 	void setGraspPose(const std::string& grasp) { properties().set("grasp", grasp); }
-	void setGraspPose(const moveit_msgs::RobotState& grasp) { properties().set("grasp", grasp); }
+	void setGraspPose(const moveit_msgs::msg::RobotState& grasp) { properties().set("grasp", grasp); }
 
 protected:
 	void onNewSolution(const SolutionBase& s) override;

@@ -6,7 +6,8 @@ using namespace moveit::core;
 
 RobotModelPtr getModel() {
 	// suppress RobotModel errors and warnings
-	ros::console::set_logger_level(ROSCONSOLE_ROOT_LOGGER_NAME ".moveit_core.robot_model", ros::console::levels::Fatal);
+	if (rcutils_logging_set_logger_level("moveit_robot_model.robot_model", RCUTILS_LOG_SEVERITY_FATAL) != RCUTILS_RET_OK)
+		throw std::runtime_error("Failed to set logger level to RCUTILS_LOG_SEVERITY_ERROR");
 
 	// create dummy robot model
 	moveit::core::RobotModelBuilder builder("robot", "base");
@@ -17,7 +18,7 @@ RobotModelPtr getModel() {
 	return builder.build();
 }
 
-moveit::core::RobotModelPtr loadModel() {
-	static robot_model_loader::RobotModelLoader loader;
+moveit::core::RobotModelPtr loadModel(const rclcpp::Node::SharedPtr& node) {
+	robot_model_loader::RobotModelLoader loader(node);
 	return loader.getModel();
 }

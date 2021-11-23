@@ -1,4 +1,4 @@
-<library path="libmoveit_task_constructor_core_stage_plugins">
+<library path="moveit_task_constructor_core_stage_plugins">
   <class name="moveit_task_constructor/Current State"
          type="moveit::task_constructor::stages::CurrentState"
          base_class_type="moveit::task_constructor::Stage">

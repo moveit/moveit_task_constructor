@@ -38,7 +38,7 @@
 
 #include <moveit/task_constructor/container.h>
 #include <moveit/macros/class_forward.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <Eigen/Geometry>
 
 namespace moveit {
@@ -78,7 +78,7 @@ public:
 	void setObject(const std::string& object) { setProperty("object", object); }
 
 	/// set properties of IK solver
-	void setIKFrame(const geometry_msgs::PoseStamped& transform) { setProperty("ik_frame", transform); }
+	void setIKFrame(const geometry_msgs::msg::PoseStamped& transform) { setProperty("ik_frame", transform); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& t, const std::string& link) {

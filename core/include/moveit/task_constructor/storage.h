@@ -42,14 +42,15 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/cost_queue.h>
-#include <moveit_task_constructor_msgs/Solution.h>
-#include <visualization_msgs/MarkerArray.h>
+#include <moveit_task_constructor_msgs/msg/solution.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include <list>
 #include <vector>
 #include <deque>
 #include <cassert>
 #include <functional>
+#include <cmath>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
@@ -271,9 +272,9 @@ public:
 	const auto& markers() const { return markers_; }
 
 	/// append this solution to Solution msg
-	virtual void fillMessage(moveit_task_constructor_msgs::Solution& solution,
+	virtual void fillMessage(moveit_task_constructor_msgs::msg::Solution& solution,
 	                         Introspection* introspection = nullptr) const = 0;
-	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
+	void fillInfo(moveit_task_constructor_msgs::msg::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
 	/// required to dispatch to type-specific CostTerm methods via vtable
 	virtual double computeCost(const CostTerm& cost, std::string& comment) const = 0;
@@ -293,7 +294,7 @@ private:
 	// comment for this solution, e.g. explanation of failure
 	std::string comment_;
 	// markers for this solution, e.g. target frame or collision indicators
-	std::deque<visualization_msgs::Marker> markers_;
+	std::deque<visualization_msgs::msg::Marker> markers_;
 
 	// begin and end InterfaceState of this solution/trajectory
 	const InterfaceState* start_ = nullptr;
@@ -313,7 +314,8 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
+	void fillMessage(moveit_task_constructor_msgs::msg::Solution& msg,
+	                 Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -346,7 +348,7 @@ public:
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+	void fillMessage(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -377,7 +379,7 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
-	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
+	void fillMessage(moveit_task_constructor_msgs::msg::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;

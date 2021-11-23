@@ -8,12 +8,16 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 
-#include <moveit_msgs/RobotState.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <moveit_msgs/msg/robot_state.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
-#include <ros/console.h>
+#include <rclcpp/logging.hpp>
 #include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
@@ -28,9 +32,10 @@ struct PandaMoveTo : public testing::Test
 	Task t;
 	stages::MoveTo* move_to;
 	PlanningScenePtr scene;
+	rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("panda_move_to");
 
 	PandaMoveTo() {
-		t.setRobotModel(loadModel());
+		t.loadRobotModel(node);
 
 		scene = std::make_shared<PlanningScene>(t.getRobotModel());
 		scene->getCurrentStateNonConst().setToDefaultValues();
@@ -63,7 +68,7 @@ TEST_F(PandaMoveTo, mapTarget) {
 
 TEST_F(PandaMoveTo, stateTarget) {
 	move_to->setGoal([] {
-		moveit_msgs::RobotState state;
+		moveit_msgs::msg::RobotState state;
 		state.is_diff = true;
 		state.joint_state.name = { "panda_joint1", "panda_joint2" };
 		state.joint_state.position = { TAU / 8, TAU / 8 };
@@ -72,19 +77,19 @@ TEST_F(PandaMoveTo, stateTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-geometry_msgs::PoseStamped getFramePoseOfNamedState(RobotState state, std::string pose, std::string frame) {
+geometry_msgs::msg::PoseStamped getFramePoseOfNamedState(RobotState state, std::string pose, std::string frame) {
 	state.setToDefaultValues(state.getRobotModel()->getJointModelGroup("panda_arm"), pose);
 	auto frame_eigen{ state.getFrameTransform(frame) };
-	geometry_msgs::PoseStamped p;
+	geometry_msgs::msg::PoseStamped p;
 	p.header.frame_id = state.getRobotModel()->getModelFrame();
 	p.pose = tf2::toMsg(frame_eigen);
 	return p;
 }
 
 TEST_F(PandaMoveTo, pointTarget) {
-	geometry_msgs::PoseStamped pose{ getFramePoseOfNamedState(scene->getCurrentState(), "ready", "panda_link8") };
+	geometry_msgs::msg::PoseStamped pose{ getFramePoseOfNamedState(scene->getCurrentState(), "ready", "panda_link8") };
 
-	geometry_msgs::PointStamped point;
+	geometry_msgs::msg::PointStamped point;
 	point.header = pose.header;
 	point.point = pose.pose.position;
 	move_to->setGoal(point);
@@ -104,24 +109,24 @@ TEST_F(PandaMoveTo, poseIKFrameLinkTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id) {
-	moveit_msgs::AttachedCollisionObject aco;
+moveit_msgs::msg::AttachedCollisionObject createAttachedObject(const std::string& id) {
+	moveit_msgs::msg::AttachedCollisionObject aco;
 	aco.link_name = "panda_hand";
 	aco.object.header.frame_id = aco.link_name;
 	aco.object.operation = aco.object.ADD;
 	aco.object.id = id;
 	aco.object.primitives.resize(1, [] {
-		shape_msgs::SolidPrimitive p;
+		shape_msgs::msg::SolidPrimitive p;
 		p.type = p.SPHERE;
 		p.dimensions.resize(1);
 		p.dimensions[p.SPHERE_RADIUS] = 0.01;
 		return p;
 	}());
+	aco.object.primitive_poses.resize(1);
 #if MOVEIT_HAS_OBJECT_POSE
 	aco.object.pose.position.z = 0.2;
 	aco.object.pose.orientation.w = 1.0;
 #else
-	aco.object.primitive_poses.resize(1);
 	aco.object.primitive_poses[0].position.z = 0.2;
 	aco.object.primitive_poses[0].orientation.w = 1.0;
 #endif
@@ -129,7 +134,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
 	aco.object.subframe_poses.resize(1, [] {
-		geometry_msgs::Pose p;
+		geometry_msgs::msg::Pose p;
 		p.orientation.w = 1.0;
 		return p;
 	}());
@@ -162,9 +167,7 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "move_to_test");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	rclcpp::init(argc, argv);
 
 	return RUN_ALL_TESTS();
 }

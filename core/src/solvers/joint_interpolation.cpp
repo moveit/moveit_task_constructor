@@ -46,6 +46,8 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
+static const auto LOGGER = rclcpp::get_logger("JointInterpolationPlanner");
+
 JointInterpolationPlanner::JointInterpolationPlanner() {
 	auto& p = properties();
 	p.declare<double>("max_step", 0.1, "max joint step");
@@ -57,7 +59,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const planning_scene::PlanningSceneConstPtr& to,
                                      const moveit::core::JointModelGroup* jmg, double /*timeout*/,
                                      robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& /*path_constraints*/) {
+                                     const moveit_msgs::msg::Constraints& /*path_constraints*/) {
 	const auto& props = properties();
 
 	// Get maximum joint distance
@@ -101,7 +103,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const moveit::core::LinkModel& link, const Eigen::Isometry3d& target_eigen,
                                      const moveit::core::JointModelGroup* jmg, double timeout,
                                      robot_trajectory::RobotTrajectoryPtr& result,
-                                     const moveit_msgs::Constraints& path_constraints) {
+                                     const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto start_time = std::chrono::steady_clock::now();
 
 	auto to{ from->diff() };
@@ -119,7 +121,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	if (!to->getCurrentStateNonConst().setFromIK(jmg, target_eigen, link.getName(), timeout, is_valid)) {
 		// TODO(v4hn): planners need a way to add feedback to failing plans
 		// in case of an invalid solution feedback should include unwanted collisions or violated constraints
-		ROS_WARN_NAMED("JointInterpolationPlanner", "IK failed for pose target");
+		RCLCPP_WARN(LOGGER, "IK failed for pose target");
 		return false;
 	}
 	to->getCurrentStateNonConst().update();

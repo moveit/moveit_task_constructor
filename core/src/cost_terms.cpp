@@ -113,7 +113,7 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
-	std::vector<const robot_model::JointModel*> joint_models;
+	std::vector<const moveit::core::JointModel*> joint_models;
 	joint_models.reserve(joints.size());
 	const auto& first_waypoint = traj->getWayPoint(0);
 	for (auto& joint : joints) {
@@ -196,18 +196,9 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	auto check_distance{ [=](const InterfaceState* state, const moveit::core::RobotState& robot) {
 		collision_detection::DistanceResult result;
 		if (with_world)
-#if MOVEIT_HAS_COLLISION_ENV
 			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);
-#else
-			state->scene()->getCollisionWorld()->distanceRobot(request, result, *state->scene()->getCollisionRobot(),
-			                                                   robot);
-#endif
 		else
-#if MOVEIT_HAS_COLLISION_ENV
 			state->scene()->getCollisionEnv()->distanceSelf(request, result, robot);
-#else
-			state->scene()->getCollisionRobot()->distanceSelf(request, result, robot);
-#endif
 
 		if (result.minimum_distance.distance <= 0) {
 			return result.minimum_distance;

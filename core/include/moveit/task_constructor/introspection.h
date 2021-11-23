@@ -39,10 +39,10 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
-#include <moveit_task_constructor_msgs/TaskDescription.h>
-#include <moveit_task_constructor_msgs/TaskStatistics.h>
-#include <moveit_task_constructor_msgs/Solution.h>
-#include <moveit_task_constructor_msgs/GetSolution.h>
+#include <moveit_task_constructor_msgs/msg/task_description.hpp>
+#include <moveit_task_constructor_msgs/msg/task_statistics.hpp>
+#include <moveit_task_constructor_msgs/msg/solution.hpp>
+#include <moveit_task_constructor_msgs/srv/get_solution.hpp>
 
 #define DESCRIPTION_TOPIC "description"
 #define STATISTICS_TOPIC "statistics"
@@ -72,13 +72,14 @@ public:
 	~Introspection();
 
 	/// fill task description message for publishing the task configuration
-	moveit_task_constructor_msgs::TaskDescription&
-	fillTaskDescription(moveit_task_constructor_msgs::TaskDescription& msg);
+	moveit_task_constructor_msgs::msg::TaskDescription&
+	fillTaskDescription(moveit_task_constructor_msgs::msg::TaskDescription& msg);
 	/// publish detailed task description
 	void publishTaskDescription();
 
 	/// fill task state message for publishing the current task state
-	moveit_task_constructor_msgs::TaskStatistics& fillTaskStatistics(moveit_task_constructor_msgs::TaskStatistics& msg);
+	moveit_task_constructor_msgs::msg::TaskStatistics&
+	fillTaskStatistics(moveit_task_constructor_msgs::msg::TaskStatistics& msg);
 	/// publish the current state of task
 	void publishTaskState();
 
@@ -95,8 +96,8 @@ public:
 	void publishAllSolutions(bool wait = true);
 
 	/// get solution
-	bool getSolution(moveit_task_constructor_msgs::GetSolution::Request& req,
-	                 moveit_task_constructor_msgs::GetSolution::Response& res);
+	bool getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr req,
+	                 const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr res);
 
 	/// retrieve id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage* const s) const;
@@ -105,8 +106,8 @@ public:
 	uint32_t solutionId(const moveit::task_constructor::SolutionBase& s);
 
 private:
-	void fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::StageStatistics& s);
-	void fillSolution(moveit_task_constructor_msgs::Solution& msg, const SolutionBase& s);
+	void fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::msg::StageStatistics& s);
+	void fillSolution(moveit_task_constructor_msgs::msg::Solution& msg, const SolutionBase& s);
 	/// retrieve or set id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage* const s);
 	/// retrieve solution with given id

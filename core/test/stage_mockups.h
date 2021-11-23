@@ -8,7 +8,6 @@
 #include "models.h"
 
 #include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 namespace moveit {
 namespace task_constructor {

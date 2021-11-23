@@ -7,7 +7,7 @@
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <gtest/gtest.h>
 
@@ -16,7 +16,7 @@ using namespace moveit::task_constructor;
 void spawnObject() {
 	moveit::planning_interface::PlanningSceneInterface psi;
 
-	moveit_msgs::CollisionObject o;
+	moveit_msgs::msg::CollisionObject o;
 	o.id = "object";
 	o.header.frame_id = "table_top";
 	o.primitive_poses.resize(1);
@@ -25,7 +25,7 @@ void spawnObject() {
 	o.primitive_poses[0].position.z = 0.12;
 	o.primitive_poses[0].orientation.w = 1.0;
 	o.primitives.resize(1);
-	o.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
+	o.primitives[0].type = shape_msgs::msg::SolidPrimitive::CYLINDER;
 	o.primitives[0].dimensions.resize(2);
 	o.primitives[0].dimensions[0] = 0.23;
 	o.primitives[0].dimensions[1] = 0.03;
@@ -40,8 +40,9 @@ TEST(UR5, pick) {
 	initial_stage = initial.get();
 	t.add(std::move(initial));
 
+	auto node = rclcpp::Node::make_shared("ur5");
 	// planner used for connect
-	auto pipeline = std::make_shared<solvers::PipelinePlanner>();
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>(node);
 	pipeline->setPlannerId("RRTConnectkConfigDefault");
 	// connect to pick
 	stages::Connect::GroupPlannerVector planners = { { "arm", pipeline }, { "gripper", pipeline } };
@@ -63,12 +64,12 @@ TEST(UR5, pick) {
 	auto pick = std::make_unique<stages::Pick>(std::move(grasp));
 	pick->setProperty("eef", std::string("gripper"));
 	pick->setProperty("object", std::string("object"));
-	geometry_msgs::TwistStamped approach;
+	geometry_msgs::msg::TwistStamped approach;
 	approach.header.frame_id = "s_model_tool0";
 	approach.twist.linear.x = 1.0;
 	pick->setApproachMotion(approach, 0.03, 0.1);
 
-	geometry_msgs::TwistStamped lift;
+	geometry_msgs::msg::TwistStamped lift;
 	lift.header.frame_id = "world";
 	lift.twist.linear.z = 1.0;
 	pick->setLiftMotion(lift, 0.03, 0.05);
@@ -89,12 +90,10 @@ TEST(UR5, pick) {
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
-	ros::init(argc, argv, "ur5");
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	rclcpp::init(argc, argv);
 
 	// wait some time for move_group to come up
-	ros::WallDuration(5.0).sleep();
+	rclcpp::sleep_for(std::chrono::seconds(5));
 
 	return RUN_ALL_TESTS();
 }
