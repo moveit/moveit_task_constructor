@@ -1,7 +1,7 @@
 #pragma once
 
-#include <visualization_msgs/Marker.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/msg/marker.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <Eigen/Geometry>
 
 namespace urdf {
@@ -28,60 +28,63 @@ enum Color
 	WHITE = 13,
 	YELLOW = 14,
 };
-std_msgs::ColorRGBA getColor(Color color, double alpha = 1.0);
-std_msgs::ColorRGBA& setColor(std_msgs::ColorRGBA& color, Color color_id, double alpha = 1.0);
+std_msgs::msg::ColorRGBA getColor(Color color, double alpha = 1.0);
+std_msgs::msg::ColorRGBA& setColor(std_msgs::msg::ColorRGBA& color, Color color_id, double alpha = 1.0);
 
-std_msgs::ColorRGBA& interpolate(std_msgs::ColorRGBA& color, const std_msgs::ColorRGBA& other, double fraction);
-std_msgs::ColorRGBA& brighten(std_msgs::ColorRGBA& color, double fraction);
-std_msgs::ColorRGBA& darken(std_msgs::ColorRGBA& color, double fraction);
+std_msgs::msg::ColorRGBA& interpolate(std_msgs::msg::ColorRGBA& color, const std_msgs::msg::ColorRGBA& other,
+                                      double fraction);
+std_msgs::msg::ColorRGBA& brighten(std_msgs::msg::ColorRGBA& color, double fraction);
+std_msgs::msg::ColorRGBA& darken(std_msgs::msg::ColorRGBA& color, double fraction);
 
-geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second);
-geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second);
+geometry_msgs::msg::Pose composePoses(const geometry_msgs::msg::Pose& first, const Eigen::Isometry3d& second);
+geometry_msgs::msg::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::msg::Pose& second);
 
 /** All routines only touch the geometry part of the marker
  *  pose, color, namespace, id, etc need to be set externally
  */
 
 /// create planes with corners (-1,-1) - (+1,+1)
-visualization_msgs::Marker& makeXYPlane(visualization_msgs::Marker& m);
-visualization_msgs::Marker& makeXZPlane(visualization_msgs::Marker& m);
-visualization_msgs::Marker& makeYZPlane(visualization_msgs::Marker& m);
+visualization_msgs::msg::Marker& makeXYPlane(visualization_msgs::msg::Marker& m);
+visualization_msgs::msg::Marker& makeXZPlane(visualization_msgs::msg::Marker& m);
+visualization_msgs::msg::Marker& makeYZPlane(visualization_msgs::msg::Marker& m);
 
 /// create a cone of given angle along the x-axis
-visualization_msgs::Marker& makeCone(visualization_msgs::Marker& m, double angle);
+visualization_msgs::msg::Marker& makeCone(visualization_msgs::msg::Marker& m, double angle);
 
-visualization_msgs::Marker& makeSphere(visualization_msgs::Marker& m, double radius = 1.0);
+visualization_msgs::msg::Marker& makeSphere(visualization_msgs::msg::Marker& m, double radius = 1.0);
 
 /// create a cylinder along z-axis
-visualization_msgs::Marker& makeCylinder(visualization_msgs::Marker& m, double diameter, double height);
+visualization_msgs::msg::Marker& makeCylinder(visualization_msgs::msg::Marker& m, double diameter, double height);
 
 /// create a box with given dimensions along x, y, z axes
-visualization_msgs::Marker& makeBox(visualization_msgs::Marker& m, double x, double y, double z);
+visualization_msgs::msg::Marker& makeBox(visualization_msgs::msg::Marker& m, double x, double y, double z);
 
 /// create a mesh marker
-visualization_msgs::Marker& makeMesh(visualization_msgs::Marker& m, const std::string& filename, double sx = 1.0,
-                                     double sy = 1.0, double sz = 1.0);
-inline visualization_msgs::Marker& makeMesh(visualization_msgs::Marker& m, const std::string& filename, double scale) {
+visualization_msgs::msg::Marker& makeMesh(visualization_msgs::msg::Marker& m, const std::string& filename,
+                                          double sx = 1.0, double sy = 1.0, double sz = 1.0);
+inline visualization_msgs::msg::Marker& makeMesh(visualization_msgs::msg::Marker& m, const std::string& filename,
+                                                 double scale) {
 	return makeMesh(m, filename, scale, scale, scale);
 }
 
 /// create an arrow with a start and end point
-visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point,
-                                      const Eigen::Vector3d& end_point, double diameter, double head_length = 0.0);
+visualization_msgs::msg::Marker& makeArrow(visualization_msgs::msg::Marker& m, const Eigen::Vector3d& start_point,
+                                           const Eigen::Vector3d& end_point, double diameter, double head_length = 0.0);
 
 /// create an arrow along x-axis
-visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, double scale = 1.0, bool tip_at_origin = false);
+visualization_msgs::msg::Marker& makeArrow(visualization_msgs::msg::Marker& m, double scale = 1.0,
+                                           bool tip_at_origin = false);
 
 /// create text marker
-visualization_msgs::Marker& makeText(visualization_msgs::Marker& m, const std::string& text);
+visualization_msgs::msg::Marker& makeText(visualization_msgs::msg::Marker& m, const std::string& text);
 
 /// create marker from urdf::Geom
-visualization_msgs::Marker& makeFromGeometry(visualization_msgs::Marker& m, const urdf::Geometry& geom);
+visualization_msgs::msg::Marker& makeFromGeometry(visualization_msgs::msg::Marker& m, const urdf::Geometry& geom);
 
 template <typename T>
-void appendFrame(T& container, const geometry_msgs::PoseStamped& pose, double scale = 1.0,
+void appendFrame(T& container, const geometry_msgs::msg::PoseStamped& pose, double scale = 1.0,
                  const std::string& ns = "frame", double diameter_fraction = 0.1) {
-	visualization_msgs::Marker m;
+	visualization_msgs::msg::Marker m;
 	makeCylinder(m, scale * diameter_fraction, scale);
 	m.ns = ns;
 	m.header = pose.header;
