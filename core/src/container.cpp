@@ -59,6 +59,33 @@ ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string&
   , pending_backward_(new Interface)
   , pending_forward_(new Interface) {}
 
+ContainerBasePrivate& ContainerBasePrivate::operator=(ContainerBasePrivate&& other) {
+	assert(internal_external_.empty() && other.internal_external_.empty());
+
+	// move StagePrivate members
+	this->StagePrivate::operator=(std::move(other));
+
+	// swapping of container members needed to maintain valid pending_* interfaces
+	// and children (e.g. for TaskPrivate)
+	required_interface_ = other.required_interface_;
+	std::swap(pending_backward_, other.pending_backward_);
+	std::swap(pending_forward_, other.pending_forward_);
+	std::swap(children_, other.children_);
+
+	// redirect all children's parent pointers to the new parent
+	auto reparent_children = [](ContainerBasePrivate& self) {
+		for (auto it = self.children_.begin(), end = self.children_.end(); it != end; ++it) {
+			auto cimpl = (*it)->pimpl();
+			cimpl->unparent();
+			cimpl->setParent(static_cast<ContainerBase*>(self.me_));
+			cimpl->setParentPosition(it);
+		}
+	};
+	reparent_children(*this);
+	reparent_children(other);
+	return *this;
+}
+
 ContainerBasePrivate::const_iterator ContainerBasePrivate::childByIndex(int index, bool for_insert) const {
 	if (!for_insert && index < 0)
 		--index;
@@ -681,8 +708,8 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 			child_impl->resolveInterface(expected);
 			validateInterfaces(*child_impl, expected, first);
 			// initialize push connections of children according to their demands
-			setChildsPushForwardInterface(child_impl);
 			setChildsPushBackwardInterface(child_impl);
+			setChildsPushForwardInterface(child_impl);
 			first = false;
 		} catch (InitStageException& e) {
 			exceptions.append(e);

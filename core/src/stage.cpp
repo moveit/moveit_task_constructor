@@ -106,6 +106,33 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , parent_{ nullptr }
   , introspection_{ nullptr } {}
 
+StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
+	assert(typeid(*this) == typeid(other));
+
+	assert(states_.empty() && other.states_.empty());
+	assert((!starts_ || starts_->empty()) && (!other.starts_ || other.starts_->empty()));
+	assert((!ends_ || ends_->empty()) && (!other.ends_ || other.ends_->empty()));
+	assert(solutions_.empty() && other.solutions_.empty());
+	assert(failures_.empty() && other.failures_.empty());
+
+	// me_ must not be changed!
+	name_ = std::move(other.name_);
+	properties_ = std::move(other.properties_);
+	cost_term_ = std::move(other.cost_term_);
+	solution_cbs_ = std::move(other.solution_cbs_);
+
+	starts_ = std::move(other.starts_);
+	ends_ = std::move(other.ends_);
+	prev_ends_ = std::move(other.prev_ends_);
+	next_starts_ = std::move(other.next_starts_);
+
+	parent_ = std::move(other.parent_);
+	it_ = std::move(other.it_);
+	other.unparent();
+
+	return *this;
+}
+
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
 	if (starts())

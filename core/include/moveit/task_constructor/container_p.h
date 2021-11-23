@@ -76,7 +76,6 @@ namespace task_constructor {
 class ContainerBasePrivate : public StagePrivate
 {
 	friend class ContainerBase;
-	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	using container_type = StagePrivate::container_type;
@@ -135,6 +134,7 @@ public:
 
 protected:
 	ContainerBasePrivate(ContainerBase* me, const std::string& name);
+	ContainerBasePrivate& operator=(ContainerBasePrivate&& other);
 
 	// Set child's push interfaces: allow pushing if child requires it.
 	inline void setChildsPushBackwardInterface(StagePrivate* child) {

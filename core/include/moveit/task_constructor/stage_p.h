@@ -61,7 +61,6 @@ class StagePrivate
 {
 	friend class Stage;
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
-	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	/// container type used to store children
@@ -165,6 +164,8 @@ public:
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
 protected:
+	StagePrivate& operator=(StagePrivate&& other);
+
 	// associated/owning Stage instance
 	Stage* me_;
 
