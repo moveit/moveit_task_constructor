@@ -298,9 +298,10 @@ private:
 };
 PIMPL_FUNCTIONS(MonitoringGenerator)
 
-class ConnectingPrivate : public ComputeBasePrivate
+/// Provide functionality shared by CONNECT-like stages, i.e. maintaining a sorted list of pending state pairs
+class ConnectingShared
 {
-	friend class Connecting;
+	const Interface *starts, *ends;
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
@@ -325,12 +326,9 @@ public:
 			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
 		}
 	};
-
-	inline ConnectingPrivate(Connecting* me, const std::string& name);
-
-	InterfaceFlags requiredInterface() const override;
-	bool canCompute() const override;
-	void compute() override;
+	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
+	template <Interface::Direction other>
+	static inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
 
 	// Check whether there are pending feasible states that could connect to source
 	template <Interface::Direction dir>
@@ -338,17 +336,34 @@ public:
 
 	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
 
-private:
-	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
-	template <Interface::Direction other>
-	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
+	// ordered list of pending state pairs
+	using container_type = ordered<StatePair>;
+	container_type pending;
 
+	void initInterfaces(const InterfacePtr& s, const InterfacePtr& e) {
+		starts = s.get();
+		ends = e.get();
+	}
+};
+
+class ConnectingPrivate : protected ConnectingShared, public ComputeBasePrivate
+{
+	friend class Connecting;
+
+public:
+	inline ConnectingPrivate(Connecting* me, const std::string& name);
+
+	InterfaceFlags requiredInterface() const override;
+	bool canCompute() const override;
+	void compute() override;
+
+	using ConnectingShared::hasPendingOpposites;
+	using ConnectingShared::printPendingPairs;
+
+private:
 	// get informed when new start or end state becomes available
 	template <Interface::Direction other>
 	void newState(Interface::iterator it, bool updated);
-
-	// ordered list of pending state pairs
-	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
 }  // namespace task_constructor

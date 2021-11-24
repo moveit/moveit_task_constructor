@@ -715,10 +715,11 @@ void MonitoringGeneratorPrivate::solutionCB(const SolutionBase& s) {
 }
 
 ConnectingPrivate::ConnectingPrivate(Connecting* me, const std::string& name) : ComputeBasePrivate(me, name) {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1,
-	                                      std::placeholders::_2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1,
-	                                    std::placeholders::_2)));
+	starts_ = std::make_shared<Interface>(
+	    [this](Interface::iterator it, bool updated) { newState<Interface::BACKWARD>(it, updated); });
+	ends_ = std::make_shared<Interface>(
+	    [this](Interface::iterator it, bool updated) { newState<Interface::FORWARD>(it, updated); });
+	ConnectingShared::initInterfaces(starts_, ends_);
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
@@ -726,13 +727,13 @@ InterfaceFlags ConnectingPrivate::requiredInterface() const {
 }
 
 template <>
-ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::BACKWARD>(Interface::const_iterator first,
-                                                                               Interface::const_iterator second) {
+ConnectingShared::StatePair ConnectingShared::make_pair<Interface::BACKWARD>(Interface::const_iterator first,
+                                                                             Interface::const_iterator second) {
 	return StatePair(first, second);
 }
 template <>
-ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(Interface::const_iterator first,
-                                                                              Interface::const_iterator second) {
+ConnectingShared::StatePair ConnectingShared::make_pair<Interface::FORWARD>(Interface::const_iterator first,
+                                                                            Interface::const_iterator second) {
 	return StatePair(second, first);
 }
 
@@ -767,8 +768,8 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 // Check whether there are pending feasible states that could connect to source.
 // If not, we exhausted all solution candidates for source and thus should mark it as failure.
 template <Interface::Direction dir>
-inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
-	for (const auto& candidate : this->pending) {
+inline bool ConnectingShared::hasPendingOpposites(const InterfaceState* source) const {
+	for (const auto& candidate : pending) {
 		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
 		const auto src = std::get<dir>(candidate);
 		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
@@ -784,8 +785,8 @@ inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source)
 	return false;
 }
 // explicitly instantiate templates for both directions
-template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
-template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+template bool ConnectingShared::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
+template bool ConnectingShared::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
 
 bool ConnectingPrivate::canCompute() const {
 	// Do we still have feasible pending state pairs?
@@ -801,7 +802,7 @@ void ConnectingPrivate::compute() {
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
-std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+std::ostream& ConnectingShared::printPendingPairs(std::ostream& os) const {
 	static const char* red = "\033[31m";
 	static const char* reset = "\033[m";
 	for (const auto& candidate : pending) {
@@ -809,11 +810,11 @@ std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
 			os << " " << red;
 		// find indeces of InterfaceState pointers in start/end Interfaces
 		unsigned int first = 0, second = 0;
-		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
+		std::find_if(starts->begin(), starts->end(), [&](const InterfaceState* s) {
 			++first;
 			return &*candidate.first == s;
 		});
-		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
+		std::find_if(ends->begin(), ends->end(), [&](const InterfaceState* s) {
 			++second;
 			return &*candidate.second == s;
 		});

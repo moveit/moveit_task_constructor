@@ -74,7 +74,7 @@ TEST(Interface, update) {
 
 using PrioPair = std::pair<Prio, Prio>;
 inline bool operator<(const PrioPair& lhs, const PrioPair& rhs) {
-	return ConnectingPrivate::StatePair::less(lhs.first, lhs.second, rhs.first, rhs.second);
+	return ConnectingShared::StatePair::less(lhs.first, lhs.second, rhs.first, rhs.second);
 }
 PrioPair pair(Prio&& p1, Prio&& p2) {
 	return std::make_pair(std::move(p1), std::move(p2));
