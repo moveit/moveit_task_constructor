@@ -338,7 +338,7 @@ public:
 
 	// ordered list of pending state pairs
 	using container_type = ordered<StatePair>;
-	container_type pending;
+	container_type pending_;
 
 	void initInterfaces(const InterfacePtr& s, const InterfacePtr& e) {
 		starts = s.get();

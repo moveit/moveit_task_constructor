@@ -742,10 +742,10 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 	if (updated) {  // many pairs might be affected: resort
 		if (it->priority().pruned())
 			// remove all pending pairs involving this state
-			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
+			pending_.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
 		else
 			// TODO(v4hn): If a state becomes reenabled, this skips all previously removed pairs, right?
-			pending.sort();
+			pending_.sort();
 	} else {  // new state: insert all pairs with other interface
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface(other);
@@ -756,7 +756,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 				if (oit->priority().status() == InterfaceState::Status::FAILED)
 					oit->owner()->updatePriority(&*oit,
 					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
-				pending.insert(make_pair<other>(it, oit));
+				pending_.insert(make_pair<other>(it, oit));
 			}
 		}
 	}
@@ -769,7 +769,7 @@ void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
 // If not, we exhausted all solution candidates for source and thus should mark it as failure.
 template <Interface::Direction dir>
 inline bool ConnectingShared::hasPendingOpposites(const InterfaceState* source) const {
-	for (const auto& candidate : pending) {
+	for (const auto& candidate : pending_) {
 		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
 		const auto src = std::get<dir>(candidate);
 		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
@@ -790,12 +790,12 @@ template bool ConnectingShared::hasPendingOpposites<Interface::BACKWARD>(const I
 
 bool ConnectingPrivate::canCompute() const {
 	// Do we still have feasible pending state pairs?
-	return !pending.empty() && pending.front().first->priority().enabled() &&
-	       pending.front().second->priority().enabled();
+	return !pending_.empty() && pending_.front().first->priority().enabled() &&
+	       pending_.front().second->priority().enabled();
 }
 
 void ConnectingPrivate::compute() {
-	const StatePair& top = pending.pop();
+	const StatePair& top = pending_.pop();
 	const InterfaceState& from = *top.first;
 	const InterfaceState& to = *top.second;
 	assert(from.priority().enabled() && to.priority().enabled());
@@ -805,7 +805,7 @@ void ConnectingPrivate::compute() {
 std::ostream& ConnectingShared::printPendingPairs(std::ostream& os) const {
 	static const char* red = "\033[31m";
 	static const char* reset = "\033[m";
-	for (const auto& candidate : pending) {
+	for (const auto& candidate : pending_) {
 		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
 			os << " " << red;
 		// find indeces of InterfaceState pointers in start/end Interfaces
@@ -827,7 +827,7 @@ std::ostream& ConnectingShared::printPendingPairs(std::ostream& os) const {
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}
 
 void Connecting::reset() {
-	pimpl()->pending.clear();
+	pimpl()->pending_.clear();
 	ComputeBase::reset();
 }
 
