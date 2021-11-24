@@ -190,6 +190,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 
 	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
 	if (parent() && trajectories<dir>(*s).empty()) {
+		// TODO: This is coded with SerialContainer in mind. Not sure, it works for ParallelContainers
 		auto external{ internalToExternalMap().find(s) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
@@ -888,7 +889,7 @@ inline void Fallbacks::replaceImpl() {
 			impl = new FallbacksPrivatePropagator(std::move(*impl));
 			break;
 		case CONNECT:
-			throw std::runtime_error("Not yet implemented");
+			impl = new FallbacksPrivateConnect(std::move(*impl));
 			break;
 	}
 	delete pimpl_;
@@ -922,6 +923,11 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 	// Thus pruning must only occur once the last child is exhausted (inside computePropagate)
 }
 
+void FallbacksPrivate::nextChild() {
+	if (std::next(current_) != children().end())
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_)->name() << "' failed, trying next one.");
+	++current_;  // advance to next child
+}
 
 FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
 	: FallbacksPrivate(std::move(old)) { reset(); }
@@ -935,11 +941,8 @@ bool FallbacksPrivateGenerator::nextJob() {
 		return false;
 	}
 
-	do {
-		if (std::next(current_) != children().end())
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_)->name() << "' failed, trying next one.");
-		++current_;  // advance to next child
-	} while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	do { nextChild(); }
+	while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
 
 	// return value shall indicate current_->canCompute()
 	return current_ != children().end();
@@ -973,11 +976,9 @@ bool FallbacksPrivatePropagator::nextJob() {
 	const auto jobs = pullInterface(dir_);
 
 	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
-		if (!job_has_solutions_) { // job didn't produce solutions -> feed to next child
-			if (std::next(current_) != children().end())
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Propagator '" << (*current_)->name() << "' failed, trying next one.");
-			++current_;  // advance to next child
-		} else
+		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
+			nextChild();
+		else
 			current_ = children().end();  // indicate that this job is exhausted on all children
 	}
 	job_has_solutions_ = false;
@@ -1003,6 +1004,71 @@ bool FallbacksPrivatePropagator::nextJob() {
 	return true;
 }
 
+FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
+   : FallbacksPrivate(std::move(old)) {
+	starts_ = std::make_shared<Interface>();
+	ends_ = std::make_shared<Interface>();
+	ConnectingShared::initInterfaces(starts_, ends_);
+	FallbacksPrivateConnect::reset();
+}
+
+void FallbacksPrivateConnect::reset() {
+	FallbacksPrivate::reset();
+	job_ = pending_.end();  // indicate fresh start
+}
+
+template <Interface::Direction dir>
+void FallbacksPrivateConnect::pushState(Interface::iterator external, InterfaceState::Status status) {
+#if 0 // TODO: Map external state to internal state of current_ child
+	auto internals = externalToInternalMap().equal_range(&*external);
+	auto belongs_to_current = [this](const auto& ext_int_pair) { return ext_int_pair.second->owner() == *current_; };
+	auto internal = std::find_if(internals.first, internals.second, belongs_to_current);
+	if (internal == internals.second)  // external state wasn't yet pushed to current_ child
+		copyState<dir>(external, pullInterface(dir), false);  // do so now
+	else  // matching internal state already exists: update status
+		setStatus<dir>(internal, status);
+#else
+	copyState<dir>(external, pullInterface(dir), false);
+#endif
+}
+
+/* CONNECT-like stages are tricky, because we need to consider each pair of (start, end) states and
+   feed them one by one to all children.
+	TODO: To activate only a single pair at a time, we need to disable currently active (start, end) states. */
+bool FallbacksPrivateConnect::nextJob() {
+	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	auto& jobs = pending_;
+
+	if (job_ != jobs.end()) { // current job exists, but is exhausted on current child
+		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
+			nextChild();
+		else
+			current_ = children().end();  // indicate that this job is exhausted on all children
+	}
+	job_has_solutions_ = false;
+
+	if (current_ == children().end()) {  // all children processed the job_
+		if (job_ != jobs.end()) {
+			jobs.erase(job_);  // we don't need the job in our interface list anymore
+			job_ = jobs.end();  // indicate that we need to fetch a new job
+		}
+		current_ = children().begin();  // start next job with first child again
+	}
+
+	// pick next job if needed and possible
+	if (job_ == jobs.end()) {  // need to pick next job
+		if (!jobs.empty() && jobs.front().first->priority().enabled() &&
+	       jobs.front().second->priority().enabled())
+ 			job_ = jobs.begin();
+		else
+			return false; // no more jobs available
+	}
+
+	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
+	pushState<Interface::Direction::FORWARD>(job_->first, InterfaceState::Status::ENABLED);
+	pushState<Interface::Direction::BACKWARD>(job_->second, InterfaceState::Status::ENABLED);
+	return true;
+}
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 

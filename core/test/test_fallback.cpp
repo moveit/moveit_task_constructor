@@ -161,7 +161,7 @@ TEST_F(FallbacksFixturePropagate, activeChildReset) {
 
 using FallbacksFixtureConnect = TaskTestBase;
 
-TEST_F(FallbacksFixtureConnect, DISABLED_connectStageInsideFallbacks) {
+TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");

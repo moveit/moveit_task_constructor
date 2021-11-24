@@ -243,20 +243,21 @@ PIMPL_FUNCTIONS(ParallelContainerBase)
 
 /* The Fallbacks container needs to implement different behaviour based on its interface.
  * Thus, we implement 3 different classes: for Generator, Propagator, and Connect-like interfaces.
- * FallbacksPrivate is the common base class for all of them, defining the common API to be used
- * by the Fallbacks container.
+ * FallbacksPrivate is the common base class for all of them, defining the common API
+ * to be used by the Fallbacks container.
  * The actual interface-specific class is instantiated in initializeExternalInterfaces()
  * resp. Fallbacks::replaceImpl() when the actual interface is known.
- * The key difference between the 3 variants is how the advance to the next job. */
+ * The key difference between the 3 variants is how they advance to the next job. */
 class FallbacksPrivate : public ParallelContainerBasePrivate
 {
 public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
 	FallbacksPrivate(FallbacksPrivate&& other);
 
-	// method overrides common to 3 variants
+	// methods common to all variants
 	void initializeExternalInterfaces() final;
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+	void nextChild();  /// << Advance to next child
 
 	// virtual method specific to each variant
 	/// Advance to the next job, assuming that the current child is exhausted on the current job.
@@ -285,6 +286,20 @@ struct FallbacksPrivatePropagator : FallbacksPrivate
 
 	Interface::Direction dir_;  // propagation direction
 	Interface::iterator job_;  // pointer to currently processed external state
+};
+
+/// Fallbacks implementation for CONNECT interface
+struct FallbacksPrivateConnect : ConnectingShared, FallbacksPrivate
+{
+	FallbacksPrivateConnect(FallbacksPrivate&& old);
+	bool nextJob() override;
+	void reset() override;
+
+	template <Interface::Direction dir>
+	void pushState(Interface::iterator external, InterfaceState::Status status);
+
+	// pointer to currently processed pair of external states
+	ConnectingShared::container_type::iterator job_;
 };
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate
