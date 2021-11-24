@@ -261,8 +261,11 @@ public:
 	// virtual method specific to each variant
 	/// Advance to the next job, assuming that the current child is exhausted on the current job.
 	virtual bool nextJob() { return false; }
+	/// Reset data structures
+	virtual void reset();
 
 	container_type::const_iterator current_;  // currently active child generator
+	bool job_has_solutions_;  // flag indicating whether the current job generated solutions
 };
 PIMPL_FUNCTIONS(Fallbacks)
 
@@ -278,7 +281,7 @@ struct FallbacksPrivatePropagator : FallbacksPrivate
 {
 	FallbacksPrivatePropagator(FallbacksPrivate&& old);
 	bool nextJob() override;
-	bool jobHasSolutions() const;
+	void reset() override;
 
 	Interface::Direction dir_;  // propagation direction
 	Interface::iterator job_;  // pointer to currently processed external state

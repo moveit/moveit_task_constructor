@@ -849,18 +849,18 @@ Fallbacks::Fallbacks(FallbacksPrivate* impl) : ParallelContainerBase(impl) {}
 
 void Fallbacks::reset() {
 	ParallelContainerBase::reset();
+	pimpl()->reset();
 }
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ParallelContainerBase::init(robot_model);
-	auto impl = pimpl();
-	impl->current_ = impl->children().begin();
+	pimpl()->reset();
 }
 
 bool Fallbacks::canCompute() const {
 	auto impl = const_cast<FallbacksPrivate*>(pimpl());
 
-	while(impl->current_ != impl->children().end() && // not completely exhaused
+	while(impl->current_ != impl->children().end() &&  // not completely exhausted
 	      !(*impl->current_)->pimpl()->canCompute())  // but current child cannot compute
 		return impl->nextJob();  // advance to next job
 
@@ -873,6 +873,7 @@ void Fallbacks::compute() {
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
+	pimpl()->job_has_solutions_ = true;
 	liftSolution(s);
 }
 
@@ -901,8 +902,11 @@ FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
 : ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
 	// move contents of other
 	this->ParallelContainerBasePrivate::operator=(std::move(other));
-	// (re)initialize
+}
+
+void FallbacksPrivate::reset() {
 	current_ = children().begin();
+	job_has_solutions_ = false;
 }
 
 void FallbacksPrivate::initializeExternalInterfaces() {
@@ -920,13 +924,13 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 
 
 FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
-	: FallbacksPrivate(std::move(old)) {}
+	: FallbacksPrivate(std::move(old)) { reset(); }
 
 bool FallbacksPrivateGenerator::nextJob() {
 	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
 
 	// don't advance to next child when we already produced solutions
-	if (!solutions_.empty()) {
+	if (job_has_solutions_) {
 		current_ = children().end();  // indicate that we are exhausted
 		return false;
 	}
@@ -956,28 +960,27 @@ FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
 	default:
 		assert(false);
 	}
-	job_ = pullInterface(dir_)->end();  // indicate fresh start
+	FallbacksPrivatePropagator::reset();
 }
 
-bool FallbacksPrivatePropagator::jobHasSolutions() const {
-	const auto& trajectories { dir_ == Interface::FORWARD ? job_->outgoingTrajectories()
-			                                                : job_->incomingTrajectories() };
-		return std::find_if(trajectories.cbegin(), trajectories.cend(),
-			                    [](const auto& t){ return !t->isFailure();}) != trajectories.cend();
-};
+void FallbacksPrivatePropagator::reset() {
+	FallbacksPrivate::reset();
+	job_ = pullInterface(dir_)->end();  // indicate fresh start
+}
 
 bool FallbacksPrivatePropagator::nextJob() {
 	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
 	const auto jobs = pullInterface(dir_);
 
 	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
-		if (!jobHasSolutions()) { // job didn't produce solutions -> feed to next child
+		if (!job_has_solutions_) { // job didn't produce solutions -> feed to next child
 			if (std::next(current_) != children().end())
 				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Propagator '" << (*current_)->name() << "' failed, trying next one.");
 			++current_;  // advance to next child
 		} else
 			current_ = children().end();  // indicate that this job is exhausted on all children
 	}
+	job_has_solutions_ = false;
 
 	if (current_ == children().end()) {  // all children processed the job_
 		if (job_ != jobs->end()) {
