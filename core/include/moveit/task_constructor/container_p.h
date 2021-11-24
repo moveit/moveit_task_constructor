@@ -246,21 +246,23 @@ PIMPL_FUNCTIONS(ParallelContainerBase)
  * FallbacksPrivate is the common base class for all of them, defining the common API to be used
  * by the Fallbacks container.
  * The actual interface-specific class is instantiated in initializeExternalInterfaces()
- * resp. Fallbacks::replaceImpl() when the actual interface is known. */
+ * resp. Fallbacks::replaceImpl() when the actual interface is known.
+ * The key difference between the 3 variants is how the advance to the next job. */
 class FallbacksPrivate : public ParallelContainerBasePrivate
 {
 public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
 	FallbacksPrivate(FallbacksPrivate&& other);
 
-	// shared method overrides
+	// method overrides common to 3 variants
 	void initializeExternalInterfaces() final;
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
 
-	// interface-specific methods
-	virtual void _init(){};
-	virtual bool _canCompute() const { return false; };
-	virtual void _compute(){};
+	// virtual method specific to each variant
+	/// Advance to the next job, assuming that the current child is exhausted on the current job.
+	virtual bool nextJob() { return false; }
+
+	container_type::const_iterator current_;  // currently active child generator
 };
 PIMPL_FUNCTIONS(Fallbacks)
 
@@ -268,40 +270,18 @@ PIMPL_FUNCTIONS(Fallbacks)
 struct FallbacksPrivateGenerator : FallbacksPrivate
 {
 	FallbacksPrivateGenerator(FallbacksPrivate&& old);
-	void _init() override { current_ = children().begin(); }
-	bool _canCompute() const override;
-	void _compute() override;
-
-	mutable container_type::const_iterator current_;  // currently active child generator
+	bool nextJob() override;
 };
 
 /// Fallbacks implementation for FORWARD or BACKWARD interface
 struct FallbacksPrivatePropagator : FallbacksPrivate
 {
 	FallbacksPrivatePropagator(FallbacksPrivate&& old);
-	void _init() override { current_ = pending_.end(); }
-	bool _canCompute() const override;
-	void _compute() override;
+	bool nextJob() override;
+	bool jobHasSolutions() const;
 
-	// interface notify() callback
-	void onNewExternalState(Interface::iterator external, bool updated);
-
-	// print pending states for debugging
-	void printPending(const char* comment = "pending: ") const;
-
-	struct Job
-	{
-		Job() = default;
-		Job(Interface::iterator state, container_type::const_iterator child) : external_state(state), stage(child) {}
-
-		Interface::iterator external_state;
-		container_type::const_iterator stage;
-
-		inline bool operator<(const Job& other) const { return *external_state < *other.external_state; }
-	};
-	Interface::Direction dir_;
-	ordered<Job> pending_;  // pending external states to process
-	ordered<Job>::iterator current_;  // currently active job
+	Interface::Direction dir_;  // propagation direction
+	Interface::iterator job_;  // pointer to currently processed external state
 };
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate

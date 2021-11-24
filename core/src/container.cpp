@@ -853,15 +853,23 @@ void Fallbacks::reset() {
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ParallelContainerBase::init(robot_model);
-	pimpl()->_init();
+	auto impl = pimpl();
+	impl->current_ = impl->children().begin();
 }
 
 bool Fallbacks::canCompute() const {
-	return pimpl()->_canCompute();
+	auto impl = const_cast<FallbacksPrivate*>(pimpl());
+
+	while(impl->current_ != impl->children().end() && // not completely exhaused
+	      !(*impl->current_)->pimpl()->canCompute())  // but current child cannot compute
+		return impl->nextJob();  // advance to next job
+
+	// return value: current child is well defined and thus can compute?
+	return impl->current_ != impl->children().end();
 }
 
 void Fallbacks::compute() {
-	pimpl()->_compute();
+	(*pimpl()->current_)->pimpl()->runCompute();
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
@@ -893,6 +901,8 @@ FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
 : ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
 	// move contents of other
 	this->ParallelContainerBasePrivate::operator=(std::move(other));
+	// (re)initialize
+	current_ = children().begin();
 }
 
 void FallbacksPrivate::initializeExternalInterfaces() {
@@ -910,143 +920,84 @@ void FallbacksPrivate::onNewFailure(const Stage& /*child*/, const InterfaceState
 
 
 FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
-   : FallbacksPrivate(std::move(old)) {
-	FallbacksPrivateGenerator::_init();
-}
+	: FallbacksPrivate(std::move(old)) {}
 
-bool FallbacksPrivateGenerator::_canCompute() const {
-	// current_ is fixed if it produced solutions before
-	if (!solutions_.empty())
-		return (*current_)->pimpl()->canCompute();
-	else {
-		// move to first generator that can run
-		while(current_ != children().end() && !(*current_)->pimpl()->canCompute()) {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_)->name() << "' can't compute, trying next one.");
-			++current_;
-		}
-		return current_ != children().end();
+bool FallbacksPrivateGenerator::nextJob() {
+	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
+
+	// don't advance to next child when we already produced solutions
+	if (!solutions_.empty()) {
+		current_ = children().end();  // indicate that we are exhausted
+		return false;
 	}
-}
 
-void FallbacksPrivateGenerator::_compute() {
-	assert(current_ != children().end());
-	(*current_)->pimpl()->runCompute();
+	do {
+		if (std::next(current_) != children().end())
+			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_)->name() << "' failed, trying next one.");
+		++current_;  // advance to next child
+	} while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
+
+	// return value shall indicate current_->canCompute()
+	return current_ != children().end();
 }
 
 
 FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
    : FallbacksPrivate(std::move(old)) {
 	switch (requiredInterface()) {
-		case PROPAGATE_FORWARDS:
-			dir_ = Interface::FORWARD;
-			starts().reset(new Interface([this](Interface::iterator external, bool updated) {
-			                  this->onNewExternalState(external, updated);
-			               }));
-			break;
-		case PROPAGATE_BACKWARDS:
-			dir_ = Interface::BACKWARD;
-			ends().reset(new Interface([this](Interface::iterator external, bool updated) {
-			                this->onNewExternalState(external, updated);
-			            }));
-			break;
-		default:
-			assert(false);
+	case PROPAGATE_FORWARDS:
+		dir_ = Interface::FORWARD;
+		starts() = std::make_shared<Interface>();
+		break;
+	case PROPAGATE_BACKWARDS:
+		dir_ = Interface::BACKWARD;
+		ends() = std::make_shared<Interface>();
+		break;
+	default:
+		assert(false);
 	}
-	FallbacksPrivatePropagator::_init();
+	job_ = pullInterface(dir_)->end();  // indicate fresh start
 }
 
-bool FallbacksPrivatePropagator::_canCompute() const {
-	return !pending_.empty();
-}
-
-void FallbacksPrivatePropagator::_compute() {
-	while (!pending_.empty()) {
-		printPending();
-
-		// If we have a currently active job, proceed with this one even if pending_.front()
-		// might be different meanwhile. This is important as we need to feed jobs one by one to the children.
-		// Otherwise we cannot know if a child is exhausted on a specific input state.
-		if (current_ == pending_.end())
-			current_ = pending_.begin();
-		auto current = current_;  // Keep a copy here, as current_ might change due to resorting of pending_!
-
-		auto pushState = [this](const Job& ext) {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Push external state (" << ext.external_state->priority()
-			                                    << ") to '" << (*ext.stage)->name() << "'");
-			copyState(dir_, ext.external_state, (*ext.stage)->pimpl()->pullInterface(dir_), false);
-		};
-
-		if (current->stage == children().cend()) {
-			current->stage = children().begin();  // activate first child
-			pushState(*current);
-		}
-
-		StagePrivate* child = (*current->stage)->pimpl();
-		if (child->canCompute()) {
-			child->runCompute();
-			return;  // return after first compute()
-		}
-
-		auto has_solutions{ [](const InterfaceState& s, Interface::Direction d){
-			const auto& trajectories { d == Interface::FORWARD ? s.outgoingTrajectories()
-			                                                   : s.incomingTrajectories() };
-			return std::find_if(trajectories.cbegin(), trajectories.cend(),
+bool FallbacksPrivatePropagator::jobHasSolutions() const {
+	const auto& trajectories { dir_ == Interface::FORWARD ? job_->outgoingTrajectories()
+			                                                : job_->incomingTrajectories() };
+		return std::find_if(trajectories.cbegin(), trajectories.cend(),
 			                    [](const auto& t){ return !t->isFailure();}) != trajectories.cend();
-		}};
+};
 
-		if(!has_solutions(*current->external_state, dir_)){
-			++current->stage;
-			if(current->stage != children().cend()){
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << child->name() << "' failed generating solutions, trying next child: '"
-				                       << (*current->stage)->name() << "'");
-				pushState(*current);
-			}
-			else {
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Failed to extend state with all children, pruning path");
-				parent()->pimpl()->onNewFailure(*me(),
-				                                dir_ == Interface::FORWARD ? &*current->external_state : nullptr,
-				                                dir_ == Interface::BACKWARD ? nullptr : &*current->external_state);
-				pending_.erase(current);
-				current_ = pending_.end();
-			}
+bool FallbacksPrivatePropagator::nextJob() {
+	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	const auto jobs = pullInterface(dir_);
+
+	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
+		if (!jobHasSolutions()) { // job didn't produce solutions -> feed to next child
+			if (std::next(current_) != children().end())
+				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Propagator '" << (*current_)->name() << "' failed, trying next one.");
+			++current_;  // advance to next child
+		} else
+			current_ = children().end();  // indicate that this job is exhausted on all children
+	}
+
+	if (current_ == children().end()) {  // all children processed the job_
+		if (job_ != jobs->end()) {
+			jobs->remove(job_);  // we don't need the job in our interface list anymore
+			job_ = jobs->end();  // indicate that we need to fetch a new job
 		}
-		else {
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << child->name() << "' exhausted, but produced solutions before, not invoking further fallbacks");
-			pending_.erase(current);
-			current_ = pending_.end();
-		}
-		// continue processing with next pending state as we didn't runCompute() yet
-	}
-}
-
-void FallbacksPrivatePropagator::onNewExternalState(Interface::iterator external, bool updated) {
-	if (updated) {
-		auto it = std::find_if(pending_.begin(), pending_.end(),
-		                       [external](const Job& s) { return s.external_state == external; });
-		if (it == pending_.cend())
-			return;  // already processed
-
-		pending_.update(it);  // update sorting pos of this single item
-		printPending("after update: ");
-
-		// update prio of linked internal states as well
-		ContainerBasePrivate::copyState(dir_, external, InterfacePtr(), updated);
-		return;
+		current_ = children().begin();  // start next job with first child again
 	}
 
-	// remember external state for later processing by children.
-	// children().end() indicates that the states wasn't yet forwarded to any child
-	pending_.push(Job(external, children().cend()));
-	printPending("after push: ");
-}
-
-inline void FallbacksPrivatePropagator::printPending(const char* comment) const {
-	ROSCONSOLE_DEFINE_LOCATION(true, ::ros::console::levels::Debug, ROSCONSOLE_NAME_PREFIX ".Fallbacks");
-	if (ROS_UNLIKELY(__rosconsole_define_location__enabled)) {
-		std::cout << name() << ": " << comment;
-		std::for_each(pending_.begin(), pending_.end(), [](const auto& e) { std::cout << e.external_state->priority() << " "; });
-		std::cout << std::endl;
+	// pick next job if needed and possible
+	if (job_ == jobs->end()) {  // need to pick next job
+		if (!jobs->empty() && jobs->front()->priority().enabled())
+ 			job_ = jobs->begin();
+		else
+			return false; // no more jobs available
 	}
+
+	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
+	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), false);
+	return true;
 }
 
 
