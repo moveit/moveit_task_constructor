@@ -304,9 +304,9 @@ class ConnectingShared
 	const Interface *starts, *ends;
 
 public:
-	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
+	struct StatePair : std::pair<Interface::iterator, Interface::iterator>
 	{
-		using std::pair<Interface::const_iterator, Interface::const_iterator>::pair;  // inherit base constructors
+		using std::pair<Interface::iterator, Interface::iterator>::pair;  // inherit base constructors
 		bool operator<(const StatePair& rhs) const {
 			return less(first->priority(), second->priority(), rhs.first->priority(), rhs.second->priority());
 		}
@@ -328,7 +328,7 @@ public:
 	};
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
 	template <Interface::Direction other>
-	static inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
+	static inline StatePair make_pair(Interface::iterator first, Interface::iterator second);
 
 	// Check whether there are pending feasible states that could connect to source
 	template <Interface::Direction dir>

@@ -727,13 +727,13 @@ InterfaceFlags ConnectingPrivate::requiredInterface() const {
 }
 
 template <>
-ConnectingShared::StatePair ConnectingShared::make_pair<Interface::BACKWARD>(Interface::const_iterator first,
-                                                                             Interface::const_iterator second) {
+ConnectingShared::StatePair ConnectingShared::make_pair<Interface::BACKWARD>(Interface::iterator first,
+                                                                             Interface::iterator second) {
 	return StatePair(first, second);
 }
 template <>
-ConnectingShared::StatePair ConnectingShared::make_pair<Interface::FORWARD>(Interface::const_iterator first,
-                                                                            Interface::const_iterator second) {
+ConnectingShared::StatePair ConnectingShared::make_pair<Interface::FORWARD>(Interface::iterator first,
+                                                                            Interface::iterator second) {
 	return StatePair(second, first);
 }
 
