@@ -316,6 +316,7 @@ void Stage::reset() {
 	impl->next_starts_.reset();
 	// reset inherited properties
 	impl->properties_.reset();
+	impl->total_compute_time_ = std::chrono::duration<double>::zero();
 }
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
