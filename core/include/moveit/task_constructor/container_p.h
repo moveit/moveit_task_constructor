@@ -263,7 +263,10 @@ public:
 	/// Advance to the next job, assuming that the current child is exhausted on the current job.
 	virtual bool nextJob() { return false; }
 	/// Reset data structures
-	virtual void reset();
+	virtual void reset() {
+		current_ = children().begin();
+		job_has_solutions_ = false;
+	}
 
 	container_type::const_iterator current_;  // currently active child generator
 	bool job_has_solutions_;  // flag indicating whether the current job generated solutions
@@ -281,25 +284,40 @@ struct FallbacksPrivateGenerator : FallbacksPrivate
 struct FallbacksPrivatePropagator : FallbacksPrivate
 {
 	FallbacksPrivatePropagator(FallbacksPrivate&& old);
-	bool nextJob() override;
-	void reset() override;
 
+	using JobType = Interface::iterator;
+	inline auto& pendingJobs() { return *pullInterface(dir_); }
+	inline bool isFeasible(JobType job) { return job->priority().enabled(); }
+	inline void deactivateJob(JobType job) {}
+	inline void activateJob(JobType job);
 	Interface::Direction dir_;  // propagation direction
-	Interface::iterator job_;  // pointer to currently processed external state
 };
 
 /// Fallbacks implementation for CONNECT interface
 struct FallbacksPrivateConnect : ConnectingShared, FallbacksPrivate
 {
 	FallbacksPrivateConnect(FallbacksPrivate&& old);
-	bool nextJob() override;
-	void reset() override;
+
+	using JobType = ConnectingShared::container_type::iterator;
+	inline auto& pendingJobs() { return pending_; }
+	inline bool isFeasible(JobType job) { return job->first->priority().enabled() && job->second->priority().enabled(); }
+	inline void deactivateJob(JobType job);
+	inline void activateJob(JobType job);
 
 	template <Interface::Direction dir>
 	void pushState(Interface::iterator external, InterfaceState::Status status);
+};
 
-	// pointer to currently processed pair of external states
-	ConnectingShared::container_type::iterator job_;
+/// Generic job-based Fallbacks implementation for PROPAGATE and CONNECT interfaces
+template <typename T>
+struct FallbacksPrivateJobBased : T
+{
+	using BaseType = T;
+	FallbacksPrivateJobBased(FallbacksPrivate&& old);
+	bool nextJob() override;
+	void reset() override;
+
+	typename BaseType::JobType job_;  // currently processed job
 };
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate

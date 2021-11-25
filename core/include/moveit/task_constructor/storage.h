@@ -202,6 +202,8 @@ public:
 
 	/// remove a state from the interface and return it as a one-element list
 	container_type remove(iterator it);
+	// alias for use with templates (TODO: replace remove())
+	inline container_type erase(iterator it) { return remove(it); }
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
@@ -211,7 +213,6 @@ private:
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
-	using base_type::erase;
 	using base_type::insert;
 	using base_type::moveFrom;
 	using base_type::moveTo;

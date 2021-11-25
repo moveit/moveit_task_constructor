@@ -886,10 +886,10 @@ inline void Fallbacks::replaceImpl() {
 			break;
 		case PROPAGATE_FORWARDS:
 		case PROPAGATE_BACKWARDS:
-			impl = new FallbacksPrivatePropagator(std::move(*impl));
+			impl = new FallbacksPrivateJobBased<FallbacksPrivatePropagator>(std::move(*impl));
 			break;
 		case CONNECT:
-			impl = new FallbacksPrivateConnect(std::move(*impl));
+			impl = new FallbacksPrivateJobBased<FallbacksPrivateConnect>(std::move(*impl));
 			break;
 	}
 	delete pimpl_;
@@ -903,11 +903,6 @@ FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
 : ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
 	// move contents of other
 	this->ParallelContainerBasePrivate::operator=(std::move(other));
-}
-
-void FallbacksPrivate::reset() {
-	current_ = children().begin();
-	job_has_solutions_ = false;
 }
 
 void FallbacksPrivate::initializeExternalInterfaces() {
@@ -948,7 +943,6 @@ bool FallbacksPrivateGenerator::nextJob() {
 	return current_ != children().end();
 }
 
-
 FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
    : FallbacksPrivate(std::move(old)) {
 	switch (requiredInterface()) {
@@ -963,45 +957,11 @@ FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
 	default:
 		assert(false);
 	}
-	FallbacksPrivatePropagator::reset();
 }
 
-void FallbacksPrivatePropagator::reset() {
-	FallbacksPrivate::reset();
-	job_ = pullInterface(dir_)->end();  // indicate fresh start
-}
-
-bool FallbacksPrivatePropagator::nextJob() {
-	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
-	const auto jobs = pullInterface(dir_);
-
-	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
-		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
-			nextChild();
-		else
-			current_ = children().end();  // indicate that this job is exhausted on all children
-	}
-	job_has_solutions_ = false;
-
-	if (current_ == children().end()) {  // all children processed the job_
-		if (job_ != jobs->end()) {
-			jobs->remove(job_);  // we don't need the job in our interface list anymore
-			job_ = jobs->end();  // indicate that we need to fetch a new job
-		}
-		current_ = children().begin();  // start next job with first child again
-	}
-
-	// pick next job if needed and possible
-	if (job_ == jobs->end()) {  // need to pick next job
-		if (!jobs->empty() && jobs->front()->priority().enabled())
- 			job_ = jobs->begin();
-		else
-			return false; // no more jobs available
-	}
-
+void FallbacksPrivatePropagator::activateJob(JobType job) {
 	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
-	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), false);
-	return true;
+	copyState(dir_, job, (*current_)->pimpl()->pullInterface(dir_), false);
 }
 
 FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
@@ -1009,12 +969,6 @@ FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
 	starts_ = std::make_shared<Interface>();
 	ends_ = std::make_shared<Interface>();
 	ConnectingShared::initInterfaces(starts_, ends_);
-	FallbacksPrivateConnect::reset();
-}
-
-void FallbacksPrivateConnect::reset() {
-	FallbacksPrivate::reset();
-	job_ = pending_.end();  // indicate fresh start
 }
 
 template <Interface::Direction dir>
@@ -1035,38 +989,56 @@ void FallbacksPrivateConnect::pushState(Interface::iterator external, InterfaceS
 /* CONNECT-like stages are tricky, because we need to consider each pair of (start, end) states and
    feed them one by one to all children.
 	TODO: To activate only a single pair at a time, we need to disable currently active (start, end) states. */
-bool FallbacksPrivateConnect::nextJob() {
-	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
-	auto& jobs = pending_;
+void FallbacksPrivateConnect::deactivateJob(JobType job) {
+}
+void FallbacksPrivateConnect::activateJob(JobType job) {
+	pushState<Interface::Direction::FORWARD>(job->first, InterfaceState::Status::ENABLED);
+	pushState<Interface::Direction::BACKWARD>(job->second, InterfaceState::Status::ENABLED);
+}
+
+template <typename T>
+FallbacksPrivateJobBased<T>::FallbacksPrivateJobBased(FallbacksPrivate&& old)
+	: T(std::move(old)) {
+	FallbacksPrivateJobBased<T>::reset();
+}
+
+template <typename T>
+void FallbacksPrivateJobBased<T>::reset() {
+	BaseType::reset();
+	job_ = this->pendingJobs().end();  // indicate fresh start
+}
+
+template <typename T>
+bool FallbacksPrivateJobBased<T>::nextJob() {
+	assert(this->current_ != this->children().end() && !(*this->current_)->pimpl()->canCompute());
+	auto& jobs = this->pendingJobs();
 
 	if (job_ != jobs.end()) { // current job exists, but is exhausted on current child
-		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
-			nextChild();
+		if (!this->job_has_solutions_) // job didn't produce solutions -> feed to next child
+			this->nextChild();
 		else
-			current_ = children().end();  // indicate that this job is exhausted on all children
+			this->current_ = this->children().end();  // indicate that this job is exhausted on all children
 	}
-	job_has_solutions_ = false;
+	this->job_has_solutions_ = false;
 
-	if (current_ == children().end()) {  // all children processed the job_
+	if (this->current_ == this->children().end()) {  // all children processed the job_
 		if (job_ != jobs.end()) {
-			jobs.erase(job_);  // we don't need the job in our interface list anymore
+			this->deactivateJob(job_);
+			jobs.erase(job_);  // we don't need the job in our job list anymore
 			job_ = jobs.end();  // indicate that we need to fetch a new job
 		}
-		current_ = children().begin();  // start next job with first child again
+		this->current_ = this->children().begin();  // start next job with first child again
 	}
 
 	// pick next job if needed and possible
 	if (job_ == jobs.end()) {  // need to pick next job
-		if (!jobs.empty() && jobs.front().first->priority().enabled() &&
-	       jobs.front().second->priority().enabled())
+		if (!jobs.empty() && this->isFeasible(jobs.begin()))
  			job_ = jobs.begin();
 		else
 			return false; // no more jobs available
 	}
 
-	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
-	pushState<Interface::Direction::FORWARD>(job_->first, InterfaceState::Status::ENABLED);
-	pushState<Interface::Direction::BACKWARD>(job_->second, InterfaceState::Status::ENABLED);
+	this->activateJob(job_);
 	return true;
 }
 
