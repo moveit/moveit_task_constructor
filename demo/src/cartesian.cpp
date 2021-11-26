@@ -41,12 +41,12 @@
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/connect.h>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 
 using namespace moveit::task_constructor;
 
-Task createTask() {
+Task createTask(const rclcpp::Node::SharedPtr& node) {
 	Task t;
 	t.stages()->setName("Cartesian Path");
 
@@ -59,7 +59,7 @@ Task createTask() {
 	auto joint_interpolation = std::make_shared<solvers::JointInterpolationPlanner>();
 
 	// start from a fixed robot state
-	t.loadRobotModel();
+	t.loadRobotModel(node);
 	auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
 	{
 		auto& state = scene->getCurrentStateNonConst();
@@ -73,7 +73,7 @@ Task createTask() {
 	{
 		auto stage = std::make_unique<stages::MoveRelative>("x +0.2", cartesian_interpolation);
 		stage->setGroup(group);
-		geometry_msgs::Vector3Stamped direction;
+		geometry_msgs::msg::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.x = 0.2;
 		stage->setDirection(direction);
@@ -83,7 +83,7 @@ Task createTask() {
 	{
 		auto stage = std::make_unique<stages::MoveRelative>("y -0.3", cartesian_interpolation);
 		stage->setGroup(group);
-		geometry_msgs::Vector3Stamped direction;
+		geometry_msgs::msg::Vector3Stamped direction;
 		direction.header.frame_id = "world";
 		direction.vector.y = -0.3;
 		stage->setDirection(direction);
@@ -93,7 +93,7 @@ Task createTask() {
 	{  // rotate about TCP
 		auto stage = std::make_unique<stages::MoveRelative>("rz +45°", cartesian_interpolation);
 		stage->setGroup(group);
-		geometry_msgs::TwistStamped twist;
+		geometry_msgs::msg::TwistStamped twist;
 		twist.header.frame_id = "world";
 		twist.twist.angular.z = M_PI / 4.;
 		stage->setDirection(twist);
@@ -108,16 +108,8 @@ Task createTask() {
 		t.add(std::move(stage));
 	}
 
-	{  // move gripper into predefined open state
-		auto stage = std::make_unique<stages::MoveTo>("open gripper", joint_interpolation);
-		stage->setGroup(eef);
-		stage->setGoal("open");
-		t.add(std::move(stage));
-	}
-
 	{  // move from reached state back to the original state, using joint interpolation
-		// specifying two groups (arm and hand) will try to merge both trajectories
-		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation }, { eef, joint_interpolation } };
+		stages::Connect::GroupPlannerVector planners = { { group, joint_interpolation } };
 		auto connect = std::make_unique<stages::Connect>("connect", planners);
 		t.add(std::move(connect));
 	}
@@ -132,12 +124,11 @@ Task createTask() {
 }
 
 int main(int argc, char** argv) {
-	ros::init(argc, argv, "mtc_tutorial");
-	// run an asynchronous spinner to communicate with the move_group node and rviz
-	ros::AsyncSpinner spinner(1);
-	spinner.start();
+	rclcpp::init(argc, argv);
+	auto node = rclcpp::Node::make_shared("mtc_tutorial");
+	std::thread spinning_thread([node] { rclcpp::spin(node); });
 
-	auto task = createTask();
+	auto task = createTask(node);
 	try {
 		if (task.plan())
 			task.introspection().publishSolution(*task.solutions().front());
@@ -145,6 +136,7 @@ int main(int argc, char** argv) {
 		std::cerr << "planning failed with exception" << std::endl << ex << task;
 	}
 
-	ros::waitForShutdown();  // keep alive for interactive inspection in rviz
+	// keep alive for interactive inspection in rviz
+	spinning_thread.join();
 	return 0;
 }

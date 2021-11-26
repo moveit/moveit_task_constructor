@@ -36,12 +36,12 @@
 
 #include "property_factory.h"
 #include <yaml.h>
-#include <rviz/properties/string_property.h>
-#include <rviz/properties/float_property.h>
+#include <rviz_common/properties/string_property.hpp>
+#include <rviz_common/properties/float_property.hpp>
 
 namespace mtc = ::moveit::task_constructor;
 
-/** Implement PropertyFactory::createDefault(), creating an rviz::Property (tree)
+/** Implement PropertyFactory::createDefault(), creating an rviz_common::properties::Property (tree)
  *  from a YAML-serialized string.
  *  As we cannot know the required data type for a field from YAML parsing,
  *  we only distinguish numbers (FloatProperty) and all other YAML scalars (StringProperty).
@@ -60,7 +60,7 @@ private:
 	yaml_event_t event_;
 };
 
-// Event-based YAML parser, creating an rviz::Property tree
+// Event-based YAML parser, creating an rviz_common::properties::Property tree
 // https://www.wpsoftware.net/andrew/pages/libyaml.html
 class Parser
 {
@@ -70,30 +70,35 @@ public:
 	Parser(const std::string& value);
 	~Parser();
 
-	rviz::Property* process(const QString& name, const QString& description, rviz::Property* old) const;
+	rviz_common::properties::Property* process(const QString& name, const QString& description,
+	                                           rviz_common::properties::Property* old) const;
 
 private:
-	static rviz::Property* createScalar(const QString& name, const QString& description, const QByteArray& value,
-	                                    rviz::Property* old);
+	static rviz_common::properties::Property* createScalar(const QString& name, const QString& description,
+	                                                       const QByteArray& value,
+	                                                       rviz_common::properties::Property* old);
 
 	// return true if there was no error so far
 	bool noError() const { return parser_.error == YAML_NO_ERROR; }
 	// parse a single event and return it's type, YAML_ERROR_EVENT on parsing error
 	int parse(yaml_event_t& event) const;
 	// process events: scalar, start mapping, start sequence
-	rviz::Property* process(const yaml_event_t& event, const QString& name, const QString& description,
-	                        rviz::Property* old) const;
+	rviz_common::properties::Property* process(const yaml_event_t& event, const QString& name,
+	                                           const QString& description, rviz_common::properties::Property* old) const;
 
 	inline static QByteArray byteArray(const yaml_event_t& event) {
 		assert(event.type == YAML_SCALAR_EVENT);
 		return QByteArray::fromRawData(reinterpret_cast<const char*>(event.data.scalar.value), event.data.scalar.length);
 	}
-	// Try to set value of existing rviz::Property (expecting matching types). Return false on error.
-	static bool setValue(rviz::Property* old, const QByteArray& value);
+	// Try to set value of existing rviz_common::properties::Property (expecting matching types). Return false on error.
+	static bool setValue(rviz_common::properties::Property* old, const QByteArray& value);
 
-	static rviz::Property* createParent(const QString& name, const QString& description, rviz::Property* old);
-	rviz::Property* processMapping(const QString& name, const QString& description, rviz::Property* old) const;
-	rviz::Property* processSequence(const QString& name, const QString& description, rviz::Property* old) const;
+	static rviz_common::properties::Property* createParent(const QString& name, const QString& description,
+	                                                       rviz_common::properties::Property* old);
+	rviz_common::properties::Property* processMapping(const QString& name, const QString& description,
+	                                                  rviz_common::properties::Property* old) const;
+	rviz_common::properties::Property* processSequence(const QString& name, const QString& description,
+	                                                   rviz_common::properties::Property* old) const;
 
 private:
 	mutable yaml_parser_t parser_;
@@ -116,7 +121,8 @@ int Parser::parse(yaml_event_t& event) const {
 }
 
 // main processing function
-rviz::Property* Parser::process(const QString& name, const QString& description, rviz::Property* old) const {
+rviz_common::properties::Property* Parser::process(const QString& name, const QString& description,
+                                                   rviz_common::properties::Property* old) const {
 	bool stop = false;
 	while (!stop) {
 		ScopedYamlEvent event;
@@ -141,8 +147,9 @@ rviz::Property* Parser::process(const QString& name, const QString& description,
 }
 
 // default processing for scalar, start mapping, start sequence events
-rviz::Property* Parser::process(const yaml_event_t& event, const QString& name, const QString& description,
-                                rviz::Property* old) const {
+rviz_common::properties::Property* Parser::process(const yaml_event_t& event, const QString& name,
+                                                   const QString& description,
+                                                   rviz_common::properties::Property* old) const {
 	switch (event.type) {
 		case YAML_SEQUENCE_START_EVENT:
 			return processSequence(name, description, old);
@@ -153,18 +160,20 @@ rviz::Property* Parser::process(const yaml_event_t& event, const QString& name, 
 		default:
 			throw std::runtime_error("Unhandled YAML event");
 	}
+	assert(false);  // should not be reached
+	return nullptr;
 }
 
 // Try to set numeric or arbitrary scalar value from YAML node. Needs to match old's type.
-bool Parser::setValue(rviz::Property* old, const QByteArray& value) {
-	if (rviz::FloatProperty* p = dynamic_cast<rviz::FloatProperty*>(old)) {
+bool Parser::setValue(rviz_common::properties::Property* old, const QByteArray& value) {
+	if (rviz_common::properties::FloatProperty* p = dynamic_cast<rviz_common::properties::FloatProperty*>(old)) {
 		bool ok = true;
 		double v = value.toDouble(&ok);
 		if (ok)
 			p->setValue(v);
 		return ok;
 	}
-	if (rviz::StringProperty* p = dynamic_cast<rviz::StringProperty*>(old)) {
+	if (rviz_common::properties::StringProperty* p = dynamic_cast<rviz_common::properties::StringProperty*>(old)) {
 		// value should be an arbitrary string. If not throws YAML::BadConversion
 		p->setValue(value);
 		return true;
@@ -173,9 +182,10 @@ bool Parser::setValue(rviz::Property* old, const QByteArray& value) {
 }
 
 // Update existing old rviz:Property or create a new one from scalar YAML node
-rviz::Property* Parser::createScalar(const QString& name, const QString& description, const QByteArray& value,
-                                     rviz::Property* old) {
-	// try to update value, expecting matching rviz::Property
+rviz_common::properties::Property* Parser::createScalar(const QString& name, const QString& description,
+                                                        const QByteArray& value,
+                                                        rviz_common::properties::Property* old) {
+	// try to update value, expecting matching rviz_common::properties::Property
 	if (old && setValue(old, value)) {
 		// only if setValue succeeded, also update the rest
 		old->setName(name);
@@ -186,21 +196,23 @@ rviz::Property* Parser::createScalar(const QString& name, const QString& descrip
 	bool ok = true;
 	double v = value.toDouble(&ok);
 	if (ok)  // if value is a number, create a FloatProperty
-		old = new rviz::FloatProperty(name, v, description);
+		old = new rviz_common::properties::FloatProperty(name, v, description);
 	else  // otherwise create a StringProperty
-		old = new rviz::StringProperty(name, value, description);
+		old = new rviz_common::properties::StringProperty(name, value, description);
 
 	old->setReadOnly(true);
 	return old;
 }
 
 // Reuse old property (or create new one) as parent for a sequence or map
-rviz::Property* Parser::createParent(const QString& name, const QString& description, rviz::Property* old) {
+rviz_common::properties::Property* Parser::createParent(const QString& name, const QString& description,
+                                                        rviz_common::properties::Property* old) {
 	// don't reuse float or string properties (they are for scalars)
-	if (dynamic_cast<rviz::FloatProperty*>(old) || dynamic_cast<rviz::StringProperty*>(old))
+	if (dynamic_cast<rviz_common::properties::FloatProperty*>(old) ||
+	    dynamic_cast<rviz_common::properties::StringProperty*>(old))
 		old = nullptr;
 	if (!old) {
-		old = new rviz::Property(name, QVariant(), description);
+		old = new rviz_common::properties::Property(name, QVariant(), description);
 		old->setReadOnly(true);
 	} else {
 		old->setName(name);
@@ -210,7 +222,8 @@ rviz::Property* Parser::createParent(const QString& name, const QString& descrip
 }
 
 // Hierarchically create property from YAML map node
-rviz::Property* Parser::processMapping(const QString& name, const QString& description, rviz::Property* root) const {
+rviz_common::properties::Property* Parser::processMapping(const QString& name, const QString& description,
+                                                          rviz_common::properties::Property* root) const {
 	root = createParent(name, description, root);
 	int index = 0;  // current child index in root
 	bool stop = false;
@@ -233,11 +246,11 @@ rviz::Property* Parser::processMapping(const QString& name, const QString& descr
 				num = root->numChildren();
 
 				// if names differ, insert a new child, otherwise reuse existing
-				rviz::Property* old_child = index < num ? root->childAt(index) : nullptr;
+				rviz_common::properties::Property* old_child = index < num ? root->childAt(index) : nullptr;
 				if (old_child && old_child->getName() != key)
 					old_child = nullptr;
 
-				rviz::Property* new_child = nullptr;
+				rviz_common::properties::Property* new_child = nullptr;
 				switch (parse(event)) {  // parse value
 					case YAML_MAPPING_START_EVENT:
 					case YAML_SEQUENCE_START_EVENT:
@@ -268,7 +281,8 @@ rviz::Property* Parser::processMapping(const QString& name, const QString& descr
 }
 
 // Hierarchically create property from YAML sequence node. Items are named [#].
-rviz::Property* Parser::processSequence(const QString& name, const QString& description, rviz::Property* root) const {
+rviz_common::properties::Property* Parser::processSequence(const QString& name, const QString& description,
+                                                           rviz_common::properties::Property* root) const {
 	root = createParent(name, description, root);
 	int index = 0;  // current child index in root
 	bool stop = false;
@@ -282,8 +296,8 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 			case YAML_MAPPING_START_EVENT:
 			case YAML_SEQUENCE_START_EVENT:
 			case YAML_SCALAR_EVENT: {
-				rviz::Property* old_child = root->childAt(index);  // nullptr for invalid index
-				rviz::Property* new_child = process(event, QString("[%1]").arg(index), "", old_child);
+				rviz_common::properties::Property* old_child = root->childAt(index);  // nullptr for invalid index
+				rviz_common::properties::Property* new_child = process(event, QString("[%1]").arg(index), "", old_child);
 				if (new_child != old_child)
 					root->addChild(new_child, index);
 				if (++index >= 10)
@@ -305,9 +319,10 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 
 namespace moveit_rviz_plugin {
 
-rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
-                                               const std::string& description, const std::string& value,
-                                               rviz::Property* old) {
+rviz_common::properties::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
+                                                                  const std::string& description,
+                                                                  const std::string& value,
+                                                                  rviz_common::properties::Property* old) {
 	QString qname = QString::fromStdString(name);
 	QString qdesc = QString::fromStdString(description);
 	Parser parser(value);

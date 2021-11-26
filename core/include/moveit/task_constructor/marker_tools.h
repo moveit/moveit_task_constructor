@@ -1,7 +1,7 @@
 #pragma once
 
 #include <rviz_marker_tools/marker_creation.h>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/msg/marker.hpp>
 #include <moveit/macros/class_forward.h>
 #include <functional>
 
@@ -19,7 +19,7 @@ namespace moveit {
 namespace task_constructor {
 
 /** signature of callback function, passing the generated marker and the name of the robot link / scene object */
-using MarkerCallback = std::function<void(visualization_msgs::Marker&, const std::string&)>;
+using MarkerCallback = std::function<void(visualization_msgs::msg::Marker&, const std::string&)>;
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  object_names: set of links to include (or all if empty) */

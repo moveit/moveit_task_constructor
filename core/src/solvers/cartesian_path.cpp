@@ -41,13 +41,13 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
-#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 #include <moveit/robot_state/cartesian_interpolator.h>
-#endif
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("CartesianPath");
 
 CartesianPath::CartesianPath() {
 	auto& p = properties();
@@ -61,10 +61,10 @@ void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
                          const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
                          double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                         const moveit_msgs::Constraints& path_constraints) {
+                         const moveit_msgs::msg::Constraints& path_constraints) {
 	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
 	if (!link) {
-		ROS_WARN_STREAM("no unique tip for joint model group: " << jmg->getName());
+		RCLCPP_WARN_STREAM(LOGGER, "no unique tip for joint model group: " << jmg->getName());
 		return false;
 	}
 
@@ -75,7 +75,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
                          const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
                          robot_trajectory::RobotTrajectoryPtr& result,
-                         const moveit_msgs::Constraints& path_constraints) {
+                         const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& props = properties();
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
 
@@ -86,21 +86,15 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	                                       const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) &&
+		return !sandbox_scene->isStateColliding(const_cast<const moveit::core::RobotState&>(*state), jmg->getName()) &&
 		       kcs.decide(*state).satisfied;
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
-#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
 	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid);
-#else
-	double achieved_fraction = sandbox_scene->getCurrentStateNonConst().computeCartesianPath(
-	    jmg, trajectory, &link, target, true, props.get<double>("step_size"), props.get<double>("jump_threshold"),
-	    is_valid);
-#endif
 
 	assert(!trajectory.empty());  // there should be at least the start state
 	result = std::make_shared<robot_trajectory::RobotTrajectory>(sandbox_scene->getRobotModel(), jmg);

@@ -7,7 +7,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <gtest/gtest.h>
 

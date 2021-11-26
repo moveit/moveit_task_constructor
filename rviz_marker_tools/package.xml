@@ -6,10 +6,18 @@
 	<license>BSD</license>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 
-	<buildtool_depend>catkin</buildtool_depend>
+	<buildtool_depend>ament_cmake</buildtool_depend>
+	<buildtool_depend>eigen3_cmake_module</buildtool_depend>
+	<buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
+	<build_depend>eigen</build_depend>
 
 	<depend>visualization_msgs</depend>
 	<depend>geometry_msgs</depend>
-	<depend>roscpp</depend>
-	<depend>rviz</depend>
+	<depend>rclcpp</depend>
+	<depend>rviz2</depend>
+	<depend>tf2_eigen</depend>
+
+	<export>
+	  <build_type>ament_cmake</build_type>
+	</export>
 </package>

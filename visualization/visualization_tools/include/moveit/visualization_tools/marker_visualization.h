@@ -1,8 +1,8 @@
 #pragma once
 
-#include <rviz/properties/bool_property.h>
+#include <rviz_common/properties/bool_property.hpp>
 #include <moveit/macros/class_forward.h>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/msg/marker.hpp>
 #include <deque>
 #include <list>
 #include <memory>
@@ -11,10 +11,17 @@ namespace Ogre {
 class SceneNode;
 }
 
-namespace rviz {
+namespace rviz_common {
 class DisplayContext;
+}  // namespace rviz_common
+
+namespace rviz_default_plugins {
+namespace displays {
+namespace markers {
 class MarkerBase;
-}  // namespace rviz
+}
+}  // namespace displays
+}  // namespace rviz_default_plugins
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
@@ -41,10 +48,10 @@ class MarkerVisualization
 	// list of all markers, attached to scene nodes in namespaces_
 	struct MarkerData
 	{
-		visualization_msgs::MarkerPtr msg_;
-		std::shared_ptr<rviz::MarkerBase> marker_;
+		visualization_msgs::msg::Marker::SharedPtr msg_;
+		std::shared_ptr<rviz_default_plugins::displays::markers::MarkerBase> marker_;
 
-		MarkerData(const visualization_msgs::Marker& marker);
+		MarkerData(const visualization_msgs::msg::Marker& marker);
 	};
 	struct NamespaceData
 	{
@@ -64,14 +71,14 @@ class MarkerVisualization
 	bool markers_created_ = false;
 
 public:
-	MarkerVisualization(const std::vector<visualization_msgs::Marker>& markers,
+	MarkerVisualization(const std::vector<visualization_msgs::msg::Marker>& markers,
 	                    const planning_scene::PlanningScene& end_scene);
 	~MarkerVisualization();
 
 	/// did we successfully created all markers (and scene nodes)?
 	bool created() const { return markers_created_; }
 	/// create markers (placed at planning frame of scene)
-	bool createMarkers(rviz::DisplayContext* context, Ogre::SceneNode* scene_node);
+	bool createMarkers(rviz_common::DisplayContext* context, Ogre::SceneNode* scene_node);
 	/// update marker position/orientation based on frames of given scene + robot_state
 	void update(const planning_scene::PlanningScene& end_scene, const moveit::core::RobotState& robot_state);
 
@@ -88,22 +95,22 @@ private:
  *  The class remembers which MarkerVisualization instances are currently hosted
  *  and provides the user interaction to toggle marker visibility by namespace.
  */
-class MarkerVisualizationProperty : public rviz::BoolProperty
+class MarkerVisualizationProperty : public rviz_common::properties::BoolProperty
 {
 	Q_OBJECT
 
-	rviz::DisplayContext* context_ = nullptr;
+	rviz_common::DisplayContext* context_ = nullptr;
 	Ogre::SceneNode* parent_scene_node_ = nullptr;  // scene node provided externally
 	Ogre::SceneNode* marker_scene_node_ = nullptr;  // scene node all markers are attached to
-	std::map<QString, rviz::BoolProperty*> namespaces_;  // rviz properties for encountered namespaces
+	std::map<QString, rviz_common::properties::BoolProperty*> namespaces_;  // rviz properties for encountered namespaces
 	std::list<MarkerVisualizationPtr> hosted_markers_;  // list of hosted MarkerVisualization instances
-	rviz::BoolProperty* all_markers_at_once_;
+	rviz_common::properties::BoolProperty* all_markers_at_once_;
 
 public:
 	MarkerVisualizationProperty(const QString& name, Property* parent = nullptr);
 	~MarkerVisualizationProperty() override;
 
-	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
+	void onInitialize(Ogre::SceneNode* scene_node, rviz_common::DisplayContext* context);
 
 	/// remove all hosted markers from display
 	void clearMarkers();

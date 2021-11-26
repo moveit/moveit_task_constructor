@@ -37,17 +37,17 @@
 #pragma once
 
 #ifndef Q_MOC_RUN
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #endif
 
-#include <rviz/panel.h>
+#include <rviz_common/panel.hpp>
 
 #include <QSlider>
 #include <QLabel>
 #include <QPushButton>
 
 namespace moveit_rviz_plugin {
-class TaskSolutionPanel : public rviz::Panel
+class TaskSolutionPanel : public rviz_common::Panel
 {
 	Q_OBJECT
 

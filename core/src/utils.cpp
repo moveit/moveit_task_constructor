@@ -35,7 +35,11 @@
 
 /* Authors: Michael Goerner, Robert Haschke */
 
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/planning_scene/planning_scene.h>
@@ -85,7 +89,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 		}
 		tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
 	} else {
-		auto ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(property.value());
+		auto ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(property.value());
 		if (ik_pose_msg.header.frame_id.empty()) {
 			if (!(robot_link = get_tip())) {
 				solution.markAsFailure("frame_id of ik_frame is empty and no unique group tip was found");
@@ -99,7 +103,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 			tip_in_global_frame = scene.getFrameTransform(ik_pose_msg.header.frame_id) * tip_in_global_frame;
 		} else {
 			std::stringstream ss;
-			ss << "ik_frame specified in unknown frame '" << ik_pose_msg << "'";
+			ss << "ik_frame specified in unknown frame '" << ik_pose_msg.header.frame_id << "'";
 			solution.markAsFailure(ss.str());
 			return false;
 		}

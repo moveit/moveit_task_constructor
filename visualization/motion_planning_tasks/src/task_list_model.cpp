@@ -42,8 +42,6 @@
 #include "factory_model.h"
 #include "icons.h"
 
-#include <ros/console.h>
-
 #include <QMimeData>
 #include <QHeaderView>
 #include <QScrollBar>
@@ -54,7 +52,7 @@ using namespace moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-static const std::string LOGNAME("TaskListModel");
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.task_list_model");
 
 QVariant TaskListModel::horizontalHeader(int column, int role) {
 	switch (role) {
@@ -145,7 +143,7 @@ StageFactoryPtr getStageFactory() {
 		factory = result;  // remember for future uses
 		return result;
 	} catch (const std::exception& e) {
-		ROS_ERROR("Failed to initialize StageFactory");
+		RCLCPP_ERROR(LOGGER, "Failed to initialize StageFactory");
 		return StageFactoryPtr();
 	}
 }
@@ -164,12 +162,12 @@ void TaskListModel::onRemoveModel(QAbstractItemModel* model) {
 
 TaskListModel::TaskListModel(QObject* parent)
   : FlatMergeProxyModel(parent), old_task_handling_(TaskView::OLD_TASK_REPLACE) {
-	ROS_DEBUG_NAMED(LOGNAME, "created TaskListModel: %p", this);
+	RCLCPP_DEBUG(LOGGER, "created TaskListModel: %p", this);
 	setStageFactory(getStageFactory());
 }
 
 TaskListModel::~TaskListModel() {
-	ROS_DEBUG_NAMED(LOGNAME, "destroying TaskListModel: %p", this);
+	RCLCPP_DEBUG(LOGGER, "destroying TaskListModel: %p", this);
 	// inform MetaTaskListModel that we will remove our stuff
 	removeRows(0, rowCount());
 	// free RemoteTaskModels
@@ -181,7 +179,7 @@ void TaskListModel::setScene(const planning_scene::PlanningSceneConstPtr& scene)
 	scene_ = scene;
 }
 
-void TaskListModel::setDisplayContext(rviz::DisplayContext* display_context) {
+void TaskListModel::setDisplayContext(rviz_common::DisplayContext* display_context) {
 	display_context_ = display_context;
 }
 
@@ -241,8 +239,8 @@ QVariant TaskListModel::data(const QModelIndex& index, int role) const {
 
 // process a task description message:
 // update existing RemoteTask, create a new one, or (if msg.stages is empty) delete an existing one
-void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_msgs::TaskDescription& msg,
-                                                  ros::NodeHandle& nh, const std::string& service_name) {
+void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_msgs::msg::TaskDescription& msg,
+                                                  const std::string& service_name) {
 	// retrieve existing or insert new remote task for given task id
 	auto it_inserted = remote_tasks_.insert(std::make_pair(msg.task_id, nullptr));
 	const auto& task_it = it_inserted.first;
@@ -267,9 +265,9 @@ void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_
 			remote_task->processStageDescriptions(msg.stages);
 	} else if (!remote_task) {  // create new task model, if ID was not known before
 		// the model is managed by this instance via Qt's parent-child mechanism
-		remote_task = new RemoteTaskModel(nh, service_name, scene_, display_context_, this);
+		remote_task = new RemoteTaskModel(service_name, scene_, display_context_, this);
 		remote_task->processStageDescriptions(msg.stages);
-		ROS_DEBUG_NAMED(LOGNAME, "received new task: %s (%s)", msg.stages[0].name.c_str(), msg.task_id.c_str());
+		RCLCPP_DEBUG(LOGGER, "received new task: %s (%s)", msg.stages[0].name.c_str(), msg.task_id.c_str());
 		// insert newly created model into this' model instance
 		insertModel(remote_task, -1);
 
@@ -280,10 +278,10 @@ void TaskListModel::processTaskDescriptionMessage(const moveit_task_constructor_
 }
 
 // process a task statistics message
-void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_msgs::TaskStatistics& msg) {
+void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_msgs::msg::TaskStatistics& msg) {
 	auto it = remote_tasks_.find(msg.task_id);
 	if (it == remote_tasks_.cend()) {
-		ROS_WARN("unknown task: %s", msg.task_id.c_str());
+		RCLCPP_WARN(LOGGER, "unknown task: %s", msg.task_id.c_str());
 		return;
 	}
 
@@ -294,7 +292,7 @@ void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_m
 	remote_task->processStageStatistics(msg.stages);
 }
 
-DisplaySolutionPtr TaskListModel::processSolutionMessage(const moveit_task_constructor_msgs::Solution& msg) {
+DisplaySolutionPtr TaskListModel::processSolutionMessage(const moveit_task_constructor_msgs::msg::Solution& msg) {
 	auto it = remote_tasks_.find(msg.task_id);
 	if (it == remote_tasks_.cend())
 		return DisplaySolutionPtr();  // unkown task

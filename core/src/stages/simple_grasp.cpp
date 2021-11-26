@@ -44,7 +44,11 @@
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <Eigen/Geometry>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 
 namespace moveit {
 namespace task_constructor {
@@ -126,9 +130,9 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 
 		attach->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p) {
 			const std::string& eef = p.get<std::string>("eef");
-			moveit_msgs::AttachedCollisionObject obj;
-			obj.object.operation =
-			    forward ? (int8_t)moveit_msgs::CollisionObject::ADD : (int8_t)moveit_msgs::CollisionObject::REMOVE;
+			moveit_msgs::msg::AttachedCollisionObject obj;
+			obj.object.operation = forward ? (int8_t)moveit_msgs::msg::CollisionObject::ADD :
+			                                 (int8_t)moveit_msgs::msg::CollisionObject::REMOVE;
 			obj.link_name = scene->getRobotModel()->getEndEffector(eef)->getEndEffectorParentGroup().second;
 			obj.object.id = p.get<std::string>("object");
 			scene->processAttachedCollisionObjectMsg(obj);
@@ -143,7 +147,7 @@ void SimpleGraspBase::init(const moveit::core::RobotModelConstPtr& robot_model) 
 }
 
 void SimpleGraspBase::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
-	geometry_msgs::PoseStamped pose_msg;
+	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);

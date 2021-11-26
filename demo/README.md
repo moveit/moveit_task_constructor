@@ -8,4 +8,4 @@ Developed by Henning Kayser & Simon Goldstein at [PickNik Consulting](http://pic
 
 Run demo
 
-    roslaunch moveit_task_constructor_demo demo.launch
+    ros2 launch moveit_task_constructor_demo demo.launch.py

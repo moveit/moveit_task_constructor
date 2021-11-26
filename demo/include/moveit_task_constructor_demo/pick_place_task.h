@@ -31,11 +31,11 @@
  *********************************************************************/
 
 /* Author: Henning Kayser, Simon Goldstein
-   Desc:   A demo to show MoveIt Task Constructor in action
+  Desc:   A demo to show MoveIt Task Constructor in action
 */
 
 // ROS
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 // MoveIt
 #include <moveit/planning_scene/planning_scene.h>
@@ -56,22 +56,26 @@
 #include <moveit/task_constructor/stages/predicate_filter.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
-#include <eigen_conversions/eigen_msg.h>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
+#include <tf2_eigen/tf2_eigen.h>
+#endif
 
 #pragma once
 
 namespace moveit_task_constructor_demo {
 using namespace moveit::task_constructor;
 
-// prepare a demo environment from ROS parameters under pnh
-void setupDemoScene(ros::NodeHandle& pnh);
+// prepare a demo environment from ROS parameters under node
+void setupDemoScene(const rclcpp::Node::SharedPtr& node);
 
 class PickPlaceTask
 {
 public:
-	PickPlaceTask(const std::string& task_name, const ros::NodeHandle& pnh);
+	PickPlaceTask(const std::string& task_name, const rclcpp::Node::SharedPtr& pnh);
 	~PickPlaceTask() = default;
 
 	bool init();
@@ -83,9 +87,7 @@ public:
 private:
 	void loadParameters();
 
-	static constexpr char LOGNAME[]{ "pick_place_task" };
-
-	ros::NodeHandle pnh_;
+	rclcpp::Node::SharedPtr node_;
 
 	std::string task_name_;
 	moveit::task_constructor::TaskPtr task_;
@@ -117,7 +119,7 @@ private:
 	double lift_object_max_dist_;
 
 	// Place metrics
-	geometry_msgs::Pose place_pose_;
+	geometry_msgs::msg::Pose place_pose_;
 	double place_surface_offset_;
 };
 }  // namespace moveit_task_constructor_demo

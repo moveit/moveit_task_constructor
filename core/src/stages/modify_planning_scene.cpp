@@ -46,6 +46,8 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("ModifyPlanningScene");
+
 ModifyPlanningScene::ModifyPlanningScene(const std::string& name) : PropagatingEitherWay(name) {
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 }
@@ -56,19 +58,19 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 	o.insert(o.end(), objects.begin(), objects.end());
 }
 
-void ModifyPlanningScene::addObject(const moveit_msgs::CollisionObject& collision_object) {
-	if (collision_object.operation != moveit_msgs::CollisionObject::ADD) {
-		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
-		                                                        "to ADD -- ignoring the object");
+void ModifyPlanningScene::addObject(const moveit_msgs::msg::CollisionObject& collision_object) {
+	if (collision_object.operation != moveit_msgs::msg::CollisionObject::ADD) {
+		RCLCPP_ERROR_STREAM(LOGGER, name() << ": addObject is called with object's operation not set "
+		                                      "to ADD -- ignoring the object");
 		return;
 	}
 	collision_objects_.push_back(collision_object);
 }
 
 void ModifyPlanningScene::removeObject(const std::string& object_name) {
-	moveit_msgs::CollisionObject obj;
+	moveit_msgs::msg::CollisionObject obj;
 	obj.id = object_name;
-	obj.operation = moveit_msgs::CollisionObject::REMOVE;
+	obj.operation = moveit_msgs::msg::CollisionObject::REMOVE;
 	collision_objects_.push_back(obj);
 }
 
@@ -93,13 +95,13 @@ void ModifyPlanningScene::computeBackward(const InterfaceState& to) {
 
 void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
                                         const std::pair<std::string, std::pair<Names, bool> >& pair, bool invert) {
-	moveit_msgs::AttachedCollisionObject obj;
+	moveit_msgs::msg::AttachedCollisionObject obj;
 	obj.link_name = pair.first;
 	bool attach = pair.second.second;
 	if (invert)
 		attach = !attach;
 	obj.object.operation =
-	    attach ? (int8_t)moveit_msgs::CollisionObject::ADD : (int8_t)moveit_msgs::CollisionObject::REMOVE;
+	    attach ? (int8_t)moveit_msgs::msg::CollisionObject::ADD : (int8_t)moveit_msgs::msg::CollisionObject::REMOVE;
 	for (const std::string& name : pair.second.first) {
 		obj.object.id = name;
 		scene.processAttachedCollisionObjectMsg(obj);
@@ -141,7 +143,7 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 }
 
 void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& scene,
-                                                 const moveit_msgs::CollisionObject& object) {
+                                                 const moveit_msgs::msg::CollisionObject& object) {
 	scene.processCollisionObjectMsg(object);
 }
 }  // namespace stages

@@ -37,15 +37,17 @@
 
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/storage.h>
-#include <moveit_msgs/GetPlanningScene.h>
-#include <moveit_msgs/PlanningSceneComponents.h>
+#include <moveit_msgs/srv/get_planning_scene.hpp>
+#include <moveit_msgs/msg/planning_scene_components.hpp>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("CurrentState");
 
 CurrentState::CurrentState(const std::string& name) : Generator(name) {
 	auto& p = properties();
@@ -67,31 +69,37 @@ bool CurrentState::canCompute() const {
 void CurrentState::compute() {
 	scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
 
-	ros::NodeHandle h;
-	ros::ServiceClient client = h.serviceClient<moveit_msgs::GetPlanningScene>("get_planning_scene");
+	// Add random ID to prevent warnings about multiple publishers within the same node
+	rclcpp::NodeOptions options;
+	options.arguments(
+	    { "--ros-args", "-r", "__node:=current_state_" + std::to_string(reinterpret_cast<std::size_t>(this)) });
+	auto node = rclcpp::Node::make_shared("_", options);
+	auto client = node->create_client<moveit_msgs::srv::GetPlanningScene>("get_planning_scene");
 
-	ros::Duration timeout(this->timeout());
-	if (client.waitForExistence(timeout)) {
-		moveit_msgs::GetPlanningScene::Request req;
-		moveit_msgs::GetPlanningScene::Response res;
+	auto timeout = std::chrono::duration<double>(this->timeout());
+	if (client->wait_for_service(timeout)) {
+		auto req = std::make_shared<moveit_msgs::srv::GetPlanningScene::Request>();
 
-		req.components.components =
-		    moveit_msgs::PlanningSceneComponents::SCENE_SETTINGS | moveit_msgs::PlanningSceneComponents::ROBOT_STATE |
-		    moveit_msgs::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
-		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_NAMES |
-		    moveit_msgs::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY | moveit_msgs::PlanningSceneComponents::OCTOMAP |
-		    moveit_msgs::PlanningSceneComponents::TRANSFORMS |
-		    moveit_msgs::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
-		    moveit_msgs::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
-		    moveit_msgs::PlanningSceneComponents::OBJECT_COLORS;
+		req->components.components = moveit_msgs::msg::PlanningSceneComponents::SCENE_SETTINGS |
+		                             moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE |
+		                             moveit_msgs::msg::PlanningSceneComponents::ROBOT_STATE_ATTACHED_OBJECTS |
+		                             moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_NAMES |
+		                             moveit_msgs::msg::PlanningSceneComponents::WORLD_OBJECT_GEOMETRY |
+		                             moveit_msgs::msg::PlanningSceneComponents::OCTOMAP |
+		                             moveit_msgs::msg::PlanningSceneComponents::TRANSFORMS |
+		                             moveit_msgs::msg::PlanningSceneComponents::ALLOWED_COLLISION_MATRIX |
+		                             moveit_msgs::msg::PlanningSceneComponents::LINK_PADDING_AND_SCALING |
+		                             moveit_msgs::msg::PlanningSceneComponents::OBJECT_COLORS;
 
-		if (client.call(req, res)) {
-			scene_->setPlanningSceneMsg(res.scene);
+		auto res_future = client->async_send_request(req);
+		if (rclcpp::spin_until_future_complete(node, res_future) == rclcpp::FutureReturnCode::SUCCESS) {
+			auto res = res_future.get();
+			scene_->setPlanningSceneMsg(res->scene);
 			spawn(InterfaceState(scene_), 0.0);
 			return;
 		}
 	}
-	ROS_WARN("failed to acquire current PlanningScene");
+	RCLCPP_WARN(LOGGER, "failed to acquire current PlanningScene");
 }
 }  // namespace stages
 }  // namespace task_constructor

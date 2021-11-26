@@ -9,6 +9,7 @@
 #include "gtest_value_printers.h"
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <initializer_list>
 #include <chrono>
 #include <thread>
@@ -176,8 +177,9 @@ TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
 int main(int argc, char** argv) {
 	for (int i = 1; i < argc; ++i) {
 		if (strcmp(argv[i], "--debug") == 0) {
-			if (ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Debug))
-				ros::console::notifyLoggerLevelsChanged();
+			if (rcutils_logging_set_logger_level("moveit_robot_model.robot_model", RCUTILS_LOG_SEVERITY_FATAL) !=
+			    RCUTILS_RET_OK)
+				throw std::runtime_error("Failed to set logger level to RCUTILS_LOG_SEVERITY_ERROR");
 			break;
 		}
 	}

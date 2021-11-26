@@ -38,7 +38,7 @@
 
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/cost_queue.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <Eigen/Geometry>
 
 namespace moveit {
@@ -82,7 +82,7 @@ public:
 	void setGroup(const std::string& group) { setProperty("group", group); }
 
 	/// setters for IK frame
-	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const geometry_msgs::msg::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
 	void setIKFrame(const T& p, const std::string& link) {
@@ -97,7 +97,7 @@ public:
 	 * This property should almost always be set in the InterfaceState sent by the child.
 	 * If possible, avoid setting it manually.
 	 */
-	void setTargetPose(const geometry_msgs::PoseStamped& pose) { setProperty("target_pose", pose); }
+	void setTargetPose(const geometry_msgs::msg::PoseStamped& pose) { setProperty("target_pose", pose); }
 	void setTargetPose(const Eigen::Isometry3d& pose, const std::string& frame = "");
 	template <typename T>
 	void setTargetPose(const T& p, const std::string& frame = "") {

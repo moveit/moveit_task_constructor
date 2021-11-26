@@ -44,9 +44,13 @@
 #include <moveit/task_constructor/cost_terms.h>
 
 #include <rviz_marker_tools/marker_creation.h>
-#include <Eigen/Geometry>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
-#include <ros/console.h>
+#endif
+#include <Eigen/Geometry>
+#include <rclcpp/logging.hpp>
 
 namespace vm = visualization_msgs;
 namespace cd = collision_detection;
@@ -55,13 +59,15 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("FixCollisionObjects");
+
 FixCollisionObjects::FixCollisionObjects(const std::string& name) : PropagatingEitherWay(name) {
 	// TODO: possibly weight solutions based on the required displacement?
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 
 	auto& p = properties();
 	p.declare<double>("max_penetration", "maximally corrected penetration depth");
-	p.declare<geometry_msgs::Vector3>("direction", "direction vector to use for corrections");
+	p.declare<geometry_msgs::msg::Vector3>("direction", "direction vector to use for corrections");
 }
 
 void FixCollisionObjects::computeForward(const InterfaceState& from) {
@@ -79,8 +85,7 @@ bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d
 	correction.setZero();
 	for (const cd::Contact& c : contacts) {
 		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT && c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
-			ROS_WARN_STREAM_NAMED("FixCollisionObjects",
-			                      "Cannot fix collision between " << c.body_name_1 << " and " << c.body_name_2);
+			RCLCPP_WARN_STREAM(LOGGER, "Cannot fix collision between " << c.body_name_1 << " and " << c.body_name_2);
 			return false;
 		}
 		if (c.body_type_1 == cd::BodyTypes::WORLD_OBJECT)
@@ -110,20 +115,15 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	req.verbose = false;
 	req.distance = false;
 
-	vm::Marker m;
+	vm::msg::Marker m;
 	m.header.frame_id = scene.getPlanningFrame();
 	m.ns = "collisions";
 
 	bool failure = false;
 	while (!failure) {
 		res.clear();
-#if MOVEIT_HAS_COLLISION_ENV
 		scene.getCollisionEnv()->checkRobotCollision(req, res, scene.getCurrentState(),
 		                                             scene.getAllowedCollisionMatrix());
-#else
-		scene.getCollisionWorld()->checkRobotCollision(req, res, *scene.getCollisionRobotUnpadded(),
-		                                               scene.getCurrentState(), scene.getAllowedCollisionMatrix());
-#endif
 		if (!res.collision)
 			return result;
 
@@ -147,7 +147,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 
 			// fix collision by shifting object along correction direction
 			if (!dir.empty())  // if explicitly given, use this correction direction
-				tf2::fromMsg(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
+				tf2::fromMsg(boost::any_cast<geometry_msgs::msg::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
 			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));

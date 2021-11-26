@@ -42,9 +42,9 @@
 #pragma once
 
 #include <moveit/move_group/move_group_capability.h>
-#include <actionlib/server/simple_action_server.h>
+#include <rclcpp_action/rclcpp_action.hpp>
 
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
 #include <memory>
 
@@ -58,13 +58,23 @@ public:
 	void initialize() override;
 
 private:
-	bool constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,
+	using ExecuteTaskSolutionAction = moveit_task_constructor_msgs::action::ExecuteTaskSolution;
+	using ActionServerType = rclcpp_action::Server<ExecuteTaskSolutionAction>;
+	bool constructMotionPlan(const moveit_task_constructor_msgs::msg::Solution& solution,
 	                         plan_execution::ExecutableMotionPlan& plan);
 
-	void goalCallback(const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal);
-	void preemptCallback();
+	void goalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
 
-	std::unique_ptr<actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>> as_;
+	rclcpp_action::CancelResponse
+	preemptCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
+
+	/** Always accept the goal */
+	rclcpp_action::GoalResponse handleNewGoal(const rclcpp_action::GoalUUID& uuid,
+	                                          const ExecuteTaskSolutionAction::Goal::ConstSharedPtr goal) const {
+		return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+	}
+
+	ActionServerType::SharedPtr as_;
 };
 
 }  // namespace move_group

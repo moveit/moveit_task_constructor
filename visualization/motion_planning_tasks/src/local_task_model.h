@@ -47,14 +47,14 @@ class LocalTaskModel : public BaseTaskModel, public moveit::task_constructor::Ta
 	using Node = moveit::task_constructor::Stage;
 	Node* root_;
 	StageFactoryPtr stage_factory_;
-	std::map<Node*, rviz::PropertyTreeModel*> properties_;
+	std::map<Node*, rviz_common::properties::PropertyTreeModel*> properties_;
 
 	inline Node* node(const QModelIndex& index) const;
 	QModelIndex index(Node* n) const;
 
 public:
 	LocalTaskModel(ContainerBase::pointer&& container, const planning_scene::PlanningSceneConstPtr& scene,
-	               rviz::DisplayContext* display_context, QObject* parent = nullptr);
+	               rviz_common::DisplayContext* display_context, QObject* parent = nullptr);
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
 
 	QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -76,6 +76,6 @@ public:
 	QAbstractItemModel* getSolutionModel(const QModelIndex& index) override;
 	DisplaySolutionPtr getSolution(const QModelIndex& index) override;
 
-	rviz::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
+	rviz_common::properties::PropertyTreeModel* getPropertyModel(const QModelIndex& index) override;
 };
 }  // namespace moveit_rviz_plugin

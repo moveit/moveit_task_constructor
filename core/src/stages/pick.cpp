@@ -26,7 +26,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 	int insertion_position = forward ? -1 : 0;  // insert children at end / front, i.e. normal or reverse order
 
 	auto init_ik_frame = [](const PropertyMap& other) -> boost::any {
-		geometry_msgs::PoseStamped pose;
+		geometry_msgs::msg::PoseStamped pose;
 		const boost::any& frame = other.get("eef_frame");
 		if (frame.empty())
 			return boost::any();
@@ -79,7 +79,7 @@ void PickPlaceBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	SerialContainer::init(robot_model);
 }
 
-void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion, double min_distance,
+void PickPlaceBase::setApproachRetract(const geometry_msgs::msg::TwistStamped& motion, double min_distance,
                                        double max_distance) {
 	auto& p = approach_stage_->properties();
 	p.set("direction", motion);
@@ -87,7 +87,8 @@ void PickPlaceBase::setApproachRetract(const geometry_msgs::TwistStamped& motion
 	p.set("max_distance", max_distance);
 }
 
-void PickPlaceBase::setLiftPlace(const geometry_msgs::TwistStamped& motion, double min_distance, double max_distance) {
+void PickPlaceBase::setLiftPlace(const geometry_msgs::msg::TwistStamped& motion, double min_distance,
+                                 double max_distance) {
 	auto& p = lift_stage_->properties();
 	p.set("direction", motion);
 	p.set("min_distance", min_distance);

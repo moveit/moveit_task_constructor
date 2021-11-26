@@ -41,11 +41,17 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
+
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("MoveRelative");
 
 MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterfacePtr& planner)
   : PropagatingEitherWay(name), planner_(planner) {
@@ -54,21 +60,21 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 	auto& p = properties();
 	p.property("timeout").setDefaultValue(1.0);
 	p.declare<std::string>("group", "name of planning group");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
+	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to be moved in Cartesian direction");
 
 	p.declare<boost::any>("direction", "motion specification");
 	// register actual types
-	PropertySerializer<geometry_msgs::TwistStamped>();
-	PropertySerializer<geometry_msgs::Vector3Stamped>();
+	PropertySerializer<geometry_msgs::msg::TwistStamped>();
+	PropertySerializer<geometry_msgs::msg::Vector3Stamped>();
 	p.declare<double>("min_distance", -1.0, "minimum distance to move");
 	p.declare<double>("max_distance", 0.0, "maximum distance to move");
 
-	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
-	                                    "constraints to maintain during trajectory");
+	p.declare<moveit_msgs::msg::Constraints>("path_constraints", moveit_msgs::msg::Constraints(),
+	                                         "constraints to maintain during trajectory");
 }
 
 void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
-	geometry_msgs::PoseStamped pose_msg;
+	geometry_msgs::msg::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
 	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);
@@ -104,7 +110,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 	return false;
 }
 
-static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Interface::Direction dir, bool success,
+static void visualizePlan(std::deque<visualization_msgs::msg::Marker>& markers, Interface::Direction dir, bool success,
                           const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& link_pose,
                           const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance) {
 	double linear_norm = linear.norm();
@@ -118,7 +124,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 	Eigen::Vector3d pos_reached = reached_pose.translation();
 	Eigen::Vector3d pos_target = pos_reached + quat_target * Eigen::Vector3d(linear_norm - distance, 0, 0);
 
-	visualization_msgs::Marker m;
+	visualization_msgs::msg::Marker m;
 	m.ns = ns;
 	m.header.frame_id = frame_id;
 	if (dir == Interface::FORWARD) {
@@ -164,7 +170,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -183,7 +189,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	double max_distance = props.get<double>("max_distance");
 	double min_distance = props.get<double>("min_distance");
-	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
+	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
@@ -209,7 +215,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try {  // try to extract Twist
-			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
+			const geometry_msgs::msg::TwistStamped& target = boost::any_cast<geometry_msgs::msg::TwistStamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf2::fromMsg(target.twist.linear, linear);
 			tf2::fromMsg(target.twist.angular, angular);
@@ -252,7 +258,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 		try {  // try to extract Vector
-			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
+			const geometry_msgs::msg::Vector3Stamped& target =
+			    boost::any_cast<geometry_msgs::msg::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
 			tf2::fromMsg(target.vector, linear);
 
@@ -282,7 +289,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
-		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+		moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 		reached_state->updateLinkTransforms();
 		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 

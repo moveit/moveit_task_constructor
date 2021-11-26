@@ -48,21 +48,25 @@
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/task_constructor/stage.h>
 
-#include <rviz/properties/property.h>
-#include <rviz/properties/enum_property.h>
-#include <rviz/display_group.h>
-#include <rviz/visualization_manager.h>
-#include <rviz/window_manager_interface.h>
-#include <rviz/visualization_frame.h>
-#include <rviz/panel_dock_widget.h>
-#include <ros/console.h>
+#include <rviz_common/properties/property.hpp>
+#include <rviz_common/properties/enum_property.hpp>
+#include <rviz_common/properties/property_tree_model.hpp>
+#include <rviz_common/display_group.hpp>
+#include <rviz_common/visualization_manager.hpp>
+#include <rviz_common/window_manager_interface.hpp>
+#include <rviz_common/visualization_frame.hpp>
+#include <rviz_common/panel_dock_widget.hpp>
+#include <rclcpp/logging.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <QPointer>
 #include <QButtonGroup>
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.task_view");
+
 namespace moveit_rviz_plugin {
 
-rviz::PanelDockWidget* getStageDockWidget(rviz::WindowManagerInterface* mgr) {
-	static QPointer<rviz::PanelDockWidget> widget = nullptr;
+rviz_common::PanelDockWidget* getStageDockWidget(rviz_common::WindowManagerInterface* mgr) {
+	static QPointer<rviz_common::PanelDockWidget> widget = nullptr;
 	if (!widget && mgr) {  // create widget
 		StageFactoryPtr factory = getStageFactory();
 		if (!factory)
@@ -83,7 +87,7 @@ static QPointer<TaskPanel> SINGLETON;
 // count active TaskDisplays
 static uint DISPLAY_COUNT = 0;
 
-TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanelPrivate(this)) {
+TaskPanel::TaskPanel(QWidget* parent) : rviz_common::Panel(parent), d_ptr(new TaskPanelPrivate(this)) {
 	Q_D(TaskPanel);
 
 	// sync checked tool button with displayed widget
@@ -148,10 +152,10 @@ void TaskPanel::addSubPanel(SubPanel* w, const QString& title, const QIcon& icon
  * will never be called if the display is disabled...
  */
 
-void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
+void TaskPanel::request(rviz_common::WindowManagerInterface* window_manager) {
 	++DISPLAY_COUNT;
 
-	rviz::VisualizationFrame* vis_frame = dynamic_cast<rviz::VisualizationFrame*>(window_manager);
+	rviz_common::VisualizationFrame* vis_frame = dynamic_cast<rviz_common::VisualizationFrame*>(window_manager);
 	if (SINGLETON || !vis_frame)
 		return;  // already defined, nothing to do
 
@@ -173,23 +177,23 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
 	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
-	property_root = new rviz::Property("Global Settings");
+	property_root = new rviz_common::properties::Property("Global Settings");
 }
 
 void TaskPanel::onInitialize() {
-	d_ptr->window_manager_ = vis_manager_->getWindowManager();
+	d_ptr->window_manager_ = getDisplayContext()->getWindowManager();
 }
 
-void TaskPanel::save(rviz::Config config) const {
-	rviz::Panel::save(config);
+void TaskPanel::save(rviz_common::Config config) const {
+	rviz_common::Panel::save(config);
 	for (int i = 0; i < d_ptr->stackedWidget->count(); ++i) {
 		SubPanel* w = static_cast<SubPanel*>(d_ptr->stackedWidget->widget(i));
 		w->save(config.mapMakeChild(w->windowTitle()));
 	}
 }
 
-void TaskPanel::load(const rviz::Config& config) {
-	rviz::Panel::load(config);
+void TaskPanel::load(const rviz_common::Config& config) {
+	rviz_common::Panel::load(config);
 	for (int i = 0; i < d_ptr->stackedWidget->count(); ++i) {
 		SubPanel* w = static_cast<SubPanel*>(d_ptr->stackedWidget->widget(i));
 		w->load(config.mapGetChild(w->windowTitle()));
@@ -197,7 +201,7 @@ void TaskPanel::load(const rviz::Config& config) {
 }
 
 void TaskPanel::showStageDockWidget() {
-	rviz::PanelDockWidget* dock = getStageDockWidget(d_ptr->window_manager_);
+	rviz_common::PanelDockWidget* dock = getStageDockWidget(d_ptr->window_manager_);
 	if (dock)
 		dock->show();
 }
@@ -216,8 +220,14 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 	view->setExpanded(index, expand);
 }
 
-TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view), exec_action_client_("execute_task_solution") {
+TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 	setupUi(view);
+
+	rclcpp::NodeOptions options;
+	options.arguments({ "--ros-args", "-r", "__node:=task_view_private" });
+	node_ = rclcpp::Node::make_shared("_", "", options);
+	exec_action_client_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
+	    node_, "execute_task_solution");
 
 	MetaTaskListModel* meta_model = &MetaTaskListModel::instance();
 	StageFactoryPtr factory = getStageFactory();
@@ -292,7 +302,7 @@ void TaskViewPrivate::lock(TaskDisplay* display) {
 	locked_display_ = display;
 }
 
-TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
+TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz_common::properties::Property* root)
   : SubPanel(parent), d_ptr(new TaskViewPrivate(this)) {
 	Q_D(TaskView);
 
@@ -318,23 +328,24 @@ TaskView::TaskView(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
 	        SIGNAL(configChanged()));
 
 	// configuration settings
-	auto configs = new rviz::Property("Task View Settings", QVariant(), QString(), root);
-	initial_task_expand =
-	    new rviz::EnumProperty("Task Expansion", "All Expanded", "Configure how to initially expand new tasks", configs);
+	auto configs = new rviz_common::properties::Property("Task View Settings", QVariant(), QString(), root);
+	initial_task_expand = new rviz_common::properties::EnumProperty(
+	    "Task Expansion", "All Expanded", "Configure how to initially expand new tasks", configs);
 	initial_task_expand->addOption("Top-level Expanded", EXPAND_TOP);
 	initial_task_expand->addOption("All Expanded", EXPAND_ALL);
 	initial_task_expand->addOption("All Closed", EXPAND_NONE);
 
-	old_task_handling =
-	    new rviz::EnumProperty("Old task handling", "Keep",
-	                           "Configure what to do with old tasks whose solutions cannot be queried anymore", configs);
+	old_task_handling = new rviz_common::properties::EnumProperty(
+	    "Old task handling", "Keep", "Configure what to do with old tasks whose solutions cannot be queried anymore",
+	    configs);
 	old_task_handling->addOption("Keep", OLD_TASK_KEEP);
 	old_task_handling->addOption("Replace", OLD_TASK_REPLACE);
 	old_task_handling->addOption("Remove", OLD_TASK_REMOVE);
-	connect(old_task_handling, &rviz::Property::changed, this, &TaskView::onOldTaskHandlingChanged);
+	connect(old_task_handling, &rviz_common::properties::Property::changed, this, &TaskView::onOldTaskHandlingChanged);
 
-	show_time_column = new rviz::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
-	connect(show_time_column, &rviz::Property::changed, this, &TaskView::onShowTimeChanged);
+	show_time_column =
+	    new rviz_common::properties::BoolProperty("Show Computation Times", true, "Show the 'time' column", configs);
+	connect(show_time_column, &rviz_common::properties::Property::changed, this, &TaskView::onShowTimeChanged);
 
 	d_ptr->configureExistingModels();
 }
@@ -343,11 +354,11 @@ TaskView::~TaskView() {
 	delete d_ptr;
 }
 
-void TaskView::save(rviz::Config config) {
+void TaskView::save(rviz_common::Config config) {
 	auto write_splitter_sizes = [&config](QSplitter* splitter, const QString& key) {
-		rviz::Config group = config.mapMakeChild(key);
+		rviz_common::Config group = config.mapMakeChild(key);
 		for (int s : splitter->sizes()) {
-			rviz::Config item = group.listAppendNew();
+			rviz_common::Config item = group.listAppendNew();
 			item.setValue(s);
 		}
 	};
@@ -355,9 +366,9 @@ void TaskView::save(rviz::Config config) {
 	write_splitter_sizes(d_ptr->tasks_solutions_splitter, "solutions_splitter");
 
 	auto write_column_sizes = [&config](QHeaderView* view, const QString& key) {
-		rviz::Config group = config.mapMakeChild(key);
+		rviz_common::Config group = config.mapMakeChild(key);
 		for (int c = 0, end = view->count(); c != end; ++c) {
-			rviz::Config item = group.listAppendNew();
+			rviz_common::Config item = group.listAppendNew();
 			item.setValue(view->sectionSize(c));
 		}
 	};
@@ -365,21 +376,21 @@ void TaskView::save(rviz::Config config) {
 	write_column_sizes(d_ptr->solutions_view->header(), "solutions_view_columns");
 
 	const QHeaderView* view = d_ptr->solutions_view->header();
-	rviz::Config group = config.mapMakeChild("solution_sorting");
+	rviz_common::Config group = config.mapMakeChild("solution_sorting");
 	group.mapSetValue("column", view->sortIndicatorSection());
 	group.mapSetValue("order", view->sortIndicatorOrder());
 }
 
-void TaskView::load(const rviz::Config& config) {
+void TaskView::load(const rviz_common::Config& config) {
 	if (!config.isValid())
 		return;
 
 	auto read_sizes = [&config](const QString& key) {
-		rviz::Config group = config.mapGetChild(key);
+		rviz_common::Config group = config.mapGetChild(key);
 		QList<int> sizes, empty;
 		for (int i = 0; i < group.listLength(); ++i) {
-			rviz::Config item = group.listChildAt(i);
-			if (item.getType() != rviz::Config::Value)
+			rviz_common::Config item = group.listChildAt(i);
+			if (item.getType() != rviz_common::Config::Value)
 				return empty;
 			QVariant value = item.getValue();
 			bool ok = false;
@@ -401,7 +412,7 @@ void TaskView::load(const rviz::Config& config) {
 		d_ptr->tasks_view->setColumnWidth(++column, w);
 
 	QTreeView* view = d_ptr->solutions_view;
-	rviz::Config group = config.mapGetChild("solution_sorting");
+	rviz_common::Config group = config.mapGetChild("solution_sorting");
 	int order = 0;
 	if (group.mapGetInt("column", &column) && group.mapGetInt("order", &order))
 		view->sortByColumn(column, static_cast<Qt::SortOrder>(order));
@@ -488,7 +499,7 @@ void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModel
 		solution = task->getSolution(current);
 		display->setSolutionStatus(bool(solution));
 	} catch (const std::invalid_argument& e) {
-		ROS_ERROR_STREAM(e.what());
+		RCLCPP_ERROR_STREAM(LOGGER, e.what());
 		display->setSolutionStatus(false, e.what());
 	}
 	vis->interruptCurrentDisplay();
@@ -511,7 +522,7 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection& /*selected*/, co
 			solution = task->getSolution(index);
 			display->setSolutionStatus(bool(solution));
 		} catch (const std::invalid_argument& e) {
-			ROS_ERROR_STREAM(e.what());
+			RCLCPP_ERROR_STREAM(LOGGER, e.what());
 			display->setSolutionStatus(false, e.what());
 		}
 		display->addMarkers(solution);
@@ -528,14 +539,21 @@ void TaskView::onExecCurrentSolution() const {
 
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 
-	if (!d_ptr->exec_action_client_.waitForServer(ros::Duration(0.1))) {
-		ROS_ERROR("Failed to connect to task execution action");
+	if (!d_ptr->exec_action_client_->wait_for_action_server(std::chrono::milliseconds(100))) {
+		RCLCPP_ERROR(LOGGER, "Failed to connect to task execution action");
 		return;
 	}
 
-	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
+	moveit_task_constructor_msgs::action::ExecuteTaskSolution::Goal goal;
 	solution->fillMessage(goal.solution);
-	d_ptr->exec_action_client_.sendGoal(goal);
+	auto goal_handle_future = d_ptr->exec_action_client_->async_send_goal(goal);
+	if (rclcpp::spin_until_future_complete(d_ptr->node_, goal_handle_future) != rclcpp::FutureReturnCode::SUCCESS) {
+		RCLCPP_ERROR(LOGGER, "send goal call failed");
+		return;
+	}
+	auto goal_handle = goal_handle_future.get();
+	if (!goal_handle)
+		RCLCPP_ERROR(LOGGER, "Goal was rejected by server");
 }
 
 void TaskView::onShowTimeChanged() {
@@ -550,30 +568,33 @@ void TaskView::onOldTaskHandlingChanged() {
 	Q_EMIT oldTaskHandlingChanged(old_task_handling->getOptionInt());
 }
 
-GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* widget, rviz::Property* root)
+GlobalSettingsWidgetPrivate::GlobalSettingsWidgetPrivate(GlobalSettingsWidget* widget,
+                                                         rviz_common::properties::Property* root)
   : q_ptr(widget) {
 	setupUi(widget);
-	properties = new rviz::PropertyTreeModel(root, widget);
+	properties = new rviz_common::properties::PropertyTreeModel(root, widget);
 	view->setModel(properties);
 }
 
-GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel* parent, rviz::Property* root)
+GlobalSettingsWidget::GlobalSettingsWidget(moveit_rviz_plugin::TaskPanel* parent,
+                                           rviz_common::properties::Property* root)
   : SubPanel(parent), d_ptr(new GlobalSettingsWidgetPrivate(this, root)) {
 	Q_D(GlobalSettingsWidget);
 
 	d->view->expandAll();
-	connect(d->properties, &rviz::PropertyTreeModel::configChanged, this, &GlobalSettingsWidget::configChanged);
+	connect(d->properties, &rviz_common::properties::PropertyTreeModel::configChanged, this,
+	        &GlobalSettingsWidget::configChanged);
 }
 
 GlobalSettingsWidget::~GlobalSettingsWidget() {
 	delete d_ptr;
 }
 
-void GlobalSettingsWidget::save(rviz::Config config) {
+void GlobalSettingsWidget::save(rviz_common::Config config) {
 	d_ptr->properties->getRoot()->save(config);
 }
 
-void GlobalSettingsWidget::load(const rviz::Config& config) {
+void GlobalSettingsWidget::load(const rviz_common::Config& config) {
 	d_ptr->properties->getRoot()->load(config);
 }
 }  // namespace moveit_rviz_plugin

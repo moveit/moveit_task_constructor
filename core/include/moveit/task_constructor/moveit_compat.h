@@ -44,16 +44,7 @@
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
 	 major * 1'000'000 + minor * 1'000 + patch)
 
-// use collision env instead of collision robot/world
-#define MOVEIT_HAS_COLLISION_ENV MOVEIT_VERSION_GE(1, 1, 0)
-
-// cartesian interpolator got separated from RobotState at some point
-#define MOVEIT_HAS_CARTESIAN_INTERPOLATOR MOVEIT_VERSION_GE(1, 1, 0)
-
-// isEmpty got split off into its own header
-#define MOVEIT_HAS_MESSAGE_CHECKS MOVEIT_VERSION_GE(1, 1, 0)
-
 // use object shape poses relative to a single object pose
-#define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
+#define MOVEIT_HAS_OBJECT_POSE 1
 
-#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)
+#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK 0

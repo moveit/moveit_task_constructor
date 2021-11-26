@@ -37,7 +37,7 @@
 #pragma once
 
 #include <moveit/macros/class_forward.h>
-#include <moveit_task_constructor_msgs/Solution.h>
+#include <moveit_task_constructor_msgs/msg/solution.hpp>
 #include <QObject>
 #include <boost/thread/mutex.hpp>
 
@@ -47,10 +47,13 @@ namespace Ogre {
 class SceneNode;
 }
 
-namespace rviz {
-class Display;
-class DisplayContext;
+namespace rviz_default_plugins {
+namespace robot {
 class Robot;
+}
+}  // namespace rviz_default_plugins
+namespace rviz_common {
+namespace properties {
 class Property;
 class IntProperty;
 class StringProperty;
@@ -60,8 +63,11 @@ class RosTopicProperty;
 class EnumProperty;
 class EditableEnumProperty;
 class ColorProperty;
+}  // namespace properties
+class Display;
+class DisplayContext;
 class PanelDockWidget;
-}  // namespace rviz
+}  // namespace rviz_common
 
 namespace moveit {
 namespace core {
@@ -91,24 +97,24 @@ class TaskSolutionVisualization : public QObject
 public:
 	/**
 	 * \brief Playback a trajectory from a planned path
-	 * \param parent - either a rviz::Display or rviz::Property
+	 * \param parent - either a rviz::Display _commonorproperties:: rviz::Property
 	 * \param display - the rviz::Display from the parent
 	 * \return true on success
 	 */
-	TaskSolutionVisualization(rviz::Property* parent, rviz::Display* display);
+	TaskSolutionVisualization(rviz_common::properties::Property* parent, rviz_common::Display* display);
 	~TaskSolutionVisualization() override;
 
 	virtual void update(float wall_dt, float ros_dt);
 	virtual void reset();
 
-	void onInitialize(Ogre::SceneNode* scene_node, rviz::DisplayContext* context);
+	void onInitialize(Ogre::SceneNode* scene_node, rviz_common::DisplayContext* context);
 	void onRobotModelLoaded(const moveit::core::RobotModelConstPtr& robot_model);
 	void onEnable();
 	void onDisable();
 	void setName(const QString& name);
 
 	planning_scene::PlanningSceneConstPtr getScene() const { return scene_; }
-	void showTrajectory(const moveit_task_constructor_msgs::Solution& msg);
+	void showTrajectory(const moveit_task_constructor_msgs::msg::Solution& msg);
 	void showTrajectory(const moveit_rviz_plugin::DisplaySolutionPtr& s, bool lock);
 	void unlock();
 
@@ -156,12 +162,12 @@ protected:
 	MarkerVisualizationProperty* marker_visual_;
 
 	// Handle colouring of robot
-	void setRobotColor(rviz::Robot* robot, const QColor& color);
-	void unsetRobotColor(rviz::Robot* robot);
+	void setRobotColor(rviz_default_plugins::robot::Robot* robot, const QColor& color);
+	void unsetRobotColor(rviz_default_plugins::robot::Robot* robot);
 
 	DisplaySolutionPtr displaying_solution_;
 	DisplaySolutionPtr next_solution_to_display_;
-	std::vector<rviz::Robot*> trail_;
+	std::vector<rviz_default_plugins::robot::Robot*> trail_;
 	bool animating_ = false;  // auto-progressing the current waypoint?
 	bool drop_displaying_solution_ = false;
 	bool locked_ = false;
@@ -172,36 +178,36 @@ protected:
 	planning_scene::PlanningScenePtr scene_;
 
 	// Pointers from parent display that we save
-	rviz::Display* display_;  // the parent display that this class populates
+	rviz_common::Display* display_;  // the parent display that this class populates
 	Ogre::SceneNode* parent_scene_node_;  // parent scene node provided by display
 	Ogre::SceneNode* main_scene_node_;  // to be added/removed to/from scene_node_
 	Ogre::SceneNode* trail_scene_node_;  // to be added/removed to/from scene_node_
-	rviz::DisplayContext* context_;
+	rviz_common::DisplayContext* context_;
 	TaskSolutionPanel* slider_panel_ = nullptr;
-	rviz::PanelDockWidget* slider_dock_panel_ = nullptr;
+	rviz_common::PanelDockWidget* slider_dock_panel_ = nullptr;
 	bool slider_panel_was_visible_ = false;
 
 	// Trajectory Properties
-	rviz::Property* robot_property_;
-	rviz::BoolProperty* robot_visual_enabled_property_;
-	rviz::BoolProperty* robot_collision_enabled_property_;
-	rviz::FloatProperty* robot_alpha_property_;
-	rviz::ColorProperty* robot_color_property_;
-	rviz::BoolProperty* enable_robot_color_property_;
+	rviz_common::properties::Property* robot_property_;
+	rviz_common::properties::BoolProperty* robot_visual_enabled_property_;
+	rviz_common::properties::BoolProperty* robot_collision_enabled_property_;
+	rviz_common::properties::FloatProperty* robot_alpha_property_;
+	rviz_common::properties::ColorProperty* robot_color_property_;
+	rviz_common::properties::BoolProperty* enable_robot_color_property_;
 
-	rviz::EditableEnumProperty* state_display_time_property_;
-	rviz::BoolProperty* loop_display_property_;
-	rviz::BoolProperty* trail_display_property_;
-	rviz::BoolProperty* interrupt_display_property_;
-	rviz::IntProperty* trail_step_size_property_;
+	rviz_common::properties::EditableEnumProperty* state_display_time_property_;
+	rviz_common::properties::BoolProperty* loop_display_property_;
+	rviz_common::properties::BoolProperty* trail_display_property_;
+	rviz_common::properties::BoolProperty* interrupt_display_property_;
+	rviz_common::properties::IntProperty* trail_step_size_property_;
 
 	// PlanningScene Properties
-	rviz::BoolProperty* scene_enabled_property_;
-	rviz::FloatProperty* scene_alpha_property_;
-	rviz::ColorProperty* scene_color_property_;
-	rviz::ColorProperty* attached_body_color_property_;
-	rviz::EnumProperty* octree_render_property_;
-	rviz::EnumProperty* octree_coloring_property_;
+	rviz_common::properties::BoolProperty* scene_enabled_property_;
+	rviz_common::properties::FloatProperty* scene_alpha_property_;
+	rviz_common::properties::ColorProperty* scene_color_property_;
+	rviz_common::properties::ColorProperty* attached_body_color_property_;
+	rviz_common::properties::EnumProperty* octree_render_property_;
+	rviz_common::properties::EnumProperty* octree_coloring_property_;
 };
 
 }  // namespace moveit_rviz_plugin

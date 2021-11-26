@@ -45,16 +45,22 @@
 #include <moveit/robot_state/attached_body.h>
 
 #include <Eigen/Geometry>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
 #include <tf2_eigen/tf2_eigen.h>
+#endif
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("GeneratePlacePose");
+
 GeneratePlacePose::GeneratePlacePose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<std::string>("object");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame");
+	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame");
 }
 
 void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
@@ -75,7 +81,7 @@ void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
 			solution.setComment(msg);
 			spawn(std::move(state), std::move(solution));
 		} else
-			ROS_WARN_STREAM_NAMED("GeneratePlacePose", msg);
+			RCLCPP_WARN_STREAM(LOGGER, msg);
 		return;
 	}
 
@@ -95,13 +101,13 @@ void GeneratePlacePose::compute() {
 	// current object_pose w.r.t. planning frame
 	const Eigen::Isometry3d& orig_object_pose = object->getGlobalCollisionBodyTransforms()[0];
 
-	const geometry_msgs::PoseStamped& pose_msg = props.get<geometry_msgs::PoseStamped>("pose");
+	const geometry_msgs::msg::PoseStamped& pose_msg = props.get<geometry_msgs::msg::PoseStamped>("pose");
 	Eigen::Isometry3d target_pose;
 	tf2::fromMsg(pose_msg.pose, target_pose);
 	// target pose w.r.t. planning frame
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
-	const geometry_msgs::PoseStamped& ik_frame_msg = props.get<geometry_msgs::PoseStamped>("ik_frame");
+	const geometry_msgs::msg::PoseStamped& ik_frame_msg = props.get<geometry_msgs::msg::PoseStamped>("ik_frame");
 	Eigen::Isometry3d ik_frame;
 	tf2::fromMsg(ik_frame_msg.pose, ik_frame);
 	ik_frame = robot_state.getGlobalLinkTransform(ik_frame_msg.header.frame_id) * ik_frame;
@@ -121,7 +127,7 @@ void GeneratePlacePose::compute() {
 				    .pretranslate(pos);
 
 				// target ik_frame's pose w.r.t. planning frame
-				geometry_msgs::PoseStamped target_pose_msg;
+				geometry_msgs::msg::PoseStamped target_pose_msg;
 				target_pose_msg.header.frame_id = scene->getPlanningFrame();
 				target_pose_msg.pose = tf2::toMsg(object * object_to_ik);
 
