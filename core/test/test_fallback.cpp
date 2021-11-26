@@ -161,16 +161,16 @@ TEST_F(FallbacksFixturePropagate, activeChildReset) {
 
 using FallbacksFixtureConnect = TaskTestBase;
 
-TEST_F(FallbacksFixtureConnect, DISABLED_connectStageInsideFallbacks) {
+TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts::constant(0.0)));
+	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts({ 0.0, 0.0, INF, 0.0 })));
 	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts::constant(100.0)));
 	t.add(std::move(fallbacks));
 
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 10.0, 20.0 })));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 21, 22));
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 22, 121));
 }
