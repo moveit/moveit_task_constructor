@@ -606,9 +606,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			starts_ = std::make_shared<Interface>([this, target](Interface::iterator it, bool updated) {
 				this->copyState<Interface::FORWARD>(it, target, updated);
-			}));
+			});
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -632,9 +632,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface([this, target](Interface::iterator it, bool updated) {
+			ends_ = std::make_shared<Interface>([this, target](Interface::iterator it, bool updated) {
 				this->copyState<Interface::BACKWARD>(it, target, updated);
-			}));
+			});
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -733,13 +733,13 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 void ParallelContainerBasePrivate::initializeExternalInterfaces() {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (requiredInterface() & READS_START)
-		starts().reset(new Interface([this](Interface::iterator external, bool updated) {
+		starts() = std::make_shared<Interface>([this](Interface::iterator external, bool updated) {
 		   this->propagateStateToChildren<Interface::FORWARD>(external, updated);
-		}));
+		});
 	if (requiredInterface() & READS_END)
-		ends().reset(new Interface([this](Interface::iterator external, bool updated) {
+		ends() = std::make_shared<Interface>([this](Interface::iterator external, bool updated) {
 		   this->propagateStateToChildren<Interface::BACKWARD>(external, updated);
-		}));
+		});
 }
 
 void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child, InterfaceFlags& external,

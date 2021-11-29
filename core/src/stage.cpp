@@ -510,14 +510,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(new Interface());
+				starts_ = std::make_shared<Interface>();
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface());
+				ends_ = std::make_shared<Interface>();
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -715,10 +715,10 @@ void MonitoringGeneratorPrivate::solutionCB(const SolutionBase& s) {
 }
 
 ConnectingPrivate::ConnectingPrivate(Connecting* me, const std::string& name) : ComputeBasePrivate(me, name) {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1,
-	                                      std::placeholders::_2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1,
-	                                    std::placeholders::_2)));
+	starts_ = std::make_shared<Interface>(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this,
+	                                                std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+	    std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
