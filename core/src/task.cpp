@@ -246,23 +246,32 @@ void Task::compute() {
 	stages()->pimpl()->runCompute();
 }
 
-bool Task::plan(size_t max_solutions) {
+moveit_msgs::MoveItErrorCodes Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
 	init();
 
+	// Print state and return success if there are solutions otherwise the input error_code
+	const auto success_or = [this](const int32_t error_code) {
+		printState();
+		moveit_msgs::MoveItErrorCodes moveit_error_code;
+		moveit_error_code.val = numSolutions() > 0 ? moveit_msgs::MoveItErrorCodes::SUCCESS : error_code;
+		return moveit_error_code;
+	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
-	while (!impl->preempt_requested_ && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions) &&
-	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
+	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
+		if (impl->preempt_requested_)
+			return success_or(moveit_msgs::MoveItErrorCodes::PREEMPTED);
+		if (std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() > available_time)
+			return success_or(moveit_msgs::MoveItErrorCodes::TIMED_OUT);
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
-	}
-	printState();
-	return numSolutions() > 0;
+	};
+	return success_or(moveit_msgs::MoveItErrorCodes::FAILURE);
 }
 
 void Task::preempt() {

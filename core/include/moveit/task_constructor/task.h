@@ -117,7 +117,7 @@ public:
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	bool plan(size_t max_solutions = 0);
+	moveit_msgs::MoveItErrorCodes plan(size_t error_code = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
 	/// execute solution, return the result

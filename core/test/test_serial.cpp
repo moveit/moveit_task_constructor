@@ -55,7 +55,7 @@ TEST_F(ConnectConnect, SuccSucc) {
 	add(t, new Connect());
 	add(t, new GeneratorMockup({ 0.0 }));
 
-	EXPECT_TRUE(t.plan());
+	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 	ASSERT_EQ(t.solutions().size(), 3u * 2u);
 	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
 	auto expected_cost = expected_costs.begin();
@@ -74,5 +74,5 @@ TEST_F(ConnectConnect, FailSucc) {
 	add(t, new GeneratorMockup());
 	add(t, new ForwardMockup(PredefinedCosts::constant(0.0), 0));
 
-	EXPECT_FALSE(t.plan());
+	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 }

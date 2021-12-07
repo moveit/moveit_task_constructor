@@ -45,10 +45,10 @@ struct PandaMoveTo : public testing::Test
 	}
 };
 
-#define EXPECT_ONE_SOLUTION                \
-	{                                       \
-		EXPECT_TRUE(t.plan());               \
-		EXPECT_EQ(t.solutions().size(), 1u); \
+#define EXPECT_ONE_SOLUTION                                                \
+	{                                                                       \
+		EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS); \
+		EXPECT_EQ(t.solutions().size(), 1u);                                 \
 	}
 
 TEST_F(PandaMoveTo, namedTarget) {

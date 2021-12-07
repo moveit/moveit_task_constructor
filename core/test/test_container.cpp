@@ -611,7 +611,7 @@ TEST(Task, reuse) {
 
 	try {
 		configure(t);
-		EXPECT_TRUE(t.plan(1));
+		EXPECT_TRUE(t.plan(1).val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 
 		t = Task("second");
 		t.setRobotModel(robot_model);
@@ -620,7 +620,7 @@ TEST(Task, reuse) {
 		EXPECT_EQ(static_cast<void*>(t.stages()->pimpl()->parent()), static_cast<void*>(&t));
 
 		configure(t);
-		EXPECT_TRUE(t.plan(1));
+		EXPECT_TRUE(t.plan(1).val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 	} catch (const InitStageException& e) {
 		ADD_FAILURE() << "InitStageException:" << std::endl << e << t;
 	}
@@ -649,23 +649,23 @@ TEST(Task, timeout) {
 	t.add(std::make_unique<TimedForwardMockup>(timeout));
 
 	// no timeout, but limited number of solutions
-	EXPECT_TRUE(t.plan(3));
+	EXPECT_TRUE(t.plan(3).val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 	EXPECT_EQ(t.solutions().size(), 3u);
 
 	// zero timeout fails
 	t.reset();
 	t.setTimeout(0.0);
-	EXPECT_FALSE(t.plan());
+	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::TIMED_OUT);
 
 	// time for 1 solution
 	t.reset();
 	t.setTimeout(std::chrono::duration<double>(timeout).count());
-	EXPECT_TRUE(t.plan());
+	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 	EXPECT_EQ(t.solutions().size(), 1u);
 
 	// time for 2 solutions
 	t.reset();
 	t.setTimeout(std::chrono::duration<double>(2 * timeout).count());
-	EXPECT_TRUE(t.plan());
+	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
 	EXPECT_EQ(t.solutions().size(), 2u);
 }
