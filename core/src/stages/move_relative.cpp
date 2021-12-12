@@ -204,6 +204,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		Eigen::Vector3d angular;  // angular rotation
 		double linear_norm = 0.0, angular_norm = 0.0;
 
+		// Target pose such that ik frame will reach there if link does
 		Eigen::Isometry3d target_eigen;
 		Eigen::Isometry3d link_pose =
 		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
@@ -277,9 +278,6 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 	COMPUTE:
-		// transform target pose such that ik frame will reach there if link does
-		target_eigen = target_eigen * scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
-
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
 		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
