@@ -249,9 +249,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			// compute absolute transform for link
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			target_eigen = link_pose;
+			target_eigen = ik_pose_world;
 			target_eigen.linear() =
-			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
+			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, ik_pose_world.linear().transpose() * angular);
 			target_eigen.translation() += linear;
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
@@ -276,7 +276,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 			// compute absolute transform for link
 			linear = frame_pose.linear() * linear;
-			target_eigen = link_pose;
+			target_eigen = ik_pose_world;
 			target_eigen.translation() += linear;
 		} catch (const boost::bad_any_cast&) {
 			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
@@ -285,7 +285,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
-		target_eigen = target_eigen * scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
+		target_eigen = target_eigen * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
