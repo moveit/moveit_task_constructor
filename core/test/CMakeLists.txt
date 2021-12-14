@@ -46,6 +46,7 @@ if (CATKIN_ENABLE_TESTING)
 	mtc_add_gmock(test_interface_state.cpp)
 
 	mtc_add_gtest(test_move_to.cpp move_to.test)
+	mtc_add_gtest(test_move_relative.cpp move_relative.test)
 
 	# building these integration tests works without moveit config packages
 	add_executable(pick_ur5 pick_ur5.cpp)
