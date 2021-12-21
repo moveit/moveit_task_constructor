@@ -119,7 +119,7 @@ void ExecuteTaskSolutionCapability::goalCallback(
 
 	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
 		goal_handle->succeed(result);
-	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED)
+	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling())
 		goal_handle->canceled(result);
 	else
 		goal_handle->abort(result);
