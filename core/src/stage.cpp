@@ -160,14 +160,14 @@ void StagePrivate::sendForward(const InterfaceState& from, InterfaceState&& to, 
 
 	me()->forwardProperties(from, to);
 
-	auto to_it = states_.insert(states_.end(), std::move(to));
+	InterfaceState* to_stored{ storeState(std::move(to)) };
 
 	// register stored interfaces with solution
 	solution->setStartState(from);
-	solution->setEndState(*to_it);
+	solution->setEndState(*to_stored);
 
 	if (!solution->isFailure())
-		nextStarts()->add(*to_it);
+		nextStarts()->add(*to_stored);
 
 	newSolution(solution);
 }
@@ -182,13 +182,13 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 
 	me()->forwardProperties(to, from);
 
-	auto from_it = states_.insert(states_.end(), std::move(from));
+	InterfaceState* from_stored{ storeState(std::move(from)) };
 
-	solution->setStartState(*from_it);
+	solution->setStartState(*from_stored);
 	solution->setEndState(to);
 
 	if (!solution->isFailure())
-		prevEnds()->add(*from_it);
+		prevEnds()->add(*from_stored);
 
 	newSolution(solution);
 }
@@ -201,8 +201,8 @@ void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution
 	if (!storeSolution(solution, nullptr, nullptr))
 		return;  // solution dropped
 
-	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
-	auto to = states_.insert(states_.end(), std::move(state));
+	InterfaceState* from{ storeState(InterfaceState{ state }) };
+	InterfaceState* to{ storeState(std::move(state)) };
 
 	solution->setStartState(*from);
 	solution->setEndState(*to);

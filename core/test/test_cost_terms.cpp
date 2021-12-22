@@ -310,7 +310,7 @@ TEST(CostTerm, CompositeSolutions) {
 	{
 		auto s1{ std::make_unique<ForwardCostMockup>() };
 		auto s2{ std::make_unique<ForwardCostMockup>() };
-		auto c1{ std::make_unique<SerialContainer>() };
+		auto c1{ std::make_unique<SerialContainer>("c1") };
 		auto constant1{ std::make_shared<cost::Constant>(1.0) };
 		s1->setCostTerm(constant1);
 		s2->setCostTerm(constant1);
@@ -334,7 +334,7 @@ TEST(CostTerm, CompositeSolutionsContainerCost) {
 	auto s1_ptr{ s1.get() };
 	auto s2{ std::make_unique<ForwardTrajectoryMockup>() };
 
-	auto c1{ std::make_unique<SerialContainer>() };
+	auto c1{ std::make_unique<SerialContainer>("c1") };
 	c1->add(std::move(s1));
 	c1->add(std::move(s2));
 

@@ -321,15 +321,15 @@ void ComputeIK::compute() {
 	                                     ->getParentJointModel()
 	                                     ->getDescendantLinkModels();
 	if (colliding) {
-		SubTrajectory solution;
+		auto solution = std::make_shared<SubTrajectory>();
 		generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
-		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
-		solution.markAsFailure();
+		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution->markers()));
+		solution->markAsFailure();
 		// TODO: visualize collisions
-		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
+		solution->setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
 		auto colliding_scene{ scene->diff() };
 		colliding_scene->setCurrentState(sandbox_state);
-		spawn(InterfaceState(colliding_scene), std::move(solution));
+		liftModifiedSolution(solution, InterfaceState(colliding_scene), s);
 		return;
 	} else
 		generateVisualMarkers(sandbox_state, appender, links_to_visualize);
@@ -382,18 +382,18 @@ void ComputeIK::compute() {
 		for (size_t i = previous; i != ik_solutions.size(); ++i) {
 			// create a new scene for each solution as they will have different robot states
 			planning_scene::PlanningScenePtr solution_scene = scene->diff();
-			SubTrajectory solution;
-			solution.setComment(s.comment());
+			auto solution = std::make_shared<SubTrajectory>();
+			solution->setComment(s.comment());
 
 			// frames at target pose and ik frame
-			rviz_marker_tools::appendFrame(solution.markers(), target_pose_msg, 0.1, "ik frame");
-			rviz_marker_tools::appendFrame(solution.markers(), ik_pose_msg, 0.1, "ik frame");
+			rviz_marker_tools::appendFrame(solution->markers(), target_pose_msg, 0.1, "ik frame");
+			rviz_marker_tools::appendFrame(solution->markers(), ik_pose_msg, 0.1, "ik frame");
 
 			if (succeeded && i + 1 == ik_solutions.size())
 				// compute cost as distance to compare_pose
-				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
+				solution->setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
 			else  // found an IK solution, but this was not valid
-				solution.markAsFailure();
+				solution->markAsFailure();
 
 			// set scene's robot state
 			robot_state::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
@@ -402,7 +402,7 @@ void ComputeIK::compute() {
 
 			InterfaceState state(solution_scene);
 			forwardProperties(*s.start(), state);
-			spawn(std::move(state), std::move(solution));
+			liftModifiedSolution(solution, std::move(state), s);
 		}
 
 		// TODO: magic constant should be a property instead ("current_seed_only", or equivalent)
@@ -414,15 +414,15 @@ void ComputeIK::compute() {
 
 	if (ik_solutions.empty()) {  // failed to find any solution
 		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
-		SubTrajectory solution;
+		auto solution = std::make_shared<SubTrajectory>();
 
-		solution.markAsFailure();
-		solution.setComment(s.comment() + " no IK found");
+		solution->markAsFailure();
+		solution->setComment(s.comment() + " no IK found");
 
 		// ik target link placement
-		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution.markers()));
+		std::copy(failure_markers.begin(), failure_markers.end(), std::back_inserter(solution->markers()));
 
-		spawn(InterfaceState(scene), std::move(solution));
+		liftModifiedSolution(solution, InterfaceState(scene), s);
 	}
 }
 }  // namespace stages

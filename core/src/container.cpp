@@ -205,44 +205,99 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	}
 
 	// create a clone of external state within target interface (child's starts() or ends())
-	auto internal = states_.insert(states_.end(), InterfaceState(*external));
-	target->add(*internal);
+	InterfaceState* internal = storeState(InterfaceState{ *external });
+
 	// and remember the mapping between them
-	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
+	internalToExternalMap().insert(std::make_pair(internal, &*external));
+	target->add(*internal);
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
-                                        const InterfaceState* internal_to) {
-	computeCost(*internal_from, *internal_to, *solution);
-
-	// map internal to external states
-	auto find_or_create_external = [this](const InterfaceState* internal, bool& created) -> InterfaceState* {
+                                        const InterfaceState* internal_to, InterfaceState* new_from,
+                                        InterfaceState* new_to) {
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	auto findExternal = [this](const InterfaceState* internal) -> const InterfaceState* {
 		auto it = internalToExternalMap().find(internal);
-		if (it != internalToExternalMap().end())
-			return const_cast<InterfaceState*>(it->second);
+		if (it != internalToExternalMap().end()) {
+			return &*it->second;
+		}
 
-		InterfaceState* external = &*states_.insert(states_.end(), InterfaceState(*internal));
-		internalToExternalMap().insert(std::make_pair(internal, external));
-		created = true;
+		return nullptr;
+	};
+
+	// external states, nullptr if they don't exist yet
+	const InterfaceState* external_from{ findExternal(internal_from) };
+	const InterfaceState* external_to{ findExternal(internal_to) };
+
+	// TODO(v4hn) rethink this. ComputeIK is exactly this case. Do I want to support an n:m mapping from internal to
+	// external?
+	if ((new_from && external_from && external_from != new_from) || (new_to && external_to && external_to != new_to)) {
+		ROS_ERROR_STREAM_NAMED("Container", "Container '" << name_ << "' tried to lift a modified solution from child '"
+		                                                  << solution->creator()->name()
+		                                                  << "', but a different one already exists. Children's "
+		                                                     "InterfaceStates can only ever match one ");
+		return;
+	}
+
+	// computeCost
+	// If there are no external states known yet, we can pass internal_{from/to} here
+	// because in this case the lifted states that will be created later
+	// are equivalent up to the connected Solutions (which are not relevant for CostTerms)
+	{
+		auto getPreliminaryState = [](const InterfaceState* external, const InterfaceState* new_state,
+		                              const InterfaceState* internal) -> const InterfaceState& {
+			if (external)
+				return *external;
+			if (new_state)
+				return *new_state;
+			else
+				return *internal;
+		};
+		computeCost(getPreliminaryState(external_from, new_from, internal_from),
+		            getPreliminaryState(external_to, new_to, internal_to), *solution);
+	}
+
+	// storeSolution
+	// only pass stored external states here (others are not relevant for pruning)
+	if (!storeSolution(solution, external_from, external_to)) {
+		return;
+	}
+
+	// store unstored states in stage-internal storage
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	auto createState = [this](const InterfaceState& internal, InterfaceState* new_external) {
+		InterfaceState* external{ storeState(new_external ? std::move(*new_external) : InterfaceState{ internal }) };
+		internalToExternalMap().insert(std::make_pair(&internal, external));
 		return external;
 	};
-	bool created_from = false;
-	bool created_to = false;
-	InterfaceState* external_from = find_or_create_external(internal_from, created_from);
-	InterfaceState* external_to = find_or_create_external(internal_to, created_to);
 
-	if (!storeSolution(solution, external_from, external_to))
-		return;
+	const bool create_from{ external_from == nullptr };
+	const bool create_to{ external_to == nullptr };
 
-	// connect solution to start/end state
+	if (create_from) {
+		assert(requiredInterface().testFlag(WRITES_PREV_END));
+		external_from = createState(*internal_from, new_from);
+	}
+	if (create_to) {
+		assert(requiredInterface().testFlag(WRITES_NEXT_START));
+		external_to = createState(*internal_to, new_to);
+	}
+
+	assert(external_from);
+	assert(external_to);
+
+	// connect solution to stored states
 	solution->setStartState(*external_from);
 	solution->setEndState(*external_to);
 
-	// spawn created states in external interfaces
-	if (created_from)
-		prevEnds()->add(*external_from);
-	if (created_to)
-		nextStarts()->add(*external_to);
+	// spawn new external states
+	if (!solution->isFailure()) {
+		if (create_from)
+			prevEnds()->add(*const_cast<InterfaceState*>(external_from));
+		if (create_to)
+			nextStarts()->add(*const_cast<InterfaceState*>(external_to));
+	}
 
 	newSolution(solution);
 }
@@ -742,17 +797,36 @@ void ParallelContainerBase::liftSolution(const SolutionBase& solution, double co
 	                      solution.start(), solution.end());
 }
 
-void ParallelContainerBase::spawn(InterfaceState&& state, SubTrajectory&& t) {
-	pimpl()->StagePrivate::spawn(std::move(state), std::make_shared<SubTrajectory>(std::move(t)));
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& modified_solution, const SolutionBase& child_solution) {
+	// child_solution is correctly prepared by a child of this container
+	assert(child_solution.creator());
+	assert(child_solution.creator()->parent() == this);
+
+	pimpl()->liftSolution(modified_solution, child_solution.start(), child_solution.end());
 }
 
-void ParallelContainerBase::sendForward(const InterfaceState& from, InterfaceState&& to, SubTrajectory&& t) {
-	pimpl()->StagePrivate::sendForward(from, std::move(to), std::make_shared<SubTrajectory>(std::move(t)));
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_propagated_state, const SolutionBase& child_solution) {
+	assert(child_solution.creator());
+	assert(child_solution.creator()->parent() == this);
+
+	if(pimpl()->requiredInterface() == GENERATE){
+		// in this case we need a second InterfaceState to move from
+		InterfaceState new_to{ new_propagated_state };
+		pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_propagated_state, &new_to);
+	}
+	else {
+		// pass new_propagated_state as start *and* end. We know at most one will be used.
+		pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_propagated_state, &new_propagated_state);
+	}
 }
 
-void ParallelContainerBase::sendBackward(InterfaceState&& from, const InterfaceState& to, SubTrajectory&& t) {
-	pimpl()->StagePrivate::sendBackward(std::move(from), to, std::make_shared<SubTrajectory>(std::move(t)));
+void ParallelContainerBase::liftModifiedSolution(const SolutionBasePtr& new_solution, InterfaceState&& new_from, InterfaceState&& new_to, const SolutionBase& child_solution) {
+	assert(child_solution.creator());
+	assert(child_solution.creator()->parent() == this);
+
+	pimpl()->liftSolution(new_solution, child_solution.start(), child_solution.end(), &new_from, &new_to);
 }
+
 
 WrapperBasePrivate::WrapperBasePrivate(WrapperBase* me, const std::string& name)
   : ParallelContainerBasePrivate(me, name) {}
