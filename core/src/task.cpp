@@ -269,7 +269,7 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
 	};
-	return success_or(moveit_msgs::MoveItErrorCodes::FAILURE);
+	return success_or(moveit_msgs::MoveItErrorCodes::PLANNING_FAILED);
 }
 
 void Task::preempt() {
