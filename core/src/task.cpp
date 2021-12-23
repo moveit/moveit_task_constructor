@@ -246,16 +246,14 @@ void Task::compute() {
 	stages()->pimpl()->runCompute();
 }
 
-moveit_msgs::MoveItErrorCodes Task::plan(size_t max_solutions) {
+moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
 	init();
 
 	// Print state and return success if there are solutions otherwise the input error_code
 	const auto success_or = [this](const int32_t error_code) {
 		printState();
-		moveit_msgs::MoveItErrorCodes moveit_error_code;
-		moveit_error_code.val = numSolutions() > 0 ? moveit_msgs::MoveItErrorCodes::SUCCESS : error_code;
-		return moveit_error_code;
+		return numSolutions() > 0 ? moveit_msgs::MoveItErrorCodes::SUCCESS : error_code;
 	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
@@ -278,7 +276,7 @@ void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
+moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
 	ac.waitForServer();
 

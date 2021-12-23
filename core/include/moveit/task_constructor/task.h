@@ -47,6 +47,26 @@
 #include <moveit/macros/class_forward.h>
 
 #include <moveit_msgs/MoveItErrorCodes.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
+#if MOVEIT_CORE_HAS_ERROR_CODE
+#include <moveit/utils/moveit_error_code.h>
+#else
+namespace moveit {
+namespace core {
+class MoveItErrorCode : public moveit_msgs::MoveItErrorCodes
+{
+public:
+	MoveItErrorCode() { val = 0; }
+	MoveItErrorCode(int code) { val = code; }
+	MoveItErrorCode(const moveit_msgs::MoveItErrorCodes& code) { val = code.val; }
+	explicit operator bool() const { return val == moveit_msgs::MoveItErrorCodes::SUCCESS; }
+	bool operator==(const int c) const { return val == c; }
+	bool operator!=(const int c) const { return val != c; }
+};
+}  // namespace core
+}  // namespace moveit
+#endif
 
 namespace moveit {
 namespace core {
@@ -117,11 +137,11 @@ public:
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	moveit_msgs::MoveItErrorCodes plan(size_t error_code = 0);
+	moveit::core::MoveItErrorCode plan(size_t error_code = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
 	/// execute solution, return the result
-	moveit_msgs::MoveItErrorCodes execute(const SolutionBase& s);
+	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;

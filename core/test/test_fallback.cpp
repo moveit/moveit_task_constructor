@@ -24,7 +24,7 @@ TEST_F(FallbacksFixtureGenerator, DISABLED_stayWithFirstSuccessful) {
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(2.0)));
 	t.add(std::move(fallback));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	ASSERT_EQ(t.solutions().size(), 1u);
 	EXPECT_EQ(t.solutions().front()->cost(), 1.0);
 }
@@ -39,7 +39,7 @@ TEST_F(FallbacksFixturePropagate, failingNoSolutions) {
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts({}), 0));
 	t.add(std::move(fallback));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
@@ -51,7 +51,7 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(INF)));
 	t.add(std::move(fallback));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
@@ -63,7 +63,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStageOnly) {
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
 	t.add(std::move(fallbacks));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
@@ -77,7 +77,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutio
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts({ 210.0, 220.0, 0, 0 })));
 	t.add(std::move(fallbacks));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(113, 124, 211, 222));
 }
 
@@ -96,7 +96,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
 	fallbacks->add(std::move(inner));
 	t.add(std::move(fallbacks));
 
-	EXPECT_TRUE(t.plan(1).val == moveit_msgs::MoveItErrorCodes::SUCCESS);  // only return 1st solution
+	EXPECT_TRUE(t.plan(1));  // only return 1st solution
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(2));  // expecting less costly solution as result
 }
 
@@ -112,7 +112,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
 	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts({ INF })));
 	t.add(std::move(fallbacks));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 33));
 	// check that first solution is not marked as pruned
 }
@@ -125,7 +125,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
 	t.add(std::move(fallback));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
@@ -137,7 +137,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
 	fallback->add(std::make_unique<ForwardMockup>(PredefinedCosts::single(2.0)));
 	t.add(std::move(fallback));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
@@ -151,7 +151,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ActiveChildReset) {
 	auto fwd2 = fallbacks->findChild("FWD2");
 	t.add(std::move(fallbacks));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 13));
 	EXPECT_COSTS(fwd1->solutions(), testing::ElementsAre(10, 10));
 	EXPECT_COSTS(fwd2->solutions(), testing::IsEmpty());
@@ -169,7 +169,7 @@ TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
 
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 10.0, 20.0 })));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 21, 22));
 }
 

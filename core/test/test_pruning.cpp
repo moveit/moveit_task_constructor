@@ -17,7 +17,7 @@ TEST_F(Pruning, PropagatorFailure) {
 	add(t, new GeneratorMockup({ 0 }));
 	add(t, new ForwardMockup({ INF }));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 	ASSERT_EQ(t.solutions().size(), 0u);
 	// ForwardMockup fails, so the backward stage should never compute
 	EXPECT_EQ(back->runs_, 0u);
@@ -32,7 +32,7 @@ TEST_F(Pruning, PruningMultiForward) {
 	// fail to extend the second solution
 	add(t, new ForwardMockup({ 0, INF }));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 
 	// the second (infeasible) solution in the last stage must not disable
 	// the earlier partial solution just because they share stage solutions
@@ -90,7 +90,7 @@ TEST_F(Pruning, PropagateIntoContainer) {
 	auto con = add(*inner, new ConnectMockup());
 	add(*inner, new GeneratorMockup({ 0 }));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 
 	// the failure in the backward stage (outside the container)
 	// should prune the expected computation of con inside the container
@@ -106,7 +106,7 @@ TEST_F(Pruning, PropagateFromContainerPull) {
 	add(*inner, new ForwardMockup());
 	add(*inner, new ForwardMockup({ INF }));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 
 	// the failure inside the container should prune computing of back
 	EXPECT_EQ(back->runs_, 0u);
@@ -120,7 +120,7 @@ TEST_F(Pruning, PropagateFromContainerPush) {
 	auto con = add(t, new ConnectMockup());
 	add(t, new GeneratorMockup({ 0 }));
 
-	EXPECT_FALSE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_FALSE(t.plan());
 
 	// the failure inside container should prune computing of con
 	EXPECT_EQ(con->runs_, 0u);
@@ -136,7 +136,7 @@ TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
 	add(*serial, new ConnectMockup());
 	add(*serial, new GeneratorMockup({ 0 }));
 
-	EXPECT_TRUE(t.plan().val == moveit_msgs::MoveItErrorCodes::SUCCESS);
+	EXPECT_TRUE(t.plan());
 
 	// the failure in one branch of Alternatives must not prune computing back
 	EXPECT_EQ(back->runs_, 1u);
