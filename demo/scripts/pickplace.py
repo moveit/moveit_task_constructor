@@ -4,7 +4,6 @@
 from moveit.task_constructor import core, stages
 from moveit_commander import PlanningSceneInterface
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from std_msgs.msg import Header
 import rospy
 import time
 

@@ -54,6 +54,7 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(MoveRelative)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(Connect)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(FixCollisionObjects)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(GenerateGraspPose)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(GeneratePlacePose)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(GeneratePose)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(Pick)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(Place)
@@ -80,7 +81,7 @@ std::vector<T> elementOrList(const py::object& arg) {
 void export_stages(pybind11::module& m) {
 	// clang-format off
 	properties::class_<ModifyPlanningScene, Stage>(m, "ModifyPlanningScene", R"pbdoc(
-		ModifyPlanningScene(self, name)
+		ModifyPlanningScene(name)
 
 		Allows modification of the planning scene.
 		This stage takes the incoming planning scene and applies previously scheduled changes to it, for example:
@@ -91,26 +92,13 @@ void export_stages(pybind11::module& m) {
 		Args:
 			name (str): Name of the stage.
 
-		::
-
-			task = core.Task()
-
-			# Specify a grasp object by the known name
-			graspObject = "sampleObject"
-
-			# allow collisions
-			allowCollision = stages.ModifyPlanningScene("allow object - hand collision")
-			allowCollision.allowCollisions(
-				graspObject,
-				"right_fingers",
-				True
-			)
-			task.add(allowCollision)
+		.. literalinclude:: ./../../../demo/scripts/modify_planning_scene.py
+			:language: python
 
 		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("modify planning scene"))
 		.def("attachObject", &ModifyPlanningScene::attachObject, R"pbdoc(
-			attachObject(self, name, link)
+			attachObject(name, link)
 
 			Args:
 				name (str): Name of the object
@@ -120,7 +108,7 @@ void export_stages(pybind11::module& m) {
 				None
 		)pbdoc")
 		.def("detachObject", &ModifyPlanningScene::detachObject, R"pbdoc(
-			detachObject(self, name, link)
+			detachObject(name, link)
 
 			Detach an object from a robot link.
 
@@ -134,7 +122,7 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link, bool attach) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, attach);
 		}, py::arg("names"), py::arg("attach_link"), py::arg("attach") = true, R"pbdoc(
-			attachObjects(self, attach_link, attach)
+			attachObjects(attach_link, attach)
 
 			Attach multiple objects to a robot link.
 
@@ -149,7 +137,7 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, false);
 		}, py::arg("names"), py::arg("attach_link"), R"pbdoc(
-			detachObjects(self, attach_link)
+			detachObjects(attach_link)
 
 			Detach multiple objects from a robot link.
 
@@ -163,7 +151,7 @@ void export_stages(pybind11::module& m) {
 	        const py::object& first, const py::object& second, bool enable_collision) {
 			self.allowCollisions(elementOrList<std::string>(first), elementOrList<std::string>(second), enable_collision);
 		}, py::arg("first"), py::arg("second"), py::arg("enable_collision") = true, R"pbdoc(
-			allowCollisions(self, first, second, enable_collision)
+			allowCollisions(first, second, enable_collision)
 
 			Allow or disable collisions between links and objects.
 
@@ -171,48 +159,52 @@ void export_stages(pybind11::module& m) {
 				first (str): Name of the first object or link.
 				second (str): Name of the second object or link.
 				enable_collision (bool): Set to true to enable collisions checks;
-					set to false to disable collision checks.
+										 set to false to disable collision checks.
 			Returns:
 				None
+		)pbdoc")
+		.def("addObject", &ModifyPlanningScene::addObject, R"pbdoc(
+			addObject(collision_object)
+
+			Add an object to the planning scene
+
+			Args:
+				collision_object (CollisionObject_): Object to be added. Must be
+												     in the appropriate message format.
+
+			.. _CollisionObject: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/CollisionObject.html
+
 		)pbdoc");
 	// clang-format on
 
 	properties::class_<CurrentState, Stage>(m, "CurrentState", R"pbdoc(
-			CurrentState(self, name)
+			CurrentState(name)
 
-			Fetch the current PlanningScene state via get_planning_scene service.
+			Fetch the current PlanningScene state via the ``get_planning_scene`` service.
 
 			Args:
 				name (str): Name of the stage.
 
-			::
+			.. literalinclude:: ./../../../demo/scripts/current_state.py
+				:language: python
 
-				task = core.Task()
-
-				# create a stage instance
-				currentState = CurrentState('current state')
-				task.add(currentState)
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("current state"));
 
 	properties::class_<FixedState, Stage>(m, "FixedState", R"pbdoc(
-			FixedState(self, name)
+			FixedState(name)
 
 			Spawn a pre-defined PlanningScene state.
 
 			Args:
 				name (str): Name of the stage.
 
-			::
+			.. literalinclude:: ./../../../demo/scripts/fixed_state.py
+				:language: python
 
-				task = core.Task()
-
-				# create a stage instance
-				fixedState = FixedState('fixed state')
-				task.add(fixedState)
 		)pbdoc")
 	    .def("setState", &FixedState::setState, R"pbdoc(
-			setState(self, scene)
+			setState(scene)
 
 			Use a planning scene pointer to specify which state the Fixed State
 			stage should have.
@@ -233,7 +225,7 @@ void export_stages(pybind11::module& m) {
 	;
 
 	properties::class_<ComputeIK, Stage>(m, "ComputeIK", R"pbdoc(
-			ComputeIK(self, name, stage)
+			ComputeIK(name, stage)
 
 			Wrapper for any pose generator stage to compute the inverse
 			kinematics for a pose in Cartesian space.
@@ -255,17 +247,8 @@ void export_stages(pybind11::module& m) {
 				name (str): Name of the stage.
 				stage: Stage that contains the robot state for IK calculation.
 
-			::
-
-				# create a task
-				task = core.Task()
-
-				# get the current robot state
-				currentState = stages.CurrentState("current state")
-
-				# calculate the inverse kinematics for the current robot state
-				computeIK = stages.ComputeIK("compute IK", currentState)
-				task.add(computeIK)
+			.. literalinclude:: ./../../../demo/scripts/compute_ik.py
+				:language: python
 
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
@@ -289,15 +272,17 @@ void export_stages(pybind11::module& m) {
 			the planning scene are allowed.
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
-			PoseStamped_ : Specify the frame with respect
-			to which the inverse kinematics should be calculated.
+			PoseStamped_: Specify the frame with respect
+			to which the inverse kinematics
+			should be calculated.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("target_pose", R"pbdoc(
-			PoseStamped_ : Specify the pose on which
+			PoseStamped_: Specify the pose on which
 			the inverse kinematics should be
-			calculated on. Since this property should almost always be set
+			calculated on. Since this property should
+			almost always be set
 			in the Interface State which is sent by the child,
 			if possible, avoid setting it manually.
 
@@ -307,54 +292,38 @@ void export_stages(pybind11::module& m) {
 	    .def(py::init<const std::string&, Stage::pointer&&>());
 
 	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo", R"pbdoc(
-		MoveTo(self, name, planner)
+			MoveTo(name, planner)
 
-		Compute a trajectory between the robot state from the
-		interface state of the preceeding stage and a specified
-		goal.
+			Compute a trajectory between the robot state from the
+			interface state of the preceeding stage and a specified
+			goal.
 
-		Args:
-			name (str): Name of the stage.
-			planner (PlannerInterface): Planner that is used to compute the path of motion.
+			Args:
+				name (str): Name of the stage.
+				planner (PlannerInterface): Planner that is used to compute the path of motion.
 
-		::
+			.. literalinclude:: ./../../../demo/scripts/cartesian.py
+				:language: python
+				:lines: 51-55
 
-			# create a planner instance
-			jointspace = core.JointInterpolationPlanner()
-
-			# specify planning group
-			group = "foo_robot"
-
-			# create a task
-			task = core.Task()
-
-			# get the current robot state
-			currentState = stages.CurrentState("current state")
-			task.add(currentState)
-
-			# moveTo named posture, using joint-space interplation
-			move = stages.MoveTo("moveTo ready", jointspace)
-			move.group = group
-			move.setGoal("ready")
-			task.add(move)
-	)pbdoc")
+		)pbdoc")
 	    .property<std::string>("group", R"pbdoc(
 			str: Planning group which should be utilized for planning and execution.
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
-			PoseStamped_ : IK reference frame for the goal pose.
+			PoseStamped_: IK reference frame for the goal pose.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 
 		)pbdoc")
 	    .property<moveit_msgs::Constraints>("path_constraints", R"pbdoc(
-			Constraints_ : Set path constraints via the corresponding moveit message type.
+			Constraints_: Set path constraints via the corresponding moveit message type.
 
 			.. _Constraints: https://docs.ros.org/en/api/moveit_msgs/html/msg/Constraints.html
 		)pbdoc")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
 	    .def("setGoal", py::overload_cast<const geometry_msgs::PoseStamped&>(&MoveTo::setGoal), R"pbdoc(
-			setGoal(self, goal)
+			setGoal(goal)
 
 			Args:
 				goal (PoseStamped_): Desired configuration.
@@ -367,7 +336,7 @@ void export_stages(pybind11::module& m) {
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal), R"pbdoc(
-			setGoal(self, goal)
+			setGoal(goal)
 
 			Args:
 				goal (PointStamped_): Desired configuration.
@@ -410,77 +379,61 @@ void export_stages(pybind11::module& m) {
 		)pbdoc");
 
 	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative", R"pbdoc(
-			MoveRelative(self, name, planner)
+			MoveRelative(name, planner)
 
-			Perform a Cartesian motion relative to some link .
+			Perform a Cartesian motion relative to some link.
 
 			Args:
 				name (str): Name of the stage.
 				planner (PlannerInterface): Planner that is used to compute the path of motion.
 
-			::
-
-				# Planning group
-				group = "panda_arm"
-
-				# Cartesian planner
-				cartesian = core.CartesianPath()
-
-				task = core.Task()
-
-				# start from current robot state
-				task.add(stages.CurrentState("current state"))
-
-				# move along x
-				move = stages.MoveRelative("x +0.2", cartesian)
-				move.group = group
-				header = Header(frame_id="world")
-				move.setDirection(Vector3Stamped(header=header, vector=Vector3(0.2, 0, 0)))
-				task.add(move)
+			.. literalinclude:: ./../../../demo/scripts/cartesian.py
+				:language: python
+				:lines: 26-31
 
 		)pbdoc")
 	    .property<std::string>("group", R"pbdoc(
 			str: Planning group which should be utilized for planning and execution.
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
-			PoseStamped_ : IK reference frame for the goal pose.
+			PoseStamped_: IK reference frame for the goal pose.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .property<double>("min_distance", R"pbdoc(
-			double: Set the minimum distance to move.
+			float: Set the minimum distance to move.
 		)pbdoc")
 	    .property<double>("max_distance", R"pbdoc(
-			double: Set the maximum distance to move.
+			float: Set the maximum distance to move.
 		)pbdoc")
 	    .property<moveit_msgs::Constraints>("path_constraints", R"pbdoc(
-			Constraints_ : These are the path constraints.
+			Constraints_: These are the path constraints.
 
 			.. _Constraints: https://docs.ros.org/en/api/moveit_msgs/html/msg/Constraints.html
 		)pbdoc")
 	    .def(py::init<const std::string&, const solvers::PlannerInterfacePtr&>())
 	    .def("setDirection", py::overload_cast<const geometry_msgs::TwistStamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-				setDirection(self, twist)
+			setDirection(twist)
 
-				Perform twist motion on specified link.
+			Perform twist motion on specified link.
 
-				Args:
-				 	twist (Twist_): Use a Twist message as movement direction description.
+			Args:
+				twist (Twist_): Use a Twist message as movement direction description.
 
-				.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
+			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const geometry_msgs::Vector3Stamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-				setDirection(self, direction)
+			setDirection(direction)
 
-				Translate link along given direction.
+			Translate link along given direction.
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const std::map<std::string, double>&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-				setDirection(self, joint_deltas)
+			setDirection(joint_deltas)
 
-				Move specified joint variables by given amount.
+			Move specified joint variables by given amount.
 		)pbdoc");
 
 	py::enum_<stages::Connect::MergeMode>(m, "MergeMode", R"pbdoc(
@@ -496,7 +449,7 @@ void export_stages(pybind11::module& m) {
 	PropertyConverter<stages::Connect::MergeMode>();
 
 	properties::class_<Connect, Stage>(m, "Connect", R"pbdoc(
-			Connect(self, name, planners)
+			Connect(name, planners)
 
 			Connect arbitrary InterfaceStates by motion planning.
 			You can specify the planning groups and the planners you
@@ -514,23 +467,18 @@ void export_stages(pybind11::module& m) {
 				Name (str): Name of the stage.
 				Planners (list): List of the planner - group associations.
 
-			::
+			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
 
-				# Create a planner instance
-				samplingPlanner = PipelinePlanner()
-				# Specify group-planner combinations
-				planners = [
-					('foo_group', samplingPlanner),
-					('bar_group', samplingPlanner)
-				]
-				# create a stage instance
-				connect = Connect('connect', planners)
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+			   :language: python
+			   :lines: 48-60
+
 		)pbdoc")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         py::arg("name") = std::string("connect"), py::arg("planners"));
 
 	properties::class_<FixCollisionObjects, Stage>(m, "FixCollisionObjects", R"pbdoc(
-			FixCollisionObjects(self, name)
+			FixCollisionObjects(name)
 
 			Test for collisions and find a correction for applicable objects.
 			Move the objects out of the way along the correction direction.
@@ -538,19 +486,42 @@ void export_stages(pybind11::module& m) {
  			Args:
 				name (str): Name of the stage.
 
-			::
-
-				task = core.Task()
-
-				# check for collisions and find corrections
-				fixCollisionObjects = stages.FixCollisionObjects("FixCollisionObjects")
-				task.add(fixCollisionObjects)
+			.. literalinclude:: ./../../../demo/scripts/fix_collision_objects.py
+				:language: python
 
 		)pbdoc")
 	    .property<double>("max_penetration", R"pbdoc(
 			Cutoff length up to which collision objects get fixed.
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fix collisions"));
+
+	properties::class_<GeneratePlacePose, MonitoringGenerator>(m, "GeneratePlacePose", R"pbdoc(
+			GeneratePlacePose(name)
+
+			GeneratePlacePose stage derives from monitoring generator and generates poses
+			for the place pipeline. Notice that whilst GenerateGraspPose spawns poses with an
+			``angle_delta`` intervall, GeneratePlacePose samples a fixed amount, which is dependent
+			on the objects shape.
+
+			Args:
+				name (str): Name of the stage.
+
+			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+				:language: python
+				:lines: 115-122
+
+		)pbdoc")
+	    .property<std::string>("object", R"pbdoc(
+			str: Name of the object in the planning scene,
+			attached to the robot which should be placed.
+		)pbdoc")
+	    .property<std::string>("eef", R"pbdoc(
+			str: Name of the end effector that should be used for grasping.
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("pose")
+	    .def(py::init<const std::string&>(), py::arg("name") = std::string("Generate Place Pose"));
 
 	properties::class_<GenerateGraspPose, MonitoringGenerator>(m, "GenerateGraspPose", R"pbdoc(
 			GenerateGraspPose(name)
@@ -561,6 +532,12 @@ void export_stages(pybind11::module& m) {
 
 			Args:
 				name (str): Name of the stage.
+
+			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+			   :language: python
+			   :lines: 62-68
 
 		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
@@ -576,35 +553,41 @@ void export_stages(pybind11::module& m) {
 			str: Name of the grasp pose.
 		)pbdoc")
 	    .property<double>("angle_delta", R"pbdoc(
-			double: Angular step distance in rad with which positions around the object are sampled.
+			float: Angular step distance in rad with which positions around the object are sampled.
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("Generate Grasp Pose"));
 
 	properties::class_<GeneratePose, MonitoringGenerator>(m, "GeneratePose", R"pbdoc(
-		GeneratePose(self, name)
+			GeneratePose(name)
 
-		Monitoring generator stage which can be used to generate a pose, based on solutions provided
-		by the monitored stage.
+			Monitoring generator stage which can be used to generate a pose, based on solutions provided
+			by the monitored stage.
 
-		Args:
-			name (str): Name of the stage.
+			Args:
+				name (str): Name of the stage.
 
-		::
-
-			task = core.Task()
+			.. literalinclude:: ./../../../demo/scripts/generate_pose.py
+				:language: python
+				:lines: 35-48
 
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("pose", R"pbdoc(
+			PoseStamped_: Set the pose, which should be spawned
+						  on each new solution of the monitored stage.
 
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def(py::init<const std::string&>());
 
 	properties::class_<Pick, Stage>(m, "Pick", R"pbdoc(
-			Pick(self, grasp_generator, name)
+			Pick(grasp_generator, name)
 
 			Args:
-				grasp_generator ():
+				grasp_generator (SimpleGrasp): Simple Grasp stage to provide
+											   poses and inverse kinematics solutions.
 				name (str): Name of the stage.
+
+			.. _pick:
 
 			The Pick stage is a specialization of the PickPlaceBase class, which
 			wraps the pipeline to pick or place an object with a given end effector.
@@ -618,40 +601,77 @@ void export_stages(pybind11::module& m) {
 			The end effector postures corresponding to pre-grasp and grasp as well
 			as the end effector's cartesian pose needs to be provided by an external
 			grasp stage.
+
+			The example below combines pick and place routines in a single pickplace pipeline.
+			Please refer to the demonstration scripts of the moveit task constructor repository
+			for reference.
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+				:language: python
+
 		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
-			Name of object to pick.
+			str: Name of object to pick.
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
-			End effector name.
+			str: The End effector name.
 		)pbdoc")
 	    .property<std::string>("eef_frame", R"pbdoc(
-			Name of the end effector frame.
+			str: Name of the end effector frame.
 		)pbdoc")
 	    .property<std::string>("eef_group", R"pbdoc(
-			Joint model group of the end effector.
+			str: Joint model group of the end effector.
 		)pbdoc")
 	    .property<std::string>("eef_parent_group", R"pbdoc(
-			Joint model group of the eef's parent.
+			str: Joint model group of the eef's parent.
 		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("grasp_generator"),
 	         py::arg("name") = std::string("pick"))
 	    .def("setApproachMotion", &Pick::setApproachMotion, R"pbdoc(
+			setApproachMotion(motion, min_distance, max_distance)
 
+			Args:
+				motion (Twist_): The twist, which represents the
+								 approach motion.
+				min_distance (float): Minimum allowed distance.
+				max_distance (float): Maximum allowed distance.
+
+			The approaching motion towards the grasping state is represented
+			by a twist message.
+
+			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setLiftMotion",
 	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Pick::setLiftMotion), R"pbdoc(
+			setLiftMotion(motion, min_distance, max_distance)
 
+			Args:
+				motion (Twist_): The twist, which represents the
+								 lift motion.
+				min_distance (float): Minimum allowed distance.
+				max_distance (float): Maximum allowed distance.
+
+			The lifting motion away from the grasping state is represented
+			by a twist message.
+
+			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setLiftMotion", py::overload_cast<const std::map<std::string, double>&>(&Pick::setLiftMotion), R"pbdoc(
+			setLiftMotion(place)
 
+			Args:
+				place (dict): The place where the object should be lifted to,
+							  given as joint-value pairs.
+
+			The lifting motion away from the grasping state is represented
+			by its destination as joint-value pairs.
 		)pbdoc");
 
 	properties::class_<Place, Stage>(m, "Place", R"pbdoc(
-			Place(self, place_generator, name)
+			Place(place_generator, name)
 
 			Args:
-				place_generator ():
+				place_generator (SimpleUnGrasp): SimpleUnGrasp Wrapper for pose generation
 				name (str): Name of the stage.
 
 			The Place stage is a specialization of the PickPlaceBase class, which
@@ -666,54 +686,224 @@ void export_stages(pybind11::module& m) {
 			The end effector postures corresponding to pre-grasp and grasp as well
 			as the end effector's Cartesian pose needs to be provided by an external
 			grasp stage.
+
+			For a working example, please consider the Pick_ Stage.
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+				:language: python
+				:lines: 131-135
 		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
-			Name of object to pick.
+			str: Name of object to pick.
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
-			End effector name.
+			str: The End effector name.
 		)pbdoc")
 	    .property<std::string>("eef_frame", R"pbdoc(
-			Name of the end effector frame.
+			str: Name of the end effector frame.
 		)pbdoc")
 	    .property<std::string>("eef_group", R"pbdoc(
-			Joint model group of the end effector.
+			str: Joint model group of the end effector.
 		)pbdoc")
 	    .property<std::string>("eef_parent_group", R"pbdoc(
-			Joint model group of the eef's parent.
+			str: Joint model group of the eef's parent.
+		)pbdoc")
+	    .def("setRetractMotion", &Place::setRetractMotion, R"pbdoc(
+			setRetractMotion(motion, min_distance, max_distance)
+
+			Args:
+				motion (Twist_): The twist, which represents the
+								 retract motion.
+				min_distance (float): Minimum allowed distance.
+				max_distance (float): Maximum allowed distance.
+
+			The retract motion towards the final state is represented
+			by a twist message.
+
+			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
+		)pbdoc")
+	    .def("setPlaceMotion",
+	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Place::setPlaceMotion), R"pbdoc(
+			setPlaceMotion(motion, min_distance, max_distance)
+
+			Args:
+				motion (Twist_): The twist, which represents the
+								 place motion.
+				min_distance (float): Minimum allowed distance.
+				max_distance (float): Maximum allowed distance.
+
+			The object-placing motion towards the final state is represented
+			by a twist message.
+
+			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
+
+		)pbdoc")
+	    .def("setPlaceMotion", py::overload_cast<const std::map<std::string, double>&>(&Place::setPlaceMotion), R"pbdoc(
+			setPlaceMotion(joints)
+
+			Args:
+				joints (dict): The place where the object should be placed at,
+							   given as joint-value pairs.
+
+			The placing motion to the final state is represented
+			by its destination as joint-value pairs.
 		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("place_generator"),
 	         py::arg("name") = std::string("place"));
 
 	properties::class_<SimpleGrasp, Stage>(m, "SimpleGrasp", R"pbdoc(
-			Specialization of SimpleGraspBase to realize grasping
+			SimpleGrasp(pose_generator, name)
+
+			Args:
+				pose_generator (GenerateGraspPose): Generator stage to
+													sample possible grasp poses.
+				name (str): Name of the stage.
+
+			Specialization of SimpleGraspBase to realize grasping.
+			Refer to the pick_ stage for a minimum code example:
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+				:language: python
+				:lines: 70-79
 		)pbdoc")
 	    .property<std::string>("eef", R"pbdoc(
-
+			str: The end effector of the robot.
 		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
+			str: The object to grasp (Must be present in the planning scene).
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
+			PoseStamped_: Set the frame for which
+			the inverse kinematics are calculated
+			with respect to each pose generated by
+			the pose_generator.
 
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("pose_generator"),
 	         py::arg("name") = std::string("grasp generator"))
 	    .def<void (SimpleGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
+			setIKFrame(transform)
 
+			Args:
+				transform (PoseStamped_): Transform to the IK Frame.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def<void (SimpleGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame,
 	                                                                              R"pbdoc(
+			setIKFrame(pose, link)
 
+			Args:
+				pose (PoseStamped_): Transform from the given link to the IK frame.
+				link (str): Base link for pose transform to IK frame.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
 		)pbdoc")
 	    .def<void (SimpleGrasp::*)(const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
+			setIKFrame(link)
+
+			Args:
+				link (str): IK Frame will be placed at the base frame of this link.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
+		)pbdoc")
+	    .def("setMaxIKSolutions", &SimpleGrasp::setMaxIKSolutions, R"pbdoc(
+			setMaxIKSolutions(max_ik_solutions)
+
+			Args:
+				max_ik_solutions (int):
+
+			Set the maximum number of inverse kinematics solutions that
+			should be computed.
 
 		)pbdoc");
 
 	properties::class_<SimpleUnGrasp, Stage>(m, "SimpleUnGrasp", R"pbdoc(
+			SimpleUnGrasp(pose_generator, name)
+
+			Args:
+				pose_generator (GeneratePlacePose): Generator stage to
+													sample possible Place
+													poses.
+				name (str): Name of the stage.
+
 			Specialization of SimpleGraspBase to realize ungrasping
-		)pbdoc")
-	    .property<std::string>("eef", R"pbdoc(
+			Refer to the place_ stage for a minimum code example.
+			Make shure to set the ``grasp`` and ``pregrasp`` properties
+			here again since they are not forwarded through the stage
+			hierarchy.
+
+			.. literalinclude:: ./../../../demo/scripts/pickplace.py
+				:language: python
+				:lines: 124-129
 
 		)pbdoc")
+	    .property<std::string>("eef", R"pbdoc(
+			str: The end effector of the robot.
+		)pbdoc")
 	    .property<std::string>("object", R"pbdoc(
+			str: The object to grasp (Must be present in the planning scene).
+		)pbdoc")
+	    .property<std::string>("pregrasp", R"pbdoc(
+			str: Name of the pre-grasp pose.
+		)pbdoc")
+	    .property<std::string>("grasp", R"pbdoc(
+			str: Name of the grasp pose.
+		)pbdoc")
+	    .property<geometry_msgs::PoseStamped>("ik_frame", R"pbdoc(
+			PoseStamped_: Specify the frame with respect
+			to which the inverse kinematics
+			should be calculated.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
+		)pbdoc")
+
+	    .def<void (SimpleUnGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleUnGrasp::setIKFrame,
+	                                                                     R"pbdoc(
+			setIKFrame(transform)
+
+			Args:
+				transform (PoseStamped_): Transform to the IK Frame.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
+
+			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
+		)pbdoc")
+	    .def<void (SimpleUnGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame",
+	                                                                                &SimpleUnGrasp::setIKFrame, R"pbdoc(
+			setIKFrame(pose, link)
+
+			Args:
+				pose (PoseStamped_): Transform from the given link to the IK frame.
+									 link (str): Base link for pose transform to IK frame.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
+		)pbdoc")
+	    .def<void (SimpleUnGrasp::*)(const std::string&)>("setIKFrame", &SimpleUnGrasp::setIKFrame, R"pbdoc(
+			setIKFrame(link)
+
+			Args:
+				link (str): IK Frame will be placed at the base frame of this link.
+
+			Set the frame for which the inverse kinematics are calculated
+			with respect to each pose generated by the pose_generator.
+		)pbdoc")
+	    .def("setMaxIKSolutions", &SimpleUnGrasp::setMaxIKSolutions, R"pbdoc(
+			setMaxIKSolutions(max_ik_solutions)
+
+			Args:
+				max_ik_solutions (int):
+
+			Set the maximum number of inverse kinematics solutions that
+			should be computed.
 
 		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("pose_generator"),
