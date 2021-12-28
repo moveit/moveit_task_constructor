@@ -110,24 +110,69 @@ void export_core(pybind11::module& m) {
 	});
 
 	// clang-format off
-	py::classh<SolutionBase>(m, "Solution")
-		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost)
-		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment)
+	py::classh<SolutionBase>(m, "Solution", R"pbdoc(
+		Solution class encapsulates a particular solution.
+		)pbdoc")
+		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost, R"pbdoc(
+			float: Cost that is associated with a particular solution.
+		)pbdoc")
+		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment, R"pbdoc(
+			str: Comment that is associated with a perticular solution.
+		)pbdoc")
 		.def("toMsg", [](const SolutionBasePtr& s) {
 			moveit_task_constructor_msgs::Solution msg;
 			s->fillMessage(msg);
 			return msg;
-		})
+		}, R"pbdoc(
+			toMsg()
+
+			Args:
+				None
+			Returns:
+				ROS message type of the solution.
+
+			Convert a solution object into a ros message type.
+		)pbdoc")
 		;
-	py::classh<SubTrajectory, SolutionBase>(m, "SubTrajectory")
+	py::classh<SubTrajectory, SolutionBase>(m, "SubTrajectory", R"pbdoc(
+		SubTrajectory()
+
+		A SubTrajectory connects interface states of compute stages.
+
+		Args:
+			None
+		)pbdoc")
 		.def(py::init<>())
-		.def_property_readonly("start", &SolutionBase::start)
-		.def_property_readonly("end", &SolutionBase::end)
-		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost)
-		.def("markAsFailure", &SolutionBase::markAsFailure)
-		.def_property_readonly("isFailure", &SolutionBase::isFailure)
-		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment)
-		.def_property_readonly("markers", py::overload_cast<>(&SolutionBase::markers))
+		.def_property_readonly("start", &SolutionBase::start, R"pbdoc(
+			InterfaceState: Start of the trajectory. Readonly property.
+		)pbdoc")
+		.def_property_readonly("end", &SolutionBase::end, R"pbdoc(
+			InterfaceState: End of the trajectory. Readonly property.
+		)pbdoc")
+		.def_property("cost", &SolutionBase::cost, &SolutionBase::setCost, R"pbdoc(
+			float: Cost of the solution.
+		)pbdoc")
+		.def("markAsFailure", &SolutionBase::markAsFailure, R"pbdoc(
+			markAsFailure(msg)
+
+			Args:
+				msg (str): Failure message.
+			Returns:
+				None
+
+			Mark the SubTrajectory as a failure.
+		)pbdoc")
+		.def_property_readonly("isFailure", &SolutionBase::isFailure, R"pbdoc(
+			bool: True if the trajectory is marked as a failure. Readonly property.
+		)pbdoc")
+		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment, R"pbdoc(
+			str: Comment, which can be assigned to the trajectory.
+		)pbdoc")
+		.def_property_readonly("markers", py::overload_cast<>(&SolutionBase::markers), R"pbdoc(
+			Marker_: Markers that visualize the trajectory. Readonly property.
+
+			.. _Marker: https://docs.ros.org/en/noetic/api/visualization_msgs/html/msg/Marker.html
+		)pbdoc")
 		;
 
 	using Solutions = ordered<SolutionBaseConstPtr>;
@@ -139,7 +184,7 @@ void export_core(pybind11::module& m) {
 		;
 
 	py::classh<InterfaceState>(m, "InterfaceState", R"pbdoc(
-		InterfaceState(self, scene)
+		InterfaceState(scene)
 
 		Args:
 			scene (obj): Desired Planning Scene at the interface.
@@ -166,22 +211,69 @@ void export_core(pybind11::module& m) {
 			return pybind11::cast(static_cast<bool>(err));
 		});
 
-	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage")
-		.property<double>("timeout")
-		.property<std::string>("marker_ns")
-		.def_property("forwarded_properties", getForwardedProperties, setForwardedProperties)
+	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage", R"pbdoc(
+		Stage base type. All other stages derive from this type.
+		Object is not instantiable and should not be added to the task hierarchy
+		in a standalone fashion. Rather, derive from generator or propagator stages
+		to implement custom logic.
+		)pbdoc")
+		.property<double>("timeout", R"pbdoc(
+			float: Timeout of stage per computation.
+		)pbdoc")
+		.property<std::string>("marker_ns", R"pbdoc(
+			str: Namespace for any markers that are associated to the stage.
+		)pbdoc")
+		.def_property("forwarded_properties", getForwardedProperties, setForwardedProperties, R"pbdoc(
+			list: Get / set a list of forwarded properties.
+		)pbdoc")
 		// expose name as writeable property
-		.def_property("name", &Stage::name, &Stage::setName)
+		.def_property("name", &Stage::name, &Stage::setName, R"pbdoc(
+			str: Get / set the name of the stage.
+		)pbdoc")
 		// read-only access to properties + solutions
-		.def_property_readonly("properties", py::overload_cast<>(&Stage::properties))
-		.def_property_readonly("solutions", &Stage::solutions)
-		.def_property_readonly("failures", &Stage::failures)
-		.def("reset", &Stage::reset)
-		.def("init", &Stage::init);
+		.def_property_readonly("properties", py::overload_cast<>(&Stage::properties), R"pbdoc(
+			PropertyMap: Return the property map of the stage. Readonly property.
+		)pbdoc")
+		.def_property_readonly("solutions", &Stage::solutions, R"pbdoc(
+			Solutions: Get the solutions of a stage.
+		)pbdoc")
+		.def_property_readonly("failures", &Stage::failures, R"pbdoc(
+			Solutions: Get the failed compuations of a stage.
+		)pbdoc")
+		.def("reset", &Stage::reset, R"pbdoc(
+			reset()
 
-	py::enum_<Stage::PropertyInitializerSource>(stage, "PropertyInitializerSource")
-		.value("PARENT", Stage::PARENT)
-		.value("INTERFACE", Stage::INTERFACE)
+			Args:
+				None
+			Returns:
+				None
+
+				Reset the stage, clearing all solutions, interfaces and inherited properties.
+		)pbdoc")
+		.def("init", &Stage::init, R"pbdoc(
+			init(robot_model)
+
+			Args:
+				robot_model (RobotModel): Initialize the stage with a particular robot model.
+			Returns:
+				None
+
+			Initialize the stage once before planning.
+			When called, properties configured for initialization from parent are already defined.
+			Push interfaces are not yet defined!
+		)pbdoc");
+
+	py::enum_<Stage::PropertyInitializerSource>(stage, "PropertyInitializerSource", R"pbdoc(
+		Define, from where properties should be initialized when using the `configureInitFrom()`
+		functions from the PropertyMap class.
+		)pbdoc")
+		.value("PARENT", Stage::PARENT, R"pbdoc(
+			Inherit properties from parent stage in task hierarchy.
+		)pbdoc")
+		.value("INTERFACE", Stage::INTERFACE, R"pbdoc(
+			Inherit properties from interface, i.e. preceeding stage
+			in the task hierarchy.
+		)pbdoc")
 		;
 
 
@@ -207,7 +299,7 @@ void export_core(pybind11::module& m) {
 		;
 
 	properties::class_<Generator, Stage, PyGenerator<>>(m, "Generator", R"pbdoc(
-			Generator(self, name)
+			Generator(name)
 
 			Args:
 				name (str): Name of the stage.
@@ -245,32 +337,41 @@ void export_core(pybind11::module& m) {
 		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
 		.def("canCompute", &Generator::canCompute, R"pbdoc(
-			canCompute(self)
+			canCompute()
 
+			Args:
+				None
 			Returns:
 				bool: Should ``compute()`` be called?
 
 			Guard for the ``compute()`` function.
 		)pbdoc")
 		.def("compute", &Generator::compute, R"pbdoc(
-			compute(self)
-
-			Implement the stage's logic here. To interface with other stages,
-			spwan an ``InterfaceState``.
-		)pbdoc")
-		.def("spawn", [](Generator& self, InterfaceState& state, double cost) { self.spawn(std::move(state), cost); }, R"pbdoc(
-			spawn(self, state, cost)
+			compute()
 
 			Args:
-				state (obj): The Interface State that should be used.
-				cost (double): The cost associated with that solution.
+				None
+			Returns:
+				None
+
+			Implement the stage's logic here. To interface with other stages,
+			spawn an ``InterfaceState``.
+		)pbdoc")
+		.def("spawn", [](Generator& self, InterfaceState& state, double cost) { self.spawn(std::move(state), cost); }, R"pbdoc(
+			spawn(state, cost)
+
+			Args:
+				state (InterfaceState): The Interface State that should be used.
+				cost (float): The cost associated with that solution.
+			Returns:
+				None
 
 			Spawn an interface state that gets forwarded to the next stage.
 		)pbdoc")
 		;
 
 	properties::class_<MonitoringGenerator, Generator, PyMonitoringGenerator<>>(m, "MonitoringGenerator", R"pbdoc(
-		MonitoringGenerator(self, name)
+		MonitoringGenerator(name)
 
 		Args:
 			name (str): Name of the stage.
@@ -330,10 +431,12 @@ void export_core(pybind11::module& m) {
 		)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("generator"))
 		.def("setMonitoredStage", &MonitoringGenerator::setMonitoredStage, R"pbdoc(
-			setMonitoredStage(self, stage)
+			setMonitoredStage(stage)
 
 			Args:
-				stage (obj): Monitor solutions of this stage.
+				stage (Stage): Monitor solutions of this stage.
+			Returns:
+				None
 
 			Set the reference to the Monitored Stage.
 		)pbdoc")
@@ -366,7 +469,7 @@ void export_core(pybind11::module& m) {
 	py::classh<ParallelContainerBase, ContainerBase>(m, "ParallelContainerBase");
 
 	py::classh<Alternatives, ParallelContainerBase>(m, "Alternatives", R"pbdoc(
-		Alternatives(self, name)
+		Alternatives(name)
 
 		Args:
 			name (str): Name of the stage.
@@ -374,69 +477,14 @@ void export_core(pybind11::module& m) {
 		Plan for different alternatives in parallel.
 		Solution of all children are reported - sorted by cost.
 
-		::
+		.. literalinclude:: ./../../../demo/scripts/alternatives.py
+			:language: python
 
-			from moveit.task_constructor import core, stages
-			import rospy
-			import time
-			import numpy as np
-
-			from moveit.python_tools import roscpp_init
-
-			roscpp_init("mtc_tutorial")
-
-			jointPlanner = core.JointInterpolationPlanner()
-
-			task = core.Task()
-
-			# start from current robot state
-			currentState = stages.CurrentState("current state")
-			task.add(currentState)
-
-			alternatives = core.Alternatives('Alternatives')
-
-			goalConfig1 = {
-				'panda_joint1': 1.0,
-				'panda_joint2': -1.0,
-				'panda_joint3': 0.0,
-				'panda_joint4': -2.5,
-				'panda_joint5': 1.0,
-				'panda_joint6': 1.0,
-				'panda_joint7': 1.0,
-			}
-
-			goalConfig2 = {
-				'panda_joint1': -3.0,
-				'panda_joint2': -1.0,
-				'panda_joint3': 0.0,
-				'panda_joint4': -2.0,
-				'panda_joint5': 1.0,
-				'panda_joint6': 2.0,
-				'panda_joint7': 0.5,
-			}
-
-			# first motion plan to compare
-			moveTo1 = stages.MoveTo('Move To Goal Configuration 1', jointPlanner)
-			moveTo1.group = 'panda_arm'
-			moveTo1.setGoal(goalConfig1)
-			alternatives.insert(moveTo1)
-
-			# second motion plan to compare
-			moveTo2 = stages.MoveTo('Move To Goal Configuration 2', jointPlanner)
-			moveTo2.group = 'panda_arm'
-			moveTo2.setGoal(goalConfig2)
-			alternatives.insert(moveTo2)
-
-			task.add(alternatives)
-
-			if task.plan():
-				task.publish(task.solutions[0])
-			time.sleep(1)
 	)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("alternatives"));
 
 	py::classh<Fallbacks, ParallelContainerBase>(m, "Fallbacks", R"pbdoc(
-		Fallbacks(self, name)
+		Fallbacks(name)
 
 		Args:
 			name (str): Name of the stage.
@@ -447,53 +495,14 @@ void export_core(pybind11::module& m) {
 		an alternative planning strategy.
 		All solutions of the last active child are reported.
 
-		::
+		.. literalinclude:: ./../../../demo/scripts/fallbacks.py
+			:language: python
 
-			from moveit.task_constructor import core, stages
-			from moveit.python_tools import roscpp_init
-			import rospy
-			import time
-
-			roscpp_init("mtc_tutorial")
-
-			# use cartesian and joint interpolation planners
-			cartesianPlanner = core.CartesianPath()
-			jointPlanner = core.JointInterpolationPlanner()
-
-			# initialize the mtc task
-			task = core.Task()
-
-			# add the current planning scene state to the task hierarchy
-			currentState = stages.CurrentState("Current State")
-			task.add(currentState)
-
-			# create a fallback container to fall back to a different planner
-			# if motion generation fails with the primary one
-			fallbacks = core.Fallbacks('Fallbacks')
-
-			# primary motion plan
-			moveTo1 = stages.MoveTo('Move To Goal Configuration 1', cartesianPlanner)
-			moveTo1.group = 'panda_arm'
-			moveTo1.setGoal('extended')
-			fallbacks.insert(moveTo1)
-
-			# fallback motion plan
-			moveTo2 = stages.MoveTo('Move To Goal Configuration 2', jointPlanner)
-			moveTo2.group = 'panda_arm'
-			moveTo2.setGoal('extended')
-			fallbacks.insert(moveTo2)
-
-			# add the fallback container to the task hierarchy
-			task.add(fallbacks)
-
-			if task.plan():
-				task.publish(task.solutions[0])
-			time.sleep(1)
 	)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("fallbacks"));
 
 	py::classh<Merger, ParallelContainerBase>(m, "Merger", R"pbdoc(
-		Merger(self, name)
+		Merger(name)
 
 		Args:
 			name (str): Name of the stage.
@@ -501,56 +510,18 @@ void export_core(pybind11::module& m) {
 		Plan for different sub tasks in parallel and finally merge
 		all sub solutions into a single trajectory
 
-		::
-
-			from moveit.task_constructor import core, stages
-			from moveit.python_tools import roscpp_init
-			import rospy
-			import time
-
-			roscpp_init("mtc_tutorial")
-
-			# use the joint interpolation planner
-			planner = core.JointInterpolationPlanner()
-
-			# the task will contain our stages
-			task = core.Task()
-
-			# start from current robot state
-			currentState = stages.CurrentState("current state")
-			task.add(currentState)
-
-			# the merger plans for two parallel execution paths
-			merger = core.Merger('Merger')
-
-			# first simultaneous execution
-			moveTo1 = stages.MoveTo('Move To Home', planner)
-			moveTo1.group = 'hand'
-			moveTo1.setGoal('close')
-			merger.insert(moveTo1)
-
-			# second simultaneous execution
-			moveTo2 = stages.MoveTo('Move To Ready', planner)
-			moveTo2.group = 'panda_arm'
-			moveTo2.setGoal('extended')
-			merger.insert(moveTo2)
-
-			# add the merger stage to the task hierarchy
-			task.add(merger)
-
-			if task.plan():
-				task.publish(task.solutions[0])
-			time.sleep(1)
+		.. literalinclude:: ./../../../demo/scripts/merger.py
+			:language: python
 
 	)pbdoc")
 		.def(py::init<const std::string&>(), py::arg("name") = std::string("merger"));
 
 	py::classh<WrapperBase, ParallelContainerBase>(m, "WrapperBase", R"pbdoc(
-		WrapperBase(self, name, child)
+		WrapperBase(name, child)
 
 		Args:
 			name (str): Name of the stage.
-			child (obj): Wrapped stage.
+			child (Stage): Wrapped stage.
 
 		A wrapper wraps a single child stage, which can be
 		accessed via ``wrapped()``. Implementations of this
@@ -562,7 +533,7 @@ void export_core(pybind11::module& m) {
 	)pbdoc");
 
 	py::classh<Task>(m, "Task", R"pbdoc(
-			Task(self, ns, introspection)
+			Task(ns, introspection)
 
 			Args:
 				ns (str): Namespace of the task.
@@ -572,20 +543,12 @@ void export_core(pybind11::module& m) {
 			wrapping a single container
 			(by default a SerialContainer),
 			which serves as the root of all stages.
+			See below an exampel which creates a task with a
+			single stage in its hierarchy, fetching the current state
+			of the planning scene.
 
-			::
-
-				# Create a task
-				task = core.Task()
-
-				# add some stages e.g. currentState
-				currentState = stages.CurrentState("current state")
-				task.add(currentState)
-
-				# compute the stages that the task contains.
-				if task.plan():
-					# publish to the ros network
-					task.publish(task.solutions[0])
+			.. literalinclude:: ./../../../demo/scripts/current_state.py
+				:language: python
 
 		)pbdoc")
 		.def(py::init<const std::string&, bool>(), py::arg("ns") = std::string(), py::arg("introspection") = true)
@@ -593,22 +556,58 @@ void export_core(pybind11::module& m) {
 		     py::arg("ns") = std::string(), py::arg("introspection") = true, py::arg("container"))
 		// read-only access to properties + solutions
 		.def_property_readonly("properties", py::overload_cast<>(&Task::properties), R"pbdoc(
-			Access the property map of the task.
+			PropertyMap: Access the property map of the task.
 		)pbdoc")
 		.def_property_readonly("solutions", &Task::solutions, R"pbdoc(
-			Access the solutions of the task, once the sub stage hierarchy has been
+			Solutions: Access the solutions of the task, once the sub stage hierarchy has been
 			traversed and planned.
 		)pbdoc")
 		.def_property_readonly("failures", &Task::failures, R"pbdoc(
-			Inspect failures that occurred during the planning phase.
+			Solutions: Inspect failures that occurred during the planning phase.
 		)pbdoc")
 		.def_property("name", &Task::name, &Task::setName, R"pbdoc(
-			Set the name property of the task.
+			str: Set the name property of the task.
 		)pbdoc")
-		.def("loadRobotModel", &Task::loadRobotModel)
-		.def("enableIntrospection", &Task::enableIntrospection, py::arg("enabled") = true)
-		.def("clear", &Task::clear)
-		.def("add", &Task::add)
+		.def("loadRobotModel", &Task::loadRobotModel, R"pbdoc(
+			loadRobotModel(robot_description)
+
+			Args:
+				robot_description (str): Which robot model to load.
+			Returns:
+				None
+
+			Load robot model from given parameter.
+			)pbdoc")
+		.def("enableIntrospection", &Task::enableIntrospection, py::arg("enabled") = true, R"pbdoc(
+			enableIntrospection(enable)
+
+			Args:
+				enable (bool): Defaults to true.
+			Returns:
+				None
+
+			Enable introspection publish for use with `rviz`.
+			)pbdoc")
+		.def("clear", &Task::clear, R"pbdoc(
+			clear()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Reset the stage hierarchy.
+			)pbdoc")
+		.def("add", &Task::add, R"pbdoc(
+			add(stage)
+
+			Args:
+				stage (Stage): Stage to be added to the task hierarchy.
+			Returns:
+				None
+
+			Add a stage to the task hierarchy.
+			)pbdoc")
 		.def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 		.def("__getitem__", [](const Task& t, const std::string &name) -> Stage* {
 			Stage* child = t.stages()->findChild(name);
@@ -620,13 +619,59 @@ void export_core(pybind11::module& m) {
 			const auto& children = t.stages()->pimpl()->children();
 			return py::make_iterator(children.begin(), children.end());
 		}, py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
-		.def("reset", &Task::reset)
-		.def("init", py::overload_cast<>(&Task::init))
-		.def("plan", &Task::plan, py::arg("max_solutions") = 0)
-		.def("preempt", &Task::preempt)
+		.def("reset", &Task::reset, R"pbdoc(
+			reset()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Reset all stages.
+			)pbdoc")
+		.def("init", py::overload_cast<>(&Task::init), R"pbdoc(
+			init()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Initialize all stages with a given scene.
+		)pbdoc")
+		.def("plan", &Task::plan, py::arg("max_solutions") = 0, R"pbdoc(
+			plan(max_solutions)
+
+			Args:
+				max_solutions (int): Maximum allowed solutions of the planning process.
+			Returns:
+				Was the planning successful?
+
+			Reset, initialize scene (if not yet done), and initialize all
+			stages, then start planning.
+			)pbdoc")
+		.def("preempt", &Task::preempt, R"pbdoc(
+			preempt()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Interrupt current planning (or execution).
+			)pbdoc")
 		.def("publish", [](Task& self, const SolutionBasePtr& solution) {
 			self.introspection().publishSolution(*solution);
-		})
+		}, R"pbdoc(
+			publish(solution)
+
+			Args:
+				solution (Solution): Publish solution
+			Returns:
+				None
+
+			Publish a given solution to the solution ros topic.
+		)pbdoc")
 		.def("execute", [](const Task& self, const SolutionBasePtr& solution) {
 			moveit::planning_interface::PlanningSceneInterface psi;
 			moveit::planning_interface::MoveGroupInterface
@@ -647,7 +692,16 @@ void export_core(pybind11::module& m) {
 				psi.applyPlanningScene(traj.scene_diff);
 			}
 			ROS_INFO("Executed successfully.");
-		});
+		}, R"pbdoc(
+			execute(solution)
+
+			Args:
+				solution (Solution): Solution, which should be executed.
+			Returns:
+				None
+
+			Execute Solution.
+		)pbdoc");
 	// clang-format on
 }
 }  // namespace python

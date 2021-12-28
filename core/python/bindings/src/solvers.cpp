@@ -58,7 +58,7 @@ void export_solvers(py::module& m) {
 	                           py::return_value_policy::reference_internal);
 
 	properties::class_<PipelinePlanner, PlannerInterface>(m, "PipelinePlanner", R"pbdoc(
-			PipelinePlanner(self)
+			PipelinePlanner()
 
 			Use MoveIt's PlanningPipeline to plan a trajectory between to scenes.
 
@@ -93,16 +93,18 @@ void export_solvers(py::module& m) {
 			uint: Number of planning attempts.
 		)pbdoc")
 	    .property<moveit_msgs::WorkspaceParameters>("workspace_parameters", R"pbdoc(
-				moveit_msgs::WorkspaceParameters: Workspace_parameters.
+				WorkspaceParameters_: Workspace_parameters for the planning algorithm
+
+			.. _WorkspaceParameters: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/WorkspaceParameters.html
 		)pbdoc")
 	    .property<double>("goal_joint_tolerance", R"pbdoc(
-			double: Tolerance for reaching joint goals.
+			float: Tolerance for reaching joint goals.
 		)pbdoc")
 	    .property<double>("goal_position_tolerance", R"pbdoc(
-			double: Tolerance for reaching position goals.
+			float: Tolerance for reaching position goals.
 		)pbdoc")
 	    .property<double>("goal_orientation_tolerance", R"pbdoc(
-			double: Tolerance for reaching orientation goals.
+			float: Tolerance for reaching orientation goals.
 		)pbdoc")
 	    .property<bool>("display_motion_plans", R"pbdoc(
 			bool: Publish generated solutions via a topic.
@@ -113,7 +115,7 @@ void export_solvers(py::module& m) {
 	    .def(py::init<>());
 
 	properties::class_<JointInterpolationPlanner, PlannerInterface>(m, "JointInterpolationPlanner", R"pbdoc(
-			JointInterpolationPlanner(self)
+			JointInterpolationPlanner()
 
 			Interpolate a trajectory between states in joint space.
 			Fails if direct joint space interpolation fails.
@@ -127,13 +129,13 @@ void export_solvers(py::module& m) {
 				jointPlanner.max_step = 0.1
 		)pbdoc")
 	    .property<double>("max_step", R"pbdoc(
-			double: Prevent large movements by specifying the maximum step distance
+			float: Prevent large movements by specifying the maximum step distance
 				in joint space.
 		)pbdoc")
 	    .def(py::init<>());
 
 	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath", R"pbdoc(
-			CartesianPath(self)
+			CartesianPath()
 
 			The planner uses MoveIt's ``computeCartesianPath()`` to
 			generate a straigh-line path between two scenes.
@@ -148,15 +150,15 @@ void export_solvers(py::module& m) {
 				cartesianPlanner.jump_threshold = 0.0  # effectively disable jump threshold.
 		)pbdoc")
 	    .property<double>("step_size", R"pbdoc(
-			double: Specify the path interpolation resolution by adjusting the
+			float: Specify the path interpolation resolution by adjusting the
 				step size between consecutive waypoints with this parameter.
 		)pbdoc")
 	    .property<double>("jump_threshold", R"pbdoc(
-			double: Prevent jumps in inverse kinematic solutions by adjusting the
+			float: Prevent jumps in inverse kinematic solutions by adjusting the
 				acceptable fraction of mean joint motion per step.
 		)pbdoc")
 	    .property<double>("min_fraction", R"pbdoc(
-			double: Lower threshold of minimum motion per step required for
+			float: Lower threshold of minimum motion per step required for
 				success in planning.
 		)pbdoc")
 	    .def(py::init<>());

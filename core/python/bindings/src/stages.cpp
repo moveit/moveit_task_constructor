@@ -171,6 +171,8 @@ void export_stages(pybind11::module& m) {
 			Args:
 				collision_object (CollisionObject_): Object to be added. Must be
 												     in the appropriate message format.
+			Returns:
+				None
 
 			.. _CollisionObject: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/CollisionObject.html
 
@@ -211,6 +213,8 @@ void export_stages(pybind11::module& m) {
 
 			Args:
 				scene (PlanningScenePtr): The desired planning scene state.
+			Returns:
+				None
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fixed state"));
 
@@ -325,57 +329,50 @@ void export_stages(pybind11::module& m) {
 	    .def("setGoal", py::overload_cast<const geometry_msgs::PoseStamped&>(&MoveTo::setGoal), R"pbdoc(
 			setGoal(goal)
 
+			1. Move link to a given pose.
+
 			Args:
 				goal (PoseStamped_): Desired configuration.
-
 			Returns:
 				None
-
-			Move link to a given pose.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const geometry_msgs::PointStamped&>(&MoveTo::setGoal), R"pbdoc(
-			setGoal(goal)
+			2. Move link to given point, keeping current orientation.
 
 			Args:
 				goal (PointStamped_): Desired configuration.
-
 			Returns:
 				None
-
-			Move link to given point, keeping current orientation.
 
 			.. _PointStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PointStamped.html
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const moveit_msgs::RobotState&>(&MoveTo::setGoal), R"pbdoc(
+			3. Move joints specified in msg to their target values.
+
 			Args:
 				goal (RobotState_): Desired configuration.
-
 			Returns:
 				None
-
-			Move joints specified in msg to their target values.
 
 			.. _RobotState: https://docs.ros.org/en/noetic/api/moveit_msgs/html/msg/RobotState.html
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const std::map<std::string, double>&>(&MoveTo::setGoal), R"pbdoc(
+			4. Move joints by name to their mapped target value.
+
 			Args:
 				goal (dict): Desired configuration given in joint - value mappings.
-
 			Returns:
 				None
-
-			Move joints by name to their mapped target value.
 		)pbdoc")
 	    .def("setGoal", py::overload_cast<const std::string&>(&MoveTo::setGoal), R"pbdoc(
+			5. Move joint model group to given named pose.
+
 			Args:
 				goal (str): Desired configuration as a name of a known pose.
-
 			Returns:
 				None
-
-			Move joint model group to given named pose.
 		)pbdoc");
 
 	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative", R"pbdoc(
@@ -390,6 +387,14 @@ void export_stages(pybind11::module& m) {
 			.. literalinclude:: ./../../../demo/scripts/cartesian.py
 				:language: python
 				:lines: 26-31
+
+			To implement your own propagtor logic on top of the `moveRelative` class' functionality,
+			you may derive from the stage like so:
+
+			.. literalinclude:: ./../../python/test/rostest_trampoline.py
+				:language: python
+				:lines: 72-87
+
 
 		)pbdoc")
 	    .property<std::string>("group", R"pbdoc(
@@ -416,24 +421,35 @@ void export_stages(pybind11::module& m) {
 	         R"pbdoc(
 			setDirection(twist)
 
-			Perform twist motion on specified link.
+			1. Perform twist motion on specified link.
 
 			Args:
 				twist (Twist_): Use a Twist message as movement direction description.
+			Returns:
+				None
 
 			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const geometry_msgs::Vector3Stamped&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-			setDirection(direction)
+			2. Translate link along given direction.
 
-			Translate link along given direction.
+			Args:
+				direction (Vector3Stamped_): Desired direction.
+			Returns:
+				None
+
+			.. _Vector3Stamped: https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Vector3Stamped.html
 		)pbdoc")
 	    .def("setDirection", py::overload_cast<const std::map<std::string, double>&>(&MoveRelative::setDirection),
 	         R"pbdoc(
-			setDirection(joint_deltas)
+			3. Move specified joint variables by given amount.
 
-			Move specified joint variables by given amount.
+			Args:
+				joint_deltas (dict): Desired direction,
+					given as a (joint_name: str, joint_value: float), mapping.
+			Returns:
+				None
 		)pbdoc");
 
 	py::enum_<stages::Connect::MergeMode>(m, "MergeMode", R"pbdoc(
@@ -491,7 +507,7 @@ void export_stages(pybind11::module& m) {
 
 		)pbdoc")
 	    .property<double>("max_penetration", R"pbdoc(
-			Cutoff length up to which collision objects get fixed.
+			float: Cutoff length up to which collision objects get fixed.
 		)pbdoc")
 	    .def(py::init<const std::string&>(), py::arg("name") = std::string("fix collisions"));
 
@@ -569,11 +585,9 @@ void export_stages(pybind11::module& m) {
 			.. literalinclude:: ./../../../demo/scripts/generate_pose.py
 				:language: python
 				:lines: 35-48
-
 		)pbdoc")
 	    .property<geometry_msgs::PoseStamped>("pose", R"pbdoc(
-			PoseStamped_: Set the pose, which should be spawned
-						  on each new solution of the monitored stage.
+			PoseStamped_: Set the pose, which should be spawned on each new solution of the monitored stage.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
@@ -635,6 +649,8 @@ void export_stages(pybind11::module& m) {
 								 approach motion.
 				min_distance (float): Minimum allowed distance.
 				max_distance (float): Maximum allowed distance.
+			Returns:
+				None
 
 			The approaching motion towards the grasping state is represented
 			by a twist message.
@@ -645,26 +661,26 @@ void export_stages(pybind11::module& m) {
 	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Pick::setLiftMotion), R"pbdoc(
 			setLiftMotion(motion, min_distance, max_distance)
 
+			1. The lifting motion away from the grasping state is represented by a twist message.
+
 			Args:
 				motion (Twist_): The twist, which represents the
 								 lift motion.
 				min_distance (float): Minimum allowed distance.
 				max_distance (float): Maximum allowed distance.
-
-			The lifting motion away from the grasping state is represented
-			by a twist message.
+			Returns:
+				None
 
 			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 		)pbdoc")
 	    .def("setLiftMotion", py::overload_cast<const std::map<std::string, double>&>(&Pick::setLiftMotion), R"pbdoc(
-			setLiftMotion(place)
+			2. The lifting motion away from the grasping state is represented by its destination as joint-value pairs.
 
 			Args:
 				place (dict): The place where the object should be lifted to,
 							  given as joint-value pairs.
-
-			The lifting motion away from the grasping state is represented
-			by its destination as joint-value pairs.
+			Returns:
+				None
 		)pbdoc");
 
 	properties::class_<Place, Stage>(m, "Place", R"pbdoc(
@@ -716,6 +732,8 @@ void export_stages(pybind11::module& m) {
 								 retract motion.
 				min_distance (float): Minimum allowed distance.
 				max_distance (float): Maximum allowed distance.
+			Returns:
+				None
 
 			The retract motion towards the final state is represented
 			by a twist message.
@@ -726,27 +744,27 @@ void export_stages(pybind11::module& m) {
 	         py::overload_cast<const geometry_msgs::TwistStamped&, double, double>(&Place::setPlaceMotion), R"pbdoc(
 			setPlaceMotion(motion, min_distance, max_distance)
 
+			1. The object-placing motion towards the final state is represented by a twist message.
+
 			Args:
 				motion (Twist_): The twist, which represents the
 								 place motion.
 				min_distance (float): Minimum allowed distance.
 				max_distance (float): Maximum allowed distance.
-
-			The object-placing motion towards the final state is represented
-			by a twist message.
+			Returns:
+				None
 
 			.. _Twist: https://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html
 
 		)pbdoc")
 	    .def("setPlaceMotion", py::overload_cast<const std::map<std::string, double>&>(&Place::setPlaceMotion), R"pbdoc(
-			setPlaceMotion(joints)
+			2. The placing motion to the final state is represented by its destination as joint-value pairs.
 
 			Args:
 				joints (dict): The place where the object should be placed at,
 							   given as joint-value pairs.
-
-			The placing motion to the final state is represented
-			by its destination as joint-value pairs.
+			Returns:
+				None
 		)pbdoc")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), py::arg("place_generator"),
 	         py::arg("name") = std::string("place"));
@@ -758,6 +776,8 @@ void export_stages(pybind11::module& m) {
 				pose_generator (GenerateGraspPose): Generator stage to
 													sample possible grasp poses.
 				name (str): Name of the stage.
+			Returns:
+				None
 
 			Specialization of SimpleGraspBase to realize grasping.
 			Refer to the pick_ stage for a minimum code example:
@@ -785,39 +805,43 @@ void export_stages(pybind11::module& m) {
 	    .def<void (SimpleGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
 			setIKFrame(transform)
 
+			1. Set the frame for which the inverse kinematics are calculated with respect to
+			   each pose generated by the pose_generator.
+
 			Args:
 				transform (PoseStamped_): Transform to the IK Frame.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def<void (SimpleGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame,
 	                                                                              R"pbdoc(
-			setIKFrame(pose, link)
+			2. Set the frame for which the inverse kinematics are calculated
+			   with respect to each pose generated by the pose_generator.
 
 			Args:
 				pose (PoseStamped_): Transform from the given link to the IK frame.
 				link (str): Base link for pose transform to IK frame.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 		)pbdoc")
 	    .def<void (SimpleGrasp::*)(const std::string&)>("setIKFrame", &SimpleGrasp::setIKFrame, R"pbdoc(
-			setIKFrame(link)
+			3. Set the frame for which the inverse kinematics are calculated
+			   with respect to each pose generated by the pose_generator.
 
 			Args:
 				link (str): IK Frame will be placed at the base frame of this link.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 		)pbdoc")
 	    .def("setMaxIKSolutions", &SimpleGrasp::setMaxIKSolutions, R"pbdoc(
 			setMaxIKSolutions(max_ik_solutions)
 
 			Args:
-				max_ik_solutions (int):
+				max_ik_solutions (int): Maximum number of ik solutions.
+			Returns:
+				None
 
 			Set the maximum number of inverse kinematics solutions that
 			should be computed.
@@ -832,6 +856,8 @@ void export_stages(pybind11::module& m) {
 													sample possible Place
 													poses.
 				name (str): Name of the stage.
+			Returns:
+				None
 
 			Specialization of SimpleGraspBase to realize ungrasping
 			Refer to the place_ stage for a minimum code example.
@@ -863,44 +889,47 @@ void export_stages(pybind11::module& m) {
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
-
 	    .def<void (SimpleUnGrasp::*)(const geometry_msgs::PoseStamped&)>("setIKFrame", &SimpleUnGrasp::setIKFrame,
 	                                                                     R"pbdoc(
 			setIKFrame(transform)
 
+			1. Set the frame for which the inverse kinematics are calculated
+			   with respect to each pose generated by the pose_generator.
+
 			Args:
 				transform (PoseStamped_): Transform to the IK Frame.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)pbdoc")
 	    .def<void (SimpleUnGrasp::*)(const Eigen::Isometry3d&, const std::string&)>("setIKFrame",
 	                                                                                &SimpleUnGrasp::setIKFrame, R"pbdoc(
-			setIKFrame(pose, link)
+			2. Set the frame for which the inverse kinematics are calculated
+			   with respect to each pose generated by the pose_generator.
 
 			Args:
 				pose (PoseStamped_): Transform from the given link to the IK frame.
 									 link (str): Base link for pose transform to IK frame.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 		)pbdoc")
 	    .def<void (SimpleUnGrasp::*)(const std::string&)>("setIKFrame", &SimpleUnGrasp::setIKFrame, R"pbdoc(
-			setIKFrame(link)
+			3. Set the frame for which the inverse kinematics are calculated
+			   with respect to each pose generated by the pose_generator.
 
 			Args:
 				link (str): IK Frame will be placed at the base frame of this link.
-
-			Set the frame for which the inverse kinematics are calculated
-			with respect to each pose generated by the pose_generator.
+			Returns:
+				None
 		)pbdoc")
 	    .def("setMaxIKSolutions", &SimpleUnGrasp::setMaxIKSolutions, R"pbdoc(
 			setMaxIKSolutions(max_ik_solutions)
 
 			Args:
-				max_ik_solutions (int):
+				max_ik_solutions (int): Maximum number of ik solutions.
+			Returns:
+				None
 
 			Set the maximum number of inverse kinematics solutions that
 			should be computed.

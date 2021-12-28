@@ -169,60 +169,224 @@ bool PropertyConverterBase::insert(const std::type_index& type_index, const std:
 
 void export_properties(py::module& m) {
 	// clang-format off
-	py::classh<Property>(m, "Property")
-		.def("setValue", [](Property& self, const py::object& value)
-		     { self.setValue(PropertyConverterRegistry::fromPython(value)); })
-		.def("setCurrentValue", [](Property& self, const py::object& value)
-	        { self.setCurrentValue(PropertyConverterRegistry::fromPython(value)); })
-		.def("value", [](const Property& self)
-		     { return PropertyConverterRegistry::toPython(self.value()); })
-		.def("value", [](const Property& self)
-		     { return PropertyConverterRegistry::toPython(self.defaultValue()); })
-		.def("reset", &Property::reset)
-		.def("defined", &Property::defined)
-		;
+	py::classh<Property>(m, "Property", R"pbdoc(
+		Property()
 
-	py::classh<PropertyMap>(m, "PropertyMap")
+		Construct a property that can hold any value.
+
+		)pbdoc")
 		.def(py::init<>())
-		.def("__bool__", [](const PropertyMap& self) { return self.begin() == self.end(); },
-		     "Check whether the map is nonempty")
+		.def("setValue", [](Property& self, const py::object& value)
+		     { self.setValue(PropertyConverterRegistry::fromPython(value)); }, R"pbdoc(
+		    setValue(value)
+
+			Args:
+				value: Any value
+			Returns:
+				None
+
+			Set current value and default value.
+		)pbdoc")
+		.def("setCurrentValue", [](Property& self, const py::object& value)
+	        { self.setCurrentValue(PropertyConverterRegistry::fromPython(value)); }, R"pbdoc(
+		    setCurrentValue(value)
+
+			Args:
+				value: Any value
+			Returns:
+				None
+
+			Set the current value of the property.
+		)pbdoc")
+		.def("value", [](const Property& self)
+		     { return PropertyConverterRegistry::toPython(self.value()); }, R"pbdoc(
+		    value()
+
+			1. Get the current value for the property. If not defined, return the
+			   default value instead.
+
+			Args:
+				None
+			Returns:
+				Current value of the property.
+		)pbdoc")
+		.def("value", [](const Property& self)
+		     { return PropertyConverterRegistry::toPython(self.defaultValue()); }, R"pbdoc(
+			2. Get the current value for the property. If not defined, return the
+			   default value instead.
+
+			Args:
+				None
+			Returns:
+				Current value of the property.
+		)pbdoc")
+		.def("reset", &Property::reset, R"pbdoc(
+			reset()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Reset the property to the default value.
+			The default value can be empty.
+		)pbdoc")
+		.def("defined", &Property::defined, R"pbdoc(
+			defined()
+
+			Args:
+				None
+			Returns:
+				Returns true if the property is defined,
+
+			Is the current value defined or will the fallback be used?
+		)pbdoc")
+		.def("description", &Property::description, R"pbdoc(
+			description()
+
+			Args:
+				None
+			Returns:
+				Returns the description text.
+
+			Get the description text.
+		)pbdoc")
+		.def("setDescription", &Property::setDescription, R"pbdoc(
+			setDescription(desc)
+
+			Args:
+				desc (str): The desired description of the property
+			Returns:
+				None
+
+			Set the description of the property.
+		)pbdoc");
+
+	py::classh<PropertyMap>(m, "PropertyMap", R"pbdoc(
+		PropertyMap()
+
+		Conveniency methods are provided to setup property
+		initialization for several properties at once - always
+		inheriting from the identically named external property.
+		)pbdoc")
+		.def(py::init<>())
+		.def("__bool__", [](const PropertyMap& self) { return self.begin() == self.end();}, R"pbdoc(
+		     Check whether the map is nonempty
+		)pbdoc")
 		.def("__iter__", [](PropertyMap& self) { return py::make_key_iterator(self.begin(), self.end()); },
 		     py::keep_alive<0, 1>())  // Essential: keep list alive while iterator exists
 		.def("items", [](const PropertyMap& self) { return py::make_iterator(self.begin(), self.end()); },
-		     py::keep_alive<0, 1>())
+		     py::keep_alive<0, 1>(), R"pbdoc(
+				items()
+
+				Iterator over the items in the property map.
+			 )pbdoc")
 		.def("__contains__", [](const PropertyMap& self, const std::string &key) { return self.hasProperty(key); })
 		.def("property", [](PropertyMap& self, const std::string& key)
-		     { return self.property(key); }, py::return_value_policy::reference_internal)
+		     { return self.property(key); }, py::return_value_policy::reference_internal, R"pbdoc(
+		    property(name)
+
+			Args:
+				name (str): Name of the property
+			Returns:
+				Property object that matches the given name.
+
+			Get the property with the given name, throws property - undeclared
+			for unkown name.
+			)pbdoc")
 		.def("__getitem__", [](const PropertyMap& self, const std::string& key)
 		     { return PropertyConverterRegistry::toPython(self.get(key)); })
 		.def("__setitem__", [](PropertyMap& self, const std::string& key, const py::object& value)
 		     { self.set(key, PropertyConverterRegistry::fromPython(value)); })
-		.def("reset", &PropertyMap::reset, "reset all properties to their defaults")
+		.def("reset", &PropertyMap::reset, R"pbdoc(
+			reset()
+
+			Args:
+				None
+			Returns:
+				None
+
+			Reset all properties to their default values
+			)pbdoc")
 		.def("update", [](PropertyMap& self, const py::dict& values) {
 				for (auto it = values.begin(), end = values.end(); it != end; ++it) {
 					self.set(it->first.cast<std::string>(),
 					         PropertyConverterRegistry::fromPython(py::reinterpret_borrow<py::object>(it->second)));
 				}
-			})
+			}, R"pbdoc(
+			update(values)
+
+			Args:
+				values (dict): Name value pairs of properties
+					that should be updated.
+			Returns:
+				None
+
+			Update multiple properties at once.
+			)pbdoc")
 		.def("configureInitFrom", [](PropertyMap& self, Property::SourceFlags sources, const py::list& names) {
 				std::set<std::string> s;
 				for (auto& item : names)
 					s.insert(item.cast<std::string>());
 				self.configureInitFrom(sources, s);
-			}, "configure initialization of listed/all properties from given source",
+			}, R"pbdoc(
+			configureInitFrom(sources, names)
+
+			Args:
+				sources (SourceFlags): Where should the property
+					values be obtained from?
+				names (list): List of str of the property names
+					that should be configured. Optional, empty by default
+					(which means all properties are obtained).
+			Returns:
+				None
+
+			Configure initialization of listed/all properties from given source"
+			)pbdoc",
 			py::arg("sources"), py::arg("names") = py::list())
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const std::string& name) {
 				self.exposeTo(other, name, name);
-			})
+			}, R"pbdoc(
+			exposeTo(other, name)
+
+			1. Declare given property that is also present in other PropertyMap.
+
+			Args:
+				other (PropertyMap): PropertyMap as the source for the
+					new property values.
+				names (str): Name of the property that should be obtained.
+			Returns:
+				None
+			)pbdoc")
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const std::string& name, const std::string& other_name) {
 				self.exposeTo(other, name, other_name);
-			})
+			}, R"pbdoc(
+			2. Declare given property name as `other_namer` in other PropertyMap.
+
+			Args:
+				other (PropertyMap): PropertyMap as the source for the
+					new property values.
+				names (str): Name of the property that should be obtained.
+				other_name (str): New name of the property.
+			Returns:
+				None
+			)pbdoc")
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const py::list& names) {
 				std::set<std::string> s;
 				for (auto& item : names)
 					s.insert(item.cast<std::string>());
 				self.exposeTo(other, s);
-			})
+			}, R"pbdoc(
+			3. Declare all given properties also in other PropertyMap.
+
+			Args:
+				other (PropertyMap): PropertyMap as the source for the
+					new property values.
+				names (list): List of str which contains the names of the
+					properties that should be obtained.
+			Returns:
+				None
+			)pbdoc")
 		;
 	// clang-format on
 }
