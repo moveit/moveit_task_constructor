@@ -36,7 +36,7 @@
 /* Authors: Luca Lach, Robert Haschke */
 
 #include <moveit/task_constructor/merge.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -166,7 +166,7 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 	}
 
 	// add timing
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
+	trajectory_processing::TimeOptimalTrajectoryGeneration timing;
 	timing.computeTimeStamps(*merged_traj, 1.0, 1.0);
 	return merged_traj;
 }

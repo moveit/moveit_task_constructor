@@ -38,7 +38,7 @@
 
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 #include <chrono>
 
@@ -92,7 +92,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 		return false;
 
 	// add timing, TODO: use a generic method to add timing via plugins
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
+	trajectory_processing::TimeOptimalTrajectoryGeneration timing;
 	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 	                         props.get<double>("max_acceleration_scaling_factor"));
 
