@@ -47,18 +47,7 @@
 #include <moveit/macros/class_forward.h>
 
 #include <moveit_msgs/MoveItErrorCodes.h>
-#include <moveit/task_constructor/moveit_compat.h>
-
-#if MOVEIT_CORE_HAS_ERROR_CODE
 #include <moveit/utils/moveit_error_code.h>
-#else
-#include <moveit/move_group_interface/move_group_interface.h>
-namespace moveit {
-namespace core {
-using MoveItErrorCode = moveit::planning_interface::MoveItErrorCode;
-}  // namespace core
-}  // namespace moveit
-#endif
 
 namespace moveit {
 namespace core {
