@@ -655,7 +655,7 @@ TEST(Task, timeout) {
 	// zero timeout fails
 	t.reset();
 	t.setTimeout(0.0);
-	EXPECT_FALSE(t.plan());
+	EXPECT_EQ(t.plan(), moveit::core::MoveItErrorCode::TIMED_OUT);
 
 	// time for 1 solution
 	t.reset();

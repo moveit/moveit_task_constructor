@@ -490,7 +490,7 @@ bool PickPlaceTask::plan() {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	int max_solutions = pnh_.param<int>("max_solutions", 10);
 
-	return task_->plan(max_solutions);
+	return static_cast<bool>(task_->plan(max_solutions));
 }
 
 bool PickPlaceTask::execute() {
