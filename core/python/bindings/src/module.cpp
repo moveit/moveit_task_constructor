@@ -50,28 +50,22 @@ PYBIND11_MODULE(pymoveit_mtc, m) {
 	pybind11::options options;
 	options.disable_function_signatures();
 
-	auto msub = m.def_submodule("core", "MoveIt Task Contructor Core");
-	msub.doc() = R"pbdoc(
-		This python package contains
-		core components such as
-		base types of stage-
-		and planner classes.
-	)pbdoc";
+	auto msub = m.def_submodule("core", R"(
+		moveit.task_constructor.core
+		============================
+
+		This package provides wrappers of core MTC components.
+	)");
 
 	moveit::python::export_properties(msub);
 	moveit::python::export_solvers(msub);
 	moveit::python::export_core(msub);
 
-	msub = m.def_submodule("stages", "MoveIt Task Constructor Stages");
-	msub.doc() = R"pbdoc(
-		This python package contains
-		all stages that
-		are available to the user.
-		To use a stage, create an instance, then
-		add it to the task hierarchy at the
-		desired spot.
- 		The arrangement of stages in the hierarchy
-		define the task to be carried out.
-	)pbdoc";
+	msub = m.def_submodule("stages", R"(
+		moveit.task_constructor.stages
+		==============================
+
+		This package provides wrappers of standard MTC stages.
+	)");
 	moveit::python::export_stages(msub);
 }
