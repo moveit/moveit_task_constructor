@@ -6,5 +6,5 @@
   name: C++ API
   output_dir: cpp
   file_patterns: "*.c *.cpp *.h *.cc *.hh *.dox"
-  exclude_patterns: "*/core/python/pybind11/* */test/*"
+  exclude_patterns: "*/core/python/pybind11/* */core/python/bindings/* */test/* "
   exclude_symbols: "*Private class_ declval*"

@@ -33,23 +33,11 @@ extensions = [
 ]
 
 autosummary_generate = True
-# Only add class doc in docstring as this is needed to clean up the
-# constructor signature
-autoclass_content = "class"
-# Remove 'view source code' from top of page (for html, not python)
-html_show_sourcelink = True
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+html_show_sourcelink = True  # Remove 'view source code' from top of page (for html, not python)
 autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
-# Enable 'expensive' imports for sphinx_autodoc_typehints
-set_type_checking_flag = True
+set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
 add_module_names = False
-
-# Look for the function signature in the first line of the docstring.
-autodoc_docstring_signature = True
-
-# Interpret docstring formatting as to Numpy code style conventions.
-# napoleon_google_docstring = True
-# napoleon_numpy_docstring = True
-
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -156,7 +144,7 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -222,9 +210,7 @@ html_static_path = ["_static"]
 htmlhelp_basename = "mtcdoc"
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"https://docs.python.org/3": None}
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # Default options for generating documentation.
-autodoc_default_options = {
-    "exclude-members": "ContainerBase, InitStageError, ParallelContainerBase, PlannerInterface, WrapperBase, PropagatingForward, PropagatingBackward, PropagatingEitherWay, MergeMode, SerialContainer, Solutions, PropertyInitializerSource"
-}
+autodoc_default_options = {"exclude-members": "ContainerBase, ParallelContainerBase, WrapperBase"}
