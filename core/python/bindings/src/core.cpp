@@ -117,7 +117,7 @@ void export_core(pybind11::module& m) {
 			float: Cost that is associated with a particular solution.
 		)pbdoc")
 		.def_property("comment", &SolutionBase::comment, &SolutionBase::setComment, R"pbdoc(
-			str: Comment that is associated with a perticular solution.
+			str: Comment that is associated with a particular solution.
 		)pbdoc")
 		.def("toMsg", [](const SolutionBasePtr& s) {
 			moveit_task_constructor_msgs::Solution msg;
