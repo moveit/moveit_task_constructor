@@ -81,6 +81,8 @@ public:
 	}
 };
 
+// Helper class to expose protected member function onNewSolution
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html#binding-protected-member-functions
 class PubMonitoringGenerator : public MonitoringGenerator
 {
 public:
