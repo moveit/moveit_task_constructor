@@ -301,6 +301,7 @@ PIMPL_FUNCTIONS(MonitoringGenerator)
 class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
+	friend struct FallbacksPrivateConnect;
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>

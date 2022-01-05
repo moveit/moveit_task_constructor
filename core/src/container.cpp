@@ -876,7 +876,11 @@ inline void Fallbacks::replaceImpl() {
 			impl = new FallbacksPrivatePropagator(std::move(*impl));
 			break;
 		case CONNECT:
-			throw std::runtime_error("Not yet implemented");
+			// For now, we only support Connecting children
+			for (const auto& child : impl->children())
+				if (!dynamic_cast<Connecting*>(child.get()))
+					throw std::runtime_error("CONNECT-like interface is only supported for Connecting children");
+			impl = new FallbacksPrivateConnect(std::move(*impl));
 			break;
 	}
 	delete pimpl_;
@@ -1014,6 +1018,65 @@ bool FallbacksPrivatePropagator::nextJob() {
 	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
 	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), false);
 	return true;
+}
+
+
+FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
+	: FallbacksPrivate(std::move(old)) {
+	starts_ = std::make_shared<Interface>(
+		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::BACKWARD>, this, std::placeholders::_1, std::placeholders::_2));
+
+	FallbacksPrivateConnect::reset();
+}
+
+void FallbacksPrivateConnect::reset() {
+	active_ = children().end();
+}
+
+template <Interface::Direction dir>
+void FallbacksPrivateConnect::propagateStateUpdate(Interface::iterator external, bool updated) {
+	copyState<dir>(external, children().front()->pimpl()->pullInterface(dir), updated);
+	// TODO: propagate updates to other children as well
+}
+
+bool FallbacksPrivateConnect::canCompute() const {
+	for (auto it=children().begin(), end=children().end(); it!=end; ++it)
+		if ((*it)->pimpl()->canCompute()) {
+			active_ = it;
+			return true;
+		}
+	active_ = children().end();
+	return false;
+}
+
+void FallbacksPrivateConnect::compute() {
+	// Alternatively, we could also compute() all children that canCompute()
+	assert(active_ != children().end());
+	(*active_)->pimpl()->runCompute();
+}
+
+void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	// expect failure to be reported from active child
+	assert(active_ != children().end() && active_->get() == &child);
+	// ... thus we can use std::next(active_) to find the next child
+	auto next = std::next(active_);
+
+	auto findIteratorFor = [](const InterfaceState* state, const Interface& interface) {
+		auto it = std::find(interface.begin(), interface.end(), state);
+		assert(it != interface.end());
+		return it;
+	};
+
+	if (next != children().end()) {  // pass job to next child
+		auto next_con = static_cast<ConnectingPrivate*>(const_cast<StagePrivate*>((*next)->pimpl()));
+		auto first_con = static_cast<const ConnectingPrivate*>(children().front()->pimpl());
+		auto fromIt = findIteratorFor(from, *first_con->starts());
+		auto toIt = findIteratorFor(to, *first_con->ends());
+		next_con->pending.insert(std::make_pair(fromIt, toIt));
+	} else  // or report failure to parent
+		parent()->pimpl()->onNewFailure(*me(), from, to);
 }
 
 

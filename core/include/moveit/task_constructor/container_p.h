@@ -302,6 +302,21 @@ struct FallbacksPrivatePropagator : FallbacksPrivateCommon
 	bool job_has_solutions_;  // flag indicating whether the current job generated solutions
 };
 
+/// Fallbacks implementation for CONNECT interface
+struct FallbacksPrivateConnect : FallbacksPrivate
+{
+	FallbacksPrivateConnect(FallbacksPrivate&& old);
+	void reset() override;
+	bool canCompute() const override;
+	void compute() override;
+	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+
+	template <Interface::Direction dir>
+	void propagateStateUpdate(Interface::iterator external, bool updated);
+
+	mutable container_type::const_iterator active_;  // child picked for compute()
+};
+
 class WrapperBasePrivate : public ParallelContainerBasePrivate
 {
 	friend class WrapperBase;
