@@ -260,7 +260,7 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 		auto internals{ externalToInternalMap().equal_range(&*external) };
 		for (auto& i = internals.first; i != internals.second; ++i) {
 			// TODO: Not only update status, but full priority!
-			setStatus<dir>(i->second, external->priority().status());
+			setStatus<dir>(i->get<INTERNAL>(), external->priority().status());
 		}
 		return;
 	}
@@ -690,9 +690,8 @@ bool SerialContainer::canCompute() const {
 
 void SerialContainer::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		if (!stage->pimpl()->canCompute())
-			continue;
-		stage->pimpl()->runCompute();
+		if (stage->pimpl()->canCompute())
+			stage->pimpl()->runCompute();
 	}
 }
 
