@@ -219,6 +219,7 @@ void ContainerBasePrivate::setStatus(const InterfaceState* s, InterfaceState::St
 
 	// if possible (i.e. if state s has an external counterpart), escalate setStatus to external interface
 	if (parent() && trajectories<dir>(*s).empty()) {
+		// TODO: This was coded with SerialContainer in mind. Not sure, it works for ParallelContainers
 		auto external{ internalToExternalMap().find(s) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
@@ -928,6 +929,11 @@ void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*
 	(void)child;
 }
 
+void FallbacksPrivate::nextChild() {
+	if (std::next(current_) != children().end())
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_)->name() << "' failed, trying next one.");
+	++current_;  // advance to next child
+}
 
 FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
 	: FallbacksPrivate(std::move(old)) { reset(); }
@@ -941,11 +947,8 @@ bool FallbacksPrivateGenerator::nextJob() {
 		return false;
 	}
 
-	do {
-		if (std::next(current_) != children().end())
-			ROS_DEBUG_STREAM_NAMED("Fallbacks", "Generator '" << (*current_)->name() << "' failed, trying next one.");
-		++current_;  // advance to next child
-	} while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	do { nextChild(); }
+	while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
 
 	// return value shall indicate current_->canCompute()
 	return current_ != children().end();
@@ -979,11 +982,9 @@ bool FallbacksPrivatePropagator::nextJob() {
 	const auto jobs = pullInterface(dir_);
 
 	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
-		if (!job_has_solutions_) { // job didn't produce solutions -> feed to next child
-			if (std::next(current_) != children().end())
-				ROS_DEBUG_STREAM_NAMED("Fallbacks", "Propagator '" << (*current_)->name() << "' failed, trying next one.");
-			++current_;  // advance to next child
-		} else
+		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
+			nextChild();
+		else
 			current_ = children().end();  // indicate that this job is exhausted on all children
 	}
 	job_has_solutions_ = false;

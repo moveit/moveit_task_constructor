@@ -257,6 +257,7 @@ public:
 	// methods common to all variants
 	void initializeExternalInterfaces() final;
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
+	void nextChild();  /// << Advance to next child
 
 	// virtual methods specific to each variant
 	/// Advance to the next job, assuming that the current child is exhausted on the current job.
