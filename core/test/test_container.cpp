@@ -586,10 +586,6 @@ TEST(Task, move) {
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2u);
 	EXPECT_EQ(t1.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
-
-	t1 = std::move(t2);
-	EXPECT_EQ(t1.stages()->numChildren(), 2u);
-	EXPECT_EQ(t2.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 TEST(Task, reuse) {

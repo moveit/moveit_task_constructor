@@ -51,14 +51,13 @@ namespace task_constructor {
 class TaskPrivate : public WrapperBasePrivate
 {
 	friend class Task;
+	TaskPrivate& operator=(TaskPrivate&& other);
 
 public:
 	TaskPrivate(Task* me, const std::string& ns);
+
 	const std::string& ns() const { return ns_; }
 	const ContainerBase* stages() const;
-
-protected:
-	static void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 private:
 	std::string ns_;

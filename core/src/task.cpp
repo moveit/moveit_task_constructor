@@ -74,30 +74,14 @@ namespace task_constructor {
 TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
   : WrapperBasePrivate(me, std::string()), ns_(rosNormalizeName(ns)), preempt_requested_(false) {}
 
-void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
-	// It only makes sense to swap pimpl instances of a Task!
-	// However, due to member protection rules, we can only implement it here
-	assert(typeid(lhs) == typeid(rhs));
-
-	// swap instances
-	::std::swap(lhs, rhs);
-	// as well as their me_ pointers
-	::std::swap(lhs->me_, rhs->me_);
-
-	// and redirect the parent pointers of children to new parents
-	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
-	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(lhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
-
-	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
-	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(rhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
+TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
+	this->WrapperBasePrivate::operator=(std::move(other));
+	ns_ = std::move(other.ns_);
+	introspection_ = std::move(other.introspection_);
+	robot_model_ = std::move(other.robot_model_);
+	robot_model_loader_ = std::move(other.robot_model_loader_);
+	task_cbs_ = std::move(other.task_cbs_);
+	return *this;
 }
 
 const ContainerBase* TaskPrivate::stages() const {
@@ -122,7 +106,7 @@ Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
 
 Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-constructor)
 	clear();  // remove all stages of current task
-	swap(this->pimpl_, other.pimpl_);
+	*static_cast<TaskPrivate*>(pimpl_) = std::move(*static_cast<TaskPrivate*>(other.pimpl_));
 	return *this;
 }
 

@@ -32,7 +32,7 @@ jobs:
             DOCKER_RUN_OPTS: >-
               -e PRELOAD=libasan.so.5
               -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions"
-            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1"
+            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
 
     env:
       CATKIN_LINT: true
