@@ -254,38 +254,52 @@ public:
 	FallbacksPrivate(Fallbacks* me, const std::string& name);
 	FallbacksPrivate(FallbacksPrivate&& other);
 
-	// methods common to all variants
 	void initializeExternalInterfaces() final;
 	void onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) override;
-	void nextChild();  /// << Advance to next child
 
 	// virtual methods specific to each variant
-	/// Advance to the next job, assuming that the current child is exhausted on the current job.
-	virtual bool nextJob() { return false; }
-	/// Reset data structures
-	virtual void reset();
-
-	container_type::const_iterator current_;  // currently active child generator
-	bool job_has_solutions_;  // flag indicating whether the current job generated solutions
+	virtual void onNewSolution(const SolutionBase& s);
+	virtual void reset() {}
 };
 PIMPL_FUNCTIONS(Fallbacks)
 
+/* Class shared between FallbacksPrivateGenerator and FallbacksPrivatePropagator,
+   which both have the notion of a currently active child stage */
+class FallbacksPrivateCommon : public FallbacksPrivate
+{
+public:
+	FallbacksPrivateCommon(FallbacksPrivate&& other) : FallbacksPrivate(std::move(other)) {}
+
+	/// Advance to next child
+	inline void nextChild();
+	/// Advance to the next job, assuming that the current child is exhausted on the current job.
+	virtual bool nextJob() = 0;
+
+	void reset() override;
+	bool canCompute() const override;
+	void compute() override;
+
+	container_type::const_iterator current_;  // currently active child
+};
+
 /// Fallbacks implementation for GENERATOR interface
-struct FallbacksPrivateGenerator : FallbacksPrivate
+struct FallbacksPrivateGenerator : FallbacksPrivateCommon
 {
 	FallbacksPrivateGenerator(FallbacksPrivate&& old);
 	bool nextJob() override;
 };
 
 /// Fallbacks implementation for FORWARD or BACKWARD interface
-struct FallbacksPrivatePropagator : FallbacksPrivate
+struct FallbacksPrivatePropagator : FallbacksPrivateCommon
 {
 	FallbacksPrivatePropagator(FallbacksPrivate&& old);
-	bool nextJob() override;
 	void reset() override;
+	void onNewSolution(const SolutionBase& s) override;
+	bool nextJob() override;
 
 	Interface::Direction dir_;  // propagation direction
 	Interface::iterator job_;  // pointer to currently processed external state
+	bool job_has_solutions_;  // flag indicating whether the current job generated solutions
 };
 
 class WrapperBasePrivate : public ParallelContainerBasePrivate

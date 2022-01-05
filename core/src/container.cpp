@@ -861,25 +861,8 @@ void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	pimpl()->reset();
 }
 
-bool Fallbacks::canCompute() const {
-	auto impl = const_cast<FallbacksPrivate*>(pimpl());
-
-	while(impl->current_ != impl->children().end() &&  // not completely exhausted
-	      !(*impl->current_)->pimpl()->canCompute())  // but current child cannot compute
-		return impl->nextJob();  // advance to next job
-
-	// return value: current child is well defined and thus can compute?
-	return impl->current_ != impl->children().end();
-}
-
-void Fallbacks::compute() {
-	(*pimpl()->current_)->pimpl()->runCompute();
-}
-
 void Fallbacks::onNewSolution(const SolutionBase& s) {
-	pimpl()->job_has_solutions_ = true;
-	// printChildrenInterfaces(*this->pimpl(), true, *s.creator());
-	liftSolution(s);
+	pimpl()->onNewSolution(s);
 }
 
 inline void Fallbacks::replaceImpl() {
@@ -909,15 +892,15 @@ FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
 	this->ParallelContainerBasePrivate::operator=(std::move(other));
 }
 
-void FallbacksPrivate::reset() {
-	current_ = children().begin();
-	job_has_solutions_ = false;
-}
-
 void FallbacksPrivate::initializeExternalInterfaces() {
 	// Here we know the final interface of the container (and all its children)
 	// Thus replace, this pimpl() with a new interface-specific one:
 	static_cast<Fallbacks*>(me())->replaceImpl();
+}
+
+void FallbacksPrivate::onNewSolution(const SolutionBase& s) {
+	// printChildrenInterfaces(*this, true, *s.creator());
+	static_cast<Fallbacks*>(me())->liftSolution(s);
 }
 
 void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
@@ -929,20 +912,37 @@ void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*
 	(void)child;
 }
 
-void FallbacksPrivate::nextChild() {
+void FallbacksPrivateCommon::reset() {
+	current_ = children().begin();
+}
+
+bool FallbacksPrivateCommon::canCompute() const {
+	while(current_ != children().end() &&  // not completely exhausted
+	      !(*current_)->pimpl()->canCompute())  // but current child cannot compute
+		return const_cast<FallbacksPrivateCommon*>(this)->nextJob();  // advance to next job
+
+	// return value: current child is well defined and thus can compute?
+	return current_ != children().end();
+}
+
+void FallbacksPrivateCommon::compute() {
+	(*current_)->pimpl()->runCompute();
+}
+
+inline void FallbacksPrivateCommon::nextChild() {
 	if (std::next(current_) != children().end())
 		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_)->name() << "' failed, trying next one.");
 	++current_;  // advance to next child
 }
 
 FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
-	: FallbacksPrivate(std::move(old)) { reset(); }
+	: FallbacksPrivateCommon(std::move(old)) { FallbacksPrivateCommon::reset(); }
 
 bool FallbacksPrivateGenerator::nextJob() {
 	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
 
 	// don't advance to next child when we already produced solutions
-	if (job_has_solutions_) {
+	if (!solutions_.empty()) {
 		current_ = children().end();  // indicate that we are exhausted
 		return false;
 	}
@@ -956,7 +956,7 @@ bool FallbacksPrivateGenerator::nextJob() {
 
 
 FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
-   : FallbacksPrivate(std::move(old)) {
+   : FallbacksPrivateCommon(std::move(old)) {
 	switch (requiredInterface()) {
 	case PROPAGATE_FORWARDS:
 		dir_ = Interface::FORWARD;
@@ -973,8 +973,14 @@ FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
 }
 
 void FallbacksPrivatePropagator::reset() {
-	FallbacksPrivate::reset();
+	FallbacksPrivateCommon::reset();
 	job_ = pullInterface(dir_)->end();  // indicate fresh start
+	job_has_solutions_ = false;
+}
+
+void FallbacksPrivatePropagator::onNewSolution(const SolutionBase& s) {
+	job_has_solutions_ = true;
+	FallbacksPrivateCommon::onNewSolution(s);
 }
 
 bool FallbacksPrivatePropagator::nextJob() {

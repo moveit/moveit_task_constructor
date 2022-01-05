@@ -167,12 +167,15 @@ public:
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	bool canCompute() const override;
-	void compute() override;
 
 protected:
 	Fallbacks(FallbacksPrivate* impl);
 	void onNewSolution(const SolutionBase& s) override;
+
+private:
+	// not needed, we directly use corresponding virtual methods of FallbacksPrivate
+	bool canCompute() const final { return false; }
+	void compute() final {}
 };
 
 class MergerPrivate;
