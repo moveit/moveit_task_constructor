@@ -50,6 +50,7 @@ demo(cartesian)
 demo(modular)
 demo(alternative_path_costs)
 demo(ik_clearance_cost)
+demo(fallbacks_move_to)
 
 demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)

@@ -61,7 +61,6 @@ class StagePrivate
 {
 	friend class Stage;
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
-	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	/// container type used to store children
@@ -103,6 +102,8 @@ public:
 	/// direction-based access to pull interface
 	template <Interface::Direction dir>
 	inline InterfacePtr pullInterface();
+	// non-template version
+	inline InterfacePtr pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
 
 	/// set parent of stage
 	/// enforce only one parent exists
@@ -157,6 +158,8 @@ public:
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
 protected:
+	StagePrivate& operator=(StagePrivate&& other);
+
 	// associated/owning Stage instance
 	Stage* me_;
 
@@ -301,6 +304,7 @@ PIMPL_FUNCTIONS(MonitoringGenerator)
 class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
+	friend struct FallbacksPrivateConnect;
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>

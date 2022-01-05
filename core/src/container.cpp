@@ -53,14 +53,64 @@ using namespace std::placeholders;
 namespace moveit {
 namespace task_constructor {
 
+// for debugging of how children interfaces evolve over time
 static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
-                                    std::ostream& os = std::cerr);
+                                    std::ostream& os = std::cerr) {
+	static unsigned int id = 0;
+	const unsigned int width = 10;  // indentation of name
+	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	if (success)
+		os << ++id << ' ';
+	if (const auto conn = dynamic_cast<const ConnectingPrivate*>(creator.pimpl()))
+		conn->printPendingPairs(os);
+	os << std::endl;
+
+	for (const auto& child : container.children()) {
+		auto cimpl = child->pimpl();
+		os << std::setw(width) << std::left << child->name();
+		if (!cimpl->starts() && !cimpl->ends())
+			os << "↕ " << std::endl;
+		if (cimpl->starts())
+			os << "↓ " << *child->pimpl()->starts() << std::endl;
+		if (cimpl->starts() && cimpl->ends())
+			os << std::setw(width) << "  ";
+		if (cimpl->ends())
+			os << "↑ " << *child->pimpl()->ends() << std::endl;
+	}
+}
 
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
   : StagePrivate(me, name)
   , required_interface_(UNKNOWN)
   , pending_backward_(new Interface)
   , pending_forward_(new Interface) {}
+
+ContainerBasePrivate& ContainerBasePrivate::operator=(ContainerBasePrivate&& other) {
+	assert(internal_external_.empty() && other.internal_external_.empty());
+
+	// move StagePrivate members
+	this->StagePrivate::operator=(std::move(other));
+
+	// swapping of container members needed to maintain valid pending_* interfaces
+	// and children (e.g. for TaskPrivate)
+	required_interface_ = other.required_interface_;
+	std::swap(pending_backward_, other.pending_backward_);
+	std::swap(pending_forward_, other.pending_forward_);
+	std::swap(children_, other.children_);
+
+	// redirect all children's parent pointers to the new parent
+	auto reparent_children = [](ContainerBasePrivate& self) {
+		for (auto it = self.children_.begin(), end = self.children_.end(); it != end; ++it) {
+			auto cimpl = (*it)->pimpl();
+			cimpl->unparent();
+			cimpl->setParent(static_cast<ContainerBase*>(self.me_));
+			cimpl->setParentPosition(it);
+		}
+	};
+	reparent_children(*this);
+	reparent_children(other);
+	return *this;
+}
 
 ContainerBasePrivate::const_iterator ContainerBasePrivate::childByIndex(int index, bool for_insert) const {
 	if (!for_insert && index < 0)
@@ -139,6 +189,7 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 
 	// if possible (i.e. if target has an external counterpart), escalate setStatus to external interface
 	if (parent() && trajectories<dir>(*target).empty()) {
+		// TODO: This was coded with SerialContainer in mind. Not sure, it works for ParallelContainers
 		auto external{ internalToExternalMap().find(target) };
 		if (external != internalToExternalMap().end()) {  // do we have an external state?
 			// only escalate if there is no other *enabled* internal state connected to the same external one
@@ -221,6 +272,14 @@ void ContainerBasePrivate::copyState(Interface::iterator external, const Interfa
 	target->add(*internal);
 	// and remember the mapping between them
 	internalToExternalMap().insert(std::make_pair(&*internal, &*external));
+}
+
+void ContainerBasePrivate::copyState(Interface::Direction dir, Interface::iterator external, const InterfacePtr& target,
+                                     Interface::UpdateFlags updated) {
+	if (dir == Interface::FORWARD)
+		copyState<Interface::FORWARD>(external, target, updated);
+	else
+		copyState<Interface::BACKWARD>(external, target, updated);
 }
 
 void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const InterfaceState* internal_from,
@@ -386,31 +445,6 @@ std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	return os;
 }
 
-// for debugging of how children interfaces evolve over time
-static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
-                                    std::ostream& os) {
-	static unsigned int id = 0;
-	const unsigned int width = 10;  // indentation of name
-	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
-	if (success)
-		os << ++id << ' ';
-	if (const Connecting* conn = dynamic_cast<const Connecting*>(&creator))
-		conn->pimpl()->printPendingPairs(os);
-	os << std::endl;
-
-	for (const auto& child : container.children()) {
-		auto cimpl = child->pimpl();
-		os << std::setw(width) << std::left << child->name();
-		if (!cimpl->starts() && !cimpl->ends())
-			os << "↕ " << std::endl;
-		if (cimpl->starts())
-			os << "↓ " << *child->pimpl()->starts() << std::endl;
-		if (cimpl->starts() && cimpl->ends())
-			os << std::setw(width) << "  ";
-		if (cimpl->ends())
-			os << "↑ " << *child->pimpl()->ends() << std::endl;
-	}
-}
 /** Collect all partial solution sequences originating from start into given direction */
 template <Interface::Direction dir>
 struct SolutionCollector
@@ -492,7 +526,7 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 			}
 		}
 	}
-	// printChildrenInterfaces(*this, true, *current.creator());
+	// printChildrenInterfaces(*this->pimpl(), true, *current.creator());
 
 	// finally, store + announce new solutions to external interface
 	for (const auto& solution : sorted)
@@ -557,9 +591,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<START_IF_MASK>(*first.pimpl(), expected);
 		// connect first child's (start) pull interface
 		if (const InterfacePtr& target = first.pimpl()->starts())
-			starts_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
+			starts_ = std::make_shared<Interface>([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::FORWARD>(it, target, updated);
-			}));
+			});
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -570,6 +604,7 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 			StagePrivate* child_impl = (**it).pimpl();
 			StagePrivate* previous_impl = (**previous_it).pimpl();
 			child_impl->resolveInterface(invert(previous_impl->requiredInterface()) & START_IF_MASK);
+			child_impl = (**it).pimpl();  // re-assign as pimpl_ pointer of a Fallback container will change!
 			connect(*previous_impl, *child_impl);
 		} catch (InitStageException& e) {
 			exceptions.append(e);
@@ -582,9 +617,9 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		validateInterface<END_IF_MASK>(*last.pimpl(), expected);
 		// connect last child's (end) pull interface
 		if (const InterfacePtr& target = last.pimpl()->ends())
-			ends_.reset(new Interface([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
+			ends_ = std::make_shared<Interface>([this, target](Interface::iterator it, Interface::UpdateFlags updated) {
 				this->copyState<Interface::BACKWARD>(it, target, updated);
-			}));
+			});
 	} catch (InitStageException& e) {
 		exceptions.append(e);
 	}
@@ -640,9 +675,8 @@ bool SerialContainer::canCompute() const {
 
 void SerialContainer::compute() {
 	for (const auto& stage : pimpl()->children()) {
-		if (!stage->pimpl()->canCompute())
-			continue;
-		stage->pimpl()->runCompute();
+		if (stage->pimpl()->canCompute())
+			stage->pimpl()->runCompute();
 	}
 }
 
@@ -663,8 +697,8 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 			child_impl->resolveInterface(expected);
 			validateInterfaces(*child_impl, expected, first);
 			// initialize push connections of children according to their demands
-			setChildsPushForwardInterface(child_impl);
 			setChildsPushBackwardInterface(child_impl);
+			setChildsPushForwardInterface(child_impl);
 			first = false;
 		} catch (InitStageException& e) {
 			exceptions.append(e);
@@ -675,17 +709,21 @@ void ParallelContainerBasePrivate::resolveInterface(InterfaceFlags expected) {
 	if (exceptions)
 		throw exceptions;
 
-	// States received by the container need to be copied to all children's pull interfaces.
-	if (expected & READS_START)
-		starts().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
-			this->onNewExternalState<Interface::FORWARD>(external, updated);
-		}));
-	if (expected & READS_END)
-		ends().reset(new Interface([this](Interface::iterator external, Interface::UpdateFlags updated) {
-			this->onNewExternalState<Interface::BACKWARD>(external, updated);
-		}));
-
 	required_interface_ = expected;
+
+	initializeExternalInterfaces();
+}
+
+void ParallelContainerBasePrivate::initializeExternalInterfaces() {
+	// States received by the container need to be copied to all children's pull interfaces.
+	if (requiredInterface() & READS_START)
+		starts() = std::make_shared<Interface>([this](Interface::iterator external, Interface::UpdateFlags updated) {
+		   this->propagateStateToAllChildren<Interface::FORWARD>(external, updated);
+		});
+	if (requiredInterface() & READS_END)
+		ends() = std::make_shared<Interface>([this](Interface::iterator external, Interface::UpdateFlags updated) {
+		   this->propagateStateToAllChildren<Interface::BACKWARD>(external, updated);
+		});
 }
 
 void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child, InterfaceFlags& external,
@@ -720,7 +758,7 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::onNewExternalState(Interface::iterator external, Interface::UpdateFlags updated) {
+void ParallelContainerBasePrivate::propagateStateToAllChildren(Interface::iterator external, Interface::UpdateFlags updated) {
 	for (const Stage::pointer& stage : children())
 		copyState<dir>(external, stage->pimpl()->pullInterface<dir>(), updated);
 }
@@ -793,43 +831,239 @@ void Alternatives::onNewSolution(const SolutionBase& s) {
 	liftSolution(s);
 }
 
+Fallbacks::Fallbacks(const std::string& name) : Fallbacks(new FallbacksPrivate(this, name)) {}
+
+Fallbacks::Fallbacks(FallbacksPrivate* impl) : ParallelContainerBase(impl) {}
+
 void Fallbacks::reset() {
-	active_child_ = nullptr;
 	ParallelContainerBase::reset();
+	pimpl()->reset();
 }
 
 void Fallbacks::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	ParallelContainerBase::init(robot_model);
-	active_child_ = pimpl()->children().front().get();
-}
-
-bool Fallbacks::canCompute() const {
-	while (active_child_) {
-		StagePrivate* child = active_child_->pimpl();
-		if (child->canCompute())
-			return true;
-
-		// active child failed, continue with next
-		auto next = child->it();
-		++next;
-		if (next == pimpl()->children().end())
-			active_child_ = nullptr;
-		else
-			active_child_ = next->get();
-	}
-	return false;
-}
-
-void Fallbacks::compute() {
-	if (!active_child_)
-		return;
-
-	active_child_->pimpl()->runCompute();
+	pimpl()->reset();
 }
 
 void Fallbacks::onNewSolution(const SolutionBase& s) {
-	liftSolution(s);
+	pimpl()->onNewSolution(s);
 }
+
+inline void Fallbacks::replaceImpl() {
+	FallbacksPrivate *impl = pimpl();
+	switch (pimpl()->requiredInterface()) {
+		case GENERATE:
+			impl = new FallbacksPrivateGenerator(std::move(*impl));
+			break;
+		case PROPAGATE_FORWARDS:
+		case PROPAGATE_BACKWARDS:
+			impl = new FallbacksPrivatePropagator(std::move(*impl));
+			break;
+		case CONNECT:
+			// For now, we only support Connecting children
+			for (const auto& child : impl->children())
+				if (!dynamic_cast<Connecting*>(child.get()))
+					throw std::runtime_error("CONNECT-like interface is only supported for Connecting children");
+			impl = new FallbacksPrivateConnect(std::move(*impl));
+			break;
+	}
+	delete pimpl_;
+	pimpl_ = impl;
+}
+
+FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
+	: ParallelContainerBasePrivate(me, name) {}
+
+FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
+: ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
+	// move contents of other
+	this->ParallelContainerBasePrivate::operator=(std::move(other));
+}
+
+void FallbacksPrivate::initializeExternalInterfaces() {
+	// Here we know the final interface of the container (and all its children)
+	// Thus replace, this pimpl() with a new interface-specific one:
+	static_cast<Fallbacks*>(me())->replaceImpl();
+}
+
+void FallbacksPrivate::onNewSolution(const SolutionBase& s) {
+	// printChildrenInterfaces(*this, true, *s.creator());
+	static_cast<Fallbacks*>(me())->liftSolution(s);
+}
+
+void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
+	// This override is deliberately empty.
+	// The method prunes solution paths when a child failed to find a valid solution for it,
+	// but in Fallbacks the next child might still yield a successful solution
+	// Thus pruning must only occur once the last child is exhausted (inside computePropagate)
+	// printChildrenInterfaces(*this, false, child);
+	(void)child;
+}
+
+void FallbacksPrivateCommon::reset() {
+	current_ = children().begin();
+}
+
+bool FallbacksPrivateCommon::canCompute() const {
+	while(current_ != children().end() &&  // not completely exhausted
+	      !(*current_)->pimpl()->canCompute())  // but current child cannot compute
+		return const_cast<FallbacksPrivateCommon*>(this)->nextJob();  // advance to next job
+
+	// return value: current child is well defined and thus can compute?
+	return current_ != children().end();
+}
+
+void FallbacksPrivateCommon::compute() {
+	(*current_)->pimpl()->runCompute();
+}
+
+inline void FallbacksPrivateCommon::nextChild() {
+	if (std::next(current_) != children().end())
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_)->name() << "' failed, trying next one.");
+	++current_;  // advance to next child
+}
+
+FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
+	: FallbacksPrivateCommon(std::move(old)) { FallbacksPrivateCommon::reset(); }
+
+bool FallbacksPrivateGenerator::nextJob() {
+	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
+
+	// don't advance to next child when we already produced solutions
+	if (!solutions_.empty()) {
+		current_ = children().end();  // indicate that we are exhausted
+		return false;
+	}
+
+	do { nextChild(); }
+	while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
+
+	// return value shall indicate current_->canCompute()
+	return current_ != children().end();
+}
+
+
+FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
+   : FallbacksPrivateCommon(std::move(old)) {
+	switch (requiredInterface()) {
+	case PROPAGATE_FORWARDS:
+		dir_ = Interface::FORWARD;
+		starts() = std::make_shared<Interface>();
+		break;
+	case PROPAGATE_BACKWARDS:
+		dir_ = Interface::BACKWARD;
+		ends() = std::make_shared<Interface>();
+		break;
+	default:
+		assert(false);
+	}
+	FallbacksPrivatePropagator::reset();
+}
+
+void FallbacksPrivatePropagator::reset() {
+	FallbacksPrivateCommon::reset();
+	job_ = pullInterface(dir_)->end();  // indicate fresh start
+	job_has_solutions_ = false;
+}
+
+void FallbacksPrivatePropagator::onNewSolution(const SolutionBase& s) {
+	job_has_solutions_ = true;
+	FallbacksPrivateCommon::onNewSolution(s);
+}
+
+bool FallbacksPrivatePropagator::nextJob() {
+	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	const auto jobs = pullInterface(dir_);
+
+	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
+		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
+			nextChild();
+		else
+			current_ = children().end();  // indicate that this job is exhausted on all children
+	}
+	job_has_solutions_ = false;
+
+	if (current_ == children().end()) {  // all children processed the job_
+		if (job_ != jobs->end()) {
+			jobs->remove(job_);  // we don't need the job in our interface list anymore
+			job_ = jobs->end();  // indicate that we need to fetch a new job
+		}
+		current_ = children().begin();  // start next job with first child again
+	}
+
+	// pick next job if needed and possible
+	if (job_ == jobs->end()) {  // need to pick next job
+		if (!jobs->empty() && jobs->front()->priority().enabled())
+ 			job_ = jobs->begin();
+		else
+			return false; // no more jobs available
+	}
+
+	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
+	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), Interface::UpdateFlags());
+	return true;
+}
+
+
+FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
+	: FallbacksPrivate(std::move(old)) {
+	starts_ = std::make_shared<Interface>(
+		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::BACKWARD>, this, std::placeholders::_1, std::placeholders::_2));
+
+	FallbacksPrivateConnect::reset();
+}
+
+void FallbacksPrivateConnect::reset() {
+	active_ = children().end();
+}
+
+template <Interface::Direction dir>
+void FallbacksPrivateConnect::propagateStateUpdate(Interface::iterator external, Interface::UpdateFlags updated) {
+	copyState<dir>(external, children().front()->pimpl()->pullInterface(dir), updated);
+	// As we use the Interface* from the first child for all children (we just populate their pending lists)
+	// there is no need to explicitly propagate state updates to other children.
+}
+
+bool FallbacksPrivateConnect::canCompute() const {
+	for (auto it=children().begin(), end=children().end(); it!=end; ++it)
+		if ((*it)->pimpl()->canCompute()) {
+			active_ = it;
+			return true;
+		}
+	active_ = children().end();
+	return false;
+}
+
+void FallbacksPrivateConnect::compute() {
+	// Alternatively, we could also compute() all children that canCompute()
+	assert(active_ != children().end());
+	(*active_)->pimpl()->runCompute();
+}
+
+void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	// expect failure to be reported from active child
+	assert(active_ != children().end() && active_->get() == &child);
+	// ... thus we can use std::next(active_) to find the next child
+	auto next = std::next(active_);
+
+	auto findIteratorFor = [](const InterfaceState* state, const Interface& interface) {
+		auto it = std::find(interface.begin(), interface.end(), state);
+		assert(it != interface.end());
+		return it;
+	};
+
+	if (next != children().end()) {  // pass job to next child
+		auto next_con = static_cast<ConnectingPrivate*>(const_cast<StagePrivate*>((*next)->pimpl()));
+		auto first_con = static_cast<const ConnectingPrivate*>(children().front()->pimpl());
+		auto fromIt = findIteratorFor(from, *first_con->starts());
+		auto toIt = findIteratorFor(to, *first_con->ends());
+		next_con->pending.insert(std::make_pair(fromIt, toIt));
+	} else  // or report failure to parent
+		parent()->pimpl()->onNewFailure(*me(), from, to);
+}
+
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 

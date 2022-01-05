@@ -178,6 +178,7 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
+		iterator() = default;
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }
@@ -246,6 +247,16 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
 std::ostream& operator<<(std::ostream& os, const Interface& interface);
+
+/// Find index of the iterator in the container. Counting starts at 1. Zero corresponds to not found.
+template <typename T>
+size_t getIndex(const T& container, typename T::const_iterator search) {
+	size_t index = 1;
+	for (typename T::const_iterator it = container.begin(), end = container.end(); it != end; ++it, ++index)
+		if (it == search)
+			return index;
+	return 0;
+}
 
 class CostTerm;
 class StagePrivate;

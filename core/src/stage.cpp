@@ -106,6 +106,33 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , parent_{ nullptr }
   , introspection_{ nullptr } {}
 
+StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
+	assert(typeid(*this) == typeid(other));
+
+	assert(states_.empty() && other.states_.empty());
+	assert((!starts_ || starts_->empty()) && (!other.starts_ || other.starts_->empty()));
+	assert((!ends_ || ends_->empty()) && (!other.ends_ || other.ends_->empty()));
+	assert(solutions_.empty() && other.solutions_.empty());
+	assert(failures_.empty() && other.failures_.empty());
+
+	// me_ must not be changed!
+	name_ = std::move(other.name_);
+	properties_ = std::move(other.properties_);
+	cost_term_ = std::move(other.cost_term_);
+	solution_cbs_ = std::move(other.solution_cbs_);
+
+	starts_ = std::move(other.starts_);
+	ends_ = std::move(other.ends_);
+	prev_ends_ = std::move(other.prev_ends_);
+	next_starts_ = std::move(other.next_starts_);
+
+	parent_ = std::move(other.parent_);
+	it_ = std::move(other.it_);
+	other.unparent();
+
+	return *this;
+}
+
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
 	if (starts())
@@ -483,14 +510,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(new Interface());
+				starts_ = std::make_shared<Interface>();
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface());
+				ends_ = std::make_shared<Interface>();
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -688,10 +715,10 @@ void MonitoringGeneratorPrivate::solutionCB(const SolutionBase& s) {
 }
 
 ConnectingPrivate::ConnectingPrivate(Connecting* me, const std::string& name) : ComputeBasePrivate(me, name) {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1,
-	                                      std::placeholders::_2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1,
-	                                    std::placeholders::_2)));
+	starts_ = std::make_shared<Interface>(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this,
+	                                                std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+	    std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
@@ -768,9 +795,23 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
 			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
-	// std::cerr << name_ << ": ";
-	// printPendingPairs(std::cerr);
-	// std::cerr << std::endl;
+#if 0
+	auto& os = std::cerr;
+	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
+		bool fw = (d == Interface::FORWARD);
+		if (fw)
+			os << "  " << std::setw(10) << std::left << this->name();
+		else
+			os << std::setw(12) << std::right << "";
+		if (dir != d)
+			os << (updated ? " !" : " +");
+		else
+			os << "  ";
+		os << (fw ? "↓ " : "↑ ") << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+	}
+	os << std::setw(15) << " ";
+	printPendingPairs(os) << std::endl;
+#endif
 }
 
 // Check whether there are pending feasible states (other than source) that could connect to target.
@@ -815,19 +856,13 @@ void ConnectingPrivate::compute() {
 std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
 	const char* reset = InterfaceState::STATUS_COLOR[3];
 	for (const auto& candidate : pending) {
-		// find indeces of InterfaceState pointers in start/end Interfaces
-		unsigned int first = 0, second = 0;
-		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
-			++first;
-			return &*candidate.first == s;
-		});
-		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
-			++second;
-			return &*candidate.second == s;
-		});
+		size_t first = getIndex(*starts(), candidate.first);
+		size_t second = getIndex(*ends(), candidate.second);
 		os << InterfaceState::STATUS_COLOR[candidate.first->priority().status()] << first << reset << ":"
 		   << InterfaceState::STATUS_COLOR[candidate.second->priority().status()] << second << reset << " ";
 	}
+	if (pending.empty())
+		os << "---";
 	return os;
 }
 
