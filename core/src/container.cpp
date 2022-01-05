@@ -734,11 +734,11 @@ void ParallelContainerBasePrivate::initializeExternalInterfaces() {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (requiredInterface() & READS_START)
 		starts() = std::make_shared<Interface>([this](Interface::iterator external, bool updated) {
-		   this->propagateStateToChildren<Interface::FORWARD>(external, updated);
+		   this->propagateStateToAllChildren<Interface::FORWARD>(external, updated);
 		});
 	if (requiredInterface() & READS_END)
 		ends() = std::make_shared<Interface>([this](Interface::iterator external, bool updated) {
-		   this->propagateStateToChildren<Interface::BACKWARD>(external, updated);
+		   this->propagateStateToAllChildren<Interface::BACKWARD>(external, updated);
 		});
 }
 
@@ -774,7 +774,7 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::propagateStateToChildren(Interface::iterator external, bool updated) {
+void ParallelContainerBasePrivate::propagateStateToAllChildren(Interface::iterator external, bool updated) {
 	for (const Stage::pointer& stage : children())
 		copyState<dir>(external, stage->pimpl()->pullInterface(dir), updated);
 }

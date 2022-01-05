@@ -233,7 +233,7 @@ protected:
 
 	/// callback for new externally received states
 	template <typename Interface::Direction>
-	void propagateStateToChildren(Interface::iterator external, bool updated);
+	void propagateStateToAllChildren(Interface::iterator external, bool updated);
 
 private:
 	// override for custom behavior on received interface states
