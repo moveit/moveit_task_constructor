@@ -21,7 +21,7 @@ incompatible_pybind11_msg = "MoveIt and MTC use incompatible pybind11 versions: 
 
 
 class PyGenerator(core.Generator):
-    """ Implements a custom 'Generator' stage."""
+    """Implements a custom 'Generator' stage."""
 
     max_calls = 3
 
@@ -45,7 +45,7 @@ class PyGenerator(core.Generator):
 
 
 class PyMonitoringGenerator(core.MonitoringGenerator):
-    """ Implements a custom 'MonitoringGenerator' stage."""
+    """Implements a custom 'MonitoringGenerator' stage."""
 
     solution_multiplier = 2
 
@@ -70,7 +70,7 @@ class PyMonitoringGenerator(core.MonitoringGenerator):
 
 
 class PyMoveRelX(stages.MoveRelative):
-    """ Implements a custom propagator stage."""
+    """Implements a custom propagator stage."""
 
     def __init__(self, x, planner, name=u"Move ±x"):
         stages.MoveRelative.__init__(self, name, planner)
