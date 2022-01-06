@@ -49,7 +49,8 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-CartesianPath::CartesianPath() {
+CartesianPath::CartesianPath(std::unique_ptr<trajectory_processing::TimeParameterization> trajectory_parameterization)
+  : trajectory_parameterization_(std::move(trajectory_parameterization)) {
 	auto& p = properties();
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
 	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
@@ -107,9 +108,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	for (const auto& waypoint : trajectory)
 		result->addSuffixWayPoint(waypoint, 0.0);
 
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
-	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-	                         props.get<double>("max_acceleration_scaling_factor"));
+	trajectory_parameterization_->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+	                                                props.get<double>("max_acceleration_scaling_factor"));
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }

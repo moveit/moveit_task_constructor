@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -50,7 +51,8 @@ MOVEIT_CLASS_FORWARD(CartesianPath);
 class CartesianPath : public PlannerInterface
 {
 public:
-	CartesianPath();
+	explicit CartesianPath(std::unique_ptr<trajectory_processing::TimeParameterization> trajectory_parameterization =
+	                           std::make_unique<trajectory_processing::IterativeParabolicTimeParameterization>());
 
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
@@ -69,6 +71,9 @@ public:
 	          const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+
+private:
+	std::unique_ptr<trajectory_processing::TimeParameterization> trajectory_parameterization_;
 };
 }  // namespace solvers
 }  // namespace task_constructor
