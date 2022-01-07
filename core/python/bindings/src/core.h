@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <moveit/utils/moveit_error_code.h>
 #include <pybind11/smart_holder.h>
 
 /** Trampoline classes to allow inheritance in Python (overriding virtual functions) */
@@ -116,6 +117,7 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SolutionBase)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SubTrajectory)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(ordered<moveit::task_constructor::SolutionBaseConstPtr>)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::InterfaceState)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::core::MoveItErrorCode)
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Stage)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingEitherWay)

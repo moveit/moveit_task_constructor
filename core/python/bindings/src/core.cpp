@@ -144,6 +144,12 @@ void export_core(pybind11::module& m) {
 		.def_property_readonly("scene", &InterfaceState::scene)
 		;
 
+	py::classh<moveit::core::MoveItErrorCode>(m, "MoveItErrorCode")
+		.def_readonly("val", &moveit::core::MoveItErrorCode::val)
+		.def(PYBIND11_BOOL_ATTR, [](const moveit::core::MoveItErrorCode& err) {
+			return pybind11::cast(static_cast<bool>(err));
+		});
+
 	auto stage = properties::class_<Stage, PyStage<>>(m, "Stage")
 		.property<double>("timeout")
 		.property<std::string>("marker_ns")
