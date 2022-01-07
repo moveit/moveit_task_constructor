@@ -37,9 +37,11 @@
 */
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/iterative_time_parameterization.h>
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 #include <moveit/robot_state/cartesian_interpolator.h>
 #endif
 
@@ -89,7 +91,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
@@ -100,15 +102,14 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	    is_valid);
 #endif
 
-	if (!trajectory.empty()) {
-		result.reset(new robot_trajectory::RobotTrajectory(sandbox_scene->getRobotModel(), jmg));
-		for (const auto& waypoint : trajectory)
-			result->addSuffixWayPoint(waypoint, 0.0);
+	assert(!trajectory.empty());  // there should be at least the start state
+	result = std::make_shared<robot_trajectory::RobotTrajectory>(sandbox_scene->getRobotModel(), jmg);
+	for (const auto& waypoint : trajectory)
+		result->addSuffixWayPoint(waypoint, 0.0);
 
-		trajectory_processing::IterativeParabolicTimeParameterization timing;
-		timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-		                         props.get<double>("max_acceleration_scaling_factor"));
-	}
+	trajectory_processing::IterativeParabolicTimeParameterization timing;
+	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+	                         props.get<double>("max_acceleration_scaling_factor"));
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }

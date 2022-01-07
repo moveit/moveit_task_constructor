@@ -40,9 +40,10 @@
 #include <rviz_marker_tools/marker_creation.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -56,6 +57,37 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(nam
 
 	p.declare<boost::any>("pregrasp", "pregrasp posture");
 	p.declare<boost::any>("grasp", "grasp posture");
+}
+
+static void applyPreGrasp(moveit::core::RobotState& state, const moveit::core::JointModelGroup* jmg,
+                          const Property& diff_property) {
+	try {
+		// try named joint pose
+		const std::string& diff_state_name{ boost::any_cast<std::string>(diff_property.value()) };
+		if (!state.setToDefaultValues(jmg, diff_state_name)) {
+			throw moveit::Exception{ "unknown state '" + diff_state_name + "'" };
+		}
+		return;
+	} catch (const boost::bad_any_cast&) {
+	}
+
+	try {
+		// try RobotState
+		const moveit_msgs::RobotState& robot_state_msg = boost::any_cast<moveit_msgs::RobotState>(diff_property.value());
+		if (!robot_state_msg.is_diff)
+			throw moveit::Exception{ "RobotState message must be a diff" };
+		const auto& accepted = jmg->getJointModelNames();
+		for (const auto& joint_name_list :
+		     { robot_state_msg.joint_state.name, robot_state_msg.multi_dof_joint_state.joint_names })
+			for (const auto& name : joint_name_list)
+				if (std::find(accepted.cbegin(), accepted.cend(), name) == accepted.cend())
+					throw moveit::Exception("joint '" + name + "' is not part of group '" + jmg->getName() + "'");
+		robotStateMsgToRobotState(robot_state_msg, state);
+		return;
+	} catch (const boost::bad_any_cast&) {
+	}
+
+	throw moveit::Exception{ "no named pose or RobotState message" };
 }
 
 void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
@@ -76,15 +108,18 @@ void GenerateGraspPose::init(const core::RobotModelConstPtr& robot_model) {
 	props.get<std::string>("object");
 	// check availability of eef
 	const std::string& eef = props.get<std::string>("eef");
-	if (!robot_model->hasEndEffector(eef))
+	if (!robot_model->hasEndEffector(eef)) {
 		errors.push_back(*this, "unknown end effector: " + eef);
-	else {
-		// check availability of eef pose
-		const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
-		const std::string& name = props.get<std::string>("pregrasp");
-		std::map<std::string, double> m;
-		if (!jmg->getVariableDefaultPositions(name, m))
-			errors.push_back(*this, "unknown end effector pose: " + name);
+		throw errors;
+	}
+
+	// check availability of eef pose
+	const moveit::core::JointModelGroup* jmg = robot_model->getEndEffector(eef);
+	moveit::core::RobotState test_state{ robot_model };
+	try {
+		applyPreGrasp(test_state, jmg, props.property("pregrasp"));
+	} catch (const moveit::Exception& e) {
+		errors.push_back(*this, std::string{ "invalid pregrasp: " } + e.what());
 	}
 
 	if (errors)
@@ -98,14 +133,7 @@ void GenerateGraspPose::onNewSolution(const SolutionBase& s) {
 	const std::string& object = props.get<std::string>("object");
 	if (!scene->knowsFrameTransform(object)) {
 		const std::string msg = "object '" + object + "' not in scene";
-		if (storeFailures()) {
-			InterfaceState state(scene);
-			SubTrajectory solution;
-			solution.markAsFailure();
-			solution.setComment(msg);
-			spawn(std::move(state), std::move(solution));
-		} else
-			ROS_WARN_STREAM_NAMED("GenerateGraspPose", msg);
+		spawn(InterfaceState{ scene }, SubTrajectory::failure(msg));
 		return;
 	}
 
@@ -123,7 +151,12 @@ void GenerateGraspPose::compute() {
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
 	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
-	robot_state.setToDefaultValues(jmg, props.get<std::string>("pregrasp"));
+	try {
+		applyPreGrasp(robot_state, jmg, props.property("pregrasp"));
+	} catch (const moveit::Exception& e) {
+		spawn(InterfaceState{ scene }, SubTrajectory::failure(std::string{ "invalid pregrasp: " } + e.what()));
+		return;
+	}
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
@@ -135,7 +168,7 @@ void GenerateGraspPose::compute() {
 		current_angle += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);
-		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+		target_pose_msg.pose = tf2::toMsg(target_pose);
 		state.properties().set("target_pose", target_pose_msg);
 		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 

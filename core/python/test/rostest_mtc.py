@@ -61,8 +61,7 @@ class Test(unittest.TestCase):
 
         task.enableIntrospection()
         task.init()
-        if task.plan():
-            task.publish(task.solutions[0])
+        self.assertFalse(task.plan())
 
 
 if __name__ == "__main__":

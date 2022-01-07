@@ -55,7 +55,8 @@ public:
 	Stage* findChild(const std::string& name) const;
 
 	/** Callback function type used by traverse functions
-	 *  The callback should return false if traversal should be stopped. */
+	 *  Receives currently visited Stage and current depth in hierarchy
+	 *  If callback returns false, traversal is stopped. */
 	using StageCallback = std::function<bool(const Stage&, unsigned int)>;
 	/// traverse direct children of this container, calling the callback for each of them
 	bool traverseChildren(const StageCallback& processor) const;
@@ -149,6 +150,7 @@ public:
 	void onNewSolution(const SolutionBase& s) override;
 };
 
+class FallbacksPrivate;
 /** Plan for different alternatives in sequence.
  *
  * Try to find feasible solutions using first child. Only if this fails,
@@ -157,17 +159,23 @@ public:
  */
 class Fallbacks : public ParallelContainerBase
 {
-	mutable Stage* active_child_ = nullptr;
+	inline void replaceImpl();
 
 public:
-	Fallbacks(const std::string& name = "fallbacks") : ParallelContainerBase(name) {}
+	PRIVATE_CLASS(Fallbacks);
+	Fallbacks(const std::string& name = "fallbacks");
 
 	void reset() override;
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	bool canCompute() const override;
-	void compute() override;
 
+protected:
+	Fallbacks(FallbacksPrivate* impl);
 	void onNewSolution(const SolutionBase& s) override;
+
+private:
+	// not needed, we directly use corresponding virtual methods of FallbacksPrivate
+	bool canCompute() const final { return false; }
+	void compute() final {}
 };
 
 class MergerPrivate;

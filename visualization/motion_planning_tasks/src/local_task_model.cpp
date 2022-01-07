@@ -65,7 +65,7 @@ QModelIndex LocalTaskModel::index(Node* n) const {
 	const ContainerBase* parent = n->parent();
 
 	// the internal pointer refers to n
-	int row = 0;
+	size_t row = 0;
 	auto find_row = [n, &row](const Stage& child, int /* depth */) -> bool {
 		if (&child == n)
 			return false;  // found, don't continue traversal
@@ -73,7 +73,7 @@ QModelIndex LocalTaskModel::index(Node* n) const {
 		return true;
 	};
 	parent->traverseChildren(find_row);
-	Q_ASSERT(row < (int)parent->numChildren());
+	Q_ASSERT(row < parent->numChildren());
 	return createIndex(row, 0, n);
 }
 

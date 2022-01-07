@@ -17,6 +17,7 @@
 	<depend>actionlib</depend>
 	<depend>pluginlib</depend>
 	<depend>std_msgs</depend>
+	<depend>moveit_task_constructor_core</depend>
 	<depend>moveit_task_constructor_msgs</depend>
 
 	<export>

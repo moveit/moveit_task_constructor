@@ -47,6 +47,7 @@
 #include <moveit/macros/class_forward.h>
 
 #include <moveit_msgs/MoveItErrorCodes.h>
+#include <moveit/utils/moveit_error_code.h>
 
 namespace moveit {
 namespace core {
@@ -117,11 +118,11 @@ public:
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	bool plan(size_t max_solutions = 0);
+	moveit::core::MoveItErrorCode plan(size_t max_solutions = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
 	/// execute solution, return the result
-	moveit_msgs::MoveItErrorCodes execute(const SolutionBase& s);
+	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;

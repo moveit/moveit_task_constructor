@@ -41,7 +41,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -70,7 +70,7 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);
 }
 
@@ -139,8 +139,8 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, distance);
 			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
 			// position half-way between pos_link and pos_reached
-			tf::pointEigenToMsg(0.5 * (pos_link + pos_reached), m.pose.position);
-			tf::quaternionEigenToMsg(quat_cylinder, m.pose.orientation);
+			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_link + pos_reached) });
+			m.pose.orientation = tf2::toMsg(quat_cylinder);
 			markers.push_back(m);
 		}
 	} else {
@@ -154,8 +154,8 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, linear_norm - distance);
 			rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
 			// position half-way between pos_reached and pos_target
-			tf::pointEigenToMsg(0.5 * (pos_reached + pos_target), m.pose.position);
-			tf::quaternionEigenToMsg(quat_cylinder, m.pose.orientation);
+			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_reached + pos_target) });
+			m.pose.orientation = tf2::toMsg(quat_cylinder);
 			markers.push_back(m);
 		}
 	}
@@ -193,24 +193,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
 		// Cartesian targets require an IK reference frame
-		geometry_msgs::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
-		const boost::any& value = props.get("ik_frame");
-		if (value.empty()) {  // property undefined
-			//  determine IK link from group
-			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				solution.markAsFailure("missing ik_frame");
-				return false;
-			}
-			ik_pose_msg.header.frame_id = link->getName();
-			ik_pose_msg.pose.orientation.w = 1.0;
-		} else {
-			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
-			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				solution.markAsFailure("unknown link for ik_frame: " + ik_pose_msg.header.frame_id);
-				return false;
-			}
-		}
+		Eigen::Isometry3d ik_pose_world;
+
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, solution, link, ik_pose_world))
+			return false;
 
 		bool use_rotation_distance = false;  // measure achieved distance as rotation?
 		Eigen::Vector3d linear;  // linear translation
@@ -224,8 +211,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		try {  // try to extract Twist
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
-			tf::vectorMsgToEigen(target.twist.linear, linear);
-			tf::vectorMsgToEigen(target.twist.angular, angular);
+			tf2::fromMsg(target.twist.linear, linear);
+			tf2::fromMsg(target.twist.angular, angular);
 
 			linear_norm = linear.norm();
 			angular_norm = angular.norm();
@@ -256,9 +243,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			// compute absolute transform for link
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			target_eigen = link_pose;
+			target_eigen = ik_pose_world;
 			target_eigen.linear() =
-			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
+			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, ik_pose_world.linear().transpose() * angular);
 			target_eigen.translation() += linear;
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
@@ -267,7 +254,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		try {  // try to extract Vector
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
-			tf::vectorMsgToEigen(target.vector, linear);
+			tf2::fromMsg(target.vector, linear);
 
 			// use max distance?
 			if (max_distance > 0.0) {
@@ -282,7 +269,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 			// compute absolute transform for link
 			linear = frame_pose.linear() * linear;
-			target_eigen = link_pose;
+			target_eigen = ik_pose_world;
 			target_eigen.translation() += linear;
 		} catch (const boost::bad_any_cast&) {
 			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
@@ -291,9 +278,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	COMPUTE:
 		// transform target pose such that ik frame will reach there if link does
-		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
-		target_eigen = target_eigen * ik_pose.inverse();
+		target_eigen = target_eigen * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
@@ -302,13 +287,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
 
 		double distance = 0.0;
-		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
-			if (use_rotation_distance) {
-				Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
-				distance = rotation.angle();
-			} else
-				distance = (reached_pose.translation() - link_pose.translation()).norm();
-		}
+		if (use_rotation_distance) {
+			Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
+			distance = rotation.angle();
+		} else
+			distance = (reached_pose.translation() - link_pose.translation()).norm();
 
 		// min_distance reached?
 		if (min_distance > 0.0) {

@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   moveit_core
   moveit_ros_move_group
+  moveit_task_constructor_core
   moveit_task_constructor_msgs
   pluginlib
   std_msgs
@@ -19,16 +20,6 @@ catkin_package(
     moveit_task_constructor_msgs
     std_msgs
 )
-
-# check for MOVEIT_MASTER
-include(CheckIncludeFileCXX)
-set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_FLAGS "-std=c++11")
-CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
-if(NOT MOVEIT_MASTER)
-  set(MOVEIT_MASTER 0)
-endif()
-add_definitions(-DMOVEIT_MASTER=${MOVEIT_MASTER})
 
 include_directories(
   ${catkin_INCLUDE_DIRS}

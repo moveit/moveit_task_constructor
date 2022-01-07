@@ -1,6 +1,6 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <urdf_model/link.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <ros/console.h>
 
 namespace vm = visualization_msgs;
@@ -139,21 +139,17 @@ std_msgs::ColorRGBA getColor(Color color, double alpha) {
 }
 
 geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(first, result_eigen);
+	tf2::fromMsg(first, result_eigen);
 	result_eigen = result_eigen * second;
-	tf::poseEigenToMsg(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(second, result_eigen);
+	tf2::fromMsg(second, result_eigen);
 	result_eigen = first * result_eigen;
-	tf::poseEigenToMsg(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 void prepareMarker(vm::Marker& m, int marker_type) {
@@ -285,8 +281,8 @@ vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const E
 	m.scale.z = head_length;
 	prepareMarker(m, vm::Marker::ARROW);
 	m.points.resize(2);
-	tf::pointEigenToMsg(start_point, m.points[0]);
-	tf::pointEigenToMsg(end_point, m.points[1]);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
 	return m;
 }
 

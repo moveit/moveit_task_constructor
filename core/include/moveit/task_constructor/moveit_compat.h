@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2021, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,33 +32,28 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Robert Haschke
-   Desc:    Generator Stage spawning a pre-defined, fixed planning scene state
+/* Author: Michael 'v4hn' Goerner
+   Desc:   Provide test for MoveIt features
 */
 
 #pragma once
 
-#include <moveit/task_constructor/stage.h>
+#include <moveit/version.h>
 
-namespace moveit {
-namespace task_constructor {
-namespace stages {
+#define MOVEIT_VERSION_GE(major, minor, patch)                                                \
+	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
+	 major * 1'000'000 + minor * 1'000 + patch)
 
-/** Spawn a pre-defined PlanningScene state */
-class FixedState : public Generator
-{
-public:
-	FixedState(const std::string& name = "initial state", planning_scene::PlanningScenePtr = nullptr);
-	void setState(const planning_scene::PlanningScenePtr& scene);
+// use collision env instead of collision robot/world
+#define MOVEIT_HAS_COLLISION_ENV MOVEIT_VERSION_GE(1, 1, 0)
 
-	void reset() override;
-	bool canCompute() const override;
-	void compute() override;
+// cartesian interpolator got separated from RobotState at some point
+#define MOVEIT_HAS_CARTESIAN_INTERPOLATOR MOVEIT_VERSION_GE(1, 1, 0)
 
-protected:
-	planning_scene::PlanningScenePtr scene_;
-	bool ran_ = false;
-};
-}  // namespace stages
-}  // namespace task_constructor
-}  // namespace moveit
+// isEmpty got split off into its own header
+#define MOVEIT_HAS_MESSAGE_CHECKS MOVEIT_VERSION_GE(1, 1, 0)
+
+// use object shape poses relative to a single object pose
+#define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
+
+#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)

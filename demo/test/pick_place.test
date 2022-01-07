@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-    <include file="$(find moveit_resources_panda_moveit_config)/launch/demo.launch">
+    <include file="$(find moveit_resources_panda_moveit_config)/launch/demo.launch" pass_all_args="true">
         <arg name="use_rviz" value="false" />
-        <arg name="execution_type" value="last point" />
+        <arg name="execution_type" value="last point" /> <!-- arg name in 0.8 -->
+        <arg name="fake_execution_type" value="last point" /> <!-- arg name in 0.8.1 -->
         <env name="LD_PRELOAD" value="$(optenv PRELOAD)" />
     </include>
 

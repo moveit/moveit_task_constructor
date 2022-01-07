@@ -37,14 +37,15 @@
 */
 
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
-
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/moveit_compat.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/task_constructor/cost_terms.h>
 
 #include <rviz_marker_tools/marker_creation.h>
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <ros/console.h>
 
 namespace vm = visualization_msgs;
@@ -116,7 +117,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 	bool failure = false;
 	while (!failure) {
 		res.clear();
-#if MOVEIT_MASTER
+#if MOVEIT_HAS_COLLISION_ENV
 		scene.getCollisionEnv()->checkRobotCollision(req, res, scene.getCurrentState(),
 		                                             scene.getAllowedCollisionMatrix());
 #else
@@ -137,9 +138,8 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 			// marker indicating correction
 			const cd::Contact& c = info.second.front();
 			rviz_marker_tools::setColor(m.color, failure ? rviz_marker_tools::RED : rviz_marker_tools::GREEN);
-			tf::poseEigenToMsg(Eigen::Translation3d(c.pos) *
-			                       Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction),
-			                   m.pose);
+			m.pose = tf2::toMsg(Eigen::Translation3d(c.pos) *
+			                    Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), correction));
 			rviz_marker_tools::makeArrow(m, depth, true);
 			result.markers().push_back(m);
 			if (failure)
@@ -147,7 +147,7 @@ SubTrajectory FixCollisionObjects::fixCollisions(planning_scene::PlanningScene& 
 
 			// fix collision by shifting object along correction direction
 			if (!dir.empty())  // if explicitly given, use this correction direction
-				tf::vectorMsgToEigen(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
+				tf2::fromMsg(boost::any_cast<geometry_msgs::Vector3>(dir), correction);
 
 			const std::string& name = c.body_type_1 == cd::BodyTypes::WORLD_OBJECT ? c.body_name_1 : c.body_name_2;
 			scene.getWorldNonConst()->moveObject(name, Eigen::Isometry3d(Eigen::Translation3d(correction)));
