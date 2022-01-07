@@ -39,7 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -52,7 +52,7 @@ class CartesianPath : public PlannerInterface
 {
 public:
 	explicit CartesianPath(std::unique_ptr<trajectory_processing::TimeParameterization> trajectory_parameterization =
-	                           std::make_unique<trajectory_processing::IterativeParabolicTimeParameterization>());
+	                           std::make_unique<trajectory_processing::TimeOptimalTrajectoryGeneration>());
 
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }

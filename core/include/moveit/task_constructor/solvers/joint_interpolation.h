@@ -40,7 +40,7 @@
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
 #include <moveit/macros/class_forward.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -57,7 +57,7 @@ class JointInterpolationPlanner : public PlannerInterface
 public:
 	explicit JointInterpolationPlanner(
 	    std::unique_ptr<trajectory_processing::TimeParameterization> trajectory_parameterization =
-	        std::make_unique<trajectory_processing::IterativeParabolicTimeParameterization>());
+	        std::make_unique<trajectory_processing::TimeOptimalTrajectoryGeneration>());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
