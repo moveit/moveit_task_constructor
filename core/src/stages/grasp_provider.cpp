@@ -94,9 +94,11 @@ void GraspProvider::activeCallback() {
 }
 
 void GraspProvider::feedbackCallback(const grasping_msgs::GraspPlanningFeedbackConstPtr& feedback) {
+	found_candidates_ = true;
+
+	// Protect grasp candidate incase feedback is sent asynchronously
 	const std::lock_guard<std::mutex> lock(grasp_mutex_);
 	grasp_candidates_ = feedback->grasps;
-	found_candidates_ = true;
 }
 
 void GraspProvider::doneCallback(const actionlib::SimpleClientGoalState& state,
@@ -158,8 +160,9 @@ void GraspProvider::compute() {
 
 	// monitor feedback/results
 	// blocking function untill timeout reached or results received
-	const std::lock_guard<std::mutex> lock(grasp_mutex_);
 	if (monitorGoal()) {
+		// Protect grasp candidate incase feedback is being recieved asynchronously
+		const std::lock_guard<std::mutex> lock(grasp_mutex_);
 		for (unsigned int i = 0; i < grasp_candidates_.size(); i++) {
 			InterfaceState state(scene);
 			state.properties().set("target_pose", grasp_candidates_.at(i).grasp_pose);

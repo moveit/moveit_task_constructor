@@ -98,9 +98,9 @@ protected:
 	void onNewSolution(const SolutionBase& s) override;
 
 private:
-	std::mutex grasp_mutex_;
-	bool found_candidates_;
-	std::vector<moveit_msgs::Grasp> grasp_candidates_;
+	std::mutex grasp_mutex_;  // Protects grasp candidates
+	std::atomic_bool found_candidates_;  // Flag indicates the discovery of grasps
+	std::vector<moveit_msgs::Grasp> grasp_candidates_;  // Grasp Candidates
 };
 }  // namespace stages
 }  // namespace task_constructor
