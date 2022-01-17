@@ -95,13 +95,9 @@ place_generator = stages.GeneratePlacePose("Generate Place Pose")
 place_generator.setMonitoredStage(task["Pick"])
 place_generator.object = object_name
 place_generator.pose = placePose
-place_generator.properties.configureInitFrom(
-    core.Stage.PropertyInitializerSource.PARENT, ["ik_frame"]
-)
 
 # The SimpleUnGrasp container encapsulates releasing the object at the given Cartesian pose
 simpleUnGrasp = stages.SimpleUnGrasp(place_generator, "UnGrasp")
-simpleUnGrasp.setIKFrame(ik_frame)
 simpleUnGrasp.pregrasp = "open"
 
 # Place container comprises placing, ungrasping, and retracting
