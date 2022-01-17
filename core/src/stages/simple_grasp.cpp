@@ -60,6 +60,7 @@ SimpleGraspBase::SimpleGraspBase(const std::string& name) : SerialContainer(name
 void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 	// properties provided by the grasp generator via its Interface or its PropertyMap
 	const std::set<std::string>& grasp_prop_names = { "object", "eef", "pregrasp", "grasp" };
+	this->setForwardedProperties(grasp_prop_names);
 
 	// insert children at end / front, i.e. normal or reverse order
 	int insertion_position = forward ? -1 : (generator ? 1 : 0);

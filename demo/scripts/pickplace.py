@@ -98,7 +98,6 @@ place_generator.pose = placePose
 
 # The SimpleUnGrasp container encapsulates releasing the object at the given Cartesian pose
 simpleUnGrasp = stages.SimpleUnGrasp(place_generator, "UnGrasp")
-simpleUnGrasp.pregrasp = "open"
 
 # Place container comprises placing, ungrasping, and retracting
 place = stages.Place(simpleUnGrasp, "Place")
