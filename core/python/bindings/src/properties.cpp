@@ -36,6 +36,7 @@
 #include <boost/core/demangle.hpp>
 
 namespace py = pybind11;
+using namespace py::literals;
 using namespace moveit::task_constructor;
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
@@ -173,10 +174,10 @@ void export_properties(py::module& m) {
 		.def(py::init<>())
 		.def("setValue", [](Property& self, const py::object& value)
 		     { self.setValue(PropertyConverterRegistry::fromPython(value)); },
-		     "Set current and default value.", py::arg("value"))
+		     "Set current and default value.", "value"_a)
 		.def("setCurrentValue", [](Property& self, const py::object& value)
 	        { self.setCurrentValue(PropertyConverterRegistry::fromPython(value)); },
-		     "Set the current value only, w/o touching the default.", py::arg("value"))
+		     "Set the current value only, w/o touching the default.", "value"_a)
 		.def("value", [](const Property& self)
 		     { return PropertyConverterRegistry::toPython(self.value()); }, "Retrieve the stored value.")
 		.def("defaultValue", [](const Property& self)
@@ -186,9 +187,9 @@ void export_properties(py::module& m) {
 		.def("defined", &Property::defined, "Was a (non-default) value stored?")
 		.def("description", &Property::description, "Retrive the property description string")
 		.def("setDescription", &Property::setDescription,
-		     "Set the property's description", py::arg("desc"));
+		     "Set the property's description", "desc"_a);
 
-	py::classh<PropertyMap>(m, "PropertyMap", "dictionary of named :doc:`properties <pymoveit_mtc.core.Property>`")
+	py::classh<PropertyMap>(m, "PropertyMap", "Dictionary of named :doc:`properties <pymoveit_mtc.core.Property>`")
 		.def(py::init<>())
 		.def("__bool__", [](const PropertyMap& self) { return self.begin() == self.end();})
 		.def("__iter__", [](PropertyMap& self) { return py::make_key_iterator(self.begin(), self.end()); },
@@ -200,7 +201,7 @@ void export_properties(py::module& m) {
 		     { return self.property(key); }, py::return_value_policy::reference_internal, R"(
 		    Retrieve the property instance for the given key.
 		    This is in contrast to ``map[key]``, which returns ``map.property(key).value()``.)",
-		    py::arg("key"))
+		    "key"_a)
 		.def("__getitem__", [](const PropertyMap& self, const std::string& key)
 		     { return PropertyConverterRegistry::toPython(self.get(key)); })
 		.def("__setitem__", [](PropertyMap& self, const std::string& key, const py::object& value)
@@ -211,29 +212,29 @@ void export_properties(py::module& m) {
 					self.set(it->first.cast<std::string>(),
 					         PropertyConverterRegistry::fromPython(py::reinterpret_borrow<py::object>(it->second)));
 				}
-			}, "Update property values from another dictionary", py::arg("values"))
+			}, "Update property values from another dictionary", "values"_a)
 		.def("configureInitFrom", [](PropertyMap& self, Property::SourceFlags sources, const py::list& names) {
 				std::set<std::string> s;
 				for (auto& item : names)
 					s.insert(item.cast<std::string>());
 				self.configureInitFrom(sources, s);
 			}, "Configure initialization of listed (or all) properties from given source(s).",
-			py::arg("sources"), py::arg("names") = py::list())
+			"sources"_a, "names"_a = py::list())
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const std::string& name) {
 				self.exposeTo(other, name, name);
 			}, "Declare ``named`` property in ``other`` PropertyMap - using same name.",
-			py::arg("other"), py::arg("name"))
+			"other"_a, "name"_a)
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const std::string& name, const std::string& other_name) {
 				self.exposeTo(other, name, other_name);
 			}, "Declare ``named`` property in ``other`` PropertyMap - using ``other_name``.",
-			py::arg("other"), py::arg("name"), py::arg("other_name"))
+			"other"_a, "name"_a, "other_name"_a)
 		.def("exposeTo", [](PropertyMap& self, PropertyMap& other, const py::list& names) {
 				std::set<std::string> s;
 				for (auto& item : names)
 					s.insert(item.cast<std::string>());
 				self.exposeTo(other, s);
 			}, "Declare `all` ``named`` properties in ``other`` PropertyMap - using the same names.",
-			py::arg("other"), py::arg("names"))
+			"other"_a, "names"_a)
 		;
 	// clang-format on
 }
