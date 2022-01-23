@@ -46,22 +46,14 @@ void export_stages(pybind11::module& m);
 }  // namespace moveit
 
 PYBIND11_MODULE(pymoveit_mtc, m) {
-	auto msub = m.def_submodule("core", R"(
-		moveit.task_constructor.core
-		============================
-
-		This package provides wrappers of core MTC components.
-	)");
+	auto msub = m.def_submodule("core", "Provides wrappers for core C++ classes. "
+	                                    "**Import as** :doc:`moveit.task_constructor.core`.");
 
 	moveit::python::export_properties(msub);
 	moveit::python::export_solvers(msub);
 	moveit::python::export_core(msub);
 
-	msub = m.def_submodule("stages", R"(
-		moveit.task_constructor.stages
-		==============================
-
-		This package provides wrappers of standard MTC stages.
-	)");
+	msub = m.def_submodule("stages", "Provides wrappers of standard MTC stages. "
+	                                 "**Import as** :doc:`moveit.task_constructor.stages`.");
 	moveit::python::export_stages(msub);
 }

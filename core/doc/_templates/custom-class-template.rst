@@ -6,7 +6,7 @@
    :members:
    :show-inheritance:
    :inherited-members:
-   :special-members: __call__, __add__, __mul__
+   :special-members: __len__, __getitem__, __iter__, __call__, __add__, __mul__
 
    {% block methods %}
    {% if methods %}

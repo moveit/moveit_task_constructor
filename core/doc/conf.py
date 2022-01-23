@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
+    "sphinx.ext.extlinks",
 ]
 
 autosummary_generate = True
@@ -214,3 +215,13 @@ intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # Default options for generating documentation.
 autodoc_default_options = {"exclude-members": "ContainerBase, ParallelContainerBase, WrapperBase"}
+
+ros_distro = "noetic"
+ros_docs = "http://docs.ros.org/" + ros_distro + "/api/"
+extlinks = {
+    "rosdocs": (ros_docs + "%s", ""),
+    "msgs": (ros_docs + "moveit_task_constructor/html/msg/%s.html", ""),
+    "moveit_msgs": (ros_docs + "moveit_msgs/html/msg/%s.html", ""),
+    "geometry_msgs": (ros_docs + "geometry_msgs/html/msg/%s.html", ""),
+    "visualization_msgs": (ros_docs + "visualization_msgs/html/msg/%s.html", ""),
+}
