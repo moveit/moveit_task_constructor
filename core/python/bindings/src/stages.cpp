@@ -82,16 +82,15 @@ std::vector<T> elementOrList(const py::object& arg) {
 void export_stages(pybind11::module& m) {
 	// clang-format off
 	properties::class_<ModifyPlanningScene, Stage>(m, "ModifyPlanningScene", R"(
-		Allows modification of the planning scene.
+		Apply modifications to the PlanningScene w/o moving the robot
 
 		This stage takes the incoming planning scene and applies previously scheduled changes to it, for example:
-			- Modify allowed collision matrix, enabling or disabling collision pairs.
-			- Attach or detach objects to robot links.
-			- Spawn or remove objects.
+
+		* Modify allowed collision matrix, enabling or disabling collision pairs
+		* Attach or detach objects to robot links
+		* Add or remove objects
 
 		.. literalinclude:: ./../../../demo/scripts/modify_planning_scene.py
-			:language: python
-
 		)")
 		.def(py::init<const std::string&>(), "name"_a = std::string("modify planning scene"))
 		.def("attachObject", &ModifyPlanningScene::attachObject, "Attach an object to a robot link", "name"_a, "link"_a)
@@ -324,7 +323,6 @@ void export_stages(pybind11::module& m) {
 			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
 
 			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-			   :language: python
 			   :lines: 48-60
 
 		)")
