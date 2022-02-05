@@ -90,7 +90,7 @@ void export_stages(pybind11::module& m) {
 		* Attach or detach objects to robot links
 		* Add or remove objects
 
-		.. literalinclude:: ./../../../demo/scripts/modify_planning_scene.py
+		For an example, see :ref:`How-To-Guides <subsubsec-howto-modify-planning-scene>`.
 		)")
 		.def(py::init<const std::string&>(), "name"_a = std::string("modify planning scene"))
 		.def("attachObject", &ModifyPlanningScene::attachObject, "Attach an object to a robot link", "name"_a, "link"_a)
@@ -126,9 +126,9 @@ void export_stages(pybind11::module& m) {
 	properties::class_<FixedState, Stage>(m, "FixedState", R"(
 			Spawn a pre-defined PlanningScene state.
 
-			.. literalinclude:: ./../../../demo/scripts/fixed_state.py
-				:language: python
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-fixed-state>`
+			for an implementation of a task hierarchy that makes use of the
+			``FixedState`` stage.
 		)")
 		.def("setState", &FixedState::setState, R"(
 			Use a planning scene pointer to specify which state the Fixed State
@@ -163,9 +163,9 @@ void export_stages(pybind11::module& m) {
 			Properties of the internally received ``InterfaceState`` can be
 			forwarded to the newly generated, externally exposed ``InterfaceState``.
 
-			.. literalinclude:: ./../../../demo/scripts/compute_ik.py
-				:language: python
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-compute-ik>`
+			for an implementation of a task hierarchy that makes use of the
+			``ComputeIK`` stage.
 		)")
 	    .property<std::string>("eef", R"(
 			str: Specify which end effector of the active planning group
@@ -210,12 +210,11 @@ void export_stages(pybind11::module& m) {
 	properties::class_<MoveTo, PropagatingEitherWay, PyMoveTo<>>(m, "MoveTo", R"(
 			Compute a trajectory between the robot state from the
 			interface state of the preceeding stage and a specified
-			goal
+			goal.
 
-			.. literalinclude:: ./../../../demo/scripts/cartesian.py
-				:language: python
-				:lines: 51-55
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-move-to>`
+			for an implementation of a task hierarchy that makes use of the
+			``MoveTo`` stage.
 		)")
 	    .property<std::string>("group", R"(
 			str: Planning group which should be utilized for planning and execution.
@@ -256,18 +255,12 @@ void export_stages(pybind11::module& m) {
 
 	properties::class_<MoveRelative, PropagatingEitherWay, PyMoveRelative<>>(m, "MoveRelative", R"(
 			Perform a Cartesian motion relative to some link.
-
-			.. literalinclude:: ./../../../demo/scripts/cartesian.py
-				:language: python
-				:lines: 26-31
-
-			To implement your own propagtor logic on top of the `moveRelative` class' functionality,
-			you may derive from the stage like so:
-
-			.. literalinclude:: ./../../python/test/rostest_trampoline.py
-				:language: python
-				:lines: 72-87
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-move-relative>`
+			for an implementation of a task hierarchy that makes use of the
+			``MoveRelative`` stage.
+			To implement your own propagtor logic on top of the ``MoveRelative`` class' functionality,
+			you may derive from the stage. Take a look at the corresponding
+			:ref:`How-To-Guide <subsubsec-howto-move-relative>`.
 		)")
 	    .property<std::string>("group", R"(
 			str: Planning group which should be utilized for planning and execution.
@@ -320,11 +313,7 @@ void export_stages(pybind11::module& m) {
 			sub trajectories of individual planning results.
 			If this fails, the sequential planning result is returned.
 
-			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
-
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-			   :lines: 48-60
-
+			For an example, see :ref:`How-To-Guides <subsubsec-howto-connect>`.
 		)")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         "name"_a = std::string("connect"), "planners"_a);
@@ -333,9 +322,9 @@ void export_stages(pybind11::module& m) {
 			Test for collisions and find a correction for applicable objects.
 			Move the objects out of the way along the correction direction.
 
-			.. literalinclude:: ./../../../demo/scripts/fix_collision_objects.py
-				:language: python
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-fix-collision-objects>`
+			for an implementation of a task hierarchy that makes use of the
+			``FixCollisionObjects`` stage.
 		)")
 	    .property<double>("max_penetration", R"(
 			float: Cutoff length up to which collision objects get fixed.
@@ -348,12 +337,8 @@ void export_stages(pybind11::module& m) {
 			``angle_delta`` intervall, GeneratePlacePose samples a fixed amount, which is dependent
 			on the objects shape.
 
-			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
-
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-				:language: python
-				:lines: 115-122
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-generate-place-pose>`
+			for a snippet that demonstrates usage of the `GeneratePlacePose` stage.
 		)")
 		.property<std::string>("object", R"(
 			str: Name of the object in the planning scene, attached to the robot which should be placed
@@ -371,13 +356,8 @@ void export_stages(pybind11::module& m) {
 			GenerateGraspPose stage derives from monitoring generator and can
 			be used to generate poses for grasping. Set the desired attributes
 			of the grasp using the stages properties.
-
-			The example below contains a snippet from the :ref:`pick pipeline example<pick>`.
-
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-			   :language: python
-			   :lines: 62-68
-
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-generate-grasp-pose>`
+			for a snippet that demonstrates usage of the `GenerateGraspPose` stage.
 		)")
 	    .property<std::string>("object", R"(
 			str: Name of the Object in the planning scene, which should be grasped
@@ -396,9 +376,9 @@ void export_stages(pybind11::module& m) {
 			Monitoring generator stage which can be used to generate a pose, based on solutions provided
 			by the monitored stage.
 
-			.. literalinclude:: ./../../../demo/scripts/generate_pose.py
-				:language: python
-				:lines: 35-48
+			Take a look at the :ref:`How-To-Guides <subsubsec-howto-fix-collision-objects>`
+			for an implementation of a task hierarchy that makes use of the
+			``GeneratePose`` stage.
 		)")
 	    .property<geometry_msgs::PoseStamped>("pose", R"(
 			PoseStamped_: Set the pose, which should be spawned on each new solution of the monitored stage.
@@ -421,13 +401,10 @@ void export_stages(pybind11::module& m) {
 			as the end effector's cartesian pose needs to be provided by an external
 			grasp stage.
 
-			The example below combines pick and place routines in a single pickplace pipeline.
-			Please refer to the demonstration scripts of the moveit task constructor repository
-			for reference.
-
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-				:language: python
-
+			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
+			as well as the :ref:`How-To Guide <subsubsec-howto-pick>` for a minimal implementation
+			of a task hierarchy that makes use of the
+			``Pick`` stage.
 		)")
 	    .property<std::string>("object", "str: Name of object to pick")
 	    .property<std::string>("eef", "str: The End effector name")
@@ -467,11 +444,10 @@ void export_stages(pybind11::module& m) {
 			as the end effector's Cartesian pose needs to be provided by an external
 			grasp stage.
 
-			For a working example, please consider the :doc:`Pick <pymoveit_mtc.stages.Pick>` stage.
-
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-				:language: python
-				:lines: 102-118
+			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
+			as well as the :ref:`How-To Guide <subsubsec-howto-place>` for a minimal implementation
+			of a task hierarchy that makes use of the
+			``Place`` stage.
 		)")
 	    .property<std::string>("object", "str: Name of object to pick")
 	    .property<std::string>("eef", "str: The End effector name")
@@ -499,12 +475,11 @@ void export_stages(pybind11::module& m) {
 
 	properties::class_<SimpleGrasp, Stage>(m, "SimpleGrasp", R"(
 			Specialization of SimpleGraspBase to realize grasping.
-			Refer to the :doc:`Pick <pymoveit_mtc.stages.Pick>`
-			stage for a minimum code example:
 
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-				:language: python
-				:lines: 58-64
+			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
+			as well as the :ref:`How-To Guide <subsubsec-howto-simplegrasp>` for a minimal implementation
+			of a task hierarchy that makes use of the
+			``SimpleGrasp`` stage.
 		)")
 	    .property<std::string>("eef", "str: The end effector of the robot")
 	    .property<std::string>("object", "str: The object to grasp (Must be present in the planning scene)")
@@ -541,15 +516,11 @@ void export_stages(pybind11::module& m) {
 
 	properties::class_<SimpleUnGrasp, Stage>(m, "SimpleUnGrasp", R"(
 			Specialization of SimpleGraspBase to realize ungrasping
-			Refer to the :doc:`Place <pymoveit_mtc.stages.Place>`
-			stage for a minimum code example.
-			Be sure to forward the ``grasp`` and ``pregrasp`` properties
-			through the stage hierarchy so that they are available here again.
 
-			.. literalinclude:: ./../../../demo/scripts/pickplace.py
-				:language: python
-				:lines: 99-100
-
+			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
+			as well as the :ref:`How-To Guide <subsubsec-howto-simplegrasp>` for a minimal implementation
+			of a task hierarchy that makes use of the
+			``SimpleUnGrasp`` stage.
 		)")
 	    .property<std::string>("eef", "str: The end effector of the robot")
 	    .property<std::string>("object", "str: The object to grasp (Must be present in the planning scene)")

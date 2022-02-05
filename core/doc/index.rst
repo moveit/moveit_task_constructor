@@ -10,20 +10,31 @@ hypotheses between stages. The framework enables the hierarchical organization o
 basic stages using containers, allowing for sequential as well as parallel compositions.
 For more details, please refer to the associated `ICRA 2019 publication <https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf>`_.
 
+
+How the documentation is organized
+----------------------------------
+
+- :ref:`sec-tutorials` guide you
+  through the initial learning process of setting up a task pipeline.
+  Take a look at the :ref:`first steps <subsec-tut-firststeps>` if you
+  are new to the moveit task constructor.
+
+- :ref:`sec-concepts` discuss the architecture and terminology
+  of the moveit task constructor on a fairly high level.
+
+- :ref:`sec-howtoguides` help you to solve
+  specific problems and use cases you might encounter.
+
+- The :ref:`sec-api` provides
+  technical details of the python package. You may
+  look up definitions here and should already
+  have a basic understanding of the key concepts.
+
 .. toctree::
-   :caption: Concepts
-   :maxdepth: 2
+  :maxdepth: 2
+  :hidden:
 
-   basics
-
-API
-^^^
-.. autosummary::
-   :toctree: _autosummary
-   :caption: API
-   :recursive:
-   :template: custom-module-template.rst
-
-   moveit.task_constructor
-   pymoveit_mtc.core
-   pymoveit_mtc.stages
+  tutorials
+  concepts
+  howtoguides
+  reference
