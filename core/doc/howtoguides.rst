@@ -206,7 +206,7 @@ property to be derived from the monitored stage as shown
 in the example.
 Download the full example code here: :download:`Source <./../../demo/scripts/compute_ik.py>`
 
-.. literalinclude:: ./../../../demo/scripts/compute_ik.py
+.. literalinclude:: ./../../demo/scripts/compute_ik.py
     :language: python
     :lines: 35-45
 
