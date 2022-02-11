@@ -250,8 +250,35 @@ MoveRelative
 You may derive from this stage to extend its functionality.
 ``MoveRelative`` itself derives from the propagator stage that
 alters solutions (i.e. computes a motion plan) when they are
-pased through the stage.
+passed through the stage.
 
 .. literalinclude:: ./../../core/python/test/rostest_trampoline.py
     :language: python
     :lines: 72-87
+
+.. _subsubsec-howto-generator-extension:
+
+Generator
+^^^^^^^^^
+
+Derive from the ``Generator`` stage to implement your own
+logic in the compute function.
+
+.. literalinclude:: ./../../core/python/test/rostest_trampoline.py
+    :language: python
+    :lines: 23-44
+
+.. _subsubsec-howto-monitoring-generator-extension:
+
+MonitoringGenerator
+^^^^^^^^^^^^^^^^^^^
+
+Derive from the ``MonitoringGenerator`` stage to
+implement your own logic in the compute function.
+Use the monitoring generator instead of the normal
+generator if you need to access solutions of the
+monitored stage (e.g. computation of inverse kinematics).
+
+.. literalinclude:: ./../../core/python/test/rostest_trampoline.py
+    :language: python
+    :lines: 47-69
