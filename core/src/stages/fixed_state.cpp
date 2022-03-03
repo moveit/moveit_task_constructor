@@ -45,6 +45,7 @@ namespace stages {
 
 FixedState::FixedState(const std::string& name, planning_scene::PlanningScenePtr scene)
   : Generator(name), scene_(scene) {
+	properties().declare("ignore_collisions", false);
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 }
 
@@ -62,7 +63,10 @@ bool FixedState::canCompute() const {
 }
 
 void FixedState::compute() {
-	spawn(InterfaceState(scene_), 0.0);
+	auto cost = !properties().get<bool>("ignore_collisions") && scene_->isStateColliding() ?
+	                std::numeric_limits<double>::infinity() :
+	                0.0;
+	spawn(InterfaceState(scene_), cost);
 	ran_ = true;
 }
 }  // namespace stages
