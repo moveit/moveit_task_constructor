@@ -9,7 +9,7 @@ of the moveit task constructor.
 .. toctree::
     :caption: Tutorials
 
-    First Steps <tut_first-steps>
-    Cartesian <tut_cartesian>
-    Properties <tut_properties>
-    Pick and Place <tut_pick-and-place>
+    first-steps
+    cartesian
+    properties
+    pick-and-place

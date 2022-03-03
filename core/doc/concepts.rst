@@ -1,9 +1,7 @@
 .. _sec-concepts:
 
-Topic Guides
+Concepts
 ------------
-
-In-depth explanation about the concepts behind the moveit task constructor framework.
 
 .. toctree::
     :maxdepth: 2

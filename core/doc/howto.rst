@@ -8,8 +8,6 @@ How-To Guides
 Stage Usage
 -----------
 
-Short examples on how to use the mtc stages.
-
 .. _subsubsec-howto-alternatives:
 
 Alternatives
@@ -217,9 +215,9 @@ MoveTo
 ^^^^^^
 
 Use planners to compute a motion plan.
-Download the full example code here: :download:`Source <./../../demo/scripts/cartesian.py>`
+Download the full example code here: :download:`Source <../../demo/scripts/cartesian.py>`
 
-.. literalinclude:: ./../../demo/scripts/cartesian.py
+.. literalinclude:: ../../demo/scripts/cartesian.py
     :language: python
     :lines: 51-55
 
@@ -230,9 +228,9 @@ MoveRelative
 ^^^^^^^^^^^^
 
 Move along a relative offset.
-Download the full example code here: :download:`Source <./../../demo/scripts/cartesian.py>`
+Download the full example code here: :download:`Source <../../demo/scripts/cartesian.py>`
 
-.. literalinclude:: ./../../demo/scripts/cartesian.py
+.. literalinclude:: ../../demo/scripts/cartesian.py
     :language: python
     :lines: 26-31
 

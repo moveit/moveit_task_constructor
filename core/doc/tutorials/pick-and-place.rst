@@ -9,7 +9,7 @@ task constructor to plan and carry out pick and place movements.
 First, lets specify the planning group and the
 end effector that you want to use.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 12-14
 
@@ -17,13 +17,13 @@ Next, we add the object that we want to displace to the
 planning scene. To this end, make sure that the planning scene
 not already contains such object.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 16-33
 
 At this point, we are ready to create the task hierarchy.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 39-40
 
@@ -40,7 +40,7 @@ to sampling-based geometric motion planners.
 Lets connect the current robot state with the solutions of
 the following stages.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 42-49
 
@@ -51,7 +51,7 @@ which essentially spawns poses
 with a given ``angle_delta`` in circular fashion around a center
 point.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 51-56
 
@@ -62,7 +62,7 @@ The ``simpleGrasp`` stage combines ik calculation with motion plan
 generation for opening and closing the end effector, as well as attaching
 the object to the robot an disabling collision.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 58-64
 
@@ -70,7 +70,7 @@ Lastly, we can insert all the previous steps into the ``Pick``
 container stage. At this point we might also specify approach and
 lift twists for the robot relative to the object we want to grasp.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 66-81
 
@@ -78,42 +78,42 @@ Since all the previous stages were chained together via their
 constructor arguments, we only need to add the top level ``Pick``
 stage to the task hierarchy.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 83-84
 
 Thats everything we need for picking an object!
 Lets find a motion plan to place the object
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 86-87
 
 Similar to the picking procedure, we define the place task.
 First, start with sampling place poses.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 89-97
 
 Next, wrap the inverse kinematics computation and gripper
 movements.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 99-100
 
 Lastly, add place and retract motions and add the ``Place``
 stage to the task hierarchy.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 102-121
 
 Finally, compute solutions for the task hierarchy and delete
 the planner instances.
 
-.. literalinclude:: ./../../demo/scripts/pickplace.py
+.. literalinclude:: ../../../demo/scripts/pickplace.py
     :language: python
     :lines: 120-128
 

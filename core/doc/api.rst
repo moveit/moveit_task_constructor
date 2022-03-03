@@ -1,7 +1,7 @@
 .. _sec-api:
 
-API
----
+API reference
+-------------
 
 .. autosummary::
    :toctree: _autosummary

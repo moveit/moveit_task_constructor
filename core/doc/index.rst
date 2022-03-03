@@ -11,30 +11,20 @@ basic stages using containers, allowing for sequential as well as parallel compo
 For more details, please refer to the associated `ICRA 2019 publication <https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf>`_.
 
 
-How the documentation is organized
-----------------------------------
+Organization of the documentation
+---------------------------------
 
-- :ref:`sec-tutorials` guide you
-  through the initial learning process of setting up a task pipeline.
-  Take a look at the :ref:`first steps <subsec-tut-firststeps>` if you
-  are new to the moveit task constructor.
-
-- :ref:`sec-concepts` discuss the architecture and terminology
-  of the moveit task constructor on a fairly high level.
-
-- :ref:`sec-howtoguides` help you to solve
-  specific problems and use cases you might encounter.
-
-- The :ref:`sec-api` provides
-  technical details of the python package. You may
-  look up definitions here and should already
-  have a basic understanding of the key concepts.
+- :ref:`sec-tutorials` provide examples how to setup your task pipeline.
+  Start with :ref:`subsec-tut-firststeps` if you are new to MTC.
+- :ref:`sec-concepts` discuss the architecture and terminology of MTC on a fairly high level.
+- :ref:`sec-howtoguides` help solving specific problems and use cases.
+- The :ref:`sec-api` provides quick access to available classes, functions, and their parameters.
 
 .. toctree::
   :maxdepth: 2
   :hidden:
 
-  tutorials
+  tutorials/index
   concepts
-  howtoguides
-  reference
+  howto
+  api
