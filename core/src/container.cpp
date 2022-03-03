@@ -37,7 +37,9 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/merge.h>
+#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 #include <ros/console.h>
 
@@ -49,6 +51,7 @@
 #include <functional>
 
 using namespace std::placeholders;
+using namespace trajectory_processing;
 
 namespace moveit {
 namespace task_constructor {
@@ -635,7 +638,7 @@ void SerialContainerPrivate::validateConnectivity() const {
 	ContainerBasePrivate::validateConnectivity();
 
 	InterfaceFlags mine = interfaceFlags();
-	// check that input / output interface of first / last child matches this' resp. interface
+	// check that input/output interface of first/last child matches this' resp. interface
 	validateInterface<START_IF_MASK>(*children().front()->pimpl(), mine);
 	validateInterface<END_IF_MASK>(*children().back()->pimpl(), mine);
 
@@ -647,7 +650,7 @@ void SerialContainerPrivate::validateConnectivity() const {
 		const StagePrivate* const cur_impl = **cur;
 		InterfaceFlags required = cur_impl->interfaceFlags();
 
-		// get iterators to prev / next stage in sequence
+		// get iterators to prev/next stage in sequence
 		auto prev = cur;
 		--prev;
 		auto next = cur;
@@ -750,7 +753,7 @@ void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child,
 void ParallelContainerBasePrivate::validateConnectivity() const {
 	InterfaceFlags my_interface = interfaceFlags();
 
-	// check that input / output interfaces of all children are handled by my interface
+	// check that input/output interfaces of all children are handled by my interface
 	for (const auto& child : children())
 		validateInterfaces(*child->pimpl(), my_interface);
 
@@ -1084,7 +1087,10 @@ void MergerPrivate::resolveInterface(InterfaceFlags expected) {
 	}
 }
 
-Merger::Merger(const std::string& name) : Merger(new MergerPrivate(this, name)) {}
+Merger::Merger(const std::string& name) : Merger(new MergerPrivate(this, name)) {
+	properties().declare<TimeParameterizationPtr>("time_parameterization",
+	                                                 std::make_shared<TimeOptimalTrajectoryGeneration>());
+}
 
 void Merger::reset() {
 	ParallelContainerBase::reset();
@@ -1237,7 +1243,8 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 	moveit::core::JointModelGroup* jmg = jmg_merged_.get();
 	robot_trajectory::RobotTrajectoryPtr merged;
 	try {
-		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg);
+		auto timing = me_->properties().get<TimeParameterizationPtr>("time_parameterization");
+		merged = task_constructor::merge(sub_trajectories, start_scene->getCurrentState(), jmg, *timing);
 	} catch (const std::runtime_error& e) {
 		SubTrajectory t;
 		t.markAsFailure();
