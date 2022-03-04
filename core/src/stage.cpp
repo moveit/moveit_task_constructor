@@ -737,7 +737,6 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
-// TODO: bool updated -> uint_8 updated (bitfield of PRIORITY | STATUS)
 template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
 	auto parent_pimpl = parent()->pimpl();
@@ -799,8 +798,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 #if 0
 	auto& os = std::cerr;
 	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
-		bool fw = (d == Interface::FORWARD);
-		if (fw)
+		if (d == Interface::FORWARD)
 			os << "  " << std::setw(10) << std::left << this->name();
 		else
 			os << std::setw(12) << std::right << "";
@@ -808,7 +806,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 			os << (updated ? " !" : " +");
 		else
 			os << "  ";
-		os << (fw ? "↓ " : "↑ ") << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
 	}
 	os << std::setw(15) << " ";
 	printPendingPairs(os) << std::endl;

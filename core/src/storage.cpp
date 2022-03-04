@@ -178,6 +178,10 @@ std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio)
 	   << InterfaceState::STATUS_COLOR[3];
 	return os;
 }
+std::ostream& operator<<(std::ostream& os, Interface::Direction dir) {
+	os << (dir == Interface::FORWARD ? "↓" : "↑");
+	return os;
+}
 
 void SolutionBase::setCreator(Stage* creator) {
 	assert(creator_ == nullptr || creator_ == creator);  // creator must only set once
