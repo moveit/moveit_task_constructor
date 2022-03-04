@@ -83,8 +83,9 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 }
 
 void InterfaceState::updatePriority(const InterfaceState::Priority& priority) {
-	// Never overwrite ARMED with PRUNED: PRUNED => !ARMED
-	assert(priority.status() != InterfaceState::Status::PRUNED || priority_.status() != InterfaceState::Status::ARMED);
+	// Never overwrite ARMED with PRUNED
+	if (priority.status() == InterfaceState::Status::PRUNED && priority_.status() == InterfaceState::Status::ARMED)
+		return;
 
 	if (owner()) {
 		owner()->updatePriority(this, priority);
