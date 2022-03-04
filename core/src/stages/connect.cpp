@@ -58,7 +58,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
-	properties().declare<TimeParameterizationPtr>("time_parameterization",
+	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
 	                                              std::make_shared<TimeOptimalTrajectoryGeneration>());
 }
 
@@ -225,7 +225,7 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	auto jmg = merged_jmg_.get();
 	assert(jmg);
-	auto timing = properties().get<TimeParameterizationPtr>("time_parameterization");
+	auto timing = properties().get<TimeParameterizationPtr>("merge_time_parameterization");
 	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg, *timing);
 	if (!trajectory)
 		return SubTrajectoryPtr();

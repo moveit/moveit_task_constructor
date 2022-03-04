@@ -60,6 +60,7 @@
 #define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)
 
 #if !MOVEIT_VERSION_GE(1, 1, 9)
+// the pointers are not yet available
 namespace trajectory_processing {
 MOVEIT_CLASS_FORWARD(TimeParameterization);
 }
