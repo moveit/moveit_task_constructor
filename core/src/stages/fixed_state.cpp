@@ -63,10 +63,12 @@ bool FixedState::canCompute() const {
 }
 
 void FixedState::compute() {
-	auto cost = !properties().get<bool>("ignore_collisions") && scene_->isStateColliding() ?
-	                std::numeric_limits<double>::infinity() :
-	                0.0;
-	spawn(InterfaceState(scene_), cost);
+	SubTrajectory trajectory;
+	if (!properties().get<bool>("ignore_collisions") && scene_->isStateColliding()) {
+		trajectory.markAsFailure("in collision");
+	}
+
+	spawn(InterfaceState(scene_), std::move(trajectory));
 	ran_ = true;
 }
 }  // namespace stages
