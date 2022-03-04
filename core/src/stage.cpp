@@ -740,10 +740,12 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
 	auto parent_pimpl = parent()->pimpl();
+	// disable current interface to break loop (jumping back and forth between both interfaces)
+	// this will be checked by notifyEnabled() below
 	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
 	if (updated) {
 		if (updated.testFlag(Interface::STATUS) &&  // only perform these costly operations if needed
-		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppress recursive loop
+		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppressing recursive loop?
 		{
 			// If status has changed, propagate the update to the opposite side
 			auto status = it->priority().status();
