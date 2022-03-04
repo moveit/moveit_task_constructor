@@ -190,8 +190,13 @@ void SolutionBase::setCost(double cost) {
 
 void SolutionBase::markAsFailure(const std::string& msg) {
 	setCost(std::numeric_limits<double>::infinity());
-	if (!msg.empty())
-		setComment(msg + "\n" + comment());
+	if (!msg.empty()) {
+		std::stringstream ss;
+		ss << msg;
+		if (!comment().empty())
+			ss << "\n" << comment();
+		setComment(ss.str());
+	}
 }
 
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
