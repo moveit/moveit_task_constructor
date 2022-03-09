@@ -19,6 +19,7 @@ currentState = stages.CurrentState("current state")
 # Add the current state to the task hierarchy
 task.add(currentState)
 
+# [initAndConfigAlternatives]
 # The alternatives stage supports multiple execution paths
 alternatives = core.Alternatives("Alternatives")
 
@@ -58,6 +59,7 @@ alternatives.insert(moveTo2)
 
 # Add the alternatives stage to the task hierarchy
 task.add(alternatives)
+# [initAndConfigAlternatives]
 
 if task.plan():
     task.publish(task.solutions[0])

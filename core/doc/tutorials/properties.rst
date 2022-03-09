@@ -15,7 +15,8 @@ a value to it.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 18-25
+    :start-after: [propertyTut1]
+    :end-before: [propertyTut1]
 
 Notice that a property always has two values: the current value
 and the default value. Before we use the property, we might want to
@@ -23,13 +24,15 @@ check if the current value defined.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 27-28
+    :start-after: [propertyTut2]
+    :end-before: [propertyTut2]
 
 Now we are ready to safely retrieve the values of the proprty!
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 30-37
+    :start-after: [propertyTut3]
+    :end-before: [propertyTut3]
 
 The Property Map
 ^^^^^^^^^^^^^^^^
@@ -44,39 +47,45 @@ of arbitrary type.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 39-47
+    :start-after: [propertyTut4]
+    :end-before: [propertyTut4]
 
 Properties can also be initialized using a more pythonic way.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 49-50
+    :start-after: [propertyTut5]
+    :end-before: [propertyTut5]
 
 There are two ways to retrieve properties back from the property map.
 We might only be interested in in the value of the property:
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 52-53
+    :start-after: [propertyTut6]
+    :end-before: [propertyTut6]
 
-Or we can obtain a refernece to the whole property object.
+Or we can obtain a reference to the whole property object.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 55-56
+    :start-after: [propertyTut7]
+    :end-before: [propertyTut7]
 
 The PropertyMap class additionally provides an iterator that can be used in loops.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 58-62
+    :start-after: [propertyTut8]
+    :end-before: [propertyTut8]
 
 Remember that wer initialized our PropertyMap by using a dict. In fact, you
 can also use an existing PropertMap to copy over some properties.
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 64-67
+    :start-after: [propertyTut9]
+    :end-before: [propertyTut9]
 
 Accessing Properties of a Stage
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -85,7 +94,14 @@ You can obtain a reference to the the PropertyMap of a stage like so
 
 .. literalinclude:: ../../../demo/scripts/properties.py
     :language: python
-    :lines: 15-16, 74-75
+    :start-after: [propertyTut10]
+    :end-before: [propertyTut10]
+
+.. literalinclude:: ../../../demo/scripts/properties.py
+    :language: python
+    :start-after: [propertyTut11]
+    :end-before: [propertyTut11]
+
 
 As mentioned, each stage contains a PropertyMap.
 Stages communicate to each other via their interfaces.
@@ -94,7 +110,18 @@ you can use the reference of a stages' property object.
 
 .. literalinclude:: ../../../demo/scripts/compute_ik.py
     :language: python
-    :lines: 27-28, 35-36, 40-42
+    :start-after: [propertyTut12]
+    :end-before: [propertyTut12]
+
+.. literalinclude:: ../../../demo/scripts/compute_ik.py
+    :language: python
+    :start-after: [propertyTut13]
+    :end-before: [propertyTut13]
+
+.. literalinclude:: ../../../demo/scripts/compute_ik.py
+    :language: python
+    :start-after: [propertyTut14]
+    :end-before: [propertyTut14]
 
 Take a look at the :ref:`How-To-Guides <subsubsec-howto-compute-ik>`
 for a full example of this.

@@ -19,7 +19,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/alt
 
 .. literalinclude:: ./../../demo/scripts/alternatives.py
     :language: python
-    :lines: 22-60
+    :start-after: [initAndConfigAlternatives]
+    :end-before: [initAndConfigAlternatives]
 
 .. _subsubsec-howto-fallbacks:
 
@@ -32,7 +33,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/fal
 
 .. literalinclude:: ./../../demo/scripts/fallbacks.py
     :language: python
-    :lines: 21-38
+    :start-after: [initAndConfigFallbacks]
+    :end-before: [initAndConfigFallbacks]
 
 .. _subsubsec-howto-merger:
 
@@ -44,7 +46,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/mer
 
 .. literalinclude:: ./../../demo/scripts/merger.py
     :language: python
-    :lines: 20-36
+    :start-after: [initAndConfigMerger]
+    :end-before: [initAndConfigMerger]
 
 .. _subsubsec-howto-connect:
 
@@ -57,7 +60,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 42-49
+    :start-after: [initAndConfigConnect]
+    :end-before: [initAndConfigConnect]
 
 .. _subsubsec-howto-fix-collision-objects:
 
@@ -69,7 +73,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/fix
 
 .. literalinclude:: ./../../demo/scripts/fix_collision_objects.py
     :language: python
-    :lines: 16-23
+    :start-after: [initAndConfig]
+    :end-before: [initAndConfig]
 
 .. _subsubsec-howto-generate-place-pose:
 
@@ -85,7 +90,13 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 24-31, 89-97
+    :start-after: [initCollisionObject]
+    :end-before: [initCollisionObject]
+
+.. literalinclude:: ./../../demo/scripts/pickplace.py
+    :language: python
+    :start-after: [initAndConfigGeneratePlacePose]
+    :end-before: [initAndConfigGeneratePlacePose]
 
 .. _subsubsec-howto-generate-grasp-pose:
 
@@ -101,7 +112,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 51-56
+    :start-after: [initAndConfigGenerateGraspPose]
+    :end-before: [initAndConfigGenerateGraspPose]
 
 .. _subsubsec-howto-generate-pose:
 
@@ -113,7 +125,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/gen
 
 .. literalinclude:: ./../../demo/scripts/generate_pose.py
     :language: python
-    :lines: 32-45
+    :start-after: [initAndConfigGeneratePose]
+    :end-before: [initAndConfigGeneratePose]
 
 .. _subsubsec-howto-pick:
 
@@ -126,7 +139,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 66-84
+    :start-after: [initAndConfigPick]
+    :end-before: [initAndConfigPick]
 
 .. _subsubsec-howto-place:
 
@@ -139,7 +153,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 102-121
+    :start-after: [initAndConfigPlace]
+    :end-before: [initAndConfigPlace]
 
 .. _subsubsec-howto-simplegrasp:
 
@@ -153,7 +168,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 58-64
+    :start-after: [initAndConfigSimpleGrasp]
+    :end-before: [initAndConfigSimpleGrasp]
 
 .. _subsubsec-howto-simpleungrasp:
 
@@ -167,7 +183,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/pic
 
 .. literalinclude:: ./../../demo/scripts/pickplace.py
     :language: python
-    :lines: 99-106
+    :start-after: [initAndConfigSimpleUnGrasp]
+    :end-before: [initAndConfigSimpleUnGrasp]
 
 .. _subsubsec-howto-modify-planning-scene:
 
@@ -179,7 +196,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/mod
 
 .. literalinclude:: ./../../demo/scripts/modify_planning_scene.py
     :language: python
-    :lines: 19-43
+    :start-after: [initAndConfigModifyPlanningScene]
+    :end-before: [initAndConfigModifyPlanningScene]
 
 .. _subsubsec-howto-fixed-state:
 
@@ -191,7 +209,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/fix
 
 .. literalinclude:: ./../../demo/scripts/fixed_state.py
     :language: python
-    :lines: 16-25
+    :start-after: [initAndConfigFixedState]
+    :end-before: [initAndConfigFixedState]
 
 .. _subsubsec-howto-compute-ik:
 
@@ -206,8 +225,8 @@ Download the full example code here: :download:`Source <./../../demo/scripts/com
 
 .. literalinclude:: ./../../demo/scripts/compute_ik.py
     :language: python
-    :lines: 35-45
-
+    :start-after: [initAndConfigComputeIk]
+    :end-before: [initAndConfigComputeIk]
 
 .. _subsubsec-howto-move-to:
 
@@ -219,8 +238,8 @@ Download the full example code here: :download:`Source <../../demo/scripts/carte
 
 .. literalinclude:: ../../demo/scripts/cartesian.py
     :language: python
-    :lines: 51-55
-
+    :start-after: [initAndConfigMoveTo]
+    :end-before: [initAndConfigMoveTo]
 
 .. _subsubsec-howto-move-relative:
 
@@ -232,8 +251,8 @@ Download the full example code here: :download:`Source <../../demo/scripts/carte
 
 .. literalinclude:: ../../demo/scripts/cartesian.py
     :language: python
-    :lines: 26-31
-
+    :start-after: [initAndConfigMoveRelative]
+    :end-before: [initAndConfigMoveRelative]
 
 .. _subsec-howto-stage-extension:
 
@@ -252,7 +271,7 @@ passed through the stage.
 
 .. literalinclude:: ./../../core/python/test/rostest_trampoline.py
     :language: python
-    :lines: 72-87
+    :pyobject: PyMoveRelX
 
 .. _subsubsec-howto-generator-extension:
 
@@ -264,7 +283,7 @@ logic in the compute function.
 
 .. literalinclude:: ./../../core/python/test/rostest_trampoline.py
     :language: python
-    :lines: 23-44
+    :pyobject: PyGenerator
 
 .. _subsubsec-howto-monitoring-generator-extension:
 
@@ -279,4 +298,4 @@ monitored stage (e.g. computation of inverse kinematics).
 
 .. literalinclude:: ./../../core/python/test/rostest_trampoline.py
     :language: python
-    :lines: 47-69
+    :pyobject: PyMonitoringGenerator

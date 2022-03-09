@@ -13,6 +13,7 @@ roscpp_init("mtc_tutorial_current_state")
 # Create a task
 task = core.Task()
 
+# [initAndConfigFixedState]
 # Initialize a PlanningScene for use in a FixedState stage
 task.loadRobotModel()  # load the robot model (usually done in init())
 planningScene = PlanningScene(task.getRobotModel())
@@ -23,6 +24,7 @@ fixedState.setState(planningScene)
 
 # Add the stage to the task hierarchy
 task.add(fixedState)
+# [initAndConfigFixedState]
 
 if task.plan():
     task.publish(task.solutions[0])

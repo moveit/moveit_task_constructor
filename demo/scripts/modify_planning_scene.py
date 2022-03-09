@@ -16,6 +16,7 @@ task = core.Task()
 # Add the current state to the task hierarchy
 task.add(stages.CurrentState("current state"))
 
+# [initAndConfigModifyPlanningScene]
 # Specify object parameters
 object_name = "grasp_object"
 object_radius = 0.02
@@ -41,6 +42,7 @@ object.operation = object.ADD
 modifyPlanningScene = stages.ModifyPlanningScene("modify planning scene")
 modifyPlanningScene.addObject(object)
 task.add(modifyPlanningScene)
+# [initAndConfigModifyPlanningScene]
 
 if task.plan():
     task.publish(task.solutions[0])

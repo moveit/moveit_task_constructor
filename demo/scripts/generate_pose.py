@@ -29,6 +29,7 @@ connect = stages.Connect("connect1", planners)
 connect.properties.configureInitFrom(core.Stage.PropertyInitializerSource.PARENT)
 task.add(connect)
 
+# [initAndConfigGeneratePose]
 # create an example pose wrt. the origin of the
 # panda arm link8
 pose = PoseStamped()
@@ -43,6 +44,7 @@ generatePose.pose = pose
 
 # Add the stage to the task hierarchy
 task.add(generatePose)
+# [initAndConfigGeneratePose]
 
 if task.plan():
     task.publish(task.solutions[0])

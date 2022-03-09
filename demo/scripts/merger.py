@@ -17,6 +17,7 @@ task = core.Task()
 currentState = stages.CurrentState("current state")
 task.add(currentState)
 
+# [initAndConfigMerger]
 # the merger plans for two parallel execution paths
 merger = core.Merger("Merger")
 
@@ -34,6 +35,7 @@ merger.insert(moveTo2)
 
 # add the merger stage to the task hierarchy
 task.add(merger)
+# [initAndConfigMerger]
 
 if task.plan():
     task.publish(task.solutions[0])

@@ -18,6 +18,7 @@ task = core.Task()
 currentState = stages.CurrentState("Current State")
 task.add(currentState)
 
+# [initAndConfigFallbacks]
 # create a fallback container to fall back to a different planner
 # if motion generation fails with the primary one
 fallbacks = core.Fallbacks("Fallbacks")
@@ -36,6 +37,7 @@ fallbacks.insert(moveTo2)
 
 # add the fallback container to the task hierarchy
 task.add(fallbacks)
+# [initAndConfigFallbacks]
 
 if task.plan():
     task.publish(task.solutions[0])
