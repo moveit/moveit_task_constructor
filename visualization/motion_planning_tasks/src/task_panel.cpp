@@ -91,8 +91,8 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz_common::Panel(parent), d_ptr(new Ta
 	Q_D(TaskPanel);
 
 	// sync checked tool button with displayed widget
-	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
-	        d->stackedWidget, [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::idClicked), d->stackedWidget,
+	        [d](int index) { d->stackedWidget->setCurrentIndex(index); });
 	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
 	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
 
