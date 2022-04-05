@@ -282,7 +282,7 @@ void ComputeIK::compute() {
 	if (value.empty()) {  // property undefined
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
-		                       jmg->getOnlyOneEndEffectorTip())) {
+                             jmg->getOnlyOneEndEffectorTip())) {
 			RCLCPP_WARN_STREAM(LOGGER, "Failed to derive IK target link");
 			return;
 		}

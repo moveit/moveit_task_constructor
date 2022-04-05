@@ -185,8 +185,8 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	auto& state_properties{ state->properties() };
 	auto& stage_properties{ s.creator()->properties() };
 	request.group_name = state_properties.hasProperty(group_property) ?
-	                         state_properties.get<std::string>(group_property) :
-	                         stage_properties.get<std::string>(group_property);
+                            state_properties.get<std::string>(group_property) :
+                            stage_properties.get<std::string>(group_property);
 
 	// look at all forbidden collisions involving group_name
 	request.enableGroup(state->scene()->getRobotModel());
