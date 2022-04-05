@@ -15,6 +15,7 @@
 	<depend>geometry_msgs</depend>
 	<depend>rclcpp</depend>
 	<depend>rviz2</depend>
+	<depend>urdfdom_headers</depend>
 	<depend>tf2_eigen</depend>
 
 	<export>
