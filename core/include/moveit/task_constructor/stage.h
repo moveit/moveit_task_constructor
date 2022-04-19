@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include "trajectory_execution_info.h"
 #include "utils.h"
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/storage.h>
@@ -201,8 +202,13 @@ public:
 	/// marker namespace of solution markers
 	const std::string& markerNS() { return properties().get<std::string>("marker_ns"); }
 
-	void setControllers(std::vector<std::string> controllers) { setProperty("controllers", controllers); }
-	std::vector<std::string> controllers() { return properties().get<std::vector<std::string>>("controllers"); }
+	/// Set and get info to use when executing the stage's trajectory
+	void setTrajectoryExecutionInfo(TrajectoryExecutionInfo trajectory_execution_info) {
+		setProperty("trajectory_execution_info", trajectory_execution_info);
+	}
+	TrajectoryExecutionInfo trajectoryExecutionInfo() {
+		return properties().get<TrajectoryExecutionInfo>("trajectory_execution_info");
+	}
 
 	/// forwarding of properties between interface states
 	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
