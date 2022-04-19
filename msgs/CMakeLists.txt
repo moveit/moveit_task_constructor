@@ -18,6 +18,7 @@ set(msg_files
 	"msg/SubTrajectory.msg"
 	"msg/TaskDescription.msg"
 	"msg/TaskStatistics.msg"
+        "msg/TrajectoryExecutionInfo.msg"
 )
 
 set(srv_files

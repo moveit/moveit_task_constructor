@@ -223,6 +223,10 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::msg::Solution& msg
 	moveit_task_constructor_msgs::msg::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
+	const auto trajectory_execution_info =
+	    creator()->properties().get<TrajectoryExecutionInfo>("trajectory_execution_info");
+	t.execution_info = trajectory_execution_info.toMsg();
+
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
