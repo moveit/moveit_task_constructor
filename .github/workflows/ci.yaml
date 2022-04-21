@@ -18,11 +18,10 @@ jobs:
           - IMAGE: galactic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: rolling-source
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wno-redundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
-          - IMAGE: rolling-source
+          - IMAGE: galactic-source
             CXX: clang++
             CLANG_TIDY: true
             CXXFLAGS: >-
@@ -30,7 +29,7 @@ jobs:
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
           # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
           # see https://github.com/google/sanitizers/wiki/AddressSanitizer
-          - IMAGE: rolling-source
+          - IMAGE: galactic-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
               -e PRELOAD=libasan.so.5
