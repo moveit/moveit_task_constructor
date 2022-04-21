@@ -15,10 +15,9 @@ jobs:
       matrix:
         env:
           # TODO: We have to use -Wno-redundant-decls since rosidl_generator_c is generating broken headers
-          - IMAGE: galactic-source
+          - IMAGE: rolling-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: rolling-source
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wno-redundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
