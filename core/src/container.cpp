@@ -229,23 +229,26 @@ inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Prio
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
-	switch (child.pimpl()->interfaceFlags()) {
-		case GENERATE:
-			// just ignore: the pair of (new) states isn't known to us anyway
-			// TODO: If child is a container, from and to might have associated solutions already!
-			break;
+	ROS_DEBUG_STREAM_NAMED("Pruning", "Pruning enabled: " << me()->pruning());
+	if (me()->pruning()) {
+		switch (child.pimpl()->interfaceFlags()) {
+			case GENERATE:
+				// just ignore: the pair of (new) states isn't known to us anyway
+				// TODO: If child is a container, from and to might have associated solutions already!
+				break;
 
-		case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
-			setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::PRUNED);
-			break;
-		case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
-			setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::PRUNED);
-			break;
+			case PROPAGATE_FORWARDS:  // mark from as failed (backwards)
+				setStatus<Interface::BACKWARD>(nullptr, nullptr, from, InterfaceState::Status::PRUNED);
+				break;
+			case PROPAGATE_BACKWARDS:  // mark to as failed (forwards)
+				setStatus<Interface::FORWARD>(nullptr, nullptr, to, InterfaceState::Status::PRUNED);
+				break;
 
-		case CONNECT:
-			setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::ARMED);
-			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::ARMED);
-			break;
+			case CONNECT:
+				setStatus<Interface::BACKWARD>(&child, to, from, InterfaceState::Status::ARMED);
+				setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::ARMED);
+				break;
+		}
 	}
 	// printChildrenInterfaces(*this, false, child);
 }

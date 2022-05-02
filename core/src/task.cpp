@@ -90,6 +90,7 @@ const ContainerBase* TaskPrivate::stages() const {
 
 Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
   : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
+	setPruning(true);
 	setTimeout(std::numeric_limits<double>::max());
 
 	// monitor state on commandline

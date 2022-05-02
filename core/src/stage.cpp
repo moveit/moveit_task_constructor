@@ -307,6 +307,7 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	assert(impl);
 	auto& p = properties();
+	p.declare<bool>("pruning", std::string("allow pruning for the stage")).configureInitFrom(Stage::PARENT, "pruning");
 	p.declare<double>("timeout", "timeout per run (s)");
 	p.declare<std::string>("marker_ns", name(), "marker namespace");
 

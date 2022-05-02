@@ -193,6 +193,9 @@ public:
 	/// timeout of stage per computation
 	double timeout() const { return properties().get<double>("timeout"); }
 
+	/// Explicitly enable/disable pruning (enabled by default)
+	void setPruning(bool pruning) { setProperty("pruning", pruning); }
+	bool pruning() const { return properties().get<bool>("pruning"); }
 	/** set marker namespace for solutions
 	 *
 	 * Auxiliary markers in this stage should use this namespace

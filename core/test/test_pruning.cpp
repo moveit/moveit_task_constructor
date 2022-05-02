@@ -27,6 +27,18 @@ TEST_F(Pruning, PropagatorFailure) {
 	EXPECT_EQ(back->runs_, 0u);
 }
 
+// Same as the previous test, except pruning is disabled for the whole task
+TEST_F(Pruning, DisabledPruningPropagatorFailure) {
+	t.setPruning(false);
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
+	EXPECT_FALSE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 0u);
+	// ForwardMockup fails, since we have pruning disabled backward should run
+	EXPECT_EQ(back->runs_, 1u);
+}
+
 TEST_F(Pruning, PruningMultiForward) {
 	add(t, new BackwardMockup());
 	add(t, new BackwardMockup());
@@ -162,6 +174,23 @@ TEST_F(Pruning, PropagateFromContainerPull) {
 
 	// the failure inside the container should prune computing of back
 	EXPECT_EQ(back->runs_, 0u);
+}
+
+// Same as previous test except pruning is disabled for the inner container
+TEST_F(Pruning, DisabledPruningPropagateFromContainerPull) {
+	auto back = add(t, new BackwardMockup());
+	add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+
+	auto inner = add(t, new SerialContainer());
+	inner->setPruning(false);
+	add(*inner, new ForwardMockup());
+	add(*inner, new ForwardMockup({ INF }));
+
+	EXPECT_FALSE(t.plan());
+
+	// ForwardMockup fails, since we have pruning disabled for the inner container backward should run
+	EXPECT_EQ(back->runs_, 1u);
 }
 
 TEST_F(Pruning, PropagateFromContainerPush) {
