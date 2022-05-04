@@ -6,11 +6,11 @@ add_compile_options(-std=c++17)
 find_package(ament_cmake REQUIRED)
 
 find_package(Boost REQUIRED)
-find_package(rclcpp_action REQUIRED)
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_move_group REQUIRED)
 find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
@@ -29,10 +29,10 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 pluginlib_export_plugin_description_file(moveit_ros_move_group capabilities_plugin_description.xml)
-ament_export_dependencies(rclcpp_action)
 ament_export_dependencies(moveit_core)
 ament_export_dependencies(moveit_ros_move_group)
 ament_export_dependencies(moveit_task_constructor_msgs)
 ament_export_dependencies(pluginlib)
+ament_export_dependencies(rclcpp_action)
 ament_export_dependencies(std_msgs)
 ament_package()

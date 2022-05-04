@@ -3,8 +3,8 @@ project(moveit_task_constructor_msgs)
 
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 find_package(moveit_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 # ROS messages, services and actions
