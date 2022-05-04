@@ -11,12 +11,12 @@
 	<buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 	<build_depend>eigen</build_depend>
 
-	<depend>visualization_msgs</depend>
 	<depend>geometry_msgs</depend>
 	<depend>rclcpp</depend>
 	<depend>rviz2</depend>
-	<depend>urdfdom_headers</depend>
 	<depend>tf2_eigen</depend>
+	<depend>urdfdom_headers</depend>
+	<depend>visualization_msgs</depend>
 
 	<export>
 	  <build_type>ament_cmake</build_type>

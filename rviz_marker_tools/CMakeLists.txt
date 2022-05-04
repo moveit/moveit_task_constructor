@@ -4,14 +4,14 @@ project(rviz_marker_tools)
 find_package(ament_cmake REQUIRED)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
+    Eigen3
+    eigen3_cmake_module
     geometry_msgs
-    visualization_msgs
     rclcpp
     rviz2
-    eigen3_cmake_module
-    Eigen3
-    urdfdom_headers
     tf2_eigen
+    urdfdom_headers
+    visualization_msgs
 )
 
 foreach(dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
