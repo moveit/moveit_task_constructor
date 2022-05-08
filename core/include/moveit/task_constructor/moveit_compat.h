@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/version.h>
+#include <moveit/macros/class_forward.h>
 
 #define MOVEIT_VERSION_GE(major, minor, patch)                                                \
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
@@ -57,3 +58,10 @@
 #define MOVEIT_HAS_OBJECT_POSE MOVEIT_VERSION_GE(1, 1, 6)
 
 #define MOVEIT_HAS_STATE_RIGID_PARENT_LINK MOVEIT_VERSION_GE(1, 1, 6)
+
+#if !MOVEIT_VERSION_GE(1, 1, 9)
+// the pointers are not yet available
+namespace trajectory_processing {
+MOVEIT_CLASS_FORWARD(TimeParameterization);
+}
+#endif
