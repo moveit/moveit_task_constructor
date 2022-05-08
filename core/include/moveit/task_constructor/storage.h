@@ -248,6 +248,7 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
 std::ostream& operator<<(std::ostream& os, const Interface& interface);
+std::ostream& operator<<(std::ostream& os, Interface::Direction);
 
 /// Find index of the iterator in the container. Counting starts at 1. Zero corresponds to not found.
 template <typename T>

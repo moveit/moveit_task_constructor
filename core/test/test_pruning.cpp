@@ -193,3 +193,17 @@ TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
 	// the failure in one branch of Alternatives must not prune computing back
 	EXPECT_EQ(back->runs_, 1u);
 }
+
+TEST_F(Pruning, TwoConnects) {
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
+	add(t, new ConnectMockup());
+
+	add(t, new GeneratorMockup());
+	add(t, new ConnectMockup());
+
+	add(t, new GeneratorMockup());
+	add(t, new ForwardMockup());
+
+	EXPECT_FALSE(t.plan());
+}

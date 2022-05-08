@@ -83,8 +83,9 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 }
 
 void InterfaceState::updatePriority(const InterfaceState::Priority& priority) {
-	// Never overwrite ARMED with PRUNED: PRUNED => !ARMED
-	assert(priority.status() != InterfaceState::Status::PRUNED || priority_.status() != InterfaceState::Status::ARMED);
+	// Never overwrite ARMED with PRUNED
+	if (priority.status() == InterfaceState::Status::PRUNED && priority_.status() == InterfaceState::Status::ARMED)
+		return;
 
 	if (owner()) {
 		owner()->updatePriority(this, priority);
@@ -176,6 +177,10 @@ std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio)
 	// maps InterfaceState::Status values to output (color-changing) prefix
 	os << InterfaceState::STATUS_COLOR[prio.status()] << prio.depth() << ":" << prio.cost()
 	   << InterfaceState::STATUS_COLOR[3];
+	return os;
+}
+std::ostream& operator<<(std::ostream& os, Interface::Direction dir) {
+	os << (dir == Interface::FORWARD ? "↓" : "↑");
 	return os;
 }
 

@@ -737,14 +737,15 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
-// TODO: bool updated -> uint_8 updated (bitfield of PRIORITY | STATUS)
 template <Interface::Direction dir>
 void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
 	auto parent_pimpl = parent()->pimpl();
+	// disable current interface to break loop (jumping back and forth between both interfaces)
+	// this will be checked by notifyEnabled() below
 	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
 	if (updated) {
 		if (updated.testFlag(Interface::STATUS) &&  // only perform these costly operations if needed
-		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppress recursive loop
+		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppressing recursive loop?
 		{
 			// If status has changed, propagate the update to the opposite side
 			auto status = it->priority().status();
@@ -799,8 +800,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 #if 0
 	auto& os = std::cerr;
 	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
-		bool fw = (d == Interface::FORWARD);
-		if (fw)
+		if (d == Interface::FORWARD)
 			os << "  " << std::setw(10) << std::left << this->name();
 		else
 			os << std::setw(12) << std::right << "";
@@ -808,7 +808,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 			os << (updated ? " !" : " +");
 		else
 			os << "  ";
-		os << (fw ? "↓ " : "↑ ") << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
 	}
 	os << std::setw(15) << " ";
 	printPendingPairs(os) << std::endl;
