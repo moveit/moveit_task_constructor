@@ -4,8 +4,8 @@ project(rviz_marker_tools)
 find_package(ament_cmake REQUIRED)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
-    Eigen3
     eigen3_cmake_module
+    Eigen3
     geometry_msgs
     rclcpp
     rviz2
