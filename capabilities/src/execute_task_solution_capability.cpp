@@ -143,51 +143,73 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 	}
 
 	plan.plan_components.reserve(solution.sub_trajectory.size());
-	for (size_t i = 0; i < solution.sub_trajectory.size(); ++i) {
-		const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj = solution.sub_trajectory[i];
+	auto make_executable_trajectory =
+	    [&](const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj, const std::string& description,
+	        const std::function<bool(const plan_execution::ExecutableMotionPlan*)>& on_success_callback) {
+		    plan.plan_components.emplace_back();
+		    plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
+		    exec_traj.description = description;
+		    const moveit::core::JointModelGroup* group = nullptr;
+		    {
+			    std::vector<std::string> joint_names(sub_traj.trajectory.joint_trajectory.joint_names);
+			    joint_names.insert(joint_names.end(), sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
+			                       sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.end());
+			    if (!joint_names.empty()) {
+				    group = findJointModelGroup(*model, joint_names);
+				    if (!group) {
+					    RCLCPP_ERROR_STREAM(LOGGER, "Could not find JointModelGroup that actuates {"
+					                                    << boost::algorithm::join(joint_names, ", ") << "}");
+					    return false;
+				    }
+				    RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());
+			    }
+		    }
+		    exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
+		    exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
-		plan.plan_components.emplace_back();
-		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
+		    /* todo add action feedback and markers */
+		    exec_traj.effect_on_success = on_success_callback;
+		    return true;
+	    };
 
-		// define individual variable for use in closure below
-		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
-		exec_traj.description = description;
-
-		const moveit::core::JointModelGroup* group = nullptr;
-		{
-			std::vector<std::string> joint_names(sub_traj.trajectory.joint_trajectory.joint_names);
-			joint_names.insert(joint_names.end(), sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.begin(),
-			                   sub_traj.trajectory.multi_dof_joint_trajectory.joint_names.end());
-			if (!joint_names.empty()) {
-				group = findJointModelGroup(*model, joint_names);
-				if (!group) {
-					RCLCPP_ERROR_STREAM(LOGGER, "Could not find JointModelGroup that actuates {"
-					                                << boost::algorithm::join(joint_names, ", ") << "}");
-					return false;
+	auto make_apply_planning_scene_diff_cb = [this](const std::vector<moveit_msgs::msg::PlanningScene>& scene_diffs) {
+		return [this, scene_diffs](const plan_execution::ExecutableMotionPlan* /*plan*/) mutable {
+			for (auto& scene_diff : scene_diffs) {
+				if (!moveit::core::isEmpty(scene_diff)) {
+					/* RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description); */
+					auto scene_diff_copy = scene_diff;
+					scene_diff_copy.robot_state.joint_state = sensor_msgs::msg::JointState();
+					scene_diff_copy.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
+					if (!context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff_copy))
+						return false;
 				}
-				RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());
-			}
-		}
-		exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
-		exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
-
-		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success = [this, sub_traj,
-		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
 			}
 			return true;
 		};
+	};
+	auto make_description = [size = solution.sub_trajectory.size()](const std::size_t index) {
+		return std::to_string(index + 1) + "/" + std::to_string(size);
+	};
+	// TODO: Case for only one subtrajectory
+	if (!make_executable_trajectory(solution.sub_trajectory[0], make_description(0),
+	                                make_apply_planning_scene_diff_cb({ solution.sub_trajectory[0].scene_diff,
+	                                                                    solution.sub_trajectory[1].scene_diff })))
+		return false;
+	for (size_t i = 1; i < solution.sub_trajectory.size() - 1; ++i) {
+		const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj = solution.sub_trajectory[i];
 
+		// define individual variable for use in closure below
+		const std::string description = make_description(i);
+		if (!make_executable_trajectory(sub_traj, description,
+		                                make_apply_planning_scene_diff_cb({ solution.sub_trajectory[i + 1].scene_diff })))
+			return false;
 		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
-			RCLCPP_ERROR_STREAM(LOGGER, "invalid intermediate robot state in scene diff of SubTrajectory " << description);
+			RCLCPP_ERROR_STREAM(LOGGER, "invalid intermediate robot state in scene diff of subtrajectory " << description);
 			return false;
 		}
 	}
-
+	make_executable_trajectory(solution.sub_trajectory.back(), make_description(solution.sub_trajectory.size() - 1), {});
 	return true;
 }
 
