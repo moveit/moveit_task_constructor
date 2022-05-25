@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 	cl_cost->cumulative = false;
 	rosparam_shortcuts::get(node, "cumulative", cl_cost->cumulative);  // sum up pairwise distances?
 	cl_cost->with_world = true;
-	rosparam_shortcuts::get(node, "with_world", cl_cost->cumulative);  // consider distance to world objects?
+	rosparam_shortcuts::get(node, "with_world", cl_cost->with_world);  // consider distance to world objects?
 	ik->setCostTerm(std::move(cl_cost));
 
 	t.add(std::move(ik));
