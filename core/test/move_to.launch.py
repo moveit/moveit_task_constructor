@@ -1,15 +1,12 @@
-import os
 import unittest
 
 import launch_testing
 import pytest
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_testing.actions import ReadyToTest
-from launch_testing.asserts import assertExitCodes
 from launch_testing.util import KeepAliveProc
 from moveit_configs_utils import MoveItConfigsBuilder
 
