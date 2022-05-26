@@ -64,12 +64,7 @@ moveit_msgs::msg::AttachedCollisionObject createAttachedObject(const std::string
 	geometry_msgs::msg::Pose p;
 	p.position.x = 0.1;
 	p.orientation.w = 1.0;
-#if MOVEIT_HAS_OBJECT_POSE
 	aco.object.pose = p;
-#else
-	aco.object.primitive_poses.resize(1, p);
-	aco.object.primitive_poses[0] = p;
-#endif
 	return aco;
 }
 

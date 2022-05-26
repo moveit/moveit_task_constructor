@@ -45,11 +45,6 @@
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
 	 major * 1'000'000 + minor * 1'000 + patch)
 
-// use object shape poses relative to a single object pose
-#define MOVEIT_HAS_OBJECT_POSE 1
-
-#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK 1
-
 #if !MOVEIT_VERSION_GE(3, 0, 0)
 // the pointers are not yet available
 namespace trajectory_processing {

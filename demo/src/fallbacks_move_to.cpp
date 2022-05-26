@@ -84,13 +84,7 @@ int main(int argc, char** argv) {
 			co.id = "box";
 			co.header.frame_id = "panda_link0";
 			co.operation = co.ADD;
-#if MOVEIT_HAS_OBJECT_POSE
-			auto& pose{ co.pose };
-#else
-			co.primitive_poses.emplace_back();
-			auto& pose{ co.primitive_poses[0] };
-#endif
-			pose = []() {
+			co.pose = []() {
 				geometry_msgs::msg::Pose p;
 				p.position.x = 0.3;
 				p.position.y = 0.0;

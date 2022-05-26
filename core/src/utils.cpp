@@ -54,18 +54,7 @@ namespace utils {
 
 const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
                                                                   std::string frame) {
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
 	return state.getRigidlyConnectedParentLinkModel(frame);
-#else
-	const moveit::core::LinkModel* link{ nullptr };
-
-	if (state.hasAttachedBody(frame)) {
-		link = state.getAttachedBody(frame)->getAttachedLink();
-	} else if (state.getRobotModel()->hasLinkModel(frame))
-		link = state.getLinkModel(frame);
-
-	return state.getRobotModel()->getRigidlyConnectedParentLinkModel(link);
-#endif
 }
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
