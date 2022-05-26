@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
 
 	auto initial = std::make_unique<stages::FixedState>();
 	initial->setState(scene);
+	initial->properties().set("ignore_collisions", true);
 
 	auto ik = std::make_unique<stages::ComputeIK>();
 	ik->insert(std::move(initial));

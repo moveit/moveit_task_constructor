@@ -18,7 +18,7 @@ using namespace moveit::task_constructor;
 
 using FallbacksFixtureGenerator = TaskTestBase;
 
-TEST_F(FallbacksFixtureGenerator, DISABLED_stayWithFirstSuccessful) {
+TEST_F(FallbacksFixtureGenerator, stayWithFirstSuccessful) {
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(INF)));
 	fallback->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(1.0)));
@@ -56,7 +56,7 @@ TEST_F(FallbacksFixturePropagate, failingWithFailedSolutions) {
 	EXPECT_EQ(t.solutions().size(), 0u);
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStageOnly) {
+TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStageOnly) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -68,7 +68,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStageOnly) {
 	EXPECT_EQ(t.numSolutions(), 1u);
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutionOnly) {
+TEST_F(FallbacksFixturePropagate, computeFirstSuccessfulStagePerSolutionOnly) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0 })));
 	// duplicate generator solutions with resulting costs: 4, 2 | 3, 1
 	t.add(std::make_unique<ForwardMockup>(PredefinedCosts({ 2.0, 0.0, 2.0, 0.0 }), 2));
@@ -79,10 +79,11 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ComputeFirstSuccessfulStagePerSolutio
 	t.add(std::move(fallbacks));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_COSTS(t.solutions(), testing::ElementsAre(113, 124, 211, 222));
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(113, 124, 212, 221));
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
+// requires individual job control in Fallbacks's children
+TEST_F(FallbacksFixturePropagate, DISABLED_updateSolutionOrder) {
 	t.add(std::make_unique<BackwardMockup>(PredefinedCosts({ 10.0, 0.0 })));
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 	// available solutions (sorted) in individual runs of fallbacks: 1 | 11, 2 | 2, 11
@@ -101,7 +102,8 @@ TEST_F(FallbacksFixturePropagate, DISABLED_UpdateSolutionOrder) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(2));  // expecting less costly solution as result
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
+// requires individual job control in Fallbacks's children
+TEST_F(FallbacksFixturePropagate, DISABLED_multipleActivePendingStates) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 2.0, 1.0, 3.0 })));
 	// use a fallback container to delay computation: the 1st child never succeeds, but only the 2nd
 	auto inner = std::make_unique<Fallbacks>("Inner");
@@ -118,7 +120,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_MultipleActivePendingStates) {
 	// check that first solution is not marked as pruned
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -130,7 +132,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
+TEST_F(FallbacksFixturePropagate, successfulWithMixedSolutions2) {
 	t.add(std::make_unique<GeneratorMockup>());
 
 	auto fallback = std::make_unique<Fallbacks>("Fallbacks");
@@ -142,7 +144,7 @@ TEST_F(FallbacksFixturePropagate, DISABLED_successfulWithMixedSolutions2) {
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(1.0));
 }
 
-TEST_F(FallbacksFixturePropagate, DISABLED_ActiveChildReset) {
+TEST_F(FallbacksFixturePropagate, activeChildReset) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, INF, 3.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
@@ -160,18 +162,18 @@ TEST_F(FallbacksFixturePropagate, DISABLED_ActiveChildReset) {
 
 using FallbacksFixtureConnect = TaskTestBase;
 
-TEST_F(FallbacksFixtureConnect, DISABLED_ConnectStageInsideFallbacks) {
+TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 1.0, 2.0 })));
 
 	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
-	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts::constant(0.0)));
+	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts({ 0.0, 0.0, INF, 0.0 })));
 	fallbacks->add(std::make_unique<ConnectMockup>(PredefinedCosts::constant(100.0)));
 	t.add(std::move(fallbacks));
 
 	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 10.0, 20.0 })));
 
 	EXPECT_TRUE(t.plan());
-	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 21, 22));
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 22, 121));
 }
 
 int main(int argc, char** argv) {

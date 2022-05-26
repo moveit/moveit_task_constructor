@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(moveit_task_constructor_demo)
 
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -54,6 +52,7 @@ demo(cartesian)
 demo(modular)
 demo(alternative_path_costs)
 demo(ik_clearance_cost)
+demo(fallbacks_move_to)
 
 demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)

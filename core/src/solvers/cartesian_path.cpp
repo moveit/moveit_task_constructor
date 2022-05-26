@@ -40,8 +40,10 @@
 #include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_parameterization.h>
 #include <moveit/robot_state/cartesian_interpolator.h>
+
+using namespace trajectory_processing;
 
 namespace moveit {
 namespace task_constructor {
@@ -101,9 +103,9 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	for (const auto& waypoint : trajectory)
 		result->addSuffixWayPoint(waypoint, 0.0);
 
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
-	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-	                         props.get<double>("max_acceleration_scaling_factor"));
+	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
+	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+	                          props.get<double>("max_acceleration_scaling_factor"));
 
 	return achieved_fraction >= props.get<double>("min_fraction");
 }

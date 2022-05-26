@@ -84,6 +84,21 @@ bool InterfaceState::Priority::operator<(const InterfaceState::Priority& other) 
 	return cost() < other.cost();
 }
 
+void InterfaceState::updatePriority(const InterfaceState::Priority& priority) {
+	// Never overwrite ARMED with PRUNED
+	if (priority.status() == InterfaceState::Status::PRUNED && priority_.status() == InterfaceState::Status::ARMED)
+		return;
+
+	if (owner()) {
+		owner()->updatePriority(this, priority);
+	} else {
+		setPriority(priority);
+	}
+}
+void InterfaceState::updateStatus(Status status) {
+	updatePriority(InterfaceState::Priority(priority_, status));
+}
+
 Interface::Interface(const Interface::NotifyFunction& notify) : notify_(notify) {}
 
 // Announce a new InterfaceState
@@ -117,7 +132,7 @@ void Interface::add(InterfaceState& state) {
 	moveFrom(it, container);
 	// and finally call notify callback
 	if (notify_)
-		notify_(it, false);
+		notify_(it, UpdateFlags());
 }
 
 Interface::container_type Interface::remove(iterator it) {
@@ -128,15 +143,23 @@ Interface::container_type Interface::remove(iterator it) {
 }
 
 void Interface::updatePriority(InterfaceState* state, const InterfaceState::Priority& priority) {
-	if (priority == state->priority())
+	const auto old_prio = state->priority();
+	if (priority == old_prio)
 		return;  // nothing to do
 
 	auto it = std::find(begin(), end(), state);  // find iterator to state
 	assert(it != end());  // state should be part of this interface
+
 	state->priority_ = priority;  // update priority
 	update(it);  // update position in ordered list
-	if (notify_)
-		notify_(it, true);  // notify callback
+
+	if (notify_) {
+		UpdateFlags updated(Update::ALL);
+		if (old_prio.status() == priority.status())
+			updated &= ~STATUS;
+
+		notify_(it, updated);  // notify callback
+	}
 }
 
 std::ostream& operator<<(std::ostream& os, const Interface& interface) {
@@ -146,15 +169,20 @@ std::ostream& operator<<(std::ostream& os, const Interface& interface) {
 		os << istate->priority() << "  ";
 	return os;
 }
+const char* InterfaceState::STATUS_COLOR[] = {
+	"\033[32m",  // ENABLED - green
+	"\033[33m",  // ARMED - yellow
+	"\033[31m",  // PRUNED - red
+	"\033[m"  // reset
+};
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio) {
 	// maps InterfaceState::Status values to output (color-changing) prefix
-	static const char* prefix[] = {
-		"\033[32me:",  // ENABLED - green
-		"\033[33md:",  // PRUNED - yellow
-		"\033[31mf:",  // FAILED - red
-	};
-	static const char* color_reset = "\033[m";
-	os << prefix[prio.status()] << prio.depth() << ":" << prio.cost() << color_reset;
+	os << InterfaceState::STATUS_COLOR[prio.status()] << prio.depth() << ":" << prio.cost()
+	   << InterfaceState::STATUS_COLOR[3];
+	return os;
+}
+std::ostream& operator<<(std::ostream& os, Interface::Direction dir) {
+	os << (dir == Interface::FORWARD ? "↓" : "↑");
 	return os;
 }
 
@@ -169,8 +197,13 @@ void SolutionBase::setCost(double cost) {
 
 void SolutionBase::markAsFailure(const std::string& msg) {
 	setCost(std::numeric_limits<double>::infinity());
-	if (!msg.empty())
-		setComment(msg + "\n" + comment());
+	if (!msg.empty()) {
+		std::stringstream ss;
+		ss << msg;
+		if (!comment().empty())
+			ss << "\n" << comment();
+		setComment(ss.str());
+	}
 }
 
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::msg::SolutionInfo& info, Introspection* introspection) const {

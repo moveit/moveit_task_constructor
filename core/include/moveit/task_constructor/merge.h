@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/trajectory_processing/time_parameterization.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -57,6 +58,7 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
  */
 robot_trajectory::RobotTrajectoryPtr
 merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-      const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group);
+      const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group,
+      const trajectory_processing::TimeParameterization& time_parameterization);
 }  // namespace task_constructor
 }  // namespace moveit

@@ -106,6 +106,33 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , parent_{ nullptr }
   , introspection_{ nullptr } {}
 
+StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
+	assert(typeid(*this) == typeid(other));
+
+	assert(states_.empty() && other.states_.empty());
+	assert((!starts_ || starts_->empty()) && (!other.starts_ || other.starts_->empty()));
+	assert((!ends_ || ends_->empty()) && (!other.ends_ || other.ends_->empty()));
+	assert(solutions_.empty() && other.solutions_.empty());
+	assert(failures_.empty() && other.failures_.empty());
+
+	// me_ must not be changed!
+	name_ = std::move(other.name_);
+	properties_ = std::move(other.properties_);
+	cost_term_ = std::move(other.cost_term_);
+	solution_cbs_ = std::move(other.solution_cbs_);
+
+	starts_ = std::move(other.starts_);
+	ends_ = std::move(other.ends_);
+	prev_ends_ = std::move(other.prev_ends_);
+	next_starts_ = std::move(other.next_starts_);
+
+	parent_ = std::move(other.parent_);
+	it_ = std::move(other.it_);
+	other.unparent();
+
+	return *this;
+}
+
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
 	if (starts())
@@ -316,6 +343,7 @@ void Stage::reset() {
 	impl->next_starts_.reset();
 	// reset inherited properties
 	impl->properties_.reset();
+	impl->total_compute_time_ = std::chrono::duration<double>::zero();
 }
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
@@ -483,14 +511,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(new Interface());
+				starts_ = std::make_shared<Interface>();
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface());
+				ends_ = std::make_shared<Interface>();
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -688,10 +716,10 @@ void MonitoringGeneratorPrivate::solutionCB(const SolutionBase& s) {
 }
 
 ConnectingPrivate::ConnectingPrivate(Connecting* me, const std::string& name) : ComputeBasePrivate(me, name) {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1,
-	                                      std::placeholders::_2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1,
-	                                    std::placeholders::_2)));
+	starts_ = std::make_shared<Interface>(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this,
+	                                                std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+	    std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
@@ -709,56 +737,108 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
-template <Interface::Direction other>
-void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (updated) {  // many pairs might be affected: resort
-		if (it->priority().pruned())
-			// remove all pending pairs involving this state
-			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
-		else
-			// TODO(v4hn): If a state becomes reenabled, this skips all previously removed pairs, right?
-			pending.sort();
-	} else {  // new state: insert all pairs with other interface
-		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
-		InterfacePtr other_interface = pullInterface(other);
-		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			// Don't re-enable states that are marked DISABLED
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is FAILED
-				if (oit->priority().status() == InterfaceState::Status::FAILED)
-					oit->owner()->updatePriority(&*oit,
-					                             InterfaceState::Priority(oit->priority(), InterfaceState::Status::ENABLED));
-				pending.insert(make_pair<other>(it, oit));
+template <Interface::Direction dir>
+void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
+	auto parent_pimpl = parent()->pimpl();
+	// disable current interface to break loop (jumping back and forth between both interfaces)
+	// this will be checked by notifyEnabled() below
+	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
+	if (updated) {
+		if (updated.testFlag(Interface::STATUS) &&  // only perform these costly operations if needed
+		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppressing recursive loop?
+		{
+			// If status has changed, propagate the update to the opposite side
+			auto status = it->priority().status();
+			if (status == InterfaceState::Status::PRUNED)  // PRUNED becomes ARMED on opposite side
+				status = InterfaceState::Status::ARMED;  // (only for pending state pairs)
+
+			for (const auto& candidate : this->pending) {
+				if (std::get<opposite<dir>()>(candidate) != it)  // only consider pairs with source state == state
+					continue;
+				auto oit = std::get<dir>(candidate);  // opposite target state
+				auto ostatus = oit->priority().status();
+				if (ostatus != status) {
+					if (status != InterfaceState::Status::ENABLED) {
+						// quicker check for hasPendingOpposites(): search in it->owner() for an enabled alternative
+						bool cancel = false;  // if found, cancel propagation of new status
+						for (const auto alternative : *it->owner())
+							if ((cancel = alternative->priority().enabled()))
+								break;
+						if (cancel)
+							continue;
+					}
+					// pass creator=nullptr to skip hasPendingOpposites() check
+					parent_pimpl->setStatus<opposite<dir>()>(nullptr, nullptr, &*oit, status);
+				}
 			}
 		}
+
+		// many pairs will have changed priorities: resort pending list
+		pending.sort();
+	} else {  // new state: insert all pairs with other interface
+		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
+		InterfacePtr other_interface = pullInterface<dir>();
+		bool have_enabled_opposites = false;
+		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
+			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
+				continue;
+
+			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
+			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+			if (oit->priority().status() == InterfaceState::Status::ARMED)
+				parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+			if (oit->priority().enabled())
+				have_enabled_opposites = true;
+
+			// Remember all pending states, regardless of their status!
+			pending.insert(make_pair<dir>(it, oit));
+		}
+		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
+			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
+			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
-	// std::cerr << name_ << ": ";
-	// printPendingPairs(std::cerr);
-	// std::cerr << std::endl;
+#if 0
+	auto& os = std::cerr;
+	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
+		if (d == Interface::FORWARD)
+			os << "  " << std::setw(10) << std::left << this->name();
+		else
+			os << std::setw(12) << std::right << "";
+		if (dir != d)
+			os << (updated ? " !" : " +");
+		else
+			os << "  ";
+		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+	}
+	os << std::setw(15) << " ";
+	printPendingPairs(os) << std::endl;
+#endif
 }
 
-// Check whether there are pending feasible states that could connect to source.
-// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+// Check whether there are pending feasible states (other than source) that could connect to target.
+// If not, we exhausted all solution candidates for target and thus should mark it as failure.
 template <Interface::Direction dir>
-inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const {
 	for (const auto& candidate : this->pending) {
-		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
-		const auto src = std::get<dir>(candidate);
-		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
-		const auto tgt = std::get<opposite<dir>()>(candidate);
+		static_assert(Interface::FORWARD == 0 && Interface::BACKWARD == 1,
+		              "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const InterfaceState* src = &*std::get<dir>(candidate);
+		const InterfaceState* tgt = &*std::get<opposite<dir>()>(candidate);
 
-		if (&*src == source && tgt->priority().enabled())
+		if (tgt == target && src != source && src->priority().enabled())
 			return true;
 
 		// early stopping when only infeasible pairs are to come
-		if (!std::get<0>(candidate)->priority().enabled())
+		if (!std::get<0>(candidate)->priority().enabled() || !std::get<1>(candidate)->priority().enabled())
 			break;
 	}
 	return false;
 }
 // explicitly instantiate templates for both directions
-template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
-template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* start,
+                                                                         const InterfaceState* end) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* end,
+                                                                          const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
 	// Do we still have feasible pending state pairs?
@@ -775,24 +855,15 @@ void ConnectingPrivate::compute() {
 }
 
 std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
-	static const char* red = "\033[31m";
-	static const char* reset = "\033[m";
+	const char* reset = InterfaceState::STATUS_COLOR[3];
 	for (const auto& candidate : pending) {
-		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
-			os << " " << red;
-		// find indeces of InterfaceState pointers in start/end Interfaces
-		unsigned int first = 0, second = 0;
-		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
-			++first;
-			return &*candidate.first == s;
-		});
-		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
-			++second;
-			return &*candidate.second == s;
-		});
-		os << first << ":" << second << " ";
+		size_t first = getIndex(*starts(), candidate.first);
+		size_t second = getIndex(*ends(), candidate.second);
+		os << InterfaceState::STATUS_COLOR[candidate.first->priority().status()] << first << reset << ":"
+		   << InterfaceState::STATUS_COLOR[candidate.second->priority().status()] << second << reset << " ";
 	}
-	os << reset;
+	if (pending.empty())
+		os << "---";
 	return os;
 }
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("Connecting");

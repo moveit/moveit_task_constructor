@@ -141,6 +141,7 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 		Specification spec;
 		spec.model = robot_model;
 		spec.pipeline = pipeline_name_;
+		spec.ns = pipeline_name_;
 		planner_ = create(node_, spec);
 	} else if (robot_model != planner_->getRobotModel()) {
 		throw std::runtime_error(

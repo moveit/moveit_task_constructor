@@ -8,6 +8,10 @@
 
 #include <gtest/gtest.h>
 
+#ifndef TYPED_TEST_SUITE
+#define TYPED_TEST_SUITE(SUITE, TYPES) TYPED_TEST_CASE(SUITE, TYPES)
+#endif
+
 using namespace moveit::task_constructor;
 
 using Pruning = TaskTestBase;
@@ -40,7 +44,54 @@ TEST_F(Pruning, PruningMultiForward) {
 	EXPECT_EQ((*t.solutions().begin())->cost(), 0u);
 }
 
+// The 2nd failing FW attempt would prune the path through CON,
+// but shouldn't because there exist two more GEN2 solutions
+TEST_F(Pruning, NoPruningIfAlternativesExist) {
+	add(t, new GeneratorMockup(PredefinedCosts({ 0.0 })));
+	add(t, new ConnectMockup());
+	add(t, new GeneratorMockup(std::list<double>{ 0, 10, 20, 30 }, 2));
+	add(t, new ForwardMockup({ INF, INF, 0.0, INF }));
+
+	t.plan();
+
+	EXPECT_EQ(t.solutions().size(), 1u);
+}
+
+TEST_F(Pruning, ConnectReactivatesPrunedPaths) {
+	add(t, new BackwardMockup);
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ConnectMockup());
+	// the solution here should re-activate the initially pruned backward path
+	add(t, new GeneratorMockup({ 0 }));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_EQ(t.solutions().size(), 1u);
+}
+
+// same as before, but wrapping Connect into a container
+template <typename T>
+struct PruningContainerTests : public Pruning
+{
+	void test() {
+		add(t, new BackwardMockup);
+		add(t, new GeneratorMockup({ 0 }));
+		auto c = new T();
+		add(*c, new ConnectMockup());
+		add(t, c);
+		add(t, new GeneratorMockup({ 0 }));
+
+		EXPECT_TRUE(t.plan());
+		EXPECT_EQ(t.solutions().size(), 1u);
+	}
+};
+using ContainerTypes = ::testing::Types<SerialContainer>;  // TODO: fails for Fallbacks!
+TYPED_TEST_SUITE(PruningContainerTests, ContainerTypes);
+TYPED_TEST(PruningContainerTests, ConnectReactivatesPrunedPaths) {
+	this->test();
+}
+
 TEST_F(Pruning, ConnectConnectForward) {
+	add(t, new BackwardMockup());
 	add(t, new GeneratorMockup());
 	auto c1 = add(t, new ConnectMockup({ INF, 0, 0 }));  // 1st attempt is a failue
 	add(t, new GeneratorMockup({ 0, 10, 20 }));
@@ -62,6 +113,7 @@ TEST_F(Pruning, ConnectConnectForward) {
 }
 
 TEST_F(Pruning, ConnectConnectBackward) {
+	add(t, new BackwardMockup());
 	add(t, new GeneratorMockup({ 1, 2, 3 }));
 	auto c1 = add(t, new ConnectMockup());
 	add(t, new BackwardMockup());
@@ -140,4 +192,18 @@ TEST_F(Pruning, PropagateFromParallelContainerMultiplePaths) {
 
 	// the failure in one branch of Alternatives must not prune computing back
 	EXPECT_EQ(back->runs_, 1u);
+}
+
+TEST_F(Pruning, TwoConnects) {
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
+	add(t, new ConnectMockup());
+
+	add(t, new GeneratorMockup());
+	add(t, new ConnectMockup());
+
+	add(t, new GeneratorMockup());
+	add(t, new ForwardMockup());
+
+	EXPECT_FALSE(t.plan());
 }

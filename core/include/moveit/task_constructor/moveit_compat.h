@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/version.h>
+#include <moveit/macros/class_forward.h>
 
 #define MOVEIT_VERSION_GE(major, minor, patch)                                                \
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
@@ -47,4 +48,11 @@
 // use object shape poses relative to a single object pose
 #define MOVEIT_HAS_OBJECT_POSE 1
 
-#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK 0
+#define MOVEIT_HAS_STATE_RIGID_PARENT_LINK 1
+
+#if !MOVEIT_VERSION_GE(3, 0, 0)
+// the pointers are not yet available
+namespace trajectory_processing {
+MOVEIT_CLASS_FORWARD(TimeParameterization);
+}
+#endif

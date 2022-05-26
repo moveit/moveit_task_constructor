@@ -76,30 +76,14 @@ namespace task_constructor {
 TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
   : WrapperBasePrivate(me, std::string()), ns_(rosNormalizeName(ns)), preempt_requested_(false) {}
 
-void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
-	// It only makes sense to swap pimpl instances of a Task!
-	// However, due to member protection rules, we can only implement it here
-	assert(typeid(lhs) == typeid(rhs));
-
-	// swap instances
-	::std::swap(lhs, rhs);
-	// as well as their me_ pointers
-	::std::swap(lhs->me_, rhs->me_);
-
-	// and redirect the parent pointers of children to new parents
-	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
-	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(lhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
-
-	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
-	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(rhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
+TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
+	this->WrapperBasePrivate::operator=(std::move(other));
+	ns_ = std::move(other.ns_);
+	introspection_ = std::move(other.introspection_);
+	robot_model_ = std::move(other.robot_model_);
+	robot_model_loader_ = std::move(other.robot_model_loader_);
+	task_cbs_ = std::move(other.task_cbs_);
+	return *this;
 }
 
 const ContainerBase* TaskPrivate::stages() const {
@@ -124,7 +108,7 @@ Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
 
 Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-constructor)
 	clear();  // remove all stages of current task
-	swap(this->pimpl_, other.pimpl_);
+	*static_cast<TaskPrivate*>(pimpl_) = std::move(*static_cast<TaskPrivate*>(other.pimpl_));
 	return *this;
 }
 
@@ -248,30 +232,37 @@ void Task::compute() {
 	stages()->pimpl()->runCompute();
 }
 
-bool Task::plan(size_t max_solutions) {
+moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
 	init();
 
+	// Print state and return success if there are solutions otherwise the input error_code
+	const auto success_or = [this](const int32_t error_code) {
+		printState();
+		return numSolutions() > 0 ? moveit::core::MoveItErrorCode::SUCCESS : error_code;
+	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
-	while (!impl->preempt_requested_ && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions) &&
-	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
+	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
+		if (impl->preempt_requested_)
+			return success_or(moveit::core::MoveItErrorCode::PREEMPTED);
+		if (std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() > available_time)
+			return success_or(moveit::core::MoveItErrorCode::TIMED_OUT);
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
-	}
-	printState();
-	return numSolutions() > 0;
+	};
+	return success_or(moveit::core::MoveItErrorCode::PLANNING_FAILED);
 }
 
 void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-moveit_msgs::msg::MoveItErrorCodes Task::execute(const SolutionBase& s) {
+moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	// Add random ID to prevent warnings about multiple publishers within the same node
 	rclcpp::NodeOptions options;
 	options.arguments(

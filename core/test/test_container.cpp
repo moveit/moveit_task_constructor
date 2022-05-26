@@ -586,10 +586,6 @@ TEST(Task, move) {
 	Task t2 = std::move(t1);
 	EXPECT_EQ(t2.stages()->numChildren(), 2u);
 	EXPECT_EQ(t1.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
-
-	t1 = std::move(t2);
-	EXPECT_EQ(t1.stages()->numChildren(), 2u);
-	EXPECT_EQ(t2.stages()->numChildren(), 0u);  // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 TEST(Task, reuse) {
@@ -655,7 +651,7 @@ TEST(Task, timeout) {
 	// zero timeout fails
 	t.reset();
 	t.setTimeout(0.0);
-	EXPECT_FALSE(t.plan());
+	EXPECT_EQ(t.plan(), moveit::core::MoveItErrorCode::TIMED_OUT);
 
 	// time for 1 solution
 	t.reset();

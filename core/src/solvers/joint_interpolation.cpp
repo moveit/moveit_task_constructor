@@ -37,8 +37,9 @@
 */
 
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
+#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
+#include <moveit/trajectory_processing/time_parameterization.h>
 
 #include <chrono>
 
@@ -47,6 +48,8 @@ namespace task_constructor {
 namespace solvers {
 
 static const auto LOGGER = rclcpp::get_logger("JointInterpolationPlanner");
+
+using namespace trajectory_processing;
 
 JointInterpolationPlanner::JointInterpolationPlanner() {
 	auto& p = properties();
@@ -91,10 +94,9 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	if (from->isStateColliding(to_state, jmg->getName()))
 		return false;
 
-	// add timing, TODO: use a generic method to add timing via plugins
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
-	timing.computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-	                         props.get<double>("max_acceleration_scaling_factor"));
+	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
+	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+	                          props.get<double>("max_acceleration_scaling_factor"));
 
 	return true;
 }
