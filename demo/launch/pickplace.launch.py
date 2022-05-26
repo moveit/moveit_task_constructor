@@ -1,62 +1,19 @@
 import os
-import yaml
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
-
-
-def load_file(package_name, file_path):
-    package_path = get_package_share_directory(package_name)
-    absolute_file_path = os.path.join(package_path, file_path)
-
-    try:
-        with open(absolute_file_path, "r") as file:
-            return file.read()
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
-
-
-def load_yaml(package_name, file_path):
-    package_path = get_package_share_directory(package_name)
-    absolute_file_path = os.path.join(package_path, file_path)
-
-    try:
-        with open(absolute_file_path, "r") as file:
-            return yaml.safe_load(file)
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
+from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def generate_launch_description():
-    # Get URDF and SRDF
-    robot_description_config = load_file(
-        "moveit_resources_panda_description", "urdf/panda.urdf"
+    moveit_config = (
+        MoveItConfigsBuilder("moveit_resources_panda")
+        .planning_pipelines(pipelines=["ompl"])
+        .robot_description(file_path="config/panda.urdf.xacro")
+        .trajectory_execution(file_path="config/gripper_moveit_controllers.yaml")
+        .to_moveit_configs()
     )
-    robot_description = {"robot_description": robot_description_config}
-
-    robot_description_semantic_config = load_file(
-        "moveit_resources_panda_moveit_config", "config/panda.srdf"
-    )
-    robot_description_semantic = {
-        "robot_description_semantic": robot_description_semantic_config
-    }
-
-    kinematics_yaml = load_yaml(
-        "moveit_resources_panda_moveit_config", "config/kinematics.yaml"
-    )
-
-    # Planning Functionality
-    ompl_planning_pipeline_config = {
-        "move_group": {
-            "planning_plugin": "ompl_interface/OMPLPlanner",
-            "request_adapters": """default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints""",
-            "start_state_max_bounds_error": 0.1,
-        }
-    }
-    ompl_planning_yaml = load_yaml(
-        "moveit_resources_panda_moveit_config", "config/ompl_planning.yaml"
-    )
-    ompl_planning_pipeline_config["move_group"].update(ompl_planning_yaml)
 
     pick_place_demo = Node(
         package="moveit_task_constructor_demo",
@@ -68,10 +25,11 @@ def generate_launch_description():
                 "config",
                 "panda_config.yaml",
             ),
-            robot_description,
-            robot_description_semantic,
-            kinematics_yaml,
-            ompl_planning_pipeline_config,
+            moveit_config.robot_description,
+            moveit_config.robot_description_semantic,
+            moveit_config.robot_description_kinematics,
+            moveit_config.planning_pipelines,
+            moveit_config.joint_limits,
         ],
     )
 

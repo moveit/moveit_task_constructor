@@ -1,1 +1,3 @@
 leak:class_loader
+leak:rviz_default_plugins
+leak:static_transform_broadcaster_node
