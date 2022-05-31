@@ -13,11 +13,7 @@ from moveit_configs_utils import MoveItConfigsBuilder
 
 @pytest.mark.launch_test
 def generate_test_description():
-    moveit_config = (
-        MoveItConfigsBuilder("moveit_resources_panda")
-        .robot_description(file_path="config/panda.urdf.xacro")
-        .to_moveit_configs()
-    )
+    moveit_config = MoveItConfigsBuilder("moveit_resources_panda").to_moveit_configs()
 
     test_exec = Node(
         executable=[
