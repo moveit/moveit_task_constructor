@@ -159,7 +159,7 @@ void GraspProvider::compute() {
 	composeGoal();
 
 	// monitor feedback/results
-	// blocking function untill timeout reached or results received
+	// blocking function until timeout reached or results received
 	if (monitorGoal()) {
 		// Protect grasp candidate incase feedback is being recieved asynchronously
 		const std::lock_guard<std::mutex> lock(grasp_mutex_);

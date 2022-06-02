@@ -33,6 +33,6 @@ generate_messages(DEPENDENCIES ${MSG_DEPS})
 
 catkin_package(
 	CATKIN_DEPENDS
-	message_runtime
-	${MSG_DEPS}
+		message_runtime
+		${MSG_DEPS}
 )
