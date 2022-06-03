@@ -41,6 +41,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_parameterization.h>
+#include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/robot_state/cartesian_interpolator.h>
 
 using namespace trajectory_processing;
@@ -56,6 +57,8 @@ CartesianPath::CartesianPath() {
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
 	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
+	p.declare<kinematics::KinematicsQueryOptions>("kinematics_options", kinematics::KinematicsQueryOptions(),
+	                                              "KinematicsQueryOptions to pass to CartesianInterpolator");
 }
 
 void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
@@ -96,7 +99,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
-	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid);
+	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid,
+	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"));
 
 	assert(!trajectory.empty());  // there should be at least the start state
 	result = std::make_shared<robot_trajectory::RobotTrajectory>(sandbox_scene->getRobotModel(), jmg);
