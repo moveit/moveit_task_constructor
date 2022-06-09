@@ -77,7 +77,6 @@ TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
 TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
 	this->WrapperBasePrivate::operator=(std::move(other));
 	ns_ = std::move(other.ns_);
-	introspection_ = std::move(other.introspection_);
 	robot_model_ = std::move(other.robot_model_);
 	robot_model_loader_ = std::move(other.robot_model_loader_);
 	task_cbs_ = std::move(other.task_cbs_);
