@@ -211,17 +211,17 @@ void Task::init() {
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
 	// provide introspection instance to all stages
-	impl->setIntrospection(impl->introspection_.get());
+	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
-	    [impl](Stage& stage, int /*depth*/) {
-		    stage.pimpl()->setIntrospection(impl->introspection_.get());
+	    [introspection](Stage& stage, int /*depth*/) {
+		    stage.pimpl()->setIntrospection(introspection);
 		    return true;
 	    },
 	    1, UINT_MAX);
 
 	// first time publish task
-	if (impl->introspection_)
-		impl->introspection_->publishTaskDescription();
+	if (introspection)
+		introspection->publishTaskDescription();
 }
 
 bool Task::canCompute() const {
