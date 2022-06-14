@@ -80,6 +80,9 @@ TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
 	robot_model_ = std::move(other.robot_model_);
 	robot_model_loader_ = std::move(other.robot_model_loader_);
 	task_cbs_ = std::move(other.task_cbs_);
+	// Ensure same introspection status, but keep the existing introspection instance,
+	// which stores this task pointer and includes it in its task_id_
+	static_cast<Task*>(me_)->enableIntrospection(static_cast<bool>(other.introspection_));
 	return *this;
 }
 
