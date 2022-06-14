@@ -1,4 +1,5 @@
 #include "models.h"
+#include "stage_mockups.h"
 
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/stages/move_to.h>
@@ -159,6 +160,34 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 #endif
+
+// This test require a running rosmaster
+TEST(Task, taskMoveConstructor) {
+	auto create_task = [] {
+		moveit::core::RobotModelConstPtr robot_model = getModel();
+		Task t("first");
+		t.setRobotModel(robot_model);
+		auto ref = new stages::FixedState("fixed");
+		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
+		ref->setState(scene);
+
+		t.add(Stage::pointer(ref));
+		t.add(std::make_unique<ConnectMockup>());
+		t.add(std::make_unique<MonitoringGeneratorMockup>(ref));
+		return t;
+	};
+
+	// Segfaults when introspection is enabled
+	Task t;
+	t = create_task();
+
+	try {
+		t.init();
+		EXPECT_TRUE(t.plan(1));
+	} catch (const InitStageException& e) {
+		ADD_FAILURE() << "InitStageException:" << std::endl << e << t;
+	}
+}
 
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
