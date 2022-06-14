@@ -79,10 +79,12 @@ TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
 TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
 	this->WrapperBasePrivate::operator=(std::move(other));
 	ns_ = std::move(other.ns_);
-	introspection_ = std::move(other.introspection_);
 	robot_model_ = std::move(other.robot_model_);
 	robot_model_loader_ = std::move(other.robot_model_loader_);
 	task_cbs_ = std::move(other.task_cbs_);
+	// Ensure same introspection status, but keep the existing introspection instance,
+	// which stores this task pointer and includes it in its task_id_
+	static_cast<Task*>(me_)->enableIntrospection(static_cast<bool>(other.introspection_));
 	return *this;
 }
 
@@ -211,17 +213,17 @@ void Task::init() {
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
 	// provide introspection instance to all stages
-	impl->setIntrospection(impl->introspection_.get());
+	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
-	    [impl](Stage& stage, int /*depth*/) {
-		    stage.pimpl()->setIntrospection(impl->introspection_.get());
+	    [introspection](Stage& stage, int /*depth*/) {
+		    stage.pimpl()->setIntrospection(introspection);
 		    return true;
 	    },
 	    1, UINT_MAX);
 
 	// first time publish task
-	if (impl->introspection_)
-		impl->introspection_->publishTaskDescription();
+	if (introspection)
+		introspection->publishTaskDescription();
 }
 
 bool Task::canCompute() const {

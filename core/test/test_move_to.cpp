@@ -1,4 +1,5 @@
 #include "models.h"
+#include "stage_mockups.h"
 
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/stages/move_to.h>
@@ -154,6 +155,33 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	move_to->setIKFrame(IK_FRAME);
 	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", IK_FRAME));
 	EXPECT_ONE_SOLUTION;
+}
+
+// https://github.com/ros-planning/moveit_task_constructor/pull/371#issuecomment-1151630657
+TEST(Task, taskMoveConstructor) {
+	auto create_task = [] {
+		moveit::core::RobotModelConstPtr robot_model = getModel();
+		Task t("first");
+		t.setRobotModel(robot_model);
+		auto ref = new stages::FixedState("fixed");
+		auto scene = std::make_shared<planning_scene::PlanningScene>(t.getRobotModel());
+		ref->setState(scene);
+
+		t.add(Stage::pointer(ref));
+		t.add(std::make_unique<ConnectMockup>());
+		t.add(std::make_unique<MonitoringGeneratorMockup>(ref));
+		return t;
+	};
+
+	Task t;
+	t = create_task();
+
+	try {
+		t.init();
+		EXPECT_TRUE(t.plan(1));
+	} catch (const InitStageException& e) {
+		ADD_FAILURE() << "InitStageException:" << std::endl << e << t;
+	}
 }
 
 int main(int argc, char** argv) {
