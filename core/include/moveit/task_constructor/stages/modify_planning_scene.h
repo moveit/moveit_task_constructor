@@ -135,7 +135,8 @@ protected:
 	// list of objects to attach (true) / detach (false) to a given link
 	std::map<std::string, std::pair<Names, bool>> attach_objects_;
 	// list of objects to add / remove to the planning scene
-	std::vector<moveit_msgs::msg::CollisionObject> collision_objects_;
+	std::vector<moveit_msgs::msg::CollisionObject> add_collision_objects_;
+	std::vector<moveit_msgs::msg::CollisionObject> remove_collision_objects_;
 
 	// list of objects to mutually
 	struct CollisionMatrixPairs

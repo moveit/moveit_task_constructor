@@ -64,14 +64,14 @@ void ModifyPlanningScene::addObject(const moveit_msgs::msg::CollisionObject& col
 		                                      "to ADD -- ignoring the object");
 		return;
 	}
-	collision_objects_.push_back(collision_object);
+	add_collision_objects_.push_back(collision_object);
 }
 
 void ModifyPlanningScene::removeObject(const std::string& object_name) {
 	moveit_msgs::msg::CollisionObject obj;
 	obj.id = object_name;
 	obj.operation = moveit_msgs::msg::CollisionObject::REMOVE;
-	collision_objects_.push_back(obj);
+	remove_collision_objects_.push_back(obj);
 }
 
 void ModifyPlanningScene::allowCollisions(const Names& first, const Names& second, bool allow) {
@@ -124,8 +124,8 @@ void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene& scene, 
 InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool invert) {
 	planning_scene::PlanningScenePtr scene = from.scene()->diff();
 	InterfaceState result(scene);
-	// add/remove objects
-	for (const auto& collision_object : collision_objects_)
+	// add objects
+	for (const auto& collision_object : add_collision_objects_)
 		processCollisionObject(*scene, collision_object);
 
 	// attach/detach objects
@@ -135,6 +135,10 @@ InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool inver
 	// allow/forbid collisions
 	for (const auto& pairs : collision_matrix_edits_)
 		allowCollisions(*scene, pairs, invert);
+
+	// remove objects
+	for (const auto& collision_object : remove_collision_objects_)
+		processCollisionObject(*scene, collision_object);
 
 	if (callback_)
 		callback_(scene, properties());
