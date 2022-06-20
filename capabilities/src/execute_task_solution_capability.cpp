@@ -95,10 +95,13 @@ void ExecuteTaskSolutionCapability::initialize() {
 	    ActionServerType::CancelCallback(
 	        std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this, std::placeholders::_1)),
 	    ActionServerType::AcceptedCallback(
-	        std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1)));
+	        [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
+		        last_goal_future_ =
+		            std::async(std::launch::async, &ExecuteTaskSolutionCapability::execCallback, this, goal_handle);
+	        }));
 }
 
-void ExecuteTaskSolutionCapability::goalCallback(
+void ExecuteTaskSolutionCapability::execCallback(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
 	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
 
