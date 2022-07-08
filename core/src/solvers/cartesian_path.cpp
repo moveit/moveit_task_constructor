@@ -59,6 +59,8 @@ CartesianPath::CartesianPath() {
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
 	p.declare<kinematics::KinematicsQueryOptions>("kinematics_options", kinematics::KinematicsQueryOptions(),
 	                                              "KinematicsQueryOptions to pass to CartesianInterpolator");
+	p.declare<kinematics::KinematicsBase::IKCostFn>("kinematics_cost_fn", kinematics::KinematicsBase::IKCostFn(),
+	                                                "Cost function to pass to IK solver");
 }
 
 void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
@@ -100,7 +102,8 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
 	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid,
-	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"));
+	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"),
+	    props.get<kinematics::KinematicsBase::IKCostFn>("kinematics_cost_fn"));
 
 	assert(!trajectory.empty());  // there should be at least the start state
 	result = std::make_shared<robot_trajectory::RobotTrajectory>(sandbox_scene->getRobotModel(), jmg);
