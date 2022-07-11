@@ -47,7 +47,8 @@ ament_target_dependencies(${PROJECT_NAME}
 )
 target_include_directories(${PROJECT_NAME}
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+	       $<INSTALL_INTERFACE:include>
 )
 
 add_subdirectory(stages)
