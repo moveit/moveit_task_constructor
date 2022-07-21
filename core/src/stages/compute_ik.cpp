@@ -84,7 +84,14 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 }
 
 // found IK solutions
-using IKSolutions = std::vector<std::vector<double>>;
+
+struct IKSolution {
+	std::vector<double> joint_positions;
+	bool feasible;
+	collision_detection::Contact contact;
+};
+
+using IKSolutions = std::vector<IKSolution>;
 
 namespace {
 
@@ -353,14 +360,25 @@ void ComputeIK::compute() {
 	                 &ik_solutions](robot_state::RobotState* state, const robot_model::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
-			if (jmg->distance(joint_positions, sol.data()) < min_solution_distance)
+			if (jmg->distance(joint_positions, sol.joint_positions.data()) < min_solution_distance)
 				return false;  // too close to already found solution
 		}
 		state->setJointGroupPositions(jmg, joint_positions);
 		ik_solutions.emplace_back();
-		state->copyJointGroupPositions(jmg, ik_solutions.back());
+		auto& solution{ ik_solutions.back() };
+		state->copyJointGroupPositions(jmg, solution.joint_positions);
+		collision_detection::CollisionRequest req;
+		collision_detection::CollisionResult res;
+		req.contacts = true;
+		req.max_contacts = 1;
+		scene->checkCollision(req, res, *state);
+		solution.feasible = ignore_collisions || !res.collision;
+		if (res.contacts.size() > 0) {
+			solution.contact = res.contacts.begin()->second.front();
+		}
+		
 
-		return ignore_collisions || !scene->isStateColliding(*state, jmg->getName());
+		return solution.feasible;
 	};
 
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
@@ -388,15 +406,17 @@ void ComputeIK::compute() {
 			solution.setComment(s.comment());
 			std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 
-			if (succeeded && i + 1 == ik_solutions.size())
+			if (ik_solutions[i].feasible)
 				// compute cost as distance to compare_pose
-				solution.setCost(s.cost() + jmg->distance(ik_solutions.back().data(), compare_pose.data()));
-			else  // found an IK solution, but this was not valid
-				solution.markAsFailure();
-
+				solution.setCost(s.cost() + jmg->distance(ik_solutions[i].joint_positions.data(), compare_pose.data()));
+			else { // found an IK solution, but this was not valid
+				std::stringstream ss;
+				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '" << ik_solutions[i].contact.body_name_2 << "'";
+				solution.markAsFailure(ss.str());
+			} 
 			// set scene's robot state
 			robot_state::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
-			solution_state.setJointGroupPositions(jmg, ik_solutions[i].data());
+			solution_state.setJointGroupPositions(jmg, ik_solutions[i].joint_positions.data());
 			solution_state.update();
 
 			InterfaceState state(solution_scene);
