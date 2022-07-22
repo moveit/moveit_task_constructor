@@ -85,7 +85,8 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 
 // found IK solutions
 
-struct IKSolution {
+struct IKSolution
+{
 	std::vector<double> joint_positions;
 	bool feasible;
 	collision_detection::Contact contact;
@@ -376,8 +377,6 @@ void ComputeIK::compute() {
 		if (res.contacts.size() > 0) {
 			solution.contact = res.contacts.begin()->second.front();
 		}
-		
-
 		return solution.feasible;
 	};
 
@@ -409,11 +408,12 @@ void ComputeIK::compute() {
 			if (ik_solutions[i].feasible)
 				// compute cost as distance to compare_pose
 				solution.setCost(s.cost() + jmg->distance(ik_solutions[i].joint_positions.data(), compare_pose.data()));
-			else { // found an IK solution, but this was not valid
+			else {  // found an IK solution, but this was not valid
 				std::stringstream ss;
-				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '" << ik_solutions[i].contact.body_name_2 << "'";
+				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '"
+				   << ik_solutions[i].contact.body_name_2 << "'";
 				solution.markAsFailure(ss.str());
-			} 
+			}
 			// set scene's robot state
 			robot_state::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
 			solution_state.setJointGroupPositions(jmg, ik_solutions[i].joint_positions.data());
