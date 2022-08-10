@@ -342,6 +342,14 @@ Stage* ContainerBase::findChild(const std::string& name) const {
 	return nullptr;
 }
 
+Stage* ContainerBase::front() const {
+	return pimpl()->children().front().get();
+}
+
+Stage* ContainerBase::back() const {
+	return pimpl()->children().back().get();
+}
+
 bool ContainerBase::traverseChildren(const ContainerBase::StageCallback& processor) const {
 	return pimpl()->traverseStages(processor, 0, 1);
 }

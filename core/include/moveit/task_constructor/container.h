@@ -53,6 +53,8 @@ public:
 
 	size_t numChildren() const;
 	Stage* findChild(const std::string& name) const;
+	Stage* front() const;
+	Stage* back() const;
 
 	/** Callback function type used by traverse functions
 	 *  Receives currently visited Stage and current depth in hierarchy
