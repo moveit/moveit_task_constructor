@@ -203,10 +203,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		Eigen::Vector3d linear;  // linear translation
 		Eigen::Vector3d angular;  // angular rotation
 		double linear_norm = 0.0, angular_norm = 0.0;
-
 		Eigen::Isometry3d target_eigen;
-		Eigen::Isometry3d link_pose =
-		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try {  // try to extract Twist
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
@@ -277,8 +274,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 	COMPUTE:
+		const Eigen::Isometry3d& link_pose = scene->getCurrentState().getGlobalLinkTransform(link);
 		// transform target pose such that ik frame will reach there if link does
-		target_eigen = target_eigen * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
+		target_eigen = target_eigen * ik_pose_world.inverse() * link_pose;
 
 		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
