@@ -237,13 +237,13 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 				angular *= -1.0;
 			}
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying motion transform of twist
+			// linear+angular are expressed w.r.t. model frame and thus we need left-multiplication
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			target_eigen = ik_pose_world;
-			target_eigen.linear() =
-			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, ik_pose_world.linear().transpose() * angular);
-			target_eigen.translation() += linear;
+			auto R = Eigen::AngleAxisd(angular_norm, angular);
+			auto p = ik_pose_world.translation();
+			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
 		}
@@ -264,10 +264,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			if (dir == Interface::BACKWARD)
 				linear *= -1.0;
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying delta transform of twist
 			linear = frame_pose.linear() * linear;
-			target_eigen = ik_pose_world;
-			target_eigen.translation() += linear;
+			target_eigen = Eigen::Translation3d(linear) * ik_pose_world;
 		} catch (const boost::bad_any_cast&) {
 			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
 			return false;
