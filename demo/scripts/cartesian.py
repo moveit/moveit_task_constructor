@@ -13,7 +13,6 @@ roscpp_init("mtc_tutorial")
 
 # [cartesianTut1]
 group = "panda_arm"
-eef_frame = "panda_link8"
 # [cartesianTut1]
 
 # [cartesianTut2]
