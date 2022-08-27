@@ -172,8 +172,9 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 }
 
 bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                           const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                           const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target_eigen,
+                           const moveit::core::JointModelGroup* jmg, double timeout,
+                           robot_trajectory::RobotTrajectoryPtr& result,
                            const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
@@ -181,7 +182,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 
 	geometry_msgs::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
-	target.pose = tf2::toMsg(target_eigen);
+	target.pose = tf2::toMsg(target_eigen * offset.inverse());
 
 	req.goal_constraints.resize(1);
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
