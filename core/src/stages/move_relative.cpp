@@ -273,22 +273,22 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		}
 
 	COMPUTE:
-		const Eigen::Isometry3d& link_pose = scene->getCurrentState().getGlobalLinkTransform(link);
-		// transform target pose such that ik frame will reach there if link does
-		target_eigen = target_eigen * ik_pose_world.inverse() * link_pose;
+		// offset from link to ik_frame
+		const Eigen::Isometry3d& offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
-		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		success =
+		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
 		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 		reached_state->updateLinkTransforms();
-		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
+		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
 
 		double distance = 0.0;
 		if (use_rotation_distance) {
-			Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
+			Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
 			distance = rotation.angle();
 		} else
-			distance = (reached_pose.translation() - link_pose.translation()).norm();
+			distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
 
 		// min_distance reached?
 		if (min_distance > 0.0) {
@@ -306,8 +306,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		// visualize plan
 		auto ns = props.get<std::string>("marker_ns");
 		if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
-			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), link_pose, reached_pose, linear,
-			              distance);
+			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
+			              linear, distance);
 		}
 	}
 
