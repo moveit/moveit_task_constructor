@@ -141,7 +141,7 @@ private:
 };
 
 const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
-                                                                  std::string frame);
+                                                                  const std::string& frame);
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
