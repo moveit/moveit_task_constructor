@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_capabilities)
 
-add_compile_options(-std=c++14)
-
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   moveit_core
@@ -12,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   std_msgs
 )
+
+moveit_build_options()
 
 catkin_package(
   LIBRARIES $PROJECT_NAME}

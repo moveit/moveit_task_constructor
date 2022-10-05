@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_demo)
 
-if(NOT "${CMAKE_CXX_STANDARD}")
-  set(CMAKE_CXX_STANDARD 14)
-endif()
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	moveit_core
@@ -14,6 +8,8 @@ find_package(catkin REQUIRED COMPONENTS
 	moveit_ros_planning_interface
 	rosparam_shortcuts
 )
+
+moveit_build_options()
 
 catkin_package(
 	CATKIN_DEPENDS roscpp

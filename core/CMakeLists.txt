@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
 	rviz_marker_tools
 )
 
+moveit_build_options()
+
 catkin_package(
 	LIBRARIES
 		${PROJECT_NAME}
@@ -28,8 +30,6 @@ catkin_package(
 		rviz_marker_tools
 		visualization_msgs
 )
-
-set(CMAKE_CXX_STANDARD 14)
 
 add_compile_options(-fvisibility-inlines-hidden)
 

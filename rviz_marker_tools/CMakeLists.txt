@@ -20,8 +20,6 @@ catkin_package(
 		rviz
 )
 
-set(CMAKE_CXX_STANDARD 14)
-
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
 
 set(HEADERS
