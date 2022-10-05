@@ -57,8 +57,6 @@ catkin_package(
 		rviz
 )
 
-set(CMAKE_CXX_STANDARD 14)
-
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)
 

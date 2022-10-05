@@ -29,8 +29,6 @@ catkin_package(
 		visualization_msgs
 )
 
-set(CMAKE_CXX_STANDARD 14)
-
 add_compile_options(-fvisibility-inlines-hidden)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
