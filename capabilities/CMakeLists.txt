@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+moveit_build_options()
+
 catkin_package(
   LIBRARIES $PROJECT_NAME}
   CATKIN_DEPENDS

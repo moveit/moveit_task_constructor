@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
 	rviz_marker_tools
 )
 
+moveit_build_options()
+
 catkin_package(
 	LIBRARIES
 		${PROJECT_NAME}

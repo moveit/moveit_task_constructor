@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
 	rosparam_shortcuts
 )
 
+moveit_build_options()
+
 catkin_package(
 	CATKIN_DEPENDS roscpp
 )

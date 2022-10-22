@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
 	rviz
 )
 
+moveit_build_options()
+
 # rviz transitively includes OGRE headers which break with `-Wall -Werror`
 # so isolate these include dirs and add them as SYSTEM include where needed.
 set(rviz_OGRE_INCLUDE_DIRS)
