@@ -119,7 +119,6 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	}());
 	aco.object.pose.position.z = 0.2;
 	aco.object.pose.orientation.w = 1.0;
-	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
 	aco.object.subframe_poses.resize(1, [] {
 		geometry_msgs::Pose p;
@@ -138,7 +137,6 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-// If we don't have this, we also don't have subframe support
 TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	const std::string ATTACHED_OBJECT{ "attached_object" };
 	const std::string IK_FRAME{ ATTACHED_OBJECT + "/subframe" };
