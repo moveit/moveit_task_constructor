@@ -1046,8 +1046,7 @@ void FallbacksPrivateConnect::compute() {
 
 void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	// expect failure to be reported from active child
-	assert(active_ != children().end() && active_->get() == &child);
-	(void)child;
+	assert(active_ != children().end() && active_->get() == &child); (void)child;
 	// ... thus we can use std::next(active_) to find the next child
 	auto next = std::next(active_);
 
