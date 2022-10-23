@@ -14,13 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: melodic-source
-            NAME: ccov
-            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: master-source
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
+          - IMAGE: noetic-source
+            NAME: ccov
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: noetic-source
             CXX: clang++
             CLANG_TIDY: true
