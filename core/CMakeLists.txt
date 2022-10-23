@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 	visualization_msgs
 	rviz_marker_tools
 )
+find_package(Eigen3 REQUIRED)
 
 moveit_build_options()
 
@@ -29,6 +30,8 @@ catkin_package(
 		moveit_task_constructor_msgs
 		rviz_marker_tools
 		visualization_msgs
+	DEPENDS
+		EIGEN3
 )
 
 add_compile_options(-fvisibility-inlines-hidden)
