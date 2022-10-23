@@ -22,7 +22,6 @@ jobs:
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: noetic-source
-            CXX: clang++
             CLANG_TIDY: true
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
