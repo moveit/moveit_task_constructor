@@ -15,7 +15,7 @@ jobs:
       matrix:
         env:
           - IMAGE: master-source
-            CXXFLAGS: >-
+            TARGET_CMAKE_ARGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
           - IMAGE: noetic-source
@@ -23,7 +23,7 @@ jobs:
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: noetic-source
             CLANG_TIDY: true
-            CXXFLAGS: >-
+            TARGET_CMAKE_ARGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
           - IMAGE: noetic-source
