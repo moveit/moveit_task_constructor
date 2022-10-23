@@ -40,29 +40,12 @@
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/storage.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace utils {
-
-const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
-                                                                  std::string frame) {
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
-	return state.getRigidlyConnectedParentLinkModel(frame);
-#else
-	const moveit::core::LinkModel* link{ nullptr };
-
-	if (state.hasAttachedBody(frame)) {
-		link = state.getAttachedBody(frame)->getAttachedLink();
-	} else if (state.getRobotModel()->hasLinkModel(frame))
-		link = state.getLinkModel(frame);
-
-	return state.getRobotModel()->getRigidlyConnectedParentLinkModel(link);
-#endif
-}
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
@@ -94,7 +77,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
 			tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link) * tip_in_global_frame;
 		} else if (scene.knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			robot_link = getRigidlyConnectedParentLinkModel(scene.getCurrentState(), ik_pose_msg.header.frame_id);
+			robot_link = scene.getCurrentState().getRigidlyConnectedParentLinkModel(ik_pose_msg.header.frame_id);
 			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
 			tip_in_global_frame = scene.getFrameTransform(ik_pose_msg.header.frame_id) * tip_in_global_frame;
 		} else {

@@ -5,7 +5,6 @@
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -118,15 +117,8 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 		p.dimensions[p.SPHERE_RADIUS] = 0.01;
 		return p;
 	}());
-#if MOVEIT_HAS_OBJECT_POSE
 	aco.object.pose.position.z = 0.2;
 	aco.object.pose.orientation.w = 1.0;
-#else
-	aco.object.primitive_poses.resize(1);
-	aco.object.primitive_poses[0].position.z = 0.2;
-	aco.object.primitive_poses[0].orientation.w = 1.0;
-#endif
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
 	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
 	aco.object.subframe_poses.resize(1, [] {
@@ -134,7 +126,6 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 		p.orientation.w = 1.0;
 		return p;
 	}());
-#endif
 	return aco;
 }
 
@@ -147,7 +138,6 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-#if MOVEIT_HAS_STATE_RIGID_PARENT_LINK
 // If we don't have this, we also don't have subframe support
 TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	const std::string ATTACHED_OBJECT{ "attached_object" };
@@ -159,7 +149,6 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", IK_FRAME));
 	EXPECT_ONE_SOLUTION;
 }
-#endif
 
 // This test require a running rosmaster
 TEST(Task, taskMoveConstructor) {

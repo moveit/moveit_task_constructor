@@ -4,7 +4,6 @@
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -63,12 +62,7 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	geometry_msgs::Pose p;
 	p.position.x = 0.1;
 	p.orientation.w = 1.0;
-#if MOVEIT_HAS_OBJECT_POSE
 	aco.object.pose = p;
-#else
-	aco.object.primitive_poses.resize(1, p);
-	aco.object.primitive_poses[0] = p;
-#endif
 	return aco;
 }
 
