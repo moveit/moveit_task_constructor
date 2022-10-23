@@ -78,7 +78,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 }
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                         const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
+                         const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double /*timeout*/,
                          robot_trajectory::RobotTrajectoryPtr& result,
                          const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();

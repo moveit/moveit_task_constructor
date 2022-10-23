@@ -148,7 +148,7 @@ void PropertyFactory::addRemainingProperties(rviz::Property* root, mtc::Property
 }
 
 #ifndef HAVE_YAML
-rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
                                                const std::string& description, const std::string& value,
                                                rviz::Property* old) {
 	if (old) {  // reuse existing Property?

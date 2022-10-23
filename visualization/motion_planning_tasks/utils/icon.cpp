@@ -55,7 +55,7 @@ static QPixmap maskToColorAndAlpha(const QPixmap& mask, const QColor& color) {
 
 using MaskAndColor = QPair<QPixmap, QColor>;
 using MasksAndColors = QList<MaskAndColor>;
-static MasksAndColors masksAndColors(const Icon& icon, int dpr) {
+static MasksAndColors masksAndColors(const Icon& icon, int /*dpr*/) {
 	MasksAndColors result;
 	for (const IconMaskAndColor& i : icon) {
 		const QString& file_name = i.first;
