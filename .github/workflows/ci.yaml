@@ -24,7 +24,7 @@ jobs:
           - IMAGE: noetic-source
             CLANG_TIDY: true
             TARGET_CMAKE_ARGS: >-
-             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+             -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
           - IMAGE: noetic-source
             NAME: asan
