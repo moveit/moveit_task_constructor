@@ -18,7 +18,7 @@ jobs:
             COMPILE_FLAGS: >-
               -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
               -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
-            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="$COMPILE_FLAGS"
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${{matrix.env.COMPILE_FLAGS}}"
           - IMAGE: noetic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
@@ -27,7 +27,7 @@ jobs:
             COMPILE_FLAGS: >-
               -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
               -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
-            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="$COMPILE_FLAGS"
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="${{matrix.env.COMPILE_FLAGS}}"
           - IMAGE: noetic-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
