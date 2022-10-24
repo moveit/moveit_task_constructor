@@ -21,14 +21,11 @@ catkin_package(
     std_msgs
 )
 
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
-
 add_library(${PROJECT_NAME}
    src/execute_task_solution_capability.cpp
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME}

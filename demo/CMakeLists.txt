@@ -15,13 +15,10 @@ catkin_package(
 	CATKIN_DEPENDS roscpp
 )
 
-include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
-)
-
 add_library(${PROJECT_NAME}_pick_place_task src/pick_place_task.cpp)
 target_link_libraries(${PROJECT_NAME}_pick_place_task ${catkin_LIBRARIES})
+target_include_directories(${PROJECT_NAME}_pick_place_task PUBLIC include)
+target_include_directories(${PROJECT_NAME}_pick_place_task SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
 add_dependencies(${PROJECT_NAME}_pick_place_task ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 install(TARGETS ${PROJECT_NAME}_pick_place_task
 	ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -34,6 +31,7 @@ function(demo name)
 	add_executable(${PROJECT_NAME}_${name} src/${name}.cpp)
 	add_dependencies(${PROJECT_NAME}_${name} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 	target_link_libraries(${PROJECT_NAME}_${name} ${catkin_LIBRARIES})
+	target_include_directories(${PROJECT_NAME}_${name} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
 	set_target_properties(${PROJECT_NAME}_${name} PROPERTIES OUTPUT_NAME ${name} PREFIX "")
 	install(TARGETS ${PROJECT_NAME}_${name}
 		ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -52,7 +50,7 @@ demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)
 
 install(DIRECTORY launch config
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+	DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
 add_subdirectory(test)

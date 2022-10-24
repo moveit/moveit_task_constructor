@@ -33,14 +33,14 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
 	PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-	# https://stackoverflow.com/questions/47175683/cmake-target-link-libraries-propagation-of-include-directories
-	PUBLIC $<TARGET_PROPERTY:motion_planning_tasks_utils,INTERFACE_INCLUDE_DIRECTORIES>
-	PUBLIC $<TARGET_PROPERTY:motion_planning_tasks_properties,INTERFACE_INCLUDE_DIRECTORIES>
-	PUBLIC $<TARGET_PROPERTY:moveit_task_visualization_tools,INTERFACE_INCLUDE_DIRECTORIES>
-	PUBLIC ${catkin_INCLUDE_DIRS}
 )
-target_include_directories(${MOVEIT_LIB_NAME} SYSTEM
-	PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
+target_include_directories(${MOVEIT_LIB_NAME} SYSTEM PUBLIC
+	# https://stackoverflow.com/questions/47175683/cmake-target-link-libraries-propagation-of-include-directories
+	$<TARGET_PROPERTY:motion_planning_tasks_utils,INTERFACE_INCLUDE_DIRECTORIES>
+	$<TARGET_PROPERTY:motion_planning_tasks_properties,INTERFACE_INCLUDE_DIRECTORIES>
+	$<TARGET_PROPERTY:moveit_task_visualization_tools,INTERFACE_INCLUDE_DIRECTORIES>
+	${catkin_INCLUDE_DIRS}
+	${rviz_OGRE_INCLUDE_DIRS}
 )
 
 install(TARGETS ${MOVEIT_LIB_NAME}
