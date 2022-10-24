@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 	rviz_marker_tools
 )
 
+option(MOVEIT_CI_WARNINGS "Enable all warnings used by CI" OFF) # We use our own set of warnings
 moveit_build_options()
 
 catkin_package(
