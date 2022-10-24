@@ -37,7 +37,6 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -302,7 +301,7 @@ void ComputeIK::compute() {
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;
 
-		link = utils::getRigidlyConnectedParentLinkModel(scene->getCurrentState(), ik_pose_msg.header.frame_id);
+		link = scene->getCurrentState().getRigidlyConnectedParentLinkModel(ik_pose_msg.header.frame_id);
 
 		// transform target pose such that ik frame will reach there if link does
 		target_pose = target_pose * ik_pose.inverse() * scene->getCurrentState().getFrameTransform(link->getName());

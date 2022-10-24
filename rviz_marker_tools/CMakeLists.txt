@@ -20,8 +20,6 @@ catkin_package(
 		rviz
 )
 
-set(CMAKE_CXX_STANDARD 14)
-
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
 
 set(HEADERS
@@ -34,10 +32,8 @@ add_library(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-target_include_directories(${PROJECT_NAME}
-  PUBLIC include
-  PRIVATE ${catkin_INCLUDE_DIRS}
-)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${catkin_INCLUDE_DIRS})
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 install(DIRECTORY include/ DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION})

@@ -42,7 +42,6 @@
 
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/cost_terms.h>
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/task_constructor/utils.h>
 
 #include <rviz_marker_tools/marker_creation.h>

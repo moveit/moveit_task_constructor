@@ -3,8 +3,6 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/task_constructor/moveit_compat.h>
-
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
@@ -85,12 +83,7 @@ int main(int argc, char** argv) {
 			co.id = "box";
 			co.header.frame_id = "panda_link0";
 			co.operation = co.ADD;
-#if MOVEIT_HAS_OBJECT_POSE
 			auto& pose{ co.pose };
-#else
-			co.primitive_poses.emplace_back();
-			auto& pose{ co.primitive_poses[0] };
-#endif
 			pose = []() {
 				geometry_msgs::Pose p;
 				p.position.x = 0.3;

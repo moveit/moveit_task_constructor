@@ -38,7 +38,6 @@
 
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/merge.h>
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/task_constructor/cost_terms.h>
 
 #include <moveit/planning_scene/planning_scene.h>

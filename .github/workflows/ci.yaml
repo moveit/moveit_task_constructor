@@ -14,25 +14,26 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: melodic-source
+          - IMAGE: master-source
+            TARGET_CMAKE_ARGS: >-
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="
+              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter"
+          - IMAGE: noetic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: master-source
-            CXXFLAGS: >-
-             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
-             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
           - IMAGE: noetic-source
-            CXX: clang++
             CLANG_TIDY: true
-            CXXFLAGS: >-
-             -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
-             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
+            TARGET_CMAKE_ARGS: >-
+              -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="
+              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls
+              -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy"
           - IMAGE: noetic-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
               -e PRELOAD=libasan.so.5
               -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions"
-            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
 
     env:
       CATKIN_LINT: true
@@ -51,16 +52,18 @@ jobs:
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Cache ccache
-        uses: pat-s/always-upload-cache@v2.1.5
+        uses: rhaschke/cache@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
             ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}
             ccache-${{ env.CACHE_PREFIX }}
+        env:
+          GHA_CACHE_SAVE: always
 
       - id: ici
         name: Run industrial_ci
@@ -68,7 +71,7 @@ jobs:
         env: ${{ matrix.env }}
 
       - name: Upload test artifacts (on failure)
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
         with:
           name: test-results-${{ matrix.env.IMAGE }}
@@ -81,7 +84,7 @@ jobs:
           workdir: ${{ env.BASEDIR }}/target_ws
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
         with:
           files: ${{ env.BASEDIR }}/target_ws/coverage.info

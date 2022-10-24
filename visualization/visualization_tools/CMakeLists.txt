@@ -31,12 +31,10 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 	${QT_LIBRARIES}
 	${Boost_LIBRARIES}
 )
-target_include_directories(${MOVEIT_LIB_NAME}
-  PUBLIC include
-  PRIVATE ${catkin_INCLUDE_DIRS}
-)
+target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
 target_include_directories(${MOVEIT_LIB_NAME} SYSTEM
-  PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
+	PRIVATE ${catkin_INCLUDE_DIRS}
+	PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
 )
 add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
 

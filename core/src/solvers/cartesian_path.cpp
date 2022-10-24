@@ -37,14 +37,10 @@
 */
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
-#include <moveit/task_constructor/moveit_compat.h>
-
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_parameterization.h>
 #include <moveit/kinematics_base/kinematics_base.h>
-#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 #include <moveit/robot_state/cartesian_interpolator.h>
-#endif
 
 using namespace trajectory_processing;
 
@@ -96,17 +92,11 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	};
 
 	std::vector<moveit::core::RobotStatePtr> trajectory;
-#if MOVEIT_HAS_CARTESIAN_INTERPOLATOR
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
 	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid,
 	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"));
-#else
-	double achieved_fraction = sandbox_scene->getCurrentStateNonConst().computeCartesianPath(
-	    jmg, trajectory, &link, target, true, props.get<double>("step_size"), props.get<double>("jump_threshold"),
-	    is_valid, props.get<kinematics::KinematicsQueryOptions>("kinematics_options"));
-#endif
 
 	assert(!trajectory.empty());  // there should be at least the start state
 	result = std::make_shared<robot_trajectory::RobotTrajectory>(sandbox_scene->getRobotModel(), jmg);
