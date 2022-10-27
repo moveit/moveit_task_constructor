@@ -46,7 +46,7 @@ namespace solvers {
 
 MOVEIT_CLASS_FORWARD(CartesianPath);
 
-/** Use MoveIt's computeCartesianPath() to generate a straigh-line path between to scenes */
+/** Use MoveIt's computeCartesianPath() to generate a straight-line path between two scenes. */
 class CartesianPath : public PlannerInterface
 {
 public:

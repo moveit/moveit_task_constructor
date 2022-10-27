@@ -44,19 +44,22 @@ if (BUILD_TESTING)
 		mtc_add_test("gmock" ${ARGN})
 	endmacro()
 
-	mtc_add_gtest(test_stage.cpp)
-	mtc_add_gtest(test_container.cpp)
-	mtc_add_gtest(test_serial.cpp)
-	mtc_add_gtest(test_pruning.cpp)
-	mtc_add_gtest(test_properties.cpp)
-	mtc_add_gtest(test_cost_terms.cpp)
+	# TODO UNCOMMENT
+	# mtc_add_gtest(test_stage.cpp)
+	# mtc_add_gtest(test_container.cpp)
+	# mtc_add_gtest(test_serial.cpp)
+	# mtc_add_gtest(test_pruning.cpp)
+	# mtc_add_gtest(test_properties.cpp)
+	# mtc_add_gtest(test_cost_terms.cpp)
 
-	mtc_add_gmock(test_fallback.cpp)
-	mtc_add_gmock(test_cost_queue.cpp)
-	mtc_add_gmock(test_interface_state.cpp)
+	# mtc_add_gmock(test_fallback.cpp)
+	# mtc_add_gmock(test_cost_queue.cpp)
+	# mtc_add_gmock(test_interface_state.cpp)
 
-	mtc_add_gtest(test_move_to.cpp move_to.launch.py)
-  mtc_add_gtest(test_move_relative.cpp move_to.launch.py)
+	mtc_add_gtest(test_move_circle.cpp move_to.launch.py)
+	# TODO UNCOMMENT
+	# mtc_add_gtest(test_move_to.cpp move_to.launch.py)
+	# mtc_add_gtest(test_move_relative.cpp move_to.launch.py)
 
 	# building these integration tests works without moveit config packages
 	ament_add_gtest_executable(pick_ur5 pick_ur5.cpp)

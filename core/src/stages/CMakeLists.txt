@@ -13,6 +13,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	${PROJECT_INCLUDE}/stages/predicate_filter.h
 
 	${PROJECT_INCLUDE}/stages/connect.h
+	${PROJECT_INCLUDE}/stages/move_circle.h
 	${PROJECT_INCLUDE}/stages/move_to.h
 	${PROJECT_INCLUDE}/stages/move_relative.h
 
@@ -33,6 +34,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	predicate_filter.cpp
 
 	connect.cpp
+	move_circle.cpp
 	move_to.cpp
 	move_relative.cpp
 
@@ -46,6 +48,7 @@ ament_target_dependencies(${PROJECT_NAME}_stages
     moveit_ros_planning
     moveit_ros_planning_interface
     moveit_task_constructor_msgs
+	pilz_industrial_motion_planner
     rclcpp
     tf2_eigen
     visualization_msgs
