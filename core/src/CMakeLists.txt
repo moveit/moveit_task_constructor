@@ -17,6 +17,7 @@ add_library(${PROJECT_NAME} SHARED
 	${PROJECT_INCLUDE}/solvers/planner_interface.h
 	${PROJECT_INCLUDE}/solvers/cartesian_path.h
 	${PROJECT_INCLUDE}/solvers/joint_interpolation.h
+	${PROJECT_INCLUDE}/solvers/pilz.h
 	${PROJECT_INCLUDE}/solvers/pipeline_planner.h
 
 	container.cpp
@@ -33,6 +34,7 @@ add_library(${PROJECT_NAME} SHARED
 	solvers/planner_interface.cpp
 	solvers/cartesian_path.cpp
 	solvers/pipeline_planner.cpp
+	solvers/pilz.cpp
 	solvers/joint_interpolation.cpp
 )
 ament_target_dependencies(${PROJECT_NAME}
@@ -41,6 +43,7 @@ ament_target_dependencies(${PROJECT_NAME}
     moveit_ros_planning
     moveit_ros_planning_interface
     moveit_task_constructor_msgs
+	pilz_industrial_motion_planner
     rclcpp
     rviz_marker_tools
     visualization_msgs

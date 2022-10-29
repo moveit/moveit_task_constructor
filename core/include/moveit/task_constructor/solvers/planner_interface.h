@@ -78,7 +78,7 @@ public:
 
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model) = 0;
 
-	/// plan trajectory between to robot states
+	/// plan trajectory between two robot states
 	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
 	                  const moveit::core::JointModelGroup* jmg, double timeout,
 	                  robot_trajectory::RobotTrajectoryPtr& result,

@@ -203,7 +203,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		return false;
 	}
 
-	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
+	auto path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
@@ -238,7 +238,41 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		add_frame(ik_pose_world, "ik frame");
 
 		// transform target pose such that ik frame will reach there if link does
-		target = target * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
+		const auto ik_pose_link = ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
+		target = target * ik_pose_link;
+
+		// TODO MOVE ELSEWHERE AND CLEAN UP PLEASE
+		// Add path constraints for the interim / center
+		const auto& planner_props = planner_->properties();
+		if (planner_props.hasProperty("arc_constraint") && planner_props.get<std::string>("planner") == "CIRC") {
+			RCLCPP_ERROR(LOGGER, "HAS CIRCULAR ARC!");
+			auto [arc_constraint_type, arc_constraint_pose] =
+			    planner_->properties().get<std::pair<std::string, geometry_msgs::msg::PoseStamped>>("arc_constraint");
+
+			RCLCPP_INFO(LOGGER, "Constraint pose orig: X=%f Y=%f Z=%f", arc_constraint_pose.pose.position.x,
+				arc_constraint_pose.pose.position.y, arc_constraint_pose.pose.position.z);
+
+			Eigen::Isometry3d arc_target;
+			tf2::fromMsg(arc_constraint_pose.pose, arc_target);
+			arc_target = scene->getFrameTransform(arc_constraint_pose.header.frame_id) * arc_target * ik_pose_link;
+			geometry_msgs::msg::PoseStamped arc_target_pose;
+			arc_target_pose.header.frame_id = link->getName();
+			arc_target_pose.pose = Eigen::toMsg(arc_target);
+	
+			add_frame(arc_target, "constraint frame");
+			RCLCPP_INFO(LOGGER, "Constraint pose converted: X=%f Y=%f Z=%f", arc_target_pose.pose.position.x,
+			arc_target_pose.pose.position.y, arc_target_pose.pose.position.z);
+
+			path_constraints.name = arc_constraint_type;
+			moveit_msgs::msg::PositionConstraint pos_constraint;
+			pos_constraint.header.frame_id = arc_target_pose.header.frame_id;
+			pos_constraint.link_name = link->getName();
+			pos_constraint.constraint_region.primitive_poses.resize(1);
+			pos_constraint.constraint_region.primitive_poses[0] = arc_target_pose.pose;
+			pos_constraint.weight = 1.0;  // Shouldn't matter as it's the only constraint
+			path_constraints.position_constraints.resize(1);
+			path_constraints.position_constraints[0] = pos_constraint;
+		}
 
 		// plan to Cartesian target
 		success = planner_->plan(state.scene(), *link, target, jmg, timeout, robot_trajectory, path_constraints);
