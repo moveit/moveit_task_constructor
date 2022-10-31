@@ -43,7 +43,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_parameterization.h>
 #include <moveit/kinematics_base/kinematics_base.h>
-#include <moveit/robot_state/cartesian_interpolator.h> // TODO remove
+#include <moveit/robot_state/cartesian_interpolator.h>  // TODO remove
 #include <moveit/robot_state/conversions.h>
 
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)
@@ -96,17 +96,6 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
 	const auto& robot_model = sandbox_scene->getRobotModel();
 
-	kinematic_constraints::KinematicConstraintSet kcs(robot_model);
-	kcs.add(path_constraints, sandbox_scene->getTransforms());
-
-	auto is_valid = [&sandbox_scene, &kcs](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
-	                                       const double* joint_positions) {
-		state->setJointGroupPositions(jmg, joint_positions);
-		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const moveit::core::RobotState&>(*state), jmg->getName()) &&
-		       kcs.decide(*state).satisfied;
-	};
-
 	const std::string group_name = jmg->getName();
 	const std::string link_name = link.getName();
 
@@ -134,9 +123,8 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	motion_request.group_name = group_name;
 	motion_request.max_velocity_scaling_factor = props.get<double>("max_velocity_scaling_factor");
 	motion_request.max_acceleration_scaling_factor = props.get<double>("max_acceleration_scaling_factor");
-	RCLCPP_INFO(LOGGER, "Using scaling factor %f %f", 
-		motion_request.max_velocity_scaling_factor,
-		motion_request.max_acceleration_scaling_factor);
+	RCLCPP_INFO(LOGGER, "Using scaling factor %f %f", motion_request.max_velocity_scaling_factor,
+	            motion_request.max_acceleration_scaling_factor);
 	moveit::core::robotStateToRobotStateMsg(sandbox_scene->getCurrentState(), motion_request.start_state);
 
 	// Add goal and path constraints for target pose

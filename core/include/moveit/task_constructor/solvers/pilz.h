@@ -61,9 +61,7 @@ public:
 	bool setPlanner(const std::string& planner);
 
 	// Set Cartesian and joint limits.
-	void setLimits(const pilz_industrial_motion_planner::LimitsContainer& limits) {
-		limits_ = limits;
-	};
+	void setLimits(const pilz_industrial_motion_planner::LimitsContainer& limits) { limits_ = limits; };
 
 	/// Set other simple properties.
 	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }

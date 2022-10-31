@@ -43,12 +43,11 @@ struct PandaMoveToPilz : public testing::Test
 
 		scene = std::make_shared<PlanningScene>(t.getRobotModel());
 		scene->getCurrentStateNonConst().setToDefaultValues();
-		scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"),
-		                                                    "ready");
+		scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "ready");
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
 		solver = std::make_shared<solvers::Pilz>();
-		
+
 		solver->setLimits(make_limits());
 
 		auto move = std::make_unique<stages::MoveTo>("move", solver);
@@ -132,7 +131,6 @@ auto const test_arc_interim_pose = [] {
 	return msg;
 }();
 
-
 TEST_F(PandaMoveToPilz, invalidPlanner) {
 	EXPECT_FALSE(solver->setPlanner("BLAH"));
 	move_to->setGoal(test_goal_pose);
@@ -157,7 +155,7 @@ TEST_F(PandaMoveToPilz, poseTargetCIRCCenter) {
 	solver->setPlanner("CIRC");
 	move_to->setIKFrame("panda_hand");
 	move_to->setGoal(test_goal_pose);
-	move_to->setCircularArcConstraint({"center", test_arc_center_pose});
+	move_to->setCircularArcConstraint({ "center", test_arc_center_pose });
 	EXPECT_ONE_SOLUTION;
 }
 
@@ -165,7 +163,7 @@ TEST_F(PandaMoveToPilz, poseTargetCIRCInterim) {
 	solver->setPlanner("CIRC");
 	move_to->setIKFrame("panda_hand");
 	move_to->setGoal(test_goal_pose);
-	move_to->setCircularArcConstraint({"interim", test_arc_interim_pose});
+	move_to->setCircularArcConstraint({ "interim", test_arc_interim_pose });
 	EXPECT_ONE_SOLUTION;
 }
 

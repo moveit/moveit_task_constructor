@@ -189,7 +189,7 @@ bool MoveTo::setCircularArcConstraint(const std::pair<std::string, geometry_msgs
 	const std::string constraint_type = constraint.first;
 	if (constraint_type == "center" || constraint_type == "interim") {
 		setProperty("arc_constraint", constraint);
-		return true;	
+		return true;
 	} else {
 		RCLCPP_ERROR(LOGGER, "Undefined arc constraint type %s", constraint_type.c_str());
 		return false;
