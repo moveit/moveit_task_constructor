@@ -61,7 +61,6 @@ static const rclcpp::Logger LOGGER = rclcpp::get_logger("Pilz");
 Pilz::Pilz() {
 	auto& p = properties();
 	p.declare<std::string>("planner", "Pilz planner type (ptp, linear, circle)");
-	p.declare<std::pair<std::string, geometry_msgs::msg::PoseStamped>>("arc_constraint", "arc constraint specification");
 }
 
 void Pilz::init(const core::RobotModelConstPtr& /*robot_model*/) {}
@@ -85,17 +84,6 @@ bool Pilz::setPlanner(const std::string& planner) {
 		return true;
 	} else {
 		RCLCPP_ERROR(LOGGER, "Undefined planner type %s", planner.c_str());
-		return false;
-	}
-}
-
-bool Pilz::setCircularArcConstraint(const std::pair<std::string, geometry_msgs::msg::PoseStamped>& constraint) {
-	const std::string constraint_type = constraint.first;
-	if (constraint_type == "center" || constraint_type == "interim") {
-		setProperty("arc_constraint", constraint);
-		return true;	
-	} else {
-		RCLCPP_ERROR(LOGGER, "Undefined arc constraint type %s", constraint_type.c_str());
 		return false;
 	}
 }

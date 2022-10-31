@@ -67,6 +67,8 @@ MoveTo::MoveTo(const std::string& name, const solvers::PlannerInterfacePtr& plan
 	p.declare<std::string>("group", "name of planning group");
 	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
 	p.declare<boost::any>("goal", "goal specification");
+	p.declare<std::pair<std::string, geometry_msgs::msg::PoseStamped>>("arc_constraint", "arc constraint specification");
+
 	// register actual types
 	PropertySerializer<std::string>();
 	PropertySerializer<moveit_msgs::msg::RobotState>();
@@ -183,6 +185,17 @@ bool MoveTo::getPointGoal(const boost::any& goal, const Eigen::Isometry3d& ik_po
 	return true;
 }
 
+bool MoveTo::setCircularArcConstraint(const std::pair<std::string, geometry_msgs::msg::PoseStamped>& constraint) {
+	const std::string constraint_type = constraint.first;
+	if (constraint_type == "center" || constraint_type == "interim") {
+		setProperty("arc_constraint", constraint);
+		return true;	
+	} else {
+		RCLCPP_ERROR(LOGGER, "Undefined arc constraint type %s", constraint_type.c_str());
+		return false;
+	}
+}
+
 bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& solution,
                      Interface::Direction dir) {
 	scene = state.scene()->diff();
@@ -241,27 +254,21 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		const auto ik_pose_link = ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
 		target = target * ik_pose_link;
 
-		// TODO MOVE ELSEWHERE AND CLEAN UP PLEASE
-		// Add path constraints for the interim / center
-		const auto& planner_props = planner_->properties();
-		if (planner_props.hasProperty("arc_constraint") && planner_props.get<std::string>("planner") == "CIRC") {
-			RCLCPP_ERROR(LOGGER, "HAS CIRCULAR ARC!");
+		// Add circular arc path constraints, if enabled.
+		// Note that this replaces all other path constraints.
+		if (!props.get("arc_constraint").empty()) {
+			RCLCPP_INFO(LOGGER, "Adding circular arc constraint.");
 			auto [arc_constraint_type, arc_constraint_pose] =
-			    planner_->properties().get<std::pair<std::string, geometry_msgs::msg::PoseStamped>>("arc_constraint");
-
-			RCLCPP_INFO(LOGGER, "Constraint pose orig: X=%f Y=%f Z=%f", arc_constraint_pose.pose.position.x,
-				arc_constraint_pose.pose.position.y, arc_constraint_pose.pose.position.z);
+			    props.get<std::pair<std::string, geometry_msgs::msg::PoseStamped>>("arc_constraint");
 
 			Eigen::Isometry3d arc_target;
 			tf2::fromMsg(arc_constraint_pose.pose, arc_target);
-			arc_target = scene->getFrameTransform(arc_constraint_pose.header.frame_id) * arc_target * ik_pose_link;
-			geometry_msgs::msg::PoseStamped arc_target_pose;
-			arc_target_pose.header.frame_id = link->getName();
-			arc_target_pose.pose = Eigen::toMsg(arc_target);
-	
+			arc_target = scene->getFrameTransform(arc_constraint_pose.header.frame_id) * arc_target;
 			add_frame(arc_target, "constraint frame");
-			RCLCPP_INFO(LOGGER, "Constraint pose converted: X=%f Y=%f Z=%f", arc_target_pose.pose.position.x,
-			arc_target_pose.pose.position.y, arc_target_pose.pose.position.z);
+			arc_target = arc_target * ik_pose_link;
+			geometry_msgs::msg::PoseStamped arc_target_pose;
+			arc_target_pose.header.frame_id = scene->getPlanningFrame();
+			arc_target_pose.pose = Eigen::toMsg(arc_target);
 
 			path_constraints.name = arc_constraint_type;
 			moveit_msgs::msg::PositionConstraint pos_constraint;

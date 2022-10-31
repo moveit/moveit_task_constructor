@@ -88,6 +88,10 @@ public:
 	/// move joints by name to their mapped target value
 	void setGoal(const std::map<std::string, double>& joints);
 
+	/// Set circular arc constraint. This only takes effect when using the Pilz CIRC planner.
+	/// @return true if successfully set, else false.
+	bool setCircularArcConstraint(const std::pair<std::string, geometry_msgs::msg::PoseStamped>& constraint);
+
 	void setPathConstraints(moveit_msgs::msg::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}

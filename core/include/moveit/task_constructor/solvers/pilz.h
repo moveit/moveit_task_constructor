@@ -66,10 +66,6 @@ public:
 	/// Return true if successfully set, else false.
 	bool setPlanner(const std::string& planner);
 
-	/// Set circular arc constraint. This only takes effect if the planner is CIRC.
-	/// @return true if successfully set, else false.
-	bool setCircularArcConstraint(const std::pair<std::string, geometry_msgs::msg::PoseStamped>& constraint);
-
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
