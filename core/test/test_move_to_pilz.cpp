@@ -8,6 +8,7 @@
 #include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <pilz_industrial_motion_planner/limits_container.h>
 
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -46,6 +47,15 @@ struct PandaMoveToPilz : public testing::Test
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
 		solver = std::make_shared<solvers::Pilz>();
+		auto cart_limits = pilz_industrial_motion_planner::CartesianLimit();
+		cart_limits.setMaxRotationalVelocity(1.0);
+		cart_limits.setMaxTranslationalVelocity(1.0);
+		cart_limits.setMaxTranslationalAcceleration(1.0);
+		cart_limits.setMaxTranslationalDeceleration(-1.0);
+		auto limits = pilz_industrial_motion_planner::LimitsContainer();
+		limits.setCartesianLimits(cart_limits);
+		solver->setLimits(limits);
+
 		auto move = std::make_unique<stages::MoveTo>("move", solver);
 		move_to = move.get();
 		move_to->setGroup("panda_arm");
@@ -56,7 +66,7 @@ struct PandaMoveToPilz : public testing::Test
 #define EXPECT_ONE_SOLUTION                \
 	{                                       \
 		EXPECT_TRUE(t.plan());               \
-		EXPECT_EQ(t.solutions().size(), 1u);  \
+		EXPECT_EQ(t.solutions().size(), 1u); \
 	}
 
 geometry_msgs::msg::PoseStamped getFramePoseOfNamedState(RobotState state, std::string pose, std::string frame) {

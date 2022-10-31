@@ -61,6 +61,7 @@ static const rclcpp::Logger LOGGER = rclcpp::get_logger("Pilz");
 Pilz::Pilz() {
 	auto& p = properties();
 	p.declare<std::string>("planner", "Pilz planner type (ptp, linear, circle)");
+	p.declare<double>("sample_time", 0.01, "Sample time for trajectory");
 }
 
 void Pilz::init(const core::RobotModelConstPtr& /*robot_model*/) {}
@@ -109,18 +110,6 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	const std::string group_name = jmg->getName();
 	const std::string link_name = link.getName();
 
-	// TODO: Get from properties
-	// and also set joint limits (from robot model?)
-	using pilz_industrial_motion_planner::CartesianLimit;
-	using pilz_industrial_motion_planner::LimitsContainer;
-	auto cart_limits = CartesianLimit();
-	cart_limits.setMaxRotationalVelocity(1.0);
-	cart_limits.setMaxTranslationalVelocity(1.0);
-	cart_limits.setMaxTranslationalAcceleration(1.0);
-	cart_limits.setMaxTranslationalDeceleration(-1.0);
-	auto limits = LimitsContainer();
-	limits.setCartesianLimits(cart_limits);
-
 	// Create a trajectory generator
 	if (props.get("planner").empty()) {
 		RCLCPP_ERROR(LOGGER, "Undefined planner.");
@@ -129,13 +118,13 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	const std::string& planner = props.get<std::string>("planner");
 	if (planner == "PTP") {
 		traj_gen_ =
-		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorPTP>(robot_model, limits, group_name);
+		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorPTP>(robot_model, limits_, group_name);
 	} else if (planner == "LIN") {
 		traj_gen_ =
-		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorLIN>(robot_model, limits, group_name);
+		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorLIN>(robot_model, limits_, group_name);
 	} else if (planner == "CIRC") {
 		traj_gen_ =
-		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorCIRC>(robot_model, limits, group_name);
+		    std::make_shared<pilz_industrial_motion_planner::TrajectoryGeneratorCIRC>(robot_model, limits_, group_name);
 	}  // else case already handled in setPlanner() and empty checking logic
 
 	// Package up a motion plan request for Pilz
@@ -143,22 +132,21 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	motion_request.pipeline_id = "pilz_industrial_motion_planner";
 	motion_request.planner_id = planner;
 	motion_request.group_name = group_name;
-	motion_request.max_velocity_scaling_factor = 1.0;  // TODO: Get from props
-	motion_request.max_acceleration_scaling_factor = 1.0;  // TODO: Get from props
+	motion_request.max_velocity_scaling_factor = props.get<double>("max_velocity_scaling_factor");
+	motion_request.max_acceleration_scaling_factor = props.get<double>("max_acceleration_scaling_factor");
 	moveit::core::robotStateToRobotStateMsg(sandbox_scene->getCurrentState(), motion_request.start_state);
 
-	// Add goal constraint for target pose
+	// Add goal and path constraints for target pose
 	geometry_msgs::msg::PoseStamped target_msg;
 	target_msg.header.frame_id = link_name;
 	target_msg.pose = Eigen::toMsg(target);
 	motion_request.goal_constraints.resize(1);
 	motion_request.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(link_name, target_msg);
-
 	motion_request.path_constraints = path_constraints;
 
+	// Generate a trajectory using Pilz
 	planning_interface::MotionPlanResponse motion_response;
-	const double sampling_time = 0.001;  // TODO Get from props
-
+	const double sampling_time = props.get<double>("sample_time");
 	const bool success = traj_gen_->generate(sandbox_scene, motion_request, motion_response, sampling_time);
 	result = motion_response.trajectory_;
 	return success;

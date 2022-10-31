@@ -56,15 +56,19 @@ class Pilz : public PlannerInterface
 public:
 	Pilz();
 
-	// TODO:
-	// set Time step size
-	// set joint limits
-	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
-	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
-
 	/// Set Pilz planner type (PTP, LIN, or CIRC).
 	/// Return true if successfully set, else false.
 	bool setPlanner(const std::string& planner);
+
+	// Set Cartesian and joint limits.
+	void setLimits(const pilz_industrial_motion_planner::LimitsContainer& limits) {
+		limits_ = limits;
+	};
+
+	/// Set other simple properties.
+	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
+	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
+	void setSampleTime(double sample_time) { setProperty("sample_time", sample_time); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -78,6 +82,9 @@ public:
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 protected:
+	// The robot Cartesian and joint limits.
+	pilz_industrial_motion_planner::LimitsContainer limits_;
+
 	// The trajectory generator to use for planning.
 	std::shared_ptr<pilz_industrial_motion_planner::TrajectoryGenerator> traj_gen_;
 };

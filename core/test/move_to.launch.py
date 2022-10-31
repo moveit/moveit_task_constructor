@@ -30,7 +30,6 @@ def generate_test_description():
             moveit_config.robot_description_kinematics,
             moveit_config.joint_limits,
         ],
-        # prefix=["gdbserver :3000"]
     )
 
     return (
