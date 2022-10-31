@@ -134,6 +134,9 @@ bool Pilz::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit:
 	motion_request.group_name = group_name;
 	motion_request.max_velocity_scaling_factor = props.get<double>("max_velocity_scaling_factor");
 	motion_request.max_acceleration_scaling_factor = props.get<double>("max_acceleration_scaling_factor");
+	RCLCPP_INFO(LOGGER, "Using scaling factor %f %f", 
+		motion_request.max_velocity_scaling_factor,
+		motion_request.max_acceleration_scaling_factor);
 	moveit::core::robotStateToRobotStateMsg(sandbox_scene->getCurrentState(), motion_request.start_state);
 
 	// Add goal and path constraints for target pose

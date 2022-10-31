@@ -8,6 +8,7 @@
 #include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <pilz_industrial_motion_planner/joint_limits_aggregator.h>
 #include <pilz_industrial_motion_planner/limits_container.h>
 
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)
@@ -47,19 +48,30 @@ struct PandaMoveToPilz : public testing::Test
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
 		solver = std::make_shared<solvers::Pilz>();
-		auto cart_limits = pilz_industrial_motion_planner::CartesianLimit();
-		cart_limits.setMaxRotationalVelocity(1.0);
-		cart_limits.setMaxTranslationalVelocity(1.0);
-		cart_limits.setMaxTranslationalAcceleration(1.0);
-		cart_limits.setMaxTranslationalDeceleration(-1.0);
-		auto limits = pilz_industrial_motion_planner::LimitsContainer();
-		limits.setCartesianLimits(cart_limits);
-		solver->setLimits(limits);
+		
+		solver->setLimits(make_limits());
 
 		auto move = std::make_unique<stages::MoveTo>("move", solver);
 		move_to = move.get();
 		move_to->setGroup("panda_arm");
 		t.add(std::move(move));
+	}
+
+	pilz_industrial_motion_planner::LimitsContainer make_limits() {
+		auto limits = pilz_industrial_motion_planner::LimitsContainer();
+
+		auto cart_limits = pilz_industrial_motion_planner::CartesianLimit();
+		cart_limits.setMaxRotationalVelocity(1.0);
+		cart_limits.setMaxTranslationalVelocity(1.0);
+		cart_limits.setMaxTranslationalAcceleration(1.0);
+		cart_limits.setMaxTranslationalDeceleration(1.0);
+		limits.setCartesianLimits(cart_limits);
+
+		auto joint_limits = pilz_industrial_motion_planner::JointLimitsAggregator::getAggregatedLimits(
+		    node, "robot_description_planning", t.getRobotModel()->getActiveJointModels());
+		limits.setJointLimits(joint_limits);
+
+		return limits;
 	}
 };
 
@@ -111,11 +123,11 @@ auto const test_arc_interim_pose = [] {
 	geometry_msgs::msg::PoseStamped msg;
 	msg.header.frame_id = "world";
 	msg.pose.orientation.x = 0.9381665;
-	msg.pose.orientation.y = -0.3461834;
+	msg.pose.orientation.y = 0.3461834;
 	msg.pose.orientation.z = 0.0;
 	msg.pose.orientation.w = 0.0;
 	msg.pose.position.x = 0.21708;
-	msg.pose.position.y = -0.21708;
+	msg.pose.position.y = 0.21708;
 	msg.pose.position.z = 0.59;
 	return msg;
 }();
@@ -125,6 +137,13 @@ TEST_F(PandaMoveToPilz, invalidPlanner) {
 	EXPECT_FALSE(solver->setPlanner("BLAH"));
 	move_to->setGoal(test_goal_pose);
 	EXPECT_FALSE(t.plan());
+}
+
+TEST_F(PandaMoveToPilz, poseTargetPTP) {
+	solver->setPlanner("PTP");
+	move_to->setIKFrame("panda_hand");
+	move_to->setGoal(test_goal_pose);
+	EXPECT_ONE_SOLUTION;
 }
 
 TEST_F(PandaMoveToPilz, poseTargetLIN) {
