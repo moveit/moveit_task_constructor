@@ -56,7 +56,6 @@ if (BUILD_TESTING)
 	# mtc_add_gmock(test_cost_queue.cpp)
 	# mtc_add_gmock(test_interface_state.cpp)
 
-	# mtc_add_gtest(test_move_circle.cpp move_to.launch.py)
 	# mtc_add_gtest(test_move_to.cpp move_to.launch.py)
 	mtc_add_gtest(test_move_to_pilz.cpp move_to.launch.py)
 	# mtc_add_gtest(test_move_relative.cpp move_to.launch.py)

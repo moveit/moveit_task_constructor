@@ -48,7 +48,6 @@
 #include "stages/generate_place_pose.h"
 #include "stages/generate_pose.h"
 #include "stages/modify_planning_scene.h"
-#include "stages/move_circle.h"
 #include "stages/move_relative.h"
 #include "stages/move_to.h"
 #include "stages/predicate_filter.h"
