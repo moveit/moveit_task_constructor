@@ -6,6 +6,7 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
@@ -17,7 +18,7 @@ using namespace planning_scene;
 using namespace moveit::core;
 
 constexpr double TAU{ 2 * M_PI };
-constexpr double EPS{ 1e-6 };
+constexpr double EPS{ 5e-5 };
 
 // provide a basic test fixture that prepares a Task
 struct PandaMoveRelative : public testing::Test
@@ -66,9 +67,23 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 	return aco;
 }
 
-inline auto position(const PlanningSceneConstPtr& scene, const std::string& frame) {
-	return scene->getFrameTransform(frame).translation();
+void expect_const_position(const SolutionBaseConstPtr& solution, const std::string& tip,
+                           const Eigen::Isometry3d& offset = Eigen::Isometry3d::Identity()) {
+	const robot_trajectory::RobotTrajectory& t = *std::dynamic_pointer_cast<const SubTrajectory>(solution)->trajectory();
+	const Eigen::Vector3d start_position = (t.getFirstWayPoint().getFrameTransform(tip) * offset).translation();
+	for (size_t i = 0; i < t.getWayPointCount(); ++i) {
+		const Eigen::Vector3d position = (t.getWayPoint(i).getFrameTransform(tip) * offset).translation();
+		ASSERT_TRUE(start_position.isApprox(position, EPS))
+		    << "Rotation must maintain position\n"
+		    << i << ": " << start_position.transpose() << " != " << position.transpose();
+	}
 }
+
+#define EXPECT_CONST_POSITION(...)                                \
+	{                                                              \
+		SCOPED_TRACE("expect_constant_position(" #__VA_ARGS__ ")"); \
+		expect_const_position(__VA_ARGS__);                         \
+	}
 
 TEST_F(PandaMoveRelative, cartesianRotateEEF) {
 	move->setDirection([] {
@@ -79,15 +94,22 @@ TEST_F(PandaMoveRelative, cartesianRotateEEF) {
 	}());
 
 	ASSERT_TRUE(t.plan()) << "Failed to plan";
+	EXPECT_CONST_POSITION(move->solutions().front(), group->getOnlyOneEndEffectorTip()->getName());
+}
 
-	const auto& tip_name{ group->getOnlyOneEndEffectorTip()->getName() };
-	const auto start_eef_position{ position(scene, tip_name) };
-	const auto end_eef_position{ position(move->solutions().front()->end()->scene(), tip_name) };
+TEST_F(PandaMoveRelative, cartesianCircular) {
+	const std::string tip = "panda_hand";
+	auto offset = Eigen::Translation3d(0, 0, 0.1);
+	move->setIKFrame(offset, tip);
+	move->setDirection([] {
+		geometry_msgs::TwistStamped twist;
+		twist.header.frame_id = "world";
+		twist.twist.angular.x = TAU / 4.0;
+		return twist;
+	}());
 
-	EXPECT_TRUE(start_eef_position.isApprox(end_eef_position, EPS))
-	    << "Cartesian rotation unexpectedly changed position of '" << tip_name << "' (must only change orientation)\n"
-	    << start_eef_position << "\nvs\n"
-	    << end_eef_position;
+	ASSERT_TRUE(t.plan()) << "Failed to plan";
+	EXPECT_CONST_POSITION(move->solutions().front(), tip, Eigen::Isometry3d(offset));
 }
 
 TEST_F(PandaMoveRelative, cartesianRotateAttachedIKFrame) {
@@ -102,15 +124,8 @@ TEST_F(PandaMoveRelative, cartesianRotateAttachedIKFrame) {
 		return twist;
 	}());
 
-	ASSERT_TRUE(t.plan());
-
-	const auto start_eef_position{ position(scene, ATTACHED_OBJECT) };
-	const auto end_eef_position{ position(move->solutions().front()->end()->scene(), ATTACHED_OBJECT) };
-
-	EXPECT_TRUE(start_eef_position.isApprox(end_eef_position, EPS))
-	    << "Cartesian rotation unexpectedly changed position of ik frame (must only change orientation)\n"
-	    << start_eef_position << "\nvs\n"
-	    << end_eef_position;
+	ASSERT_TRUE(t.plan()) << "Failed to plan";
+	EXPECT_CONST_POSITION(move->solutions().front(), ATTACHED_OBJECT);
 }
 
 int main(int argc, char** argv) {
