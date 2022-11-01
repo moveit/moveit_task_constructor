@@ -126,7 +126,7 @@ void ExecuteTaskSolutionCapability::goalCallback(
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> /*goal_handle*/) {
 	if (context_->plan_execution_)
 		context_->plan_execution_->stop();
 	return rclcpp_action::CancelResponse::ACCEPT;
