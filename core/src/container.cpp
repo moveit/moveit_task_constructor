@@ -58,8 +58,10 @@ namespace moveit {
 namespace task_constructor {
 
 // for debugging of how children interfaces evolve over time
-static void printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
-                                    std::ostream& os = std::cerr) {
+__attribute__((unused))  // silent unused-function warning
+static void
+printChildrenInterfaces(const ContainerBasePrivate& container, bool success, const Stage& creator,
+                        std::ostream& os = std::cerr) {
 	static unsigned int id = 0;
 	const unsigned int width = 10;  // indentation of name
 	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';

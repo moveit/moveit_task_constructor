@@ -17,19 +17,17 @@ jobs:
           - IMAGE: humble-source
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith
-             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
           - IMAGE: rolling-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith
-             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy -Wno-unused-but-set-parameter
           - IMAGE: rolling-source
             CXX: clang++
             CLANG_TIDY: true
             CXXFLAGS: >-
              -Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith
-             -Wno-unused-parameter -Wno-unused-function -Wno-deprecated-copy
+             -Wno-deprecated-copy
           # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
           # see https://github.com/google/sanitizers/wiki/AddressSanitizer
           - IMAGE: rolling-source
