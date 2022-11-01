@@ -99,9 +99,9 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 }
 
 bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                     const moveit::core::LinkModel& link, const Eigen::Isometry3d& target_eigen,
-                                     const moveit::core::JointModelGroup* jmg, double timeout,
-                                     robot_trajectory::RobotTrajectoryPtr& result,
+                                     const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                     const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+                                     double timeout, robot_trajectory::RobotTrajectoryPtr& result,
                                      const moveit_msgs::Constraints& path_constraints) {
 	const auto start_time = std::chrono::steady_clock::now();
 
@@ -117,7 +117,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 		return to->isStateValid(*robot_state, constraints, jmg->getName());
 	} };
 
-	if (!to->getCurrentStateNonConst().setFromIK(jmg, target_eigen, link.getName(), timeout, is_valid)) {
+	if (!to->getCurrentStateNonConst().setFromIK(jmg, target * offset.inverse(), link.getName(), timeout, is_valid)) {
 		// TODO(v4hn): planners need a way to add feedback to failing plans
 		// in case of an invalid solution feedback should include unwanted collisions or violated constraints
 		ROS_WARN_NAMED("JointInterpolationPlanner", "IK failed for pose target");
