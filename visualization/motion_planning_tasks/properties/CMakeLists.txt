@@ -23,8 +23,8 @@ target_include_directories(${MOVEIT_LIB_NAME}
 	PRIVATE ${YAML_INCLUDE_DIRS}
 )
 ament_target_dependencies(${MOVEIT_LIB_NAME}
-  moveit_task_constructor_core
-  rviz_common
+	moveit_task_constructor_core
+	rviz_common
 )
 
 install(TARGETS ${MOVEIT_LIB_NAME}

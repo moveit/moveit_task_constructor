@@ -27,7 +27,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+	set(CMAKE_CXX_STANDARD 17)
 endif()
 
 add_subdirectory(visualization_tools)

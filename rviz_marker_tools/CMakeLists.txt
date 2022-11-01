@@ -4,22 +4,22 @@ project(rviz_marker_tools)
 find_package(ament_cmake REQUIRED)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
-    eigen3_cmake_module
-    Eigen3
-    geometry_msgs
-    rclcpp
-    rviz2
-    tf2_eigen
-    urdfdom_headers
-    visualization_msgs
+	eigen3_cmake_module
+	Eigen3
+	geometry_msgs
+	rclcpp
+	rviz2
+	tf2_eigen
+	urdfdom_headers
+	visualization_msgs
 )
 
 foreach(dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
-  find_package(${dependency} REQUIRED)
+	find_package(${dependency} REQUIRED)
 endforeach()
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
+	set(CMAKE_CXX_STANDARD 17)
 endif()
 
 add_library(${PROJECT_NAME} SHARED
@@ -28,7 +28,7 @@ add_library(${PROJECT_NAME} SHARED
 
 ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_INCLUDE_DEPENDS})
 target_include_directories(${PROJECT_NAME}
-  PUBLIC
+	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>
 )
@@ -36,9 +36,9 @@ target_include_directories(${PROJECT_NAME}
 install(DIRECTORY include/ DESTINATION include)
 
 install(TARGETS ${PROJECT_NAME}
-  EXPORT ${PROJECT_NAME}Targets
-	ARCHIVE DESTINATION lib
-	LIBRARY DESTINATION lib)
+        EXPORT ${PROJECT_NAME}Targets
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
 
 ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})

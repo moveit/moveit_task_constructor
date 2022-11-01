@@ -17,14 +17,14 @@ find_package(rosparam_shortcuts REQUIRED)
 find_package(tf2_eigen REQUIRED)
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
-    moveit_core
-    moveit_ros_planning
-    moveit_ros_planning_interface
-    moveit_task_constructor_core
-    moveit_task_constructor_msgs
-    rclcpp
-    rosparam_shortcuts
-    tf2_eigen
+	moveit_core
+	moveit_ros_planning
+	moveit_ros_planning_interface
+	moveit_task_constructor_core
+	moveit_task_constructor_msgs
+	rclcpp
+	rosparam_shortcuts
+	tf2_eigen
 )
 
 add_library(${PROJECT_NAME}_pick_place_task SHARED src/pick_place_task.cpp)
@@ -39,7 +39,7 @@ include_directories(include)
 # declare a demo consisting of a single cpp file
 function(demo name)
 	add_executable(${PROJECT_NAME}_${name} src/${name}.cpp)
-  ament_target_dependencies(${PROJECT_NAME}_${name} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+	ament_target_dependencies(${PROJECT_NAME}_${name} ${THIS_PACKAGE_INCLUDE_DEPENDS})
 	set_target_properties(${PROJECT_NAME}_${name} PROPERTIES OUTPUT_NAME ${name} PREFIX "")
 	install(TARGETS ${PROJECT_NAME}_${name}
 		ARCHIVE DESTINATION lib
@@ -58,7 +58,7 @@ demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)
 
 install(DIRECTORY launch config
-  DESTINATION share/${PROJECT_NAME}
+        DESTINATION share/${PROJECT_NAME}
 )
 
 # TODO: Port tests

@@ -23,7 +23,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 	rviz_ogre_vendor::OgreMain
 )
 target_include_directories(${MOVEIT_LIB_NAME}
-  PUBLIC include
+	PUBLIC include
 )
 ament_target_dependencies(${MOVEIT_LIB_NAME}
 	Boost
