@@ -234,6 +234,8 @@ TEST_F(TaskListModelTest, deletion) {
 int main(int argc, char** argv) {
 	ros::init(argc, argv, "test_task_model");
 	QCoreApplication app(argc, argv);
+	// https://bugs.llvm.org/show_bug.cgi?id=40367
+	// NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 	QTimer::singleShot(0, [&]() {
 		::testing::InitGoogleTest(&argc, argv);
 		auto testResult = RUN_ALL_TESTS();

@@ -1,5 +1,7 @@
 ---
 Checks:          'performance-*,
+                  -performance-noexcept-move-constructor,
+                  -clang-analyzer-core.CallAndMessage,
                   llvm-namespace-comment,
                   modernize-redundant-void-arg,
                   modernize-use-nullptr,

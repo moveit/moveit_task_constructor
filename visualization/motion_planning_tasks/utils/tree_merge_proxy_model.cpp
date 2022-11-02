@@ -440,6 +440,7 @@ std::pair<QAbstractItemModel*, QModelIndex> TreeMergeProxyModel::getModel(const 
 	const QModelIndex& src_index = d_ptr->mapToSource(index, data);
 	Q_ASSERT(data);
 
+	// NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker)
 	return std::make_pair(data->model_, src_index);
 }
 
