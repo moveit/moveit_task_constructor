@@ -373,7 +373,7 @@ void ComputeIK::compute() {
 		req.max_contacts = 1;
 		scene->checkCollision(req, res, *state);
 		solution.feasible = ignore_collisions || !res.collision;
-		if (res.contacts.size() > 0) {
+		if (!res.contacts.empty()) {
 			solution.contact = res.contacts.begin()->second.front();
 		}
 		return solution.feasible;

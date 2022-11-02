@@ -44,7 +44,7 @@ namespace task_constructor {
 namespace stages {
 
 FixedState::FixedState(const std::string& name, planning_scene::PlanningScenePtr scene)
-  : Generator(name), scene_(scene) {
+  : Generator(name), scene_(std::move(scene)) {
 	properties().declare("ignore_collisions", false);
 	setCostTerm(std::make_unique<cost::Constant>(0.0));
 }

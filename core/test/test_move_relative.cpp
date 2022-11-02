@@ -113,9 +113,9 @@ TEST_F(PandaMoveRelative, cartesianCircular) {
 }
 
 TEST_F(PandaMoveRelative, cartesianRotateAttachedIKFrame) {
-	const std::string ATTACHED_OBJECT{ "attached_object" };
-	scene->processAttachedCollisionObjectMsg(createAttachedObject(ATTACHED_OBJECT));
-	move->setIKFrame(ATTACHED_OBJECT);
+	const std::string attached_object{ "attached_object" };
+	scene->processAttachedCollisionObjectMsg(createAttachedObject(attached_object));
+	move->setIKFrame(attached_object);
 
 	move->setDirection([] {
 		geometry_msgs::TwistStamped twist;
@@ -125,7 +125,7 @@ TEST_F(PandaMoveRelative, cartesianRotateAttachedIKFrame) {
 	}());
 
 	ASSERT_TRUE(t.plan()) << "Failed to plan";
-	EXPECT_CONST_POSITION(move->solutions().front(), ATTACHED_OBJECT);
+	EXPECT_CONST_POSITION(move->solutions().front(), attached_object);
 }
 
 int main(int argc, char** argv) {
