@@ -41,7 +41,6 @@
 
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/cost_terms.h>
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/task_constructor/utils.h>
 
 #include <rviz_marker_tools/marker_creation.h>
@@ -237,11 +236,11 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		add_frame(target, "target frame");
 		add_frame(ik_pose_world, "ik frame");
 
-		// transform target pose such that ik frame will reach there if link does
-		target = target * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
+		// offset from link to ik_frame
+		Eigen::Isometry3d offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
 		// plan to Cartesian target
-		success = planner_->plan(state.scene(), *link, target, jmg, timeout, robot_trajectory, path_constraints);
+		success = planner_->plan(state.scene(), *link, offset, target, jmg, timeout, robot_trajectory, path_constraints);
 	}
 
 	// store result

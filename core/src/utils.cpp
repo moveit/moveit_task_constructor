@@ -44,18 +44,12 @@
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/storage.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace utils {
-
-const moveit::core::LinkModel* getRigidlyConnectedParentLinkModel(const moveit::core::RobotState& state,
-                                                                  std::string frame) {
-	return state.getRigidlyConnectedParentLinkModel(frame);
-}
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
@@ -79,23 +73,27 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 		tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
 	} else {
 		auto ik_pose_msg = boost::any_cast<geometry_msgs::msg::PoseStamped>(property.value());
-		if (ik_pose_msg.header.frame_id.empty()) {
-			if (!(robot_link = get_tip())) {
-				solution.markAsFailure("frame_id of ik_frame is empty and no unique group tip was found");
-				return false;
-			}
-			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
-			tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link) * tip_in_global_frame;
-		} else if (scene.knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			robot_link = getRigidlyConnectedParentLinkModel(scene.getCurrentState(), ik_pose_msg.header.frame_id);
-			tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
-			tip_in_global_frame = scene.getFrameTransform(ik_pose_msg.header.frame_id) * tip_in_global_frame;
-		} else {
+		tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
+
+		robot_link = nullptr;
+		bool found = false;
+		auto ref_frame = scene.getCurrentState().getFrameInfo(ik_pose_msg.header.frame_id, robot_link, found);
+		if (!found && !ik_pose_msg.header.frame_id.empty()) {
 			std::stringstream ss;
 			ss << "ik_frame specified in unknown frame '" << ik_pose_msg.header.frame_id << "'";
 			solution.markAsFailure(ss.str());
 			return false;
 		}
+		if (!robot_link)
+			robot_link = get_tip();
+		if (!robot_link) {
+			solution.markAsFailure("ik_frame doesn't specify a link frame");
+			return false;
+		} else if (!found) {  // use robot link's frame as reference by default
+			ref_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
+		}
+
+		tip_in_global_frame = ref_frame * tip_in_global_frame;
 	}
 
 	return true;

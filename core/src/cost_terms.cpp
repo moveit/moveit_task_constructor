@@ -36,7 +36,6 @@
 
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/stage.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>

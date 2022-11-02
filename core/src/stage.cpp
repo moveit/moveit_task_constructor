@@ -38,7 +38,6 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -126,8 +125,8 @@ StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
 	prev_ends_ = std::move(other.prev_ends_);
 	next_starts_ = std::move(other.next_starts_);
 
-	parent_ = std::move(other.parent_);
-	it_ = std::move(other.it_);
+	parent_ = other.parent_;
+	it_ = other.it_;
 	other.unparent();
 
 	return *this;

@@ -21,7 +21,7 @@ struct StandaloneGeneratorMockup : public GeneratorMockup
 	InterfacePtr next;
 
 	StandaloneGeneratorMockup(std::initializer_list<double>&& costs)
-	  : StandaloneGeneratorMockup{ PredefinedCosts{ std::move(costs), true } } {}
+	  : StandaloneGeneratorMockup{ PredefinedCosts{ costs, true } } {}
 
 	StandaloneGeneratorMockup(PredefinedCosts&& costs = PredefinedCosts{ { 0.0 }, true })
 	  : GeneratorMockup{ std::move(costs) } {

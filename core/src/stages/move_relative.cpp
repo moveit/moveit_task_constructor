@@ -110,8 +110,9 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 	return false;
 }
 
+// Create an arrow marker from start_pose to reached_pose, split into a red and green part based on achieved distance
 static void visualizePlan(std::deque<visualization_msgs::msg::Marker>& markers, Interface::Direction dir, bool success,
-                          const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& link_pose,
+                          const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& start_pose,
                           const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance) {
 	double linear_norm = linear.norm();
 
@@ -120,7 +121,7 @@ static void visualizePlan(std::deque<visualization_msgs::msg::Marker>& markers, 
 	auto quat_cylinder = quat_target * Eigen::AngleAxisd(0.5 * M_PI, Eigen::Vector3d::UnitY());
 
 	// link position before planning; reached link position after planning; target link position
-	Eigen::Vector3d pos_link = link_pose.translation();
+	Eigen::Vector3d pos_start = start_pose.translation();
 	Eigen::Vector3d pos_reached = reached_pose.translation();
 	Eigen::Vector3d pos_target = pos_reached + quat_target * Eigen::Vector3d(linear_norm - distance, 0, 0);
 
@@ -130,7 +131,7 @@ static void visualizePlan(std::deque<visualization_msgs::msg::Marker>& markers, 
 	if (dir == Interface::FORWARD) {
 		if (success) {
 			// valid part: green arrow
-			rviz_marker_tools::makeArrow(m, pos_link, pos_reached, 0.1 * linear_norm);
+			rviz_marker_tools::makeArrow(m, pos_start, pos_reached, 0.1 * linear_norm);
 			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
 			markers.push_back(m);
 		} else {
@@ -145,14 +146,14 @@ static void visualizePlan(std::deque<visualization_msgs::msg::Marker>& markers, 
 			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, distance);
 			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
 			// position half-way between pos_link and pos_reached
-			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_link + pos_reached) });
+			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_start + pos_reached) });
 			m.pose.orientation = tf2::toMsg(quat_cylinder);
 			markers.push_back(m);
 		}
 	} else {
 		// valid part: green arrow
 		// head length according to above comment
-		rviz_marker_tools::makeArrow(m, pos_reached, pos_link, 0.1 * linear_norm, 0.23 * linear_norm);
+		rviz_marker_tools::makeArrow(m, pos_reached, pos_start, 0.1 * linear_norm, 0.23 * linear_norm);
 		rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
 		markers.push_back(m);
 		if (!success) {
@@ -209,10 +210,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		Eigen::Vector3d linear;  // linear translation
 		Eigen::Vector3d angular;  // angular rotation
 		double linear_norm = 0.0, angular_norm = 0.0;
-
 		Eigen::Isometry3d target_eigen;
-		Eigen::Isometry3d link_pose =
-		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try {  // try to extract Twist
 			const geometry_msgs::msg::TwistStamped& target = boost::any_cast<geometry_msgs::msg::TwistStamped>(direction);
@@ -246,13 +244,13 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 				angular *= -1.0;
 			}
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying motion transform of twist
+			// linear+angular are expressed w.r.t. model frame and thus we need left-multiplication
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			target_eigen = ik_pose_world;
-			target_eigen.linear() =
-			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, ik_pose_world.linear().transpose() * angular);
-			target_eigen.translation() += linear;
+			auto R = Eigen::AngleAxisd(angular_norm, angular);
+			auto p = ik_pose_world.translation();
+			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
 		}
@@ -274,31 +272,31 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			if (dir == Interface::BACKWARD)
 				linear *= -1.0;
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying delta transform of twist
 			linear = frame_pose.linear() * linear;
-			target_eigen = ik_pose_world;
-			target_eigen.translation() += linear;
+			target_eigen = Eigen::Translation3d(linear) * ik_pose_world;
 		} catch (const boost::bad_any_cast&) {
 			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
 			return false;
 		}
 
 	COMPUTE:
-		// transform target pose such that ik frame will reach there if link does
-		target_eigen = target_eigen * ik_pose_world.inverse() * scene->getCurrentState().getGlobalLinkTransform(link);
+		// offset from link to ik_frame
+		const Eigen::Isometry3d& offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
-		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		success =
+		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
 		moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 		reached_state->updateLinkTransforms();
-		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
+		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
 
 		double distance = 0.0;
 		if (use_rotation_distance) {
-			Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
+			Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
 			distance = rotation.angle();
 		} else
-			distance = (reached_pose.translation() - link_pose.translation()).norm();
+			distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
 
 		// min_distance reached?
 		if (min_distance > 0.0) {
@@ -316,8 +314,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		// visualize plan
 		auto ns = props.get<std::string>("marker_ns");
 		if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
-			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), link_pose, reached_pose, linear,
-			              distance);
+			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
+			              linear, distance);
 		}
 	}
 

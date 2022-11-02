@@ -149,7 +149,7 @@ void PropertyFactory::addRemainingProperties(rviz_common::properties::Property* 
 }
 
 #ifndef HAVE_YAML
-rviz_common::properties::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+rviz_common::properties::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
                                                                   const std::string& description,
                                                                   const std::string& value,
                                                                   rviz_common::properties::Property* old) {

@@ -249,7 +249,7 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
 		if (impl->preempt_requested_)
 			return success_or(moveit::core::MoveItErrorCode::PREEMPTED);
-		if (std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() > available_time)
+		if (std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() >= available_time)
 			return success_or(moveit::core::MoveItErrorCode::TIMED_OUT);
 		compute();
 		for (const auto& cb : impl->task_cbs_)

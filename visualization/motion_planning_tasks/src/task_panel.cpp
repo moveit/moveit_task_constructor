@@ -176,7 +176,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
-	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
+	button_show_stage_dock_widget->setToolTip("Show available stages");
 	property_root = new rviz_common::properties::Property("Global Settings");
 }
 

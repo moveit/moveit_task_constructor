@@ -44,10 +44,3 @@
 #define MOVEIT_VERSION_GE(major, minor, patch)                                                \
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \
 	 major * 1'000'000 + minor * 1'000 + patch)
-
-#if !MOVEIT_VERSION_GE(3, 0, 0)
-// the pointers are not yet available
-namespace trajectory_processing {
-MOVEIT_CLASS_FORWARD(TimeParameterization);
-}
-#endif

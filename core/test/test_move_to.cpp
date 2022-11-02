@@ -5,7 +5,6 @@
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
-#include <moveit/task_constructor/moveit_compat.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -78,7 +77,8 @@ TEST_F(PandaMoveTo, stateTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-geometry_msgs::msg::PoseStamped getFramePoseOfNamedState(RobotState state, std::string pose, std::string frame) {
+geometry_msgs::msg::PoseStamped getFramePoseOfNamedState(RobotState state, const std::string& pose,
+                                                         const std::string& frame) {
 	state.setToDefaultValues(state.getRobotModel()->getJointModelGroup("panda_arm"), pose);
 	auto frame_eigen{ state.getFrameTransform(frame) };
 	geometry_msgs::msg::PoseStamped p;
@@ -104,9 +104,9 @@ TEST_F(PandaMoveTo, poseTarget) {
 }
 
 TEST_F(PandaMoveTo, poseIKFrameLinkTarget) {
-	const std::string IK_FRAME{ "panda_hand" };
-	move_to->setIKFrame(IK_FRAME);
-	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", IK_FRAME));
+	const std::string ik_frame{ "panda_hand" };
+	move_to->setIKFrame(ik_frame);
+	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", ik_frame));
 	EXPECT_ONE_SOLUTION;
 }
 
@@ -123,10 +123,8 @@ moveit_msgs::msg::AttachedCollisionObject createAttachedObject(const std::string
 		p.dimensions[p.SPHERE_RADIUS] = 0.01;
 		return p;
 	}());
-	aco.object.primitive_poses.resize(1);
 	aco.object.pose.position.z = 0.2;
 	aco.object.pose.orientation.w = 1.0;
-	// If we don't have this, we also don't have subframe support
 	aco.object.subframe_names.resize(1, "subframe");
 	aco.object.subframe_poses.resize(1, [] {
 		geometry_msgs::msg::Pose p;
@@ -137,23 +135,22 @@ moveit_msgs::msg::AttachedCollisionObject createAttachedObject(const std::string
 }
 
 TEST_F(PandaMoveTo, poseIKFrameAttachedTarget) {
-	const std::string ATTACHED_OBJECT{ "attached_object" };
-	scene->processAttachedCollisionObjectMsg(createAttachedObject(ATTACHED_OBJECT));
+	const std::string attached_object{ "attached_object" };
+	scene->processAttachedCollisionObjectMsg(createAttachedObject(attached_object));
 
-	move_to->setIKFrame(ATTACHED_OBJECT);
-	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", ATTACHED_OBJECT));
+	move_to->setIKFrame(attached_object);
+	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", attached_object));
 	EXPECT_ONE_SOLUTION;
 }
 
-// If we don't have this, we also don't have subframe support
 TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
-	const std::string ATTACHED_OBJECT{ "attached_object" };
-	const std::string IK_FRAME{ ATTACHED_OBJECT + "/subframe" };
+	const std::string attached_object{ "attached_object" };
+	const std::string ik_frame{ attached_object + "/subframe" };
 
-	scene->processAttachedCollisionObjectMsg(createAttachedObject(ATTACHED_OBJECT));
+	scene->processAttachedCollisionObjectMsg(createAttachedObject(attached_object));
 
-	move_to->setIKFrame(IK_FRAME);
-	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", IK_FRAME));
+	move_to->setIKFrame(ik_frame);
+	move_to->setGoal(getFramePoseOfNamedState(scene->getCurrentState(), "ready", ik_frame));
 	EXPECT_ONE_SOLUTION;
 }
 

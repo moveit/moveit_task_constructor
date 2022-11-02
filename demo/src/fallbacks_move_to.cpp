@@ -3,8 +3,6 @@
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/task_constructor/moveit_compat.h>
-
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>

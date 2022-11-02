@@ -37,7 +37,6 @@
 */
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/task_constructor/moveit_compat.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 using namespace trajectory_processing;
