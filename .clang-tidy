@@ -14,6 +14,7 @@ Checks:          'performance-*,
                   readability-redundant-string-cstr,
                   readability-simplify-boolean-expr,
                   readability-container-size-empty,
+                  readability-identifier-naming,
                   '
 HeaderFilterRegex: '.*/moveit/task_constructor/.*\.h'
 AnalyzeTemporaryDtors: false
@@ -26,14 +27,14 @@ CheckOptions:
     value:           '2'
   # type names
   - key:             readability-identifier-naming.ClassCase
-    value:           CamelCase
+    value:           aNy_CasE # CamelCase
   - key:             readability-identifier-naming.EnumCase
     value:           CamelCase
   - key:             readability-identifier-naming.UnionCase
     value:           CamelCase
   # method names
   - key:             readability-identifier-naming.MethodCase
-    value:           camelBack
+    value:           aNy_CasE # camelBack
   # variable names
   - key:             readability-identifier-naming.VariableCase
     value:           lower_case
