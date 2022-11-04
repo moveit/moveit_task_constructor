@@ -4,7 +4,9 @@ project(moveit_task_constructor_core)
 find_package(Boost REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	tf2_eigen
+	actionlib
 	geometry_msgs
+	grasping_msgs
 	moveit_core
 	moveit_ros_planning
 	moveit_ros_planning_interface
@@ -25,7 +27,9 @@ catkin_package(
 	INCLUDE_DIRS
 		include
 	CATKIN_DEPENDS
+		actionlib
 		geometry_msgs
+		grasping_msgs
 		moveit_core
 		moveit_task_constructor_msgs
 		rviz_marker_tools
