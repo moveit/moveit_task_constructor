@@ -30,6 +30,7 @@ jobs:
              -Wno-deprecated-copy
           # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
           # see https://github.com/google/sanitizers/wiki/AddressSanitizer
+          # Disable alloc/dealloc mismatch warnings: https://github.com/ros2/rclcpp/pull/1324
           - IMAGE: rolling-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
