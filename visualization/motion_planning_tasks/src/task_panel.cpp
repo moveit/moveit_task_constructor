@@ -551,7 +551,7 @@ void TaskView::onExecCurrentSolution() const {
 		RCLCPP_ERROR(LOGGER, "send goal call failed");
 		return;
 	}
-	auto goal_handle = goal_handle_future.get();
+	const auto& goal_handle = goal_handle_future.get();
 	if (!goal_handle)
 		RCLCPP_ERROR(LOGGER, "Goal was rejected by server");
 }
