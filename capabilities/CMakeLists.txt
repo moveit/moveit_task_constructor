@@ -14,7 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 moveit_build_options()
 
 catkin_package(
-  LIBRARIES $PROJECT_NAME}
+  LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     actionlib
     moveit_task_constructor_msgs
