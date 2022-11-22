@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Install clang-format-10
         run: sudo apt-get install clang-format-10
       - uses: rhaschke/install-catkin_lint-action@v1.0

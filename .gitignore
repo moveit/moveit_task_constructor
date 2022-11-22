@@ -1,1 +1,5 @@
 *.swp
+*.pyc
+__pycache__/
+*/doc/html/
+*/doc/manifest.yaml

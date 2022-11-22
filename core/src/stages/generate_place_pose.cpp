@@ -54,7 +54,6 @@ namespace stages {
 GeneratePlacePose::GeneratePlacePose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<std::string>("object");
-	p.declare<geometry_msgs::PoseStamped>("ik_frame");
 	p.declare<bool>("allow_z_flip", false, "allow placing objects upside down");
 }
 
@@ -63,11 +62,14 @@ void GeneratePlacePose::onNewSolution(const SolutionBase& s) {
 
 	const auto& props = properties();
 	const std::string& object = props.get<std::string>("object");
+	bool frame_found = false;
+	const moveit::core::LinkModel* link = nullptr;
+	scene->getCurrentState().getFrameInfo(object, link, frame_found);
 	std::string msg;
-	if (!scene->getCurrentState().hasAttachedBody(object))
-		msg = "'" + object + "' is not an attached object";
-	if (scene->getCurrentState().getAttachedBody(object)->getShapes().empty())
-		msg = "'" + object + "' has no associated shapes";
+	if (!frame_found)
+		msg = "frame '" + object + "' is not known";
+	if (!link)
+		msg = "frame '" + object + "' is not attached to the robot";
 	if (!msg.empty()) {
 		if (storeFailures()) {
 			InterfaceState state(scene);
@@ -92,25 +94,20 @@ void GeneratePlacePose::compute() {
 	const moveit::core::RobotState& robot_state = scene->getCurrentState();
 	const auto& props = properties();
 
-	const moveit::core::AttachedBody* object = robot_state.getAttachedBody(props.get<std::string>("object"));
-	// current object_pose w.r.t. planning frame
-	const Eigen::Isometry3d& orig_object_pose = object->getGlobalCollisionBodyTransforms()[0];
+	const std::string& frame_id = props.get<std::string>("object");
+	geometry_msgs::PoseStamped ik_frame;
+	ik_frame.header.frame_id = frame_id;
+	ik_frame.pose = tf2::toMsg(Eigen::Isometry3d::Identity());
 
+	const moveit::core::AttachedBody* object = robot_state.getAttachedBody(frame_id);
 	const geometry_msgs::PoseStamped& pose_msg = props.get<geometry_msgs::PoseStamped>("pose");
 	Eigen::Isometry3d target_pose;
 	tf2::fromMsg(pose_msg.pose, target_pose);
 	// target pose w.r.t. planning frame
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
-	const geometry_msgs::PoseStamped& ik_frame_msg = props.get<geometry_msgs::PoseStamped>("ik_frame");
-	Eigen::Isometry3d ik_frame;
-	tf2::fromMsg(ik_frame_msg.pose, ik_frame);
-	ik_frame = robot_state.getGlobalLinkTransform(ik_frame_msg.header.frame_id) * ik_frame;
-	Eigen::Isometry3d object_to_ik = orig_object_pose.inverse() * ik_frame;
-
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &object_to_ik, this](const Eigen::Isometry3d& nominal, uint z_flips,
-	                                                 uint z_rotations = 10) {
+	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
 		for (uint flip = 0; flip <= z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
@@ -124,11 +121,12 @@ void GeneratePlacePose::compute() {
 				// target ik_frame's pose w.r.t. planning frame
 				geometry_msgs::PoseStamped target_pose_msg;
 				target_pose_msg.header.frame_id = scene->getPlanningFrame();
-				target_pose_msg.pose = tf2::toMsg(object * object_to_ik);
+				target_pose_msg.pose = tf2::toMsg(object);
 
 				InterfaceState state(scene);
 				forwardProperties(*s.end(), state);  // forward properties from inner solutions
 				state.properties().set("target_pose", target_pose_msg);
+				state.properties().set("ik_frame", ik_frame);
 
 				SubTrajectory trajectory;
 				trajectory.setCost(0.0);
@@ -140,7 +138,7 @@ void GeneratePlacePose::compute() {
 	};
 
 	uint z_flips = props.get<bool>("allow_z_flip") ? 1 : 0;
-	if (object->getShapes().size() == 1) {
+	if (object && object->getShapes().size() == 1) {
 		switch (object->getShapes()[0]->type) {
 			case shapes::CYLINDER:
 				spawner(target_pose, z_flips);
@@ -152,7 +150,6 @@ void GeneratePlacePose::compute() {
 				return;
 			}
 			case shapes::SPHERE:  // keep original orientation and rotate about world's z
-				target_pose.linear() = orig_object_pose.linear();
 				spawner(target_pose, z_flips);
 				return;
 			default:

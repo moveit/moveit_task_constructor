@@ -39,7 +39,7 @@ add_library(${PROJECT_NAME}_stages
 	simple_grasp.cpp
 	pick.cpp
 )
-target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_stages PUBLIC ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_library(${PROJECT_NAME}_stage_plugins
    plugins.cpp
