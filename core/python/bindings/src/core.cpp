@@ -293,7 +293,13 @@ void export_core(pybind11::module& m) {
 			Abstract base class for container stages
 			Containers allow encapsulation and reuse of planning functionality in a hierachical fashion.
 			You can iterate of the children of a container and access them by name.)")
-	    .def("add", &ContainerBase::add, "Insert a stage at the end of the current children list")
+	    .def(
+	        "add",
+	        [](ContainerBase& c, py::args args) {
+		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
+			        c.add(it->cast<Stage::pointer>());
+	        },
+	        "Insert a stage at the end of the current children list")
 	    .def("insert", &ContainerBase::insert, "stage"_a, "before"_a = -1,
 	         "Insert a stage before the given index into the children list")
 	    .def("remove", py::overload_cast<int>(&ContainerBase::remove), "Remove child stage by index", "pos"_a)
@@ -377,7 +383,13 @@ void export_core(pybind11::module& m) {
 	    .def("enableIntrospection", &Task::enableIntrospection, "enabled"_a = true,
 	         "Enable publishing intermediate results for inspection in ``rviz``")
 	    .def("clear", &Task::clear, "Reset the stage task (and all its stages)")
-	    .def("add", &Task::add, "Append a stage to the task's top-level container", "stage"_a)
+	    .def(
+	        "add",
+	        [](Task& t, py::args args) {
+		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
+			        t.add(it->cast<Stage::pointer>());
+	        },
+	        "Append stage(s) to the task's top-level container")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
