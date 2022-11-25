@@ -1,0 +1,5 @@
+breathe
+furo
+lxml
+sphinx
+sphinx-copybutton
