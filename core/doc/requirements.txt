@@ -1,4 +1,3 @@
-breathe
 furo
 lxml
 sphinx

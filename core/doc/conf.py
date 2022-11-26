@@ -26,7 +26,6 @@ DIR = Path(__file__).parent.resolve()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "breathe",
     "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -34,9 +33,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.extlinks",
 ]
-breathe_projects = {"mtc": DIR / "_doxygenxml"}
-breathe_default_project = "mtc"
-breathe_domain_by_extension = {"h": "cpp"}
 
 autosummary_generate = True
 autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
@@ -149,7 +145,7 @@ html_theme = "furo"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["_cpp"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -243,4 +239,5 @@ def generate_doxygen_xml(app):
 
 def setup(app):
     # Add hook for building doxygen xml when needed
-    app.connect("builder-inited", generate_doxygen_xml)
+    # app.connect("builder-inited", generate_doxygen_xml)
+    pass

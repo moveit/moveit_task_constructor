@@ -3,6 +3,12 @@
 API reference
 -------------
 
+`C++ <_static/index.html>`_
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Python
+^^^^^^
+
 .. autosummary::
    :toctree: _autosummary
    :caption: API
@@ -12,5 +18,3 @@ API reference
    moveit.task_constructor
    pymoveit_mtc.core
    pymoveit_mtc.stages
-
-.. doxygenindex::
