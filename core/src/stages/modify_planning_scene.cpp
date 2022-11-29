@@ -110,13 +110,12 @@ void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
 
 void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene& scene, const CollisionMatrixPairs& pairs,
                                           bool invert) {
-	collision_detection::AllowedCollisionMatrix& acm = scene.getAllowedCollisionMatrixNonConst();
 	bool allow = invert ? !pairs.allow : pairs.allow;
 	if (pairs.second.empty()) {
 		for (const auto& name : pairs.first)
-			acm.setEntry(name, allow);
+			scene.updateAllowedCollisionMatrixEntry(name, allow);
 	} else
-		acm.setEntry(pairs.first, pairs.second, allow);
+		scene.updateAllowedCollisionMatrixEntry(pairs.first, pairs.second, allow);
 }
 
 // invert indicates, whether to detach instead of attach (and vice versa)

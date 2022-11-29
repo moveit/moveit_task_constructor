@@ -95,11 +95,12 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 		p.configureInitFrom(Stage::PARENT | Stage::INTERFACE, { "eef", "object" });
 
 		allow_touch->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p) {
-			collision_detection::AllowedCollisionMatrix& acm = scene->getAllowedCollisionMatrixNonConst();
+			collision_detection::AllowedCollisionMatrix acm = scene->getAllowedCollisionMatrix();
 			const std::string& eef = p.get<std::string>("eef");
 			const std::string& object = p.get<std::string>("object");
 			acm.setEntry(object, scene->getRobotModel()->getEndEffector(eef)->getLinkModelNamesWithCollisionGeometry(),
 			             forward);
+			scene->update(acm);
 		});
 		insert(std::unique_ptr<ModifyPlanningScene>(allow_touch), insertion_position);
 	}
