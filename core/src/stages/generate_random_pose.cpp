@@ -41,7 +41,7 @@
 #include <rviz_marker_tools/marker_creation.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 #include <chrono>
 
@@ -119,7 +119,7 @@ void GenerateRandomPose::compute() {
 	// Use target pose as seed pose
 	geometry_msgs::PoseStamped seed_pose = target_pose;
 	Eigen::Isometry3d seed, sample;
-	tf::poseMsgToEigen(seed_pose.pose, seed);
+	tf2::fromMsg(seed_pose.pose, seed);
 	double elapsed_time = 0.0;
 	const auto start_time = std::chrono::steady_clock::now();
 	size_t spawned_solutions = 0;
@@ -149,7 +149,7 @@ void GenerateRandomPose::compute() {
 					sample.rotate(Eigen::AngleAxisd(pose_dim_sampler.second(0.0), Eigen::Vector3d::UnitZ()));
 			}
 		}
-		tf::poseEigenToMsg(sample, target_pose.pose);
+		target_pose.pose = tf2::toMsg(sample);
 
 		// Spawn sampled pose
 		spawn_target_pose(target_pose);
