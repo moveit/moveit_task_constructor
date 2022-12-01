@@ -74,8 +74,8 @@ public:
 	 * PoseDimension (X/Y/Z/ROLL/PITCH/YAW) for randomizing the pose.
 	 * The distribution_param is applied to the specified distribution method while the target pose value is used as
 	 * seed. The order in which the PoseDimension samplers are specified matters as the samplers are applied in sequence.
-	* That way it's possible to implement different Euler angles (i.e. XYZ, ZXZ, YXY) or even construct more complex
-	* sampling regions by applying translations after rotations.
+	 * That way it's possible to implement different Euler angles (i.e. XYZ, ZXZ, YXY) or even construct more complex
+	 * sampling regions by applying translations after rotations.
 	 * Currently supported distributions are:
 	 * * std::uniform_real_distrubtion: distribution_param specifies the full value range around the target_pose value
 	 * * std::normal_distribution: distribution_param is used as stddev, target_pose value is mean

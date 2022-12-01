@@ -49,7 +49,7 @@ namespace {
 // TODO(henningkayser): support user-defined random number engines
 std::random_device rd_;
 std::mt19937 gen_(rd_());
-}
+}  // namespace
 
 namespace moveit {
 namespace task_constructor {
@@ -66,7 +66,7 @@ GenerateRandomPose::GenerateRandomPose(const std::string& name) : GeneratePose(n
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::normal_distribution>(double stddev) {
-	return [ stddev, &gen = gen_ ](double mean) {
+	return [stddev, &gen = gen_](double mean) {
 		static std::normal_distribution<double> dist(mean, stddev);
 		return dist(gen);
 	};
@@ -75,7 +75,7 @@ GenerateRandomPose::getPoseDimensionSampler<std::normal_distribution>(double std
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::uniform_real_distribution>(double range) {
-	return [ range, &gen = gen_ ](double mean) {
+	return [range, &gen = gen_](double mean) {
 		static std::uniform_real_distribution<double> dist(mean - 0.5 * range, mean + 0.5 * range);
 		return dist(gen);
 	};
