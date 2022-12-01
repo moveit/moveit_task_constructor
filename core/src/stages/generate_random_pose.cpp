@@ -66,18 +66,18 @@ GenerateRandomPose::GenerateRandomPose(const std::string& name) : GeneratePose(n
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::normal_distribution>(double stddev) {
-	return [stddev, &gen = gen_](double mean) {
+	return [stddev](double mean) {
 		static std::normal_distribution<double> dist(mean, stddev);
-		return dist(gen);
+		return dist(gen_);
 	};
 }
 
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::uniform_real_distribution>(double range) {
-	return [range, &gen = gen_](double mean) {
+	return [range](double mean) {
 		static std::uniform_real_distribution<double> dist(mean - 0.5 * range, mean + 0.5 * range);
-		return dist(gen);
+		return dist(gen_);
 	};
 }
 
