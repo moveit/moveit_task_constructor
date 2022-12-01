@@ -131,13 +131,13 @@ void GenerateRandomPose::compute() {
 		for (const auto& pose_dim_sampler : pose_dimension_samplers_) {
 			switch (pose_dim_sampler.first) {
 				case X:
-					sample.translate(Eigen::Vector3d(pose_dim_sampler.second(seed_pose.pose.position.x), 0, 0));
+					sample.translate(Eigen::Vector3d(pose_dim_sampler.second(0), 0, 0));
 					break;
 				case Y:
-					sample.translate(Eigen::Vector3d(0, pose_dim_sampler.second(seed_pose.pose.position.y), 0));
+					sample.translate(Eigen::Vector3d(0, pose_dim_sampler.second(0), 0));
 					break;
 				case Z:
-					sample.translate(Eigen::Vector3d(0, 0, pose_dim_sampler.second(seed_pose.pose.position.z)));
+					sample.translate(Eigen::Vector3d(0, 0, pose_dim_sampler.second(0)));
 					break;
 				case ROLL:
 					sample.rotate(Eigen::AngleAxisd(pose_dim_sampler.second(0.0), Eigen::Vector3d::UnitX()));
