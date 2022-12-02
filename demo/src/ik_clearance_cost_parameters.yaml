@@ -1,0 +1,9 @@
+ik_clearance_cost_demo:
+  cumulative:
+    type: bool
+    default_value: false
+    read_only: true
+  with_world:
+    type: bool
+    default_value: true
+    read_only: true

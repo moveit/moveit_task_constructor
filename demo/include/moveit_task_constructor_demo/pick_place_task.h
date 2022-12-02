@@ -35,7 +35,7 @@
 */
 
 // ROS
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/node.hpp>
 
 // MoveIt
 #include <moveit/planning_scene/planning_scene.h>
@@ -57,6 +57,7 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
+#include "pick_place_demo_parameters.hpp"
 
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -70,56 +71,22 @@ namespace moveit_task_constructor_demo {
 using namespace moveit::task_constructor;
 
 // prepare a demo environment from ROS parameters under node
-void setupDemoScene(const rclcpp::Node::SharedPtr& node);
+void setupDemoScene(const pick_place_task_demo::Params& params);
 
 class PickPlaceTask
 {
 public:
-	PickPlaceTask(const std::string& task_name, const rclcpp::Node::SharedPtr& pnh);
+	PickPlaceTask(const std::string& task_name);
 	~PickPlaceTask() = default;
 
-	bool init();
+	bool init(const rclcpp::Node::SharedPtr& node, const pick_place_task_demo::Params& params);
 
-	bool plan();
+	bool plan(const std::size_t max_solutions);
 
 	bool execute();
 
 private:
-	void loadParameters();
-
-	rclcpp::Node::SharedPtr node_;
-
 	std::string task_name_;
 	moveit::task_constructor::TaskPtr task_;
-
-	// planning group properties
-	std::string arm_group_name_;
-	std::string eef_name_;
-	std::string hand_group_name_;
-	std::string hand_frame_;
-
-	// object + surface
-	std::vector<std::string> support_surfaces_;
-	std::string object_reference_frame_;
-	std::string surface_link_;
-	std::string object_name_;
-	std::string world_frame_;
-	std::vector<double> object_dimensions_;
-
-	// Predefined pose targets
-	std::string hand_open_pose_;
-	std::string hand_close_pose_;
-	std::string arm_home_pose_;
-
-	// Pick metrics
-	Eigen::Isometry3d grasp_frame_transform_;
-	double approach_object_min_dist_;
-	double approach_object_max_dist_;
-	double lift_object_min_dist_;
-	double lift_object_max_dist_;
-
-	// Place metrics
-	geometry_msgs::msg::Pose place_pose_;
-	double place_surface_offset_;
 };
 }  // namespace moveit_task_constructor_demo

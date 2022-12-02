@@ -8,7 +8,7 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <moveit/task_constructor/cost_terms.h>
-#include <rosparam_shortcuts/rosparam_shortcuts.h>
+#include "ik_clearance_cost_parameters.hpp"
 
 using namespace moveit::task_constructor;
 
@@ -17,6 +17,9 @@ int main(int argc, char** argv) {
 	rclcpp::init(argc, argv);
 	auto node = rclcpp::Node::make_shared("moveit_task_constructor_demo");
 	std::thread spinning_thread([node] { rclcpp::spin(node); });
+
+	const auto param_listener = std::make_shared<ik_clearance_cost_demo::ParamListener>(node);
+	const auto params = param_listener->get_params();
 
 	Task t;
 	t.stages()->setName("clearance IK");
@@ -56,10 +59,8 @@ int main(int argc, char** argv) {
 	ik->setMaxIKSolutions(100);
 
 	auto cl_cost{ std::make_unique<cost::Clearance>() };
-	cl_cost->cumulative = false;
-	rosparam_shortcuts::get(node, "cumulative", cl_cost->cumulative);  // sum up pairwise distances?
-	cl_cost->with_world = true;
-	rosparam_shortcuts::get(node, "with_world", cl_cost->with_world);  // consider distance to world objects?
+	cl_cost->cumulative = params.cumulative;
+	cl_cost->with_world = params.with_world;
 	ik->setCostTerm(std::move(cl_cost));
 
 	t.add(std::move(ik));

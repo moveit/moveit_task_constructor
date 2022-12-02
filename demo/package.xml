@@ -11,10 +11,10 @@
   <license>BSD</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>generate_parameter_library</depend>
   <depend>moveit_core</depend>
   <depend>moveit_ros_planning_interface</depend>
   <depend>moveit_task_constructor_core</depend>
-  <depend>rosparam_shortcuts</depend>
   <exec_depend>moveit_configs_utils</exec_depend>
   <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
   <exec_depend>moveit_task_constructor_capabilities</exec_depend>
