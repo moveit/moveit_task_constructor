@@ -44,54 +44,54 @@ pick_place_task_demo:
     type: string
     validation:
       not_empty<>: []
-  eef_name: 
+  eef_name:
     type: string
     validation:
       not_empty<>: []
-  hand_group_name: 
+  hand_group_name:
     type: string
     validation:
       not_empty<>: []
-  hand_frame: 
+  hand_frame:
     type: string
     validation:
       not_empty<>: []
-  hand_open_pose: 
+  hand_open_pose:
     type: string
     validation:
       not_empty<>: []
-  hand_close_pose: 
+  hand_close_pose:
     type: string
     validation:
       not_empty<>: []
-  arm_home_pose: 
+  arm_home_pose:
     type: string
     validation:
       not_empty<>: []
   # Scene frames
-  world_frame: 
+  world_frame:
     type: string
     validation:
       not_empty<>: []
-  surface_link: 
+  surface_link:
     type: string
     validation:
       not_empty<>: []
-  grasp_frame_transform: 
+  grasp_frame_transform:
     type: double_array
     validation:
       fixed_size<>: [6]
-  place_pose: 
+  place_pose:
     type: double_array
     validation:
       fixed_size<>: [6]
-  place_surface_offset: 
+  place_surface_offset:
     type: double
-  approach_object_min_dist: 
+  approach_object_min_dist:
     type: double
-  approach_object_max_dist: 
+  approach_object_max_dist:
     type: double
-  lift_object_min_dist: 
+  lift_object_min_dist:
     type: double
   lift_object_max_dist:
     type: double
