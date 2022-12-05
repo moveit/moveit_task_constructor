@@ -40,7 +40,7 @@
 // MTC pick/place demo implementation
 #include <moveit_task_constructor_demo/pick_place_task.h>
 
-#include <rosparam_shortcuts/rosparam_shortcuts.h>
+#include "pick_place_demo_parameters.hpp"
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_demo");
 
@@ -51,18 +51,20 @@ int main(int argc, char** argv) {
 	auto node = rclcpp::Node::make_shared("moveit_task_constructor_demo", node_options);
 	std::thread spinning_thread([node] { rclcpp::spin(node); });
 
-	moveit_task_constructor_demo::setupDemoScene(node);
+	const auto param_listener = std::make_shared<pick_place_task_demo::ParamListener>(node);
+	const auto params = param_listener->get_params();
+	moveit_task_constructor_demo::setupDemoScene(params);
 
 	// Construct and run pick/place task
-	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", node);
-	if (!pick_place_task.init()) {
+	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task");
+	if (!pick_place_task.init(node, params)) {
 		RCLCPP_INFO(LOGGER, "Initialization failed");
 		return 1;
 	}
 
-	if (pick_place_task.plan()) {
+	if (pick_place_task.plan(params.max_solutions)) {
 		RCLCPP_INFO(LOGGER, "Planning succeded");
-		if (bool execute = false; rosparam_shortcuts::get(node, "execute", execute) && execute) {
+		if (params.execute) {
 			pick_place_task.execute();
 			RCLCPP_INFO(LOGGER, "Execution complete");
 		} else {

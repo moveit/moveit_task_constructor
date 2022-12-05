@@ -1,0 +1,97 @@
+pick_place_task_demo:
+  execute:
+    type: bool
+    default_value: false
+  table_name:
+    type: string
+    validation:
+      not_empty<>: []
+  table_reference_frame:
+    type: string
+    validation:
+      not_empty<>: []
+  table_dimensions:
+    type: double_array
+    validation:
+      fixed_size<>: [3]
+  table_pose:
+    type: double_array
+    validation:
+      fixed_size<>: [6]
+  object_name:
+    type: string
+    validation:
+      not_empty<>: []
+  object_reference_frame:
+    type: string
+    validation:
+      not_empty<>: []
+  object_dimensions:
+    type: double_array
+    validation:
+      fixed_size<>: [2]
+  object_pose:
+    type: double_array
+    validation:
+      fixed_size<>: [6]
+  spawn_table:
+    type: bool
+    default_value: true
+  max_solutions:
+    type: int
+    default_value: 10
+  arm_group_name:
+    type: string
+    validation:
+      not_empty<>: []
+  eef_name:
+    type: string
+    validation:
+      not_empty<>: []
+  hand_group_name:
+    type: string
+    validation:
+      not_empty<>: []
+  hand_frame:
+    type: string
+    validation:
+      not_empty<>: []
+  hand_open_pose:
+    type: string
+    validation:
+      not_empty<>: []
+  hand_close_pose:
+    type: string
+    validation:
+      not_empty<>: []
+  arm_home_pose:
+    type: string
+    validation:
+      not_empty<>: []
+  # Scene frames
+  world_frame:
+    type: string
+    validation:
+      not_empty<>: []
+  surface_link:
+    type: string
+    validation:
+      not_empty<>: []
+  grasp_frame_transform:
+    type: double_array
+    validation:
+      fixed_size<>: [6]
+  place_pose:
+    type: double_array
+    validation:
+      fixed_size<>: [6]
+  place_surface_offset:
+    type: double
+  approach_object_min_dist:
+    type: double
+  approach_object_max_dist:
+    type: double
+  lift_object_min_dist:
+    type: double
+  lift_object_max_dist:
+    type: double
