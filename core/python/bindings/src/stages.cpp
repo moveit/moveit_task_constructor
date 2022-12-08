@@ -387,7 +387,7 @@ void export_stages(pybind11::module& m) {
 		)")
 	    .def(py::init<const std::string&>(), "name"_a);
 
-	properties::class_<Pick, Stage>(m, "Pick", R"(
+	properties::class_<Pick, SerialContainer>(m, "Pick", R"(
 			The Pick stage is a specialization of the PickPlaceBase class, which
 			wraps the pipeline to pick or place an object with a given end effector.
 
@@ -430,7 +430,7 @@ void export_stages(pybind11::module& m) {
 			The lifting motion away from the grasping state is represented by its destination as joint-value pairs
 		)", "place"_a);
 
-	properties::class_<Place, Stage>(m, "Place", R"(
+	properties::class_<Place, SerialContainer>(m, "Place", R"(
 			The Place stage is a specialization of the PickPlaceBase class, which
 			wraps the pipeline to pick or place an object with a given end effector.
 
@@ -473,7 +473,7 @@ void export_stages(pybind11::module& m) {
 	    .def(py::init<Stage::pointer&&, const std::string&>(), "place_generator"_a,
 	         "name"_a = std::string("place"));
 
-	properties::class_<SimpleGrasp, Stage>(m, "SimpleGrasp", R"(
+	properties::class_<SimpleGrasp, SerialContainer>(m, "SimpleGrasp", R"(
 			Specialization of SimpleGraspBase to realize grasping.
 
 			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
@@ -514,7 +514,7 @@ void export_stages(pybind11::module& m) {
 			should be computed.
 		)", "max_ik_solutions"_a);
 
-	properties::class_<SimpleUnGrasp, Stage>(m, "SimpleUnGrasp", R"(
+	properties::class_<SimpleUnGrasp, SerialContainer>(m, "SimpleUnGrasp", R"(
 			Specialization of SimpleGraspBase to realize ungrasping
 
 			Take a look at the :ref:`Pick and Place Tutorial <subsec-tut-pick-place>` for an in-depth look,
