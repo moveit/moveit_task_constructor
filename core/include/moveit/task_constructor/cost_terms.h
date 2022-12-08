@@ -113,15 +113,19 @@ public:
 	double cost;
 };
 
-/// trajectory length (interpolated between waypoints)
+/// trajectory length with optional weighting for different joints
 class PathLength : public TrajectoryCostTerm
 {
 public:
+	/// By default, all joints are considered with same weight of 1.0
 	PathLength() = default;
-	PathLength(std::vector<std::string> j) : joints{ std::move(j) } {};
+	/// Limit measurements to given joint names
+	PathLength(std::vector<std::string> joints);
+	/// Limit measurements to given joints and use given weighting
+	PathLength(std::map<std::string, double> j) : joints(std::move(j)) {}
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
-	std::vector<std::string> joints;
+	std::map<std::string, double> joints;  //< joint weights
 };
 
 /// execution duration of the whole trajectory

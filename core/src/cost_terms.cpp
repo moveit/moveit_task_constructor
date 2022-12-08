@@ -106,17 +106,23 @@ double Constant::operator()(const WrappedSolution& /*s*/, std::string& /*comment
 	return cost;
 }
 
+PathLength::PathLength(std::vector<std::string> joints) {
+	for (auto& j : joints)
+		this->joints.emplace(std::move(j), 1.0);
+}
+
 double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
-	std::vector<const robot_model::JointModel*> joint_models;
-	joint_models.reserve(joints.size());
+	std::map<const robot_model::JointModel*, double> weights;
 	const auto& first_waypoint = traj->getWayPoint(0);
-	for (auto& joint : joints) {
-		joint_models.push_back(first_waypoint.getJointModel(joint));
+	for (auto& joint_weight : joints) {
+		const robot_model::JointModel* jm = first_waypoint.getJointModel(joint_weight.first);
+		if (jm)
+			weights.emplace(jm, joint_weight.second);
 	}
 
 	double path_length{ 0.0 };
@@ -126,8 +132,8 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 		if (joints.empty()) {
 			path_length += last.distance(curr);
 		} else {
-			for (const auto& model : joint_models) {
-				path_length += last.distance(curr, model);
+			for (const auto& item : weights) {
+				path_length += item.second * last.distance(curr, item.first);
 			}
 		}
 	}
