@@ -272,6 +272,12 @@ class TestStages(unittest.TestCase):
                 print("error in class {}: {}".format(stage, ex))
                 raise
 
+    def test_CostTerm(self):
+        stage = stages.CurrentState()
+        weights = {"joint_{}".format(i + 1): 1.0 for i in range(6)}
+        costs = core.PathLength(weights)
+        stage.setCostTerm(costs)
+
 
 class TestContainer(unittest.TestCase):
     def __init__(self, *args, **kwargs):
