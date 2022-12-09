@@ -22,11 +22,11 @@ jobs:
           - IMAGE: rolling-source
             TARGET_CMAKE_ARGS: >-
               -DCMAKE_BUILD_TYPE=Release
-              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls"
+              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith"
           - IMAGE: humble-source
             TARGET_CMAKE_ARGS: >-
               -DCMAKE_BUILD_TYPE=Release
-              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls"
+              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith"
           - IMAGE: rolling-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
@@ -35,7 +35,7 @@ jobs:
             CLANG_TIDY: true
             TARGET_CMAKE_ARGS: >-
               -DCMAKE_BUILD_TYPE=Release
-              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls"
+              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith"
           # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
           # see https://github.com/google/sanitizers/wiki/AddressSanitizer
           # Disable alloc/dealloc mismatch warnings: https://github.com/ros2/rclcpp/pull/1324
