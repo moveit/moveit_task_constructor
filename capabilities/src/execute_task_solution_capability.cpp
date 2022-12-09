@@ -46,6 +46,7 @@
 #include <moveit/moveit_cpp/moveit_cpp.h>
 
 #include <boost/algorithm/string/join.hpp>
+#include <moveit/utils/moveit_error_code.h>
 
 namespace {
 

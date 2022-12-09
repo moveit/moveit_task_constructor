@@ -14,15 +14,27 @@ find_package(rviz_marker_tools REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+option(MOVEIT_CI_WARNINGS "Enable all warnings used by CI" OFF) # We use our own set of warnings
+# Common cmake code applied to all moveit packages
+find_package(moveit_common REQUIRED)
+moveit_package()
+
+# TODO: Port to ROS2
+# catkin_python_setup()
+# catkin_package(
+#   LIBRARIES
+#      moveit_python_tools
+# 	...
+# 	CFG_EXTRAS pybind11.cmake
+# )
 
 add_compile_options(-fvisibility-inlines-hidden)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
 add_subdirectory(src)
+# TODO: Port to ROS2
+# add_subdirectory(python)
 add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION include

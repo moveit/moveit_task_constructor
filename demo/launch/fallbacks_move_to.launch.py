@@ -17,7 +17,7 @@ def generate_launch_description():
         executable="fallbacks_move_to",
         output="screen",
         parameters=[
-            moveit_config.cartesian_limits,
+            moveit_config.pilz_cartesian_limits,
             moveit_config.joint_limits,
             moveit_config.planning_pipelines,
             moveit_config.robot_description,

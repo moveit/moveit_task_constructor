@@ -36,8 +36,11 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 		return pose;
 	};
 
+	const auto& forwarded_props = grasp_stage->forwardedProperties();
+
 	{
 		auto approach = std::make_unique<MoveRelative>(forward ? "approach object" : "retract", cartesian_solver_);
+		approach->setForwardedProperties(forwarded_props);
 		PropertyMap& p = approach->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.property("ik_frame").configureInitFrom(Stage::PARENT, init_ik_frame);
@@ -52,6 +55,7 @@ PickPlaceBase::PickPlaceBase(Stage::pointer&& grasp_stage, const std::string& na
 
 	{
 		auto lift = std::make_unique<MoveRelative>(forward ? "lift object" : "place object", cartesian_solver_);
+		lift->setForwardedProperties(forwarded_props);
 		PropertyMap& p = lift->properties();
 		p.property("group").configureInitFrom(Stage::PARENT, "eef_parent_group");
 		p.property("ik_frame").configureInitFrom(Stage::PARENT, init_ik_frame);
