@@ -12,6 +12,9 @@ find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
+# Common cmake code applied to all moveit packages
+find_package(moveit_common REQUIRED)
+moveit_package()
 
 add_library(${PROJECT_NAME} SHARED
    src/execute_task_solution_capability.cpp

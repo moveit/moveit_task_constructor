@@ -74,7 +74,7 @@ bool MarkerVisualization::createMarkers(rviz_common::DisplayContext* context, Og
 	// fetch transform from planning_frame_ to rviz' fixed frame
 	const std::string& fixed_frame = context->getFrameManager()->getFixedFrame();
 	Ogre::Quaternion quat;
-	Ogre::Vector3 pos;
+	Ogre::Vector3 pos = Ogre::Vector3::ZERO;
 
 	try {
 		auto tf_wrapper = std::dynamic_pointer_cast<rviz_default_plugins::transformation::TFWrapper>(

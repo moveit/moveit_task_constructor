@@ -132,8 +132,8 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 		attach->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p) {
 			const std::string& eef = p.get<std::string>("eef");
 			moveit_msgs::msg::AttachedCollisionObject obj;
-			obj.object.operation = forward ? (int8_t)moveit_msgs::msg::CollisionObject::ADD :
-                                          (int8_t)moveit_msgs::msg::CollisionObject::REMOVE;
+			obj.object.operation = forward ? static_cast<int8_t>(moveit_msgs::msg::CollisionObject::ADD) :
+                                          static_cast<int8_t>(moveit_msgs::msg::CollisionObject::REMOVE);
 			obj.link_name = scene->getRobotModel()->getEndEffector(eef)->getEndEffectorParentGroup().second;
 			obj.object.id = p.get<std::string>("object");
 			scene->processAttachedCollisionObjectMsg(obj);

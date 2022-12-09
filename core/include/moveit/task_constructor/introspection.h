@@ -96,8 +96,8 @@ public:
 	void publishAllSolutions(bool wait = true);
 
 	/// get solution
-	bool getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr req,
-	                 const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr res);
+	bool getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr& req,
+	                 const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr& res);
 
 	/// retrieve id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage* const s) const;

@@ -76,8 +76,11 @@ public:
 		auto it = types_.find(type_index);
 		if (it == types_.end()) {
 			rclcpp::Clock steady_clock(RCL_STEADY_TIME);
-			RCLCPP_WARN_STREAM_THROTTLE(LOGGER, steady_clock, 10.0,
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+			RCLCPP_WARN_STREAM_THROTTLE(LOGGER, steady_clock, 10'000,
 			                            "Unregistered property type: " << boost::core::demangle(type_index.name()));
+#pragma GCC diagnostic pop
 			return dummy_;
 		}
 		return it->second;
