@@ -16,7 +16,14 @@ set(CMAKE_INSTALL_INCLUDEDIR include/moveit/python)
 set(PYBIND11_CMAKECONFIG_INSTALL_DIR ${CATKIN_PACKAGE_SHARE_DESTINATION}/cmake
     CACHE INTERNAL "install path for pybind11 cmake files")
 
-# source pybind11 folder, which exposes its targets and installs it
+# source pybind11 folder, which exposes its targets and installs them
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/pybind11/CMakeLists.txt")
+	message("Missing content of submodule pybind11: Use 'git clone --recurse-submodule' in future.\n"
+	        "Checking out content automatically")
+	execute_process(COMMAND git submodule init
+	                COMMAND git submodule update
+	                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
 #catkin_lint: ignore_once subproject duplicate_cmd
 add_subdirectory(pybind11)
 
