@@ -40,6 +40,7 @@
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 
@@ -138,6 +139,57 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 		}
 	}
 	return path_length;
+}
+
+DistanceToReference::DistanceToReference(const moveit_msgs::RobotState& ref, Mode m, std::map<std::string, double> w)
+  : reference(ref), weights(std::move(w)), mode(m) {}
+DistanceToReference::DistanceToReference(const std::map<std::string, double>& ref, Mode m,
+                                         std::map<std::string, double> w)
+  : weights(std::move(w)), mode(m) {
+	reference.joint_state.name.reserve(ref.size());
+	reference.joint_state.position.reserve(ref.size());
+
+	for (auto& item : ref) {
+		reference.joint_state.name.push_back(item.first);
+		reference.joint_state.position.push_back(item.second);
+	}
+	reference.is_diff = true;
+}
+
+double DistanceToReference::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
+	const auto& state = (mode == Mode::END_INTERFACE) ? s.end() : s.start();
+	const auto& traj = s.trajectory();
+
+	moveit::core::RobotState ref_state = state->scene()->getCurrentState();
+	moveit::core::robotStateMsgToRobotState(reference, ref_state, false);
+
+	std::map<const robot_model::JointModel*, double> w;
+	for (auto& item : weights) {
+		const robot_model::JointModel* jm = ref_state.getJointModel(item.first);
+		if (jm)
+			w.emplace(jm, item.second);
+	}
+
+	auto distance = [this, &ref_state, &w](const moveit::core::RobotState& state) {
+		if (weights.empty()) {
+			return ref_state.distance(state);
+		} else {
+			double accumulated = 0.0;
+			for (const auto& item : w)
+				accumulated += item.second * ref_state.distance(state, item.first);
+			return accumulated;
+		}
+	};
+
+	if (mode == Mode::START_INTERFACE || mode == Mode::END_INTERFACE || (mode == Mode::AUTO && (traj == nullptr))) {
+		return distance(state->scene()->getCurrentState());
+	} else {
+		double accumulated = 0.0;
+		for (size_t i = 0; i < traj->getWayPointCount(); ++i)
+			accumulated += distance(traj->getWayPoint(i));
+		accumulated /= traj->getWayPointCount();
+		return accumulated;
+	}
 }
 
 double TrajectoryDuration::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
