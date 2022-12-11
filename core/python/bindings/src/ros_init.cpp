@@ -38,19 +38,19 @@
 namespace moveit {
 namespace python {
 
-boost::mutex InitProxy::lock;
-std::unique_ptr<InitProxy> InitProxy::singleton_instance;
+boost::mutex InitProxy::lock_;
+std::unique_ptr<InitProxy> InitProxy::singleton_instance_;
 
 void InitProxy::init(const std::string& node_name, const std::map<std::string, std::string>& remappings,
                      uint32_t options) {
-	boost::mutex::scoped_lock slock(lock);
-	if (!singleton_instance && !ros::isInitialized())
-		singleton_instance.reset(new InitProxy(node_name, remappings, options));
+	boost::mutex::scoped_lock slock(lock_);
+	if (!singleton_instance_ && !ros::isInitialized())
+		singleton_instance_.reset(new InitProxy(node_name, remappings, options));
 }
 
 void InitProxy::shutdown() {
-	boost::mutex::scoped_lock slock(lock);
-	singleton_instance.reset();
+	boost::mutex::scoped_lock slock(lock_);
+	singleton_instance_.reset();
 }
 
 InitProxy::InitProxy(const std::string& node_name, const std::map<std::string, std::string>& remappings,

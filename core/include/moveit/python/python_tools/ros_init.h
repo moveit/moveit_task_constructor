@@ -21,8 +21,8 @@ public:
 private:
 	InitProxy(const std::string& node_name, const std::map<std::string, std::string>& remappings, uint32_t options);
 
-	static boost::mutex lock;
-	static std::unique_ptr<InitProxy> singleton_instance;
+	static boost::mutex lock_;
+	static std::unique_ptr<InitProxy> singleton_instance_;
 
 private:
 	std::unique_ptr<ros::AsyncSpinner> spinner;

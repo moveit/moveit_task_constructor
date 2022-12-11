@@ -97,7 +97,7 @@ void export_core(pybind11::module& m) {
 	/// translate InitStageException into InitStageError
 	static py::exception<InitStageException> init_stage_error(m, "InitStageError");
 	/// provide extended error description for InitStageException
-	py::register_exception_translator([](std::exception_ptr p) {
+	py::register_exception_translator([](std::exception_ptr p) {  // NOLINT(performance-unnecessary-value-param)
 		try {
 			if (p)
 				std::rethrow_exception(p);
@@ -295,7 +295,7 @@ void export_core(pybind11::module& m) {
 			You can iterate of the children of a container and access them by name.)")
 	    .def(
 	        "add",
-	        [](ContainerBase& c, py::args args) {
+	        [](ContainerBase& c, const py::args& args) {
 		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
 			        c.add(it->cast<Stage::pointer>());
 	        },
@@ -385,7 +385,7 @@ void export_core(pybind11::module& m) {
 	    .def("clear", &Task::clear, "Reset the stage task (and all its stages)")
 	    .def(
 	        "add",
-	        [](Task& t, py::args args) {
+	        [](Task& t, const py::args& args) {
 		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
 			        t.add(it->cast<Stage::pointer>());
 	        },
