@@ -1,9 +1,10 @@
-# As we rely on some not yet released pybind11 PRs, we are employing
-# our own fork of it, imported via git submodule.
-# See https://github.com/pybind/pybind11/pull/2687.
+# We rely on pybind11's smart_holder branch imported pybind11 via git submodule
 
 # pybind11 must use the ROS python version
 set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION_STRING})
+
+# Use minimum-size optimization for pybind11 bindings
+add_compile_options("-Os")
 
 # create symlink to grant access to downstream packages in devel space
 add_custom_target(pybind11_devel_symlink ALL COMMAND ${CMAKE_COMMAND} -E create_symlink
