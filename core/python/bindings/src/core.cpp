@@ -357,6 +357,15 @@ void export_core(pybind11::module& m) {
 	        },
 	        py::return_value_policy::reference_internal)
 	    .def(
+	        "__getitem__",
+	        [](const ContainerBase& c, int idx) -> Stage* {
+		        Stage* child = c[idx];
+		        if (!child)
+			        throw py::index_error();
+		        return child;
+	        },
+	        py::return_value_policy::reference_internal)
+	    .def(
 	        "__iter__",
 	        [](const ContainerBase& c) {
 		        const auto& children = c.pimpl()->children();
@@ -436,6 +445,15 @@ void export_core(pybind11::module& m) {
 	        "__getitem__",
 	        [](const Task& t, const std::string& name) -> Stage* {
 		        Stage* child = t.stages()->findChild(name);
+		        if (!child)
+			        throw py::index_error();
+		        return child;
+	        },
+	        py::return_value_policy::reference_internal)
+	    .def(
+	        "__getitem__",
+	        [](const Task& t, int idx) -> Stage* {
+		        Stage* child = t.stages()->operator[](idx);
 		        if (!child)
 			        throw py::index_error();
 		        return child;
