@@ -95,8 +95,6 @@ void CurrentState::compute() {
 		if (rclcpp::spin_until_future_complete(node, res_future) == rclcpp::FutureReturnCode::SUCCESS) {
 			auto res = res_future.get();
 			scene_->setPlanningSceneMsg(res->scene);
-			scene_->getCurrentStateNonConst().enforceBounds();
-			scene_->getCurrentStateNonConst().update();
 			spawn(InterfaceState(scene_), 0.0);
 			return;
 		}

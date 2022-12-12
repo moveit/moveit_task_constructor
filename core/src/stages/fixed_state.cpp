@@ -64,8 +64,6 @@ bool FixedState::canCompute() const {
 
 void FixedState::compute() {
 	SubTrajectory trajectory;
-	scene_->getCurrentStateNonConst().enforceBounds();
-	scene_->getCurrentStateNonConst().update();
 	if (!properties().get<bool>("ignore_collisions") && scene_->isStateColliding()) {
 		trajectory.markAsFailure("in collision");
 	}
