@@ -341,7 +341,7 @@ Stage* ContainerBase::findChild(const std::string& name) const {
 	return nullptr;
 }
 
-Stage* ContainerBase::childByIndex(int index) const {
+Stage* ContainerBase::operator[](int index) const {
 	return pimpl()->childByIndex(index, false)->get();
 }
 
