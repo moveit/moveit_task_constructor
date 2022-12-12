@@ -282,7 +282,7 @@ class TestStages(unittest.TestCase):
 class BaseTestCases:
     class ContainerTest(unittest.TestCase):
         def __init__(self, ContainerType, *args, **kwargs):
-            super().__init__(*args, **kwargs)
+            super(BaseTestCases.ContainerTest, self).__init__(*args, **kwargs)
             self.ContainerType = ContainerType
             self.container = container = ContainerType()
             container.add(stages.CurrentState("1"))
@@ -319,12 +319,12 @@ class BaseTestCases:
 
 class TestSerial(BaseTestCases.ContainerTest):
     def __init__(self, *args, **kwargs):
-        super().__init__(core.SerialContainer, *args, **kwargs)
+        super(TestSerial, self).__init__(core.SerialContainer, *args, **kwargs)
 
 
 class TestTask(BaseTestCases.ContainerTest):
     def __init__(self, *args, **kwargs):
-        super().__init__(core.Task, *args, **kwargs)
+        super(TestTask, self).__init__(core.Task, *args, **kwargs)
 
     def test(self):
         task = core.Task()
