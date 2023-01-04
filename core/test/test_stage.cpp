@@ -118,8 +118,8 @@ void spawnObject(PlanningScene& scene, const std::string& name, int type,
 void attachObject(PlanningScene& scene, const std::string& object, const std::string& link, bool attach) {
 	moveit_msgs::AttachedCollisionObject obj;
 	obj.link_name = link;
-	obj.object.operation =
-	    attach ? (int8_t)moveit_msgs::CollisionObject::ADD : (int8_t)moveit_msgs::CollisionObject::REMOVE;
+	obj.object.operation = attach ? static_cast<int8_t>(moveit_msgs::CollisionObject::ADD) :
+	                                static_cast<int8_t>(moveit_msgs::CollisionObject::REMOVE);
 	obj.object.id = object;
 	scene.processAttachedCollisionObjectMsg(obj);
 }
