@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 project(moveit_task_constructor_capabilities)
 
-add_compile_options(-std=c++17)
-
 find_package(ament_cmake REQUIRED)
 
 find_package(Boost REQUIRED)
+find_package(moveit_common REQUIRED)
+moveit_package()
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_move_group REQUIRED)
 find_package(moveit_task_constructor_msgs REQUIRED)

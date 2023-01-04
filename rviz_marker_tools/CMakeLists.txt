@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 project(rviz_marker_tools)
 
 find_package(ament_cmake REQUIRED)
+find_package(moveit_common REQUIRED)
+moveit_package()
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
 	eigen3_cmake_module
