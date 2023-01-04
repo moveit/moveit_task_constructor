@@ -291,8 +291,8 @@ public:
 
 	// Default implementations, using generic compute().
 	// Override if you want to use different code for FORWARD and BACKWARD directions.
-	virtual void computeForward(const InterfaceState& from) { computeGeneric<Interface::FORWARD>(from); }
-	virtual void computeBackward(const InterfaceState& to) { computeGeneric<Interface::BACKWARD>(to); }
+	virtual void computeForward(const InterfaceState& from);
+	virtual void computeBackward(const InterfaceState& to);
 
 protected:
 	// constructor for use in derived classes

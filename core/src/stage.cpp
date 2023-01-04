@@ -616,6 +616,14 @@ template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceStat
 template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
                                                               SubTrajectory&& trajectory);
 
+void PropagatingEitherWay::computeForward(const InterfaceState& from) {
+	computeGeneric<Interface::FORWARD>(from);
+}
+
+void PropagatingEitherWay::computeBackward(const InterfaceState& to) {
+	computeGeneric<Interface::BACKWARD>(to);
+}
+
 template <Interface::Direction dir>
 void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
 	planning_scene::PlanningScenePtr end;
