@@ -248,7 +248,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			// linear+angular are expressed w.r.t. model frame and thus we need left-multiplication
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			auto R = Eigen::AngleAxisd(angular_norm, angular);
+			auto R = Eigen::AngleAxisd(angular_norm, angular);  // NOLINT(readability-identifier-naming)
 			auto p = ik_pose_world.translation();
 			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
 			goto COMPUTE;

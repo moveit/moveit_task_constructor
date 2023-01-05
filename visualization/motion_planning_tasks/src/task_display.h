@@ -116,9 +116,9 @@ private Q_SLOTS:
 	void onTasksRemoved(const QModelIndex& parent, int first, int last);
 	void onTaskDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 
-	void taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr msg);
-	void taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr msg);
-	void taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr msg);
+	void taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr& msg);
+	void taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr& msg);
+	void taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr& msg);
 
 protected:
 	/** @brief A Node which is registered with the main executor (used in the "update" thread).

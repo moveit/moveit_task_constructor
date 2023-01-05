@@ -198,7 +198,7 @@ void TaskDisplay::changedRobotDescription() {
 		loadRobotModel();
 }
 
-void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr msg) {
+void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::TaskDescription::ConstSharedPtr& msg) {
 	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	requestPanel();
 	task_list_model_->processTaskDescriptionMessage(*msg, base_ns_ + GET_SOLUTION_SERVICE "_" + msg->task_id);
@@ -222,12 +222,12 @@ void TaskDisplay::taskDescriptionCB(const moveit_task_constructor_msgs::msg::Tas
 	}
 }
 
-void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr msg) {
+void TaskDisplay::taskStatisticsCB(const moveit_task_constructor_msgs::msg::TaskStatistics::ConstSharedPtr& msg) {
 	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	task_list_model_->processTaskStatisticsMessage(*msg);
 }
 
-void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr msg) {
+void TaskDisplay::taskSolutionCB(const moveit_task_constructor_msgs::msg::Solution::ConstSharedPtr& msg) {
 	setStatus(rviz_common::properties::StatusProperty::Ok, "Task Monitor", "OK");
 	try {
 		const DisplaySolutionPtr& s = task_list_model_->processSolutionMessage(*msg);

@@ -100,8 +100,8 @@ void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
 	bool attach = pair.second.second;
 	if (invert)
 		attach = !attach;
-	obj.object.operation =
-	    attach ? (int8_t)moveit_msgs::msg::CollisionObject::ADD : (int8_t)moveit_msgs::msg::CollisionObject::REMOVE;
+	obj.object.operation = attach ? static_cast<int8_t>(moveit_msgs::msg::CollisionObject::ADD) :
+                                   static_cast<int8_t>(moveit_msgs::msg::CollisionObject::REMOVE);
 	for (const std::string& name : pair.second.first) {
 		obj.object.id = name;
 		scene.processAttachedCollisionObjectMsg(obj);

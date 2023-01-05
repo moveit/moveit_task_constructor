@@ -1,5 +1,0 @@
-repositories:
-  rosparam_shortcuts:
-    type: git
-    url: https://github.com/PickNikRobotics/rosparam_shortcuts
-    version: ros2

@@ -240,7 +240,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 		meta_model->setMimeTypes({ factory->mimeType() });
 	tasks_view->setModel(meta_model);
 	QObject::connect(meta_model, SIGNAL(rowsInserted(QModelIndex, int, int)), q_ptr,
-	                 SLOT(_q_configureInsertedModels(QModelIndex, int, int)));
+	                 SLOT(configureInsertedModels(QModelIndex, int, int)));
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -276,7 +276,7 @@ void TaskViewPrivate::configureExistingModels() {
 		configureTaskListModel(meta_model->getTaskListModel(meta_model->index(row, 0)).first);
 }
 
-void TaskViewPrivate::_q_configureInsertedModels(const QModelIndex& parent, int first, int last) {
+void TaskViewPrivate::configureInsertedModels(const QModelIndex& parent, int first, int last) {
 	if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
 		int expand = q_ptr->initial_task_expand->getOptionInt();
 		for (int row = first; row <= last; ++row) {

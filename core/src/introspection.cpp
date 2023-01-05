@@ -218,8 +218,8 @@ const SolutionBase* Introspection::solutionFromId(uint id) const {
 	return it->second;
 }
 
-bool Introspection::getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr req,
-                                const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr res) {
+bool Introspection::getSolution(const moveit_task_constructor_msgs::srv::GetSolution::Request::SharedPtr& req,
+                                const moveit_task_constructor_msgs::srv::GetSolution::Response::SharedPtr& res) {
 	const SolutionBase* solution = solutionFromId(req->solution_id);
 	if (!solution)
 		return false;

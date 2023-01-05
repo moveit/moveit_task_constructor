@@ -32,6 +32,7 @@ repos:
     rev: 22.3.0
     hooks:
       - id: black
+        args: ["--line-length", "100"]
 
   - repo: local
     hooks:
@@ -41,4 +42,4 @@ repos:
         entry: clang-format-12
         language: system
         files: \.(c|cc|cxx|cpp|frag|glsl|h|hpp|hxx|ih|ispc|ipp|java|js|m|proto|vert)$
-        args: ['-fallback-style=none', '-i']
+        args: ["-fallback-style=none", "-i"]

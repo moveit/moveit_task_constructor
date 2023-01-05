@@ -287,7 +287,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 		return error_code;
 	}
 
-	auto goal_handle = goal_handle_future.get();
+	const auto& goal_handle = goal_handle_future.get();
 	if (!goal_handle) {
 		RCLCPP_ERROR(node->get_logger(), "Goal was rejected by server");
 		return error_code;

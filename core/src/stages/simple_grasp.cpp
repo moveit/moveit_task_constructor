@@ -64,6 +64,7 @@ SimpleGraspBase::SimpleGraspBase(const std::string& name) : SerialContainer(name
 void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 	// properties provided by the grasp generator via its Interface or its PropertyMap
 	const std::set<std::string>& grasp_prop_names = { "object", "eef", "pregrasp", "grasp" };
+	this->setForwardedProperties(grasp_prop_names);
 
 	// insert children at end / front, i.e. normal or reverse order
 	int insertion_position = forward ? -1 : (generator ? 1 : 0);
@@ -131,8 +132,8 @@ void SimpleGraspBase::setup(std::unique_ptr<Stage>&& generator, bool forward) {
 		attach->setCallback([forward](const planning_scene::PlanningScenePtr& scene, const PropertyMap& p) {
 			const std::string& eef = p.get<std::string>("eef");
 			moveit_msgs::msg::AttachedCollisionObject obj;
-			obj.object.operation = forward ? (int8_t)moveit_msgs::msg::CollisionObject::ADD :
-                                          (int8_t)moveit_msgs::msg::CollisionObject::REMOVE;
+			obj.object.operation = forward ? static_cast<int8_t>(moveit_msgs::msg::CollisionObject::ADD) :
+                                          static_cast<int8_t>(moveit_msgs::msg::CollisionObject::REMOVE);
 			obj.link_name = scene->getRobotModel()->getEndEffector(eef)->getEndEffectorParentGroup().second;
 			obj.object.id = p.get<std::string>("object");
 			scene->processAttachedCollisionObjectMsg(obj);

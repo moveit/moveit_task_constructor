@@ -40,6 +40,7 @@
 #include <boost/format.hpp>
 #include <functional>
 #include <rclcpp/logging.hpp>
+#include <rclcpp/clock.hpp>
 
 namespace moveit {
 namespace task_constructor {
@@ -73,7 +74,9 @@ public:
 	const Entry& entry(const std::type_index& type_index) const {
 		auto it = types_.find(type_index);
 		if (it == types_.end()) {
-			RCLCPP_ERROR_STREAM(LOGGER, "Unregistered type: " << type_index.name());
+			rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+			RCLCPP_WARN_STREAM_THROTTLE(LOGGER, steady_clock, 10'000,
+			                            "Unregistered property type: " << boost::core::demangle(type_index.name()));
 			return dummy_;
 		}
 		return it->second;

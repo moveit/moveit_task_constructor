@@ -23,6 +23,7 @@ add_compile_options(-fvisibility-inlines-hidden)
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
 add_subdirectory(src)
+add_subdirectory(python)
 add_subdirectory(test)
 
 install(DIRECTORY include/ DESTINATION include

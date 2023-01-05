@@ -75,6 +75,8 @@ class Task : protected WrapperBase
 {
 public:
 	PRIVATE_CLASS(Task)
+	using WrapperBase::setCostTerm;
+	using WrapperBase::operator[];
 
 	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));

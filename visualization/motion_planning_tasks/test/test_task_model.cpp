@@ -236,8 +236,8 @@ int main(int argc, char** argv) {
 	// NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 	QTimer::singleShot(0, [&]() {
 		::testing::InitGoogleTest(&argc, argv);
-		auto testResult = RUN_ALL_TESTS();
-		app.exit(testResult);
+		auto test_result = RUN_ALL_TESTS();
+		app.exit(test_result);
 	});
 	return app.exec();
 }

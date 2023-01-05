@@ -616,6 +616,14 @@ template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceStat
 template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
                                                               SubTrajectory&& trajectory);
 
+void PropagatingEitherWay::computeForward(const InterfaceState& from) {
+	computeGeneric<Interface::FORWARD>(from);
+}
+
+void PropagatingEitherWay::computeBackward(const InterfaceState& to) {
+	computeGeneric<Interface::BACKWARD>(to);
+}
+
 template <Interface::Direction dir>
 void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
 	planning_scene::PlanningScenePtr end;
@@ -854,12 +862,12 @@ void ConnectingPrivate::compute() {
 }
 
 std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
-	const char* reset = InterfaceState::STATUS_COLOR[3];
+	const char* reset = InterfaceState::colorForStatus(3);
 	for (const auto& candidate : pending) {
 		size_t first = getIndex(*starts(), candidate.first);
 		size_t second = getIndex(*ends(), candidate.second);
-		os << InterfaceState::STATUS_COLOR[candidate.first->priority().status()] << first << reset << ":"
-		   << InterfaceState::STATUS_COLOR[candidate.second->priority().status()] << second << reset << " ";
+		os << InterfaceState::colorForStatus(candidate.first->priority().status()) << first << reset << ":"
+		   << InterfaceState::colorForStatus(candidate.second->priority().status()) << second << reset << " ";
 	}
 	if (pending.empty())
 		os << "---";
