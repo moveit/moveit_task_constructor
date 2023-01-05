@@ -118,10 +118,10 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
-	std::map<const robot_model::JointModel*, double> weights;
+	std::map<const moveit::core::JointModel*, double> weights;
 	const auto& first_waypoint = traj->getWayPoint(0);
 	for (auto& joint_weight : joints) {
-		const robot_model::JointModel* jm = first_waypoint.getJointModel(joint_weight.first);
+		const moveit::core::JointModel* jm = first_waypoint.getJointModel(joint_weight.first);
 		if (jm)
 			weights.emplace(jm, joint_weight.second);
 	}
@@ -143,6 +143,7 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 
 DistanceToReference::DistanceToReference(const moveit_msgs::RobotState& ref, Mode m, std::map<std::string, double> w)
   : reference(ref), weights(std::move(w)), mode(m) {}
+
 DistanceToReference::DistanceToReference(const std::map<std::string, double>& ref, Mode m,
                                          std::map<std::string, double> w)
   : weights(std::move(w)), mode(m) {
@@ -163,9 +164,9 @@ double DistanceToReference::operator()(const SubTrajectory& s, std::string& /*co
 	moveit::core::RobotState ref_state = state->scene()->getCurrentState();
 	moveit::core::robotStateMsgToRobotState(reference, ref_state, false);
 
-	std::map<const robot_model::JointModel*, double> w;
+	std::map<const moveit::core::JointModel*, double> w;
 	for (auto& item : weights) {
-		const robot_model::JointModel* jm = ref_state.getJointModel(item.first);
+		const moveit::core::JointModel* jm = ref_state.getJointModel(item.first);
 		if (jm)
 			w.emplace(jm, item.second);
 	}
