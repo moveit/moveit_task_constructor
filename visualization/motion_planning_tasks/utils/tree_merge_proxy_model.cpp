@@ -269,7 +269,7 @@ QModelIndex TreeMergeProxyModel::index(int row, int column, const QModelIndex& p
 		return QModelIndex();
 
 	if (!parent.isValid()) {  // top-level / group items
-		if ((size_t)row >= d_ptr->data_.size())
+		if (static_cast<size_t>(row) >= d_ptr->data_.size())
 			return QModelIndex();
 
 		// for group items, internal pointer refers to this model
@@ -397,11 +397,11 @@ bool TreeMergeProxyModel::insertModel(const QString& name, QAbstractItemModel* m
 			return false;  // model can only inserted once
 
 	// limit pos to range [0, modelCount()]
-	if (pos > 0 && pos > (int)modelCount())
+	if (pos > 0 && pos > static_cast<int>(modelCount()))
 		pos = modelCount();
 	if (pos < 0)
 		pos = modelCount() + std::max<int>(pos + 1, -modelCount());
-	Q_ASSERT(pos >= 0 && pos <= (int)modelCount());
+	Q_ASSERT(pos >= 0 && pos <= static_cast<int>(modelCount()));
 	auto it = d_ptr->data_.begin();
 	std::advance(it, pos);
 
@@ -460,9 +460,9 @@ bool TreeMergeProxyModel::removeModel(int pos) {
 		pos = modelCount() + pos + 1;
 	if (pos < 0)
 		return false;
-	if (pos >= (int)modelCount())
+	if (pos >= static_cast<int>(modelCount()))
 		return false;
-	Q_ASSERT(pos >= 0 && pos < (int)modelCount());
+	Q_ASSERT(pos >= 0 && pos < static_cast<int>(modelCount()));
 	auto it = d_ptr->data_.begin();
 	std::advance(it, pos);
 

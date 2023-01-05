@@ -30,7 +30,7 @@ jobs:
             CLANG_TIDY: true
             TARGET_CMAKE_ARGS: >-
               -DCMAKE_BUILD_TYPE=Release
-              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls"
+              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wold-style-cast"
           - IMAGE: noetic-source
             NAME: asan
             DOCKER_RUN_OPTS: >-

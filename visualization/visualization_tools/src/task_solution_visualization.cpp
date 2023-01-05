@@ -246,7 +246,7 @@ void TaskSolutionVisualization::clearTrail() {
 void TaskSolutionVisualization::changedLoopDisplay() {
 	// restart animation if current_state_ is at end and looping got activated
 	if (displaying_solution_ && loop_display_property_->getBool() && slider_panel_ && slider_panel_->isVisible() &&
-	    current_state_ + 1 >= (int)displaying_solution_->getWayPointCount()) {
+	    current_state_ + 1 >= static_cast<int>(displaying_solution_->getWayPointCount())) {
 		current_state_ = -1;
 		slider_panel_->pauseButton(false);
 	}
@@ -471,7 +471,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 		auto idx_pair = displaying_solution_->indexPair(index);
 		scene = displaying_solution_->scene(idx_pair);
 
-		if (previous_index < 0 || previous_index >= (int)waypoint_count ||
+		if (previous_index < 0 || previous_index >= static_cast<int>(waypoint_count) ||
 		    displaying_solution_->indexPair(previous_index).first != idx_pair.first) {
 			// switch to new stage: show new planning scene
 			renderPlanningScene(scene);
