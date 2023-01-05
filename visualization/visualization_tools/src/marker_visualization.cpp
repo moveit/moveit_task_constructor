@@ -157,7 +157,7 @@ void MarkerVisualization::update(MarkerData& data, const planning_scene::Plannin
 	auto frame_it = ns_it->second.frames_.find(marker.header.frame_id);
 	Q_ASSERT(frame_it != ns_it->second.frames_.end());  // we have created all of them
 
-	const Eigen::Quaterniond q = (Eigen::Quaterniond)pose.linear();
+	const Eigen::Quaterniond q{ pose.linear() };
 	const Eigen::Vector3d& p = pose.translation();
 	frame_it->second->setOrientation(Ogre::Quaternion(q.w(), q.x(), q.y(), q.z()));
 	frame_it->second->setPosition(Ogre::Vector3(p.x(), p.y(), p.z()));
