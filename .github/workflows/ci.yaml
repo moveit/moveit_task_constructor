@@ -85,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v3
         if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
         with:
-          name: test-results-${{ matrix.env.IMAGE }}${{ matrix.env.NAME && '-' || ''}}${{ matrix.env.NAME }}
+          name: test-results-${{ matrix.env.IMAGE }}${{ matrix.env.NAME && '-' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && '-clang-tidy' || '' }}
           path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
 
       - name: Upload clang-tidy fixes (on failure)
