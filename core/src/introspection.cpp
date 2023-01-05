@@ -173,7 +173,7 @@ void Introspection::publishTaskDescription() {
 
 void Introspection::publishTaskState() {
 	::moveit_task_constructor_msgs::msg::TaskStatistics msg;
-	impl->task_statistics_publisher_->publish(fillTaskStatistics(msg));
+	impl->task_statistics_publisher_->publish(fillTaskStatistics(msg));  // NOLINT(clang-analyzer-cplusplus.Move)
 }
 
 void Introspection::reset() {
