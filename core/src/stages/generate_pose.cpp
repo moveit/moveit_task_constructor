@@ -72,7 +72,9 @@ void GeneratePose::compute() {
 	if (upstream_solutions_.empty())
 		return;
 
-	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
+	const SolutionBase& s = *upstream_solutions_.pop();
+	planning_scene::PlanningSceneConstPtr scene = s.end()->scene()->diff();
+
 	geometry_msgs::msg::PoseStamped target_pose = properties().get<geometry_msgs::msg::PoseStamped>("pose");
 	if (target_pose.header.frame_id.empty())
 		target_pose.header.frame_id = scene->getPlanningFrame();
@@ -82,6 +84,7 @@ void GeneratePose::compute() {
 	}
 
 	InterfaceState state(scene);
+	forwardProperties(*s.end(), state);  // forward registered properties from received solution
 	state.properties().set("target_pose", target_pose);
 
 	SubTrajectory trajectory;
