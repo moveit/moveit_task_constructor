@@ -38,7 +38,7 @@ jobs:
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
-      DOCKER_IMAGE: ghcr.io/ros-planning/moveit2:${{ matrix.env.IMAGE }}
+      DOCKER_IMAGE: moveit/moveit2:${{ matrix.env.IMAGE }}
       UNDERLAY: /root/ws_moveit/install
       # TODO: Port to ROS2
       # DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
