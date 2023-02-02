@@ -1,6 +1,6 @@
 <package format="3">
 	<name>moveit_task_constructor_core</name>
-	<version>0.0.0</version>
+	<version>0.1.0</version>
 	<description>MoveIt Task Pipeline</description>
 
 	<url type="website">https://github.com/ros-planning/moveit_task_constructor</url>
