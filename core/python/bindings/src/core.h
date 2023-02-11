@@ -109,9 +109,6 @@ public:
 }  // namespace task_constructor
 }  // namespace moveit
 
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
-
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::solvers::PlannerInterface)
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SolutionBase)

@@ -6,6 +6,9 @@
 #include <boost/any.hpp>
 #include <typeindex>
 
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
+
 namespace moveit {
 namespace python {
 
