@@ -4,6 +4,7 @@
 	<description>Tools for marker creation / handling</description>
 
 	<license>BSD</license>
+	<author email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</author>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 
 	<buildtool_depend>ament_cmake</buildtool_depend>

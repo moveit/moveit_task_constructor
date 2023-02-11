@@ -4,9 +4,10 @@
   <version>0.1.0</version>
   <description>demo tasks illustrating various capabilities of MTC.</description>
 
-  <author email="simongold@picknik.ai">simon Goldstein</author>
+  <author email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</author>
+  <author email="simongold@picknik.ai">Simon Goldstein</author>
   <author email="henningkayser@picknik.ai">Henning Kayser</author>
-  <maintainer email="henningkayser@picknik.ai">Henning Kayser</maintainer>
+  <maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 
   <license>BSD</license>
 

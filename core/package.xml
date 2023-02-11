@@ -33,7 +33,8 @@
 	<!-- test_depend>launch_testing</test_depend -->
 	<test_depend>launch_testing_ament_cmake</test_depend>
 	<!-- test_depend>launch_testing_ros</test_depend -->
-	<!-- test_depend>moveit_resources_fanuc_moveit_config</test_depend -->
+	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
+	<test_depend>moveit_planners</test_depend>
 
 	<export>
 		<build_type>ament_cmake</build_type>

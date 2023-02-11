@@ -4,6 +4,7 @@
 	<description>Visualization tools for MoveIt Task Pipeline</description>
 
 	<license>BSD</license>
+	<author email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</author>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
 
