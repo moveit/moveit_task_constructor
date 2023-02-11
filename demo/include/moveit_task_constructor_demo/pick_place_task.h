@@ -58,8 +58,6 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
 
-#include <eigen_conversions/eigen_msg.h>
-
 #pragma once
 
 namespace moveit_task_constructor_demo {

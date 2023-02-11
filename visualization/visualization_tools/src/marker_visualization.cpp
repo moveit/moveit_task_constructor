@@ -12,7 +12,6 @@
 #endif
 #include <tf2_msgs/TF2Error.h>
 #include <ros/console.h>
-#include <eigen_conversions/eigen_msg.h>
 
 namespace moveit_rviz_plugin {
 
