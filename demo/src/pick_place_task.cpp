@@ -179,7 +179,6 @@ bool PickPlaceTask::init() {
 	 *               Current State                      *
 	 *                                                  *
 	 ***************************************************/
-	Stage* current_state_ptr = nullptr;  // Forward current_state on to grasp pose generator
 	{
 		auto current_state = std::make_unique<stages::CurrentState>("current state");
 
@@ -193,8 +192,6 @@ bool PickPlaceTask::init() {
 			}
 			return true;
 		});
-
-		current_state_ptr = applicability_filter.get();
 		t.add(std::move(applicability_filter));
 	}
 
@@ -203,10 +200,12 @@ bool PickPlaceTask::init() {
 	 *               Open Hand                          *
 	 *                                                  *
 	 ***************************************************/
+	Stage* initial_state_ptr = nullptr;
 	{  // Open Hand
 		auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
 		stage->setGroup(hand_group_name_);
 		stage->setGoal(hand_open_pose_);
+		initial_state_ptr = stage.get();  // remember start state for monitoring grasp pose generator
 		t.add(std::move(stage));
 	}
 
@@ -228,7 +227,7 @@ bool PickPlaceTask::init() {
 	 *               Pick Object                        *
 	 *                                                  *
 	 ***************************************************/
-	Stage* attach_object_stage = nullptr;  // Forward attach_object_stage to place pose generator
+	Stage* pick_stage_ptr = nullptr;
 	{
 		auto grasp = std::make_unique<SerialContainer>("pick object");
 		t.properties().exposeTo(grasp->properties(), { "eef", "hand", "group", "ik_frame" });
@@ -263,7 +262,7 @@ bool PickPlaceTask::init() {
 			stage->setPreGraspPose(hand_open_pose_);
 			stage->setObject(object);
 			stage->setAngleDelta(M_PI / 12);
-			stage->setMonitoredStage(current_state_ptr);  // Hook into current state
+			stage->setMonitoredStage(initial_state_ptr);  // hook into successful initial-phase solutions
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(stage));
@@ -302,7 +301,6 @@ bool PickPlaceTask::init() {
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
 			stage->attachObject(object, hand_frame_);
-			attach_object_stage = stage.get();
 			grasp->insert(std::move(stage));
 		}
 
@@ -337,10 +335,12 @@ bool PickPlaceTask::init() {
   .... *               Forbid collision (object support)  *
 		 ***************************************************/
 		{
-			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid collision (object,surface)");
+			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid collision (object,support)");
 			stage->allowCollisions({ object }, support_surfaces_, false);
 			grasp->insert(std::move(stage));
 		}
+
+		pick_stage_ptr = grasp.get();  // remember for monitoring place pose generator
 
 		// Add grasp container to task
 		t.add(std::move(grasp));
@@ -403,7 +403,7 @@ bool PickPlaceTask::init() {
 			p.pose = place_pose_;
 			p.pose.position.z += 0.5 * object_dimensions_[0] + place_surface_offset_;
 			stage->setPose(p);
-			stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
+			stage->setMonitoredStage(pick_stage_ptr);  // hook into successful pick solutions
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("place pose IK", std::move(stage));
