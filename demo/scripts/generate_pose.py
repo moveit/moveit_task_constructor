@@ -3,10 +3,10 @@
 
 from moveit.task_constructor import core, stages
 from geometry_msgs.msg import PoseStamped
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 import time
 
-roscpp_init("mtc_tutorial_compute_ik")
+roscpp_initialize("mtc_tutorial_compute_ik")
 
 # Specify the planning group
 group = "panda_arm"

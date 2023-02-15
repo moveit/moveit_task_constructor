@@ -5,10 +5,10 @@ from moveit.task_constructor import core, stages
 from moveit_msgs.msg import CollisionObject
 from shape_msgs.msg import SolidPrimitive
 from geometry_msgs.msg import PoseStamped
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 import time
 
-roscpp_init("mtc_tutorial_modify_planning_scene")
+roscpp_initialize("mtc_tutorial_modify_planning_scene")
 
 # Create a task
 task = core.Task()
