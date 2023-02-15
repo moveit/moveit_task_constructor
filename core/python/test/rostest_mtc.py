@@ -3,7 +3,7 @@
 from __future__ import print_function
 import unittest
 import rostest
-from moveit.python_tools import roscpp_init
+from moveit.tools import roscpp_init
 from moveit.task_constructor import core, stages
 from geometry_msgs.msg import PoseStamped, Pose
 from geometry_msgs.msg import Vector3Stamped, Vector3

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <moveit/python/python_tools/ros_types.h>
-#include <moveit/python/python_tools/geometry_msg_types.h>
+#include <pybind11/smart_holder.h>
+#include <moveit/python/pybind_rosmsg_typecasters.h>
 #include <moveit/task_constructor/properties.h>
 #include <boost/any.hpp>
 #include <typeindex>
