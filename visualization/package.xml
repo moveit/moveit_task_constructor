@@ -1,6 +1,6 @@
 <package format="2">
 	<name>moveit_task_constructor_visualization</name>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<description>Visualization tools for MoveIt Task Pipeline</description>
 
 	<license>BSD</license>

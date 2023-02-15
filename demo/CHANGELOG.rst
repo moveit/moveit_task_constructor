@@ -2,6 +2,16 @@
 Changelog for package moveit_task_constructor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.1 (2023-02-15)
+------------------
+* Resort to MoveIt's python tools
+  * Provide ComputeIK.ik_frame as full PoseStamped
+* Fixed build farm issues
+  * Fixed missing dependency declarations
+* pick_place_task: monitor last state before Connect
+  ... to prune solutions as much as possible
+* Contributors: Robert Haschke
+
 0.1.0 (2023-02-02)
 ------------------
 * Initial release
