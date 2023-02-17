@@ -51,6 +51,9 @@ MOVEIT_CLASS_FORWARD(MultiPlanner);
  *
  * This is useful to sequence different planning strategies of increasing complexity,
  * e.g. Cartesian or joint-space interpolation first, then OMPL, ...
+ * This is (slightly) different from the Fallbacks container, as the MultiPlanner directly applies its planners to each
+ * individual planning job. In contrast, the Fallbacks container first runs the active child to exhaustion before
+ * switching to the next child, which possibly applies a different planning strategy.
  */
 class MultiPlanner : public PlannerInterface, public std::vector<solvers::PlannerInterfacePtr>
 {

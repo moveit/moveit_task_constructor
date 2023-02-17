@@ -53,7 +53,7 @@ bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
                         const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
                         double timeout, robot_trajectory::RobotTrajectoryPtr& result,
                         const moveit_msgs::Constraints& path_constraints) {
-	double remaining_time = timeout;
+	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
 	for (const auto& p : *this) {
@@ -76,7 +76,7 @@ bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const
                         const moveit::core::JointModelGroup* jmg, double timeout,
                         robot_trajectory::RobotTrajectoryPtr& result,
                         const moveit_msgs::Constraints& path_constraints) {
-	double remaining_time = timeout;
+	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
 	for (const auto& p : *this) {

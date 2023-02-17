@@ -78,6 +78,7 @@ public:
 	const PropertyMap& properties() const { return properties_; }
 
 	void setProperty(const std::string& name, const boost::any& value) { properties_.set(name, value); }
+	void setTimeout(double timeout) { properties_.set("timeout", timeout); }
 	void setMaxVelocityScalingFactor(double factor) { properties_.set("max_velocity_scaling_factor", factor); }
 	void setMaxAccelerationScalingFactor(double factor) { properties_.set("max_acceleration_scaling_factor", factor); }
 	void setTimeParameterization(const trajectory_processing::TimeParameterizationPtr& tp) {

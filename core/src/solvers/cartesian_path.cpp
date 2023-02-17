@@ -71,7 +71,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 
 	// reach pose of forward kinematics
 	return plan(from, *link, Eigen::Isometry3d::Identity(), to->getCurrentState().getGlobalLinkTransform(link), jmg,
-	            timeout, result, path_constraints);
+	            std::min(timeout, properties().get<double>("timeout")), result, path_constraints);
 }
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
