@@ -122,6 +122,8 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 		auto element_handler = [&](const T& element) {
 			if (element && element->geometry) {
 				createGeometryMarker(m, *element->geometry, element->origin, materialColor(*model, materialName(*element)));
+				if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0)
+					return;  // skip zero-size marker
 				m.pose = rviz_marker_tools::composePoses(robot_state.getGlobalLinkTransform(name), m.pose);
 				callback(m, name);
 				valid_found = true;
