@@ -2,11 +2,23 @@
 Changelog for package moveit_task_constructor_core
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.2 (2023-02-24)
+------------------
+* Remove moveit/__init__.py during .deb builds to avoid installation conflicts
+* MultiPlanner solver (`#429 <https://github.com/ros-planning/moveit_task_constructor/issues/429>`_): a planner that tries multiple planners in sequence
+
+  * CartesianPath: Deprecate redundant property setters
+  * PlannerInterface: provide "timeout" property
+  * PlannerInterface: provide setters for properties
+* JointInterpolation: fix timeout handling
+* Contributors: Robert Haschke
+
 0.1.1 (2023-02-15)
 ------------------
 * Resort to MoveIt's python tools
-  * Provide ComputeIK.ik_frame as full PoseStamped
+* Provide ComputeIK.ik_frame as full PoseStamped
 * Fixed build farm issues
+
   * Removed unused eigen_conversions includes
   * Fixed odr compiler warning on Buster
   * Fixed missing dependency declarations

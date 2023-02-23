@@ -2,6 +2,11 @@
 Changelog for package rviz_marker_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.2 (2023-02-24)
+------------------
+* Fix marker creation: allow zero scale for geometric shapes (`#430 <https://github.com/ros-planning/moveit_task_constructor/issues/430>`_)
+* Contributors: Robert Haschke
+
 0.1.1 (2023-02-15)
 ------------------
 

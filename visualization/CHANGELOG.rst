@@ -2,6 +2,9 @@
 Changelog for package moveit_task_constructor_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.2 (2023-02-24)
+------------------
+
 0.1.1 (2023-02-15)
 ------------------
 * Remove unused eigen_conversions includes
