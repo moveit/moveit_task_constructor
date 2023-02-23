@@ -103,7 +103,8 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
                                      const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
                                      double timeout, robot_trajectory::RobotTrajectoryPtr& result,
                                      const moveit_msgs::Constraints& path_constraints) {
-	const auto start_time = std::chrono::steady_clock::now();
+	timeout = std::min(timeout, properties().get<double>("timeout"));
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration<double, std::ratio<1>>(timeout);
 
 	auto to{ from->diff() };
 
@@ -125,8 +126,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	}
 	to->getCurrentStateNonConst().update();
 
-	timeout = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
-	if (timeout <= 0.0)
+	if (std::chrono::steady_clock::now() >= deadline)
 		return false;
 
 	return plan(from, to, jmg, timeout, result, path_constraints);

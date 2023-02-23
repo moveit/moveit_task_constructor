@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2023, Bielefeld University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,34 +32,34 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
-   Desc:    generate and validate a straight-line Cartesian path
+/* Authors: Robert Haschke
+   Desc:    meta planner, running multiple planners in parallel or sequence
 */
 
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <vector>
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(CartesianPath);
+MOVEIT_CLASS_FORWARD(MultiPlanner);
 
-/** Use MoveIt's computeCartesianPath() to generate a straigh-line path between to scenes */
-class CartesianPath : public PlannerInterface
+/** A meta planner that runs multiple alternative planners in sequence and returns the first found solution.
+ *
+ * This is useful to sequence different planning strategies of increasing complexity,
+ * e.g. Cartesian or joint-space interpolation first, then OMPL, ...
+ * This is (slightly) different from the Fallbacks container, as the MultiPlanner directly applies its planners to each
+ * individual planning job. In contrast, the Fallbacks container first runs the active child to exhaustion before
+ * switching to the next child, which possibly applies a different planning strategy.
+ */
+class MultiPlanner : public PlannerInterface, public std::vector<solvers::PlannerInterfacePtr>
 {
 public:
-	CartesianPath();
-
-	void setStepSize(double step_size) { setProperty("step_size", step_size); }
-	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
-	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
-
-	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
-	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
-	[[deprecated("Replace with setMaxAccelerationScaling")]]  // clang-format off
-	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
+	using PlannerList = std::vector<solvers::PlannerInterfacePtr>;
+	using PlannerList::PlannerList;  // inherit all std::vector constructors
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
