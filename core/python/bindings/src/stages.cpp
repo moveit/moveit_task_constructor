@@ -117,7 +117,8 @@ void export_stages(pybind11::module& m) {
 		)", "collision_object"_a);
 
 	properties::class_<CurrentState, Stage>(m, "CurrentState", R"(
-			Fetch the current PlanningScene state via the ``get_planning_scene`` service.
+			Fetch the current PlanningScene / real robot state via the ``get_planning_scene`` service.
+			Usually, this stage should be used *once* at the beginning of your pipeline to start from the current state.
 
 			.. literalinclude:: ./../../../demo/scripts/current_state.py
 				:language: python
