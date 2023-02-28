@@ -58,7 +58,7 @@ public:
 
 	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
 	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
-	[[deprecated("Replace with setMaxAccelerationScaling")]]  // clang-format off
+	[[deprecated("Replace with setMaxAccelerationScalingFactor")]]  // clang-format off
 	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
