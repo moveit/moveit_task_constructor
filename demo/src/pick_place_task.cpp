@@ -47,7 +47,7 @@ void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const 
 		throw std::runtime_error("Failed to spawn object: " + object.id);
 }
 
-moveit_msgs::CollisionObject createTable(ros::NodeHandle& pnh) {
+moveit_msgs::CollisionObject createTable(const ros::NodeHandle& pnh) {
 	std::string table_name, table_reference_frame;
 	std::vector<double> table_dimensions;
 	geometry_msgs::Pose pose;
@@ -69,7 +69,7 @@ moveit_msgs::CollisionObject createTable(ros::NodeHandle& pnh) {
 	return object;
 }
 
-moveit_msgs::CollisionObject createObject(ros::NodeHandle& pnh) {
+moveit_msgs::CollisionObject createObject(const ros::NodeHandle& pnh) {
 	std::string object_name, object_reference_frame;
 	std::vector<double> object_dimensions;
 	geometry_msgs::Pose pose;
