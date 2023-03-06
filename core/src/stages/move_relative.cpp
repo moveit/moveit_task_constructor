@@ -79,11 +79,12 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	planner_->init(robot_model);
 }
 
-static bool getJointStateFromOffset(const boost::any& direction, const moveit::core::JointModelGroup* jmg,
-                                    moveit::core::RobotState& robot_state) {
+static bool getJointStateFromOffset(const boost::any& direction, const Interface::Direction dir,
+                                    const moveit::core::JointModelGroup* jmg, moveit::core::RobotState& robot_state) {
 	try {
 		const auto& accepted = jmg->getActiveJointModels();
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
+		double sign = dir == Interface::Direction::FORWARD ? +1.0 : -1.0;
 		for (const auto& j : joints) {
 			auto jm = robot_state.getRobotModel()->getJointModel(j.first);
 			if (!jm || std::find(accepted.begin(), accepted.end(), jm) == accepted.end())
@@ -92,7 +93,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 			if (jm->getVariableCount() != 1)
 				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
 			auto index = jm->getFirstVariableIndex();
-			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
+			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + sign * j.second);
 			robot_state.enforceBounds(jm);
 		}
 		robot_state.update();
@@ -189,7 +190,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-	if (getJointStateFromOffset(direction, jmg, scene->getCurrentStateNonConst())) {
+	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
