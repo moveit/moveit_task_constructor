@@ -2,6 +2,13 @@
 Changelog for package moveit_task_constructor_core
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.3 (2023-03-06)
+------------------
+* MoveRelative: Allow backwards operation for joint-space delta (`#436 <https://github.com/ros-planning/moveit_task_constructor/issues/436>`_)
+* ComputeIK: Limit collision checking to JMG (`#428 <https://github.com/ros-planning/moveit_task_constructor/issues/428>`_)
+* Fix: Fetch pybind11 submodule if not yet present
+* Contributors: Robert Haschke
+
 0.1.2 (2023-02-24)
 ------------------
 * Remove moveit/__init__.py during .deb builds to avoid installation conflicts

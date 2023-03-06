@@ -2,6 +2,11 @@
 Changelog for package moveit_task_constructor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.3 (2023-03-06)
+------------------
+* Use const reference instead of reference for ros::NodeHandle (`#437 <https://github.com/ros-planning/moveit_task_constructor/issues/437>`_)
+* Contributors: Robert Haschke
+
 0.1.2 (2023-02-24)
 ------------------
 * CartesianPath: Deprecate redundant property setters (`#429 <https://github.com/ros-planning/moveit_task_constructor/issues/429>`_)
