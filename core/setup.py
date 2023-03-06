@@ -14,10 +14,9 @@ dist = setup(**d)
 # Remove moveit/__init__.py when building .deb packages
 # Otherwise, the installation procedure will complain about conflicting files (with moveit_core)
 try:
-    libdir = dist.command_obj[
-        "install_lib"
-    ].install_dir  # installation dir (.../lib/python3/dist-packages)
-    if libdir.startswith("/opt/ros"):
+    # installation dir (.../lib/python3/dist-packages)
+    libdir = dist.command_obj["install_lib"].install_dir
+    if "/debian/ros-" in libdir and "moveit-task-constructor-core/opt/ros/" in libdir:
         import os
         import shutil
 
