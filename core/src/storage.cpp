@@ -221,7 +221,7 @@ void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Int
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
-	if (trajectory())
+	if (trajectory() && trajectory()->getWayPointDurationFromStart(trajectory()->getWayPointCount() - 1) > 0.0)
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
