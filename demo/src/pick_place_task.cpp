@@ -36,6 +36,7 @@
 
 #include <moveit_task_constructor_demo/pick_place_task.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
+#include <moveit/task_constructor/execution.h>
 
 namespace moveit_task_constructor_demo {
 
@@ -495,22 +496,24 @@ bool PickPlaceTask::plan() {
 
 bool PickPlaceTask::execute() {
 	ROS_INFO_NAMED(LOGNAME, "Executing solution trajectory");
-	moveit_msgs::MoveItErrorCodes execute_result;
 
-	execute_result = task_->execute(*task_->solutions().front());
-	// // If you want to inspect the goal message, use this instead:
-	// actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>
-	// execute("execute_task_solution", true); execute.waitForServer();
-	// moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
-	// task_->solutions().front()->fillMessage(execute_goal.solution);
-	// execute.sendGoalAndWait(execute_goal);
-	// execute_result = execute.getResult()->error_code;
+#if 1  // Blocking execution
+	if (!::moveit::task_constructor::execute(*task_->solutions().front()))
+#else  // Non-blocking execution
+	ExecuteTaskSolutionSimpleActionClient ac("execute_task_solution", true);
+	ac.waitForServer();
+	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal execute_goal;
+	task_->solutions().front()->fillMessage(execute_goal.solution);
 
-	if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS) {
-		ROS_ERROR_STREAM_NAMED(LOGNAME, "Task execution failed and returned: " << execute_result.val);
+	execute.sendGoalAndWait(execute_goal);
+	moveit_msgs::MoveItErrorCodes execute_result = execute.getResult()->error_code;
+
+	if (execute_result.val != moveit_msgs::MoveItErrorCodes::SUCCESS)
+#endif
+	{
+		ROS_ERROR_STREAM_NAMED(LOGNAME, "Task execution failed");
 		return false;
 	}
-
 	return true;
 }
 }  // namespace moveit_task_constructor_demo
