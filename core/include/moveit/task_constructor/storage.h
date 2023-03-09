@@ -265,6 +265,11 @@ class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
 struct TmpSolutionContext;
+
+MOVEIT_CLASS_FORWARD(SolutionBase);
+MOVEIT_CLASS_FORWARD(SubTrajectory);
+MOVEIT_CLASS_FORWARD(SolutionSequence);
+
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
@@ -311,6 +316,8 @@ public:
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
 
+	virtual void visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const = 0;
+
 	/// append this solution to Solution msg
 	virtual void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                         Introspection* introspection = nullptr) const = 0;
@@ -340,7 +347,6 @@ private:
 	const InterfaceState* start_ = nullptr;
 	const InterfaceState* end_ = nullptr;
 };
-MOVEIT_CLASS_FORWARD(SolutionBase);
 
 /// SubTrajectory connects interface states of ComputeStages
 class SubTrajectory : public SolutionBase
@@ -354,6 +360,7 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
+	void visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const override;
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
@@ -368,7 +375,6 @@ private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
 };
-MOVEIT_CLASS_FORWARD(SubTrajectory);
 
 /** Sequence of individual sub solutions
  *
@@ -386,6 +392,7 @@ public:
 
 	void push_back(const SolutionBase& solution);
 
+	void visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const override;
 	/// append all subsolutions to solution
 	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
@@ -400,7 +407,6 @@ private:
 	/// series of sub solutions
 	container_type subsolutions_;
 };
-MOVEIT_CLASS_FORWARD(SolutionSequence);
 
 /** Wrap an existing solution
  *
@@ -418,6 +424,8 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
+
+	void visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const override;
 	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
 	                 Introspection* introspection = nullptr) const override;
 
