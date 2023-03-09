@@ -40,10 +40,76 @@
 #include <moveit_msgs/MoveItErrorCodes.h>
 #include <moveit/task_constructor/stage.h>
 
-using namespace plan_execution;
+using namespace moveit_controller_manager;
 
 namespace moveit {
 namespace task_constructor {
+inline namespace execution {
+
+static const std::string LOGGER("execution");
+
+PlanExecution::PlanExecution(const planning_scene_monitor::PlanningSceneMonitorPtr& psm,
+                             const trajectory_execution_manager::TrajectoryExecutionManagerPtr& tem)
+  : psm_(psm), tem_(tem) {}
+
+void PlanExecution::prepare(ExecutableMotionPlan components) {
+	components_ = std::move(components);
+	next_ = components_.begin();
+}
+
+moveit::core::MoveItErrorCode PlanExecution::run() {
+	if (next_ == components_.end())  // empty / already done
+		return moveit_msgs::MoveItErrorCodes::SUCCESS;
+
+	// push components to TEM
+	for (auto it = next_, end = components_.end(); it != end; ++it) {
+		moveit_msgs::RobotTrajectory msg;
+		if (it->trajectory)
+			it->trajectory->getRobotTrajectoryMsg(msg);
+		if (!tem_->push(msg, it->controller_names)) {
+			ROS_ERROR_STREAM_NAMED(LOGGER, "Trajectory initialization failed");
+			tem_->clear();
+			next_ = end;
+			return moveit_msgs::MoveItErrorCodes::CONTROL_FAILED;
+		} else if (it->stop)
+			break;
+	}
+
+	call(next_->start_effects, "start");
+	tem_->execute([this](const ExecutionStatus& status) { onDone(status); },
+	              [this](std::size_t) { onSuccessfulComponent(); });
+
+	auto result = tem_->waitForExecution();
+	ROS_DEBUG_STREAM_NAMED(LOGGER, remaining() << " segments remaining");
+	switch (result) {
+		case ExecutionStatus::SUCCEEDED:
+			return moveit_msgs::MoveItErrorCodes::SUCCESS;
+		case ExecutionStatus::PREEMPTED:
+			return moveit_msgs::MoveItErrorCodes::PREEMPTED;
+		case ExecutionStatus::TIMED_OUT:
+			return moveit_msgs::MoveItErrorCodes::TIMED_OUT;
+		case ExecutionStatus::ABORTED:
+			return moveit_msgs::MoveItErrorCodes::ABORT;
+		default:
+			return moveit_msgs::MoveItErrorCodes::CONTROL_FAILED;
+	}
+}
+
+void PlanExecution::call(const std::vector<ExecutableTrajectory::EffectFn>& effects, const char* name) {
+	ROS_DEBUG_STREAM_NAMED(LOGGER + ".apply", effects.size() << " " << name << " effects of: " << next_->description);
+	for (const auto& f : effects)
+		f(this);
+}
+
+void PlanExecution::onDone(const ExecutionStatus& /*status*/) {}
+void PlanExecution::onSuccessfulComponent() {
+	call(next_->end_effects, "end");
+	bool stop = next_->stop;  // stop on user request
+	if (++next_ == components_.end())
+		stop = true;  // stop on end of components
+	if (!stop)
+		call(next_->start_effects, "start");
+}
 
 bool execute(const SolutionBase& s, ExecuteTaskSolutionSimpleActionClient* ac, bool wait) {
 	std::unique_ptr<ExecuteTaskSolutionSimpleActionClient> fallback;
@@ -68,30 +134,27 @@ bool execute(const SolutionBase& s, ExecuteTaskSolutionSimpleActionClient* ac, b
 ExecutableMotionPlan executableMotionPlan(const SolutionBase& s) {
 	ExecutableMotionPlan plan;
 	auto f = [&](const SubTrajectory& sub) {
-		// Need to copy *const* RobotTrajectory + Handle nullptr RobotTrajectory
-		auto copy = sub.trajectory() ?
-		                std::make_shared<robot_trajectory::RobotTrajectory>(*sub.trajectory()) :
-		                std::make_shared<robot_trajectory::RobotTrajectory>(sub.start()->scene()->getRobotModel());
-		plan.plan_components_.emplace_back(std::move(copy), sub.creator()->name());
-		auto& c = plan.plan_components_.back();
+		ExecutableTrajectory t;
+		t.description = sub.creator()->name();
+		t.trajectory = sub.trajectory();
+		plan.push_back(std::move(t));
+		auto& c = plan.back();
 
-		moveit_msgs::PlanningScene scene_diff;
-		sub.end()->scene()->getPlanningSceneDiffMsg(scene_diff);
-
-		if (!moveit::core::isEmpty(scene_diff))
-			c.effect_on_success_ = [idx = plan.plan_components_.size() - 1,
-			                        diff = std::move(scene_diff)](const ExecutableMotionPlan* plan) {
-				if (plan->planning_scene_monitor_) {
-					ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution",
-					                       "apply effect of " << plan->plan_components_[idx].description_);
-					return plan->planning_scene_monitor_->newPlanningSceneMessage(diff);
-				}
-				return true;
-			};
+		// apply planning scene changes (assuming only no-trajectory solution have those)
+		if (!sub.trajectory()) {
+			c.end_effects.push_back([scene = sub.end()->scene()](PlanExecution* plan) {
+				if (!plan->getPlanningSceneMonitor())
+					return;
+				moveit_msgs::PlanningScene diff;
+				scene->getPlanningSceneDiffMsg(diff);
+				plan->getPlanningSceneMonitor()->newPlanningSceneMessage(diff);
+			});
+		}
 	};
 	s.visitSubTrajectories(f);
 	return plan;
 }
 
+}  // namespace execution
 }  // namespace task_constructor
 }  // namespace moveit

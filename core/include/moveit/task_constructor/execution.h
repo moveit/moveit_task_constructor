@@ -36,14 +36,58 @@
 
 #pragma once
 
-#include <moveit/task_constructor/storage.h>
 #include <actionlib/client/simple_action_client.h>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
+#include <moveit/trajectory_execution_manager/trajectory_execution_manager.h>
+#include <moveit/utils/moveit_error_code.h>
+
+#include <moveit/task_constructor/storage.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
-#include <moveit/moveit_cpp/moveit_cpp.h>
-#include <moveit/plan_execution/plan_execution.h>
+#include <moveit_msgs/PlanningScene.h>
 
 namespace moveit {
 namespace task_constructor {
+inline namespace execution {
+
+class PlanExecution;
+struct ExecutableTrajectory
+{
+	using EffectFn = std::function<void(PlanExecution*)>;
+
+	std::string description;
+	robot_trajectory::RobotTrajectoryConstPtr trajectory;
+	std::vector<std::string> controller_names;
+	std::vector<EffectFn> start_effects;
+	std::vector<EffectFn> end_effects;
+	bool stop = false;
+};
+using ExecutableMotionPlan = std::vector<ExecutableTrajectory>;
+
+class PlanExecution
+{
+	planning_scene_monitor::PlanningSceneMonitorPtr psm_;
+	trajectory_execution_manager::TrajectoryExecutionManagerPtr tem_;
+	ExecutableMotionPlan components_;
+	ExecutableMotionPlan::iterator next_;
+
+	void call(const std::vector<ExecutableTrajectory::EffectFn>& effects, const char* name);
+	void onDone(const moveit_controller_manager::ExecutionStatus& status);
+	void onSuccessfulComponent();
+
+public:
+	PlanExecution(const planning_scene_monitor::PlanningSceneMonitorPtr& psm,
+	              const trajectory_execution_manager::TrajectoryExecutionManagerPtr& tem);
+
+	void prepare(ExecutableMotionPlan components);
+	moveit::core::MoveItErrorCode run();
+
+	auto remaining() const { return std::distance<ExecutableMotionPlan::const_iterator>(next_, components_.end()); }
+
+	const planning_scene_monitor::PlanningSceneMonitorPtr& getPlanningSceneMonitor() const { return psm_; }
+	const trajectory_execution_manager::TrajectoryExecutionManagerPtr& getTrajectoryExecutionManager() const {
+		return tem_;
+	}
+};
 
 /// Execute trajectory using ExecuteTaskSolution provided as move_group capability
 using ExecuteTaskSolutionSimpleActionClient =
@@ -51,7 +95,8 @@ using ExecuteTaskSolutionSimpleActionClient =
 bool execute(const SolutionBase& s, ExecuteTaskSolutionSimpleActionClient* ac = nullptr, bool wait = true);
 
 /// Construct a motion plan for execution with MoveIt's PlanExecution
-plan_execution::ExecutableMotionPlan executableMotionPlan(const SolutionBase& s);
+ExecutableMotionPlan executableMotionPlan(const SolutionBase& s);
 
+}  // namespace execution
 }  // namespace task_constructor
 }  // namespace moveit
