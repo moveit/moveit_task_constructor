@@ -39,6 +39,8 @@
 #include <moveit/task_constructor/storage.h>
 #include <actionlib/client/simple_action_client.h>
 #include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
+#include <moveit/moveit_cpp/moveit_cpp.h>
+#include <moveit/plan_execution/plan_execution.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -47,6 +49,9 @@ namespace task_constructor {
 using ExecuteTaskSolutionSimpleActionClient =
     actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>;
 bool execute(const SolutionBase& s, ExecuteTaskSolutionSimpleActionClient* ac = nullptr, bool wait = true);
+
+/// Construct a motion plan for execution with MoveIt's PlanExecution
+plan_execution::ExecutableMotionPlan executableMotionPlan(const SolutionBase& s);
 
 }  // namespace task_constructor
 }  // namespace moveit

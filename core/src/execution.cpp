@@ -36,7 +36,11 @@
 
 #include <moveit/task_constructor/execution.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/utils/message_checks.h>
 #include <moveit_msgs/MoveItErrorCodes.h>
+#include <moveit/task_constructor/stage.h>
+
+using namespace plan_execution;
 
 namespace moveit {
 namespace task_constructor {
@@ -59,6 +63,34 @@ bool execute(const SolutionBase& s, ExecuteTaskSolutionSimpleActionClient* ac, b
 		return ac->getResult()->error_code.val == moveit_msgs::MoveItErrorCodes::SUCCESS;
 	}
 	return true;
+}
+
+ExecutableMotionPlan executableMotionPlan(const SolutionBase& s) {
+	ExecutableMotionPlan plan;
+	auto f = [&](const SubTrajectory& sub) {
+		// Need to copy *const* RobotTrajectory + Handle nullptr RobotTrajectory
+		auto copy = sub.trajectory() ?
+		                std::make_shared<robot_trajectory::RobotTrajectory>(*sub.trajectory()) :
+		                std::make_shared<robot_trajectory::RobotTrajectory>(sub.start()->scene()->getRobotModel());
+		plan.plan_components_.emplace_back(std::move(copy), sub.creator()->name());
+		auto& c = plan.plan_components_.back();
+
+		moveit_msgs::PlanningScene scene_diff;
+		sub.end()->scene()->getPlanningSceneDiffMsg(scene_diff);
+
+		if (!moveit::core::isEmpty(scene_diff))
+			c.effect_on_success_ = [idx = plan.plan_components_.size() - 1,
+			                        diff = std::move(scene_diff)](const ExecutableMotionPlan* plan) {
+				if (plan->planning_scene_monitor_) {
+					ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution",
+					                       "apply effect of " << plan->plan_components_[idx].description_);
+					return plan->planning_scene_monitor_->newPlanningSceneMessage(diff);
+				}
+				return true;
+			};
+	};
+	s.visitSubTrajectories(f);
+	return plan;
 }
 
 }  // namespace task_constructor
