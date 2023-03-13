@@ -64,8 +64,9 @@ moveit::core::MoveItErrorCode PlanExecution::run() {
 	// push components to TEM
 	for (auto it = next_, end = components_.end(); it != end; ++it) {
 		moveit_msgs::RobotTrajectory msg;
-		if (it->trajectory)
+		if (it->trajectory && !it->trajectory->empty() && (it->trajectory->getDuration() > 0.0))
 			it->trajectory->getRobotTrajectoryMsg(msg);
+
 		if (!tem_->push(msg, it->controller_names)) {
 			ROS_ERROR_STREAM_NAMED(LOGGER, "Trajectory initialization failed");
 			tem_->clear();
