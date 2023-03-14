@@ -96,7 +96,7 @@ moveit::core::MoveItErrorCode PlanExecution::run() {
 	}
 }
 
-void PlanExecution::call(const std::vector<ExecutableTrajectory::EffectFn>& effects, const char* name) {
+void PlanExecution::call(const std::list<ExecutableTrajectory::EffectFn>& effects, const char* name) {
 	ROS_DEBUG_STREAM_NAMED(LOGGER + ".apply", effects.size() << " " << name << " effects of: " << next_->description);
 	for (const auto& f : effects)
 		f(this);

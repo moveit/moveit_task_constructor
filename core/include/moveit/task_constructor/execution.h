@@ -35,6 +35,7 @@
 /* Authors: Robert Haschke */
 
 #pragma once
+#include <list>
 
 #include <actionlib/client/simple_action_client.h>
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
@@ -57,11 +58,13 @@ struct ExecutableTrajectory
 	std::string description;
 	robot_trajectory::RobotTrajectoryConstPtr trajectory;
 	std::vector<std::string> controller_names;
-	std::vector<EffectFn> start_effects;
-	std::vector<EffectFn> end_effects;
+	// std::list doesn't invalidate iterators upon insertion/deletion
+	std::list<EffectFn> start_effects;
+	std::list<EffectFn> end_effects;
 	bool stop = false;
 };
-using ExecutableMotionPlan = std::vector<ExecutableTrajectory>;
+// std::list doesn't invalidate iterators upon insertion/deletion
+using ExecutableMotionPlan = std::list<ExecutableTrajectory>;
 
 class PlanExecution
 {
@@ -70,7 +73,7 @@ class PlanExecution
 	ExecutableMotionPlan components_;
 	ExecutableMotionPlan::iterator next_;
 
-	void call(const std::vector<ExecutableTrajectory::EffectFn>& effects, const char* name);
+	void call(const std::list<ExecutableTrajectory::EffectFn>& effects, const char* name);
 	void onDone(const moveit_controller_manager::ExecutionStatus& status);
 	void onSuccessfulComponent();
 
