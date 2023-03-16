@@ -61,6 +61,10 @@ moveit::core::MoveItErrorCode PlanExecution::run() {
 	if (next_ == components_.end())  // empty / already done
 		return moveit_msgs::MoveItErrorCodes::SUCCESS;
 
+	// TODO: Only stop our own execution
+	tem_->stopExecution();  // preempt any running trajectory sequence
+	// TODO: shorten next trajectory segment such that the start point deviation from current is minimized
+
 	// push components to TEM
 	for (auto it = next_, end = components_.end(); it != end; ++it) {
 		moveit_msgs::RobotTrajectory msg;
