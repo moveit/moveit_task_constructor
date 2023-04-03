@@ -39,11 +39,22 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 #include <vector>
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
+
+/** \brief A stopping criterion which is evaluated after running a planner.
+ * \param [in] result Most recent result of the last planner invoked
+ * \param [in] path_constraints Set of path constraints passed to the solver
+ * \return  If it returns true, the corresponding trajectory is considered the solution, otherwise false is returned and
+ * the next fallback planner is called.
+ */
+typedef std::function<bool(const robot_trajectory::RobotTrajectoryPtr& result,
+                           const moveit_msgs::msg::Constraints& path_constraints)>
+    StoppingCriterionFunction;
 
 MOVEIT_CLASS_FORWARD(FallbackPlanner);
 
@@ -71,6 +82,23 @@ public:
 	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
 	          double timeout, robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+
+	/** \brief Set stopping criterion function for parallel planning
+	 * \param [in] stopping_criterion_callback New stopping criterion function that will be used
+	 */
+	void setStoppingCriterionFunction(const StoppingCriterionFunction& stopping_criterion_callback) {
+		stopping_criterion_function_ = stopping_criterion_callback;
+	}
+
+protected:
+	StoppingCriterionFunction stopping_criterion_function_ =
+	    [](const robot_trajectory::RobotTrajectoryPtr& result,
+	       const moveit_msgs::msg::Constraints& /*path_constraints*/) {
+		    if (result) {
+			    return true;
+		    }
+		    return false;
+	    };
 };
 }  // namespace solvers
 }  // namespace task_constructor
