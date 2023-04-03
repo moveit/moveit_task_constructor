@@ -75,13 +75,15 @@ public:
 
 	/** \brief Set solution selection function for parallel planning
 	 * \param [in] solution_selection_function New solution selection that will be used
-	*/
-	void setSolutionSelectionFunction(const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function){
+	 */
+	void setSolutionSelectionFunction(
+	    const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function) {
 		solution_selection_function_ = solution_selection_function;
 	};
 
 protected:
-	moveit::planning_pipeline_interfaces::SolutionSelectionFunction solution_selection_function_ = &moveit::planning_pipeline_interfaces::getShortestSolution;
+	moveit::planning_pipeline_interfaces::SolutionSelectionFunction solution_selection_function_ =
+	    &moveit::planning_pipeline_interfaces::getShortestSolution;
 };
 }  // namespace solvers
 }  // namespace task_constructor
