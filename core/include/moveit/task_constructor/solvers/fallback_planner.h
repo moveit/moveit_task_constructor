@@ -32,8 +32,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Robert Haschke
-   Desc:    meta planner, running multiple planners in parallel or sequence
+/* Authors: Robert Haschke, Sebastian Jahr
+   Desc:    Meta planner, running multiple MTC planners in sequence
 */
 
 #pragma once

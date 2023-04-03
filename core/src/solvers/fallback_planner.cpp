@@ -44,8 +44,8 @@ namespace task_constructor {
 namespace solvers {
 
 void FallbackPlanner::init(const core::RobotModelConstPtr& robot_model) {
-	for (const auto& p : *this)
-		p->init(robot_model);
+	for (const auto& planner : *this)
+		planner->init(robot_model);
 }
 
 bool FallbackPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
@@ -55,13 +55,13 @@ bool FallbackPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
-	for (const auto& p : *this) {
+	for (const auto& planner : *this) {
 		if (remaining_time < 0) {
 			return false;  // timeout}
 			if (result) {
 				result->clear();
 			}
-			p->plan(from, to, jmg, remaining_time, result, path_constraints);
+			planner->plan(from, to, jmg, remaining_time, result, path_constraints);
 
 			if (stopping_criterion_function_(result, path_constraints)) {
 				return true;
