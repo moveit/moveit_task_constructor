@@ -41,3 +41,5 @@
 #include "solvers/cartesian_path.h"
 #include "solvers/joint_interpolation.h"
 #include "solvers/pipeline_planner.h"
+#include "solvers/fallback_planner.h"
+#include "solvers/alternatives_planner.h"

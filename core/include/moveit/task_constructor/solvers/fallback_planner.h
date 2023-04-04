@@ -94,7 +94,7 @@ protected:
 	StoppingCriterionFunction stopping_criterion_function_ =
 	    [](const robot_trajectory::RobotTrajectoryPtr& result,
 	       const moveit_msgs::msg::Constraints& /*path_constraints*/) {
-		    if (result) {
+		    if (result != nullptr) {
 			    return true;
 		    }
 		    return false;
