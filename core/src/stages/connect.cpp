@@ -164,11 +164,10 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		// Do not push partial solutions
 		if (success) {
-			sub_trajectories.push_back(trajectory);  
-		}
-		else {
-			// Pushing a nullptr instead of a failed trajectory. 
-			sub_trajectories.push_back(nullptr); 
+			sub_trajectories.push_back(trajectory);
+		} else {
+			// Pushing a nullptr instead of a failed trajectory.
+			sub_trajectories.push_back(nullptr);
 		}
 
 		if (!success)

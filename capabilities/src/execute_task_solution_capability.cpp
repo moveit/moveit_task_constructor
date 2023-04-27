@@ -144,13 +144,13 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		state = scene->getCurrentState();
 	}
 
-	plan.plan_components_.reserve(solution.sub_trajectory.size());
+	plan.plan_components.reserve(solution.sub_trajectory.size());
 	auto make_executable_trajectory =
 	    [&](const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj, const std::string& description,
 	        const std::function<bool(const plan_execution::ExecutableMotionPlan*)>& on_success_callback) {
-		    plan.plan_components_.emplace_back();
-		    plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
-		    exec_traj.description_ = description;
+		    plan.plan_components.emplace_back();
+		    plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
+		    exec_traj.description = description;
 		    const moveit::core::JointModelGroup* group = nullptr;
 		    {
 			    std::vector<std::string> joint_names(sub_traj.trajectory.joint_trajectory.joint_names);
@@ -166,12 +166,12 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 				    RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());
 			    }
 		    }
-		    exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
-		    exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
-		    exec_traj.controller_names_ = sub_traj.execution_info.controller_names;
+		    exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
+		    exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+		    exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
 		    /* todo add action feedback and markers */
-		    exec_traj.effect_on_success_ = on_success_callback;
+		    exec_traj.effect_on_success = on_success_callback;
 		    return true;
 	    };
 
