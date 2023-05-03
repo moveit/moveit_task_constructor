@@ -159,7 +159,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
-		
+
 		// Do not push partial solutions
 		if (success) {
 			sub_trajectories.push_back(trajectory);
