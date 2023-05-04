@@ -14,14 +14,6 @@ import rospy
 class Test(unittest.TestCase):
     PLANNING_GROUP = "manipulator"
 
-    @classmethod
-    def setUpClass(self):
-        pass
-
-    @classmethod
-    def tearDown(self):
-        pass
-
     def test_MoveAndExecute(self):
         moveRel = stages.MoveRelative("moveRel", core.JointInterpolationPlanner())
         moveRel.group = self.PLANNING_GROUP
