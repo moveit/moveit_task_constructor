@@ -85,6 +85,9 @@ public:
 	const std::string& name() const { return stages()->name(); }
 	void setName(const std::string& name) { stages()->setName(name); }
 
+	Stage* findChild(const std::string& name) const { return stages()->findChild(name); }
+	Stage* operator[](int index) const { return stages()->operator[](index); }
+
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
