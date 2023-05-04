@@ -105,6 +105,8 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, false);
 		}, "Detach multiple objects from a robot link", "names"_a, "attach_link"_a)
+		.def("allowCollisions", [](ModifyPlanningScene& self, const std::string& object, bool allow) {self.allowCollisions(object, allow);},
+			"Allow or disable all collisions involving the given object", "object"_a, "enable_collision"_a = true)
 		.def("allowCollisions", [](ModifyPlanningScene& self,
 	        const py::object& first, const py::object& second, bool enable_collision) {
 			self.allowCollisions(elementOrList<std::string>(first), elementOrList<std::string>(second), enable_collision);
