@@ -440,6 +440,7 @@ void export_core(pybind11::module& m) {
 			        t.add(it->cast<Stage::pointer>());
 	        },
 	        "Append stage(s) to the task's top-level container")
+	    .def("insert", &Task::insert, "stage"_a, "before"_a = -1, "Insert stage before given index")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
