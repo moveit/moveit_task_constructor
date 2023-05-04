@@ -79,20 +79,27 @@ TEST(ContainerBase, positionForInsert) {
 
 /* TODO: remove interface as it returns raw pointers */
 TEST(ContainerBase, findChild) {
-	SerialContainer s;
+	auto s = std::make_unique<SerialContainer>();
 	Stage *a, *b, *c1, *d;
-	s.add(Stage::pointer(a = new NamedStage("a")));
-	s.add(Stage::pointer(b = new NamedStage("b")));
-	s.add(Stage::pointer(c1 = new NamedStage("c")));
+	s->add(Stage::pointer(a = new NamedStage("a")));
+	s->add(Stage::pointer(b = new NamedStage("b")));
+	s->add(Stage::pointer(c1 = new NamedStage("c")));
 	auto sub = ContainerBase::pointer(new SerialContainer("c"));
 	sub->add(Stage::pointer(d = new NamedStage("d")));
-	s.add(std::move(sub));
+	s->add(std::move(sub));
 
-	EXPECT_EQ(s.findChild("a"), a);
-	EXPECT_EQ(s.findChild("b"), b);
-	EXPECT_EQ(s.findChild("c"), c1);
-	EXPECT_EQ(s.findChild("d"), nullptr);
-	EXPECT_EQ(s.findChild("c/d"), d);
+	EXPECT_EQ(s->findChild("a"), a);
+	EXPECT_EQ(s->findChild("b"), b);
+	EXPECT_EQ(s->findChild("c"), c1);
+	EXPECT_EQ(s->findChild("d"), nullptr);
+	EXPECT_EQ(s->findChild("c/d"), d);
+
+	Task t("", false, std::move(s));
+	EXPECT_EQ(t.findChild("a"), a);
+	EXPECT_EQ(t.findChild("b"), b);
+	EXPECT_EQ(t.findChild("c"), c1);
+	EXPECT_EQ(t.findChild("d"), nullptr);
+	EXPECT_EQ(t.findChild("c/d"), d);
 }
 
 template <typename Container>
