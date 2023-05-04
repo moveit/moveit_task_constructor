@@ -22,23 +22,21 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_MoveRelative(self):
+    def test_MoveAndExecute(self):
+        moveRel = stages.MoveRelative("moveRel", core.JointInterpolationPlanner())
+        moveRel.group = self.PLANNING_GROUP
+        moveRel.setDirection({"joint_1": 0.2, "joint_2": 0.4})
+
+        moveTo = stages.MoveTo("moveTo", core.JointInterpolationPlanner())
+        moveTo.group = self.PLANNING_GROUP
+        moveTo.setGoal("all-zeros")
+
         task = core.Task()
-        task.add(stages.CurrentState("current"))
-        move = stages.MoveRelative("move", core.JointInterpolationPlanner())
-        move.group = self.PLANNING_GROUP
-        move.setDirection({"joint_1": 0.2, "joint_2": 0.4})
-        task.add(move)
+        task.add(stages.CurrentState("current"), moveRel, moveTo)
 
-        task.enableIntrospection()
-        task.init()
-        task.plan()
-
+        self.assertTrue(task.plan())
         self.assertEqual(len(task.solutions), 1)
-        for s in task.solutions:
-            print(s)
-        s = task.solutions[0]
-        task.execute(s)
+        task.execute(task.solutions[0])
 
     def test_Merger(self):
         cartesian = core.CartesianPath()
