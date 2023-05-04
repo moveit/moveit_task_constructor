@@ -51,6 +51,8 @@ using namespace trajectory_processing;
 JointInterpolationPlanner::JointInterpolationPlanner() {
 	auto& p = properties();
 	p.declare<double>("max_step", 0.1, "max joint step");
+	// allow passing max_effort to GripperCommand actions via
+	p.declare<double>("max_effort", "max_effort for GripperCommand actions");
 }
 
 void JointInterpolationPlanner::init(const core::RobotModelConstPtr& /*robot_model*/) {}
@@ -94,6 +96,20 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 	                          props.get<double>("max_acceleration_scaling_factor"));
+
+	// set max_effort on first and last waypoint (first, because we might reverse the trajectory)
+	const auto& max_effort = properties().get("max_effort");
+	if (!max_effort.empty()) {
+		double effort = boost::any_cast<double>(max_effort);
+		for (const auto* jm : jmg->getActiveJointModels()) {
+			if (jm->getVariableCount() != 1)
+				continue;
+			result->getFirstWayPointPtr()->dropAccelerations();
+			result->getFirstWayPointPtr()->setJointEfforts(jm, &effort);
+			result->getLastWayPointPtr()->dropAccelerations();
+			result->getLastWayPointPtr()->setJointEfforts(jm, &effort);
+		}
+	}
 
 	return true;
 }
