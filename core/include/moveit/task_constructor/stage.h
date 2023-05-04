@@ -232,6 +232,8 @@ public:
 	/// Should we generate failure solutions? Note: Always report a failure!
 	bool storeFailures() const;
 
+	virtual void explainFailure(std::ostream& os) const;
+
 	/// Get the stage's property map
 	PropertyMap& properties();
 	const PropertyMap& properties() const { return const_cast<Stage*>(this)->properties(); }

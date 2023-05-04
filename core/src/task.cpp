@@ -237,9 +237,12 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	init();
 
 	// Print state and return success if there are solutions otherwise the input error_code
-	const auto success_or = [this](const int32_t error_code) {
+	const auto success_or = [this](const int32_t error_code) -> int32_t {
+		if (numSolutions() > 0)
+			return moveit::core::MoveItErrorCode::SUCCESS;
 		printState();
-		return numSolutions() > 0 ? moveit::core::MoveItErrorCode::SUCCESS : error_code;
+		explainFailure();
+		return error_code;
 	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
@@ -312,6 +315,11 @@ const core::RobotModelConstPtr& Task::getRobotModel() const {
 
 void Task::printState(std::ostream& os) const {
 	os << *stages();
+}
+
+void Task::explainFailure(std::ostream& os) const {
+	os << "Failing stage(s):\n";
+	stages()->explainFailure(os);
 }
 }  // namespace task_constructor
 }  // namespace moveit
