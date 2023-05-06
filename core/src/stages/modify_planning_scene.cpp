@@ -111,8 +111,10 @@ void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene& scene, 
 	collision_detection::AllowedCollisionMatrix& acm = scene.getAllowedCollisionMatrixNonConst();
 	bool allow = invert ? !pairs.allow : pairs.allow;
 	if (pairs.second.empty()) {
-		for (const auto& name : pairs.first)
+		for (const auto& name : pairs.first) {
+			acm.setDefaultEntry(name, allow);
 			acm.setEntry(name, allow);
+		}
 	} else
 		acm.setEntry(pairs.first, pairs.second, allow);
 }
