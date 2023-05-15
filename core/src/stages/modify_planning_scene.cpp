@@ -84,11 +84,13 @@ void ModifyPlanningScene::allowCollisions(const std::string& first, const moveit
 }
 
 void ModifyPlanningScene::computeForward(const InterfaceState& from) {
-	sendForward(from, apply(from, false), SubTrajectory());
+	auto result = apply(from, false);
+	sendForward(from, std::move(result.first), std::move(result.second));
 }
 
 void ModifyPlanningScene::computeBackward(const InterfaceState& to) {
-	sendBackward(apply(to, true), to, SubTrajectory());
+	auto result = apply(to, true);
+	sendBackward(std::move(result.first), to, std::move(result.second));
 }
 
 void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
@@ -121,30 +123,43 @@ void ModifyPlanningScene::allowCollisions(planning_scene::PlanningScene& scene, 
 
 // invert indicates, whether to detach instead of attach (and vice versa)
 // as well as to forbid instead of allow collision (and vice versa)
-InterfaceState ModifyPlanningScene::apply(const InterfaceState& from, bool invert) {
+std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const InterfaceState& from, bool invert) {
 	planning_scene::PlanningScenePtr scene = from.scene()->diff();
-	InterfaceState result(scene);
-	// add/remove objects
-	for (const auto& collision_object : collision_objects_)
-		processCollisionObject(*scene, collision_object);
+	InterfaceState state(scene);
+	SubTrajectory traj;
+	try {
+		// add/remove objects
+		for (auto& collision_object : collision_objects_)
+			processCollisionObject(*scene, collision_object, invert);
 
-	// attach/detach objects
-	for (const auto& pair : attach_objects_)
-		attachObjects(*scene, pair, invert);
+		// attach/detach objects
+		for (const auto& pair : attach_objects_)
+			attachObjects(*scene, pair, invert);
 
-	// allow/forbid collisions
-	for (const auto& pairs : collision_matrix_edits_)
-		allowCollisions(*scene, pairs, invert);
+		// allow/forbid collisions
+		for (const auto& pairs : collision_matrix_edits_)
+			allowCollisions(*scene, pairs, invert);
 
-	if (callback_)
-		callback_(scene, properties());
-
-	return result;
+		if (callback_)
+			callback_(scene, properties());
+	} catch (const std::exception& e) {
+		traj.markAsFailure(e.what());
+	}
+	return std::make_pair(state, traj);
 }
 
 void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& scene,
-                                                 const moveit_msgs::CollisionObject& object) {
+                                                 moveit_msgs::CollisionObject& object, bool invert) {
+	auto op = object.operation;
+	if (invert) {
+		if (op == moveit_msgs::CollisionObject::ADD)
+			op = moveit_msgs::CollisionObject::REMOVE;
+		else if (op == moveit_msgs::CollisionObject::REMOVE)
+			throw std::runtime_error("cannot apply removeObject() backwards");
+	}
+
 	scene.processCollisionObjectMsg(object);
+	object.operation = op;
 }
 }  // namespace stages
 }  // namespace task_constructor
