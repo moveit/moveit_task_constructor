@@ -116,7 +116,10 @@ void export_stages(pybind11::module& m) {
 
 			.. _CollisionObject: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/CollisionObject.html
 
-		)", "collision_object"_a);
+		)", "collision_object"_a)
+		.def("removeObject", &ModifyPlanningScene::removeObject,
+			"Remove a CollisionObject_ from the planning scene", "name"_a)
+		;
 
 	properties::class_<CurrentState, Stage>(m, "CurrentState", R"(
 			Fetch the current PlanningScene / real robot state via the ``get_planning_scene`` service.
