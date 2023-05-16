@@ -270,8 +270,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	ac.waitForServer();
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
-	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+	s.toMsg(goal.solution, pimpl()->introspection_.get());
 
 	ac.sendGoal(goal);
 	ac.waitForResult();
