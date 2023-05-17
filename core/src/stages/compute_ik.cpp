@@ -388,8 +388,10 @@ void ComputeIK::compute() {
 	double remaining_time = timeout();
 	auto start_time = std::chrono::steady_clock::now();
 	while (ik_solutions.size() < max_ik_solutions && remaining_time > 0) {
-		if (tried_current_state_as_seed)
+		if (tried_current_state_as_seed) {
 			sandbox_state.setToRandomPositions(jmg);
+			sandbox_state.update();
+		}
 		tried_current_state_as_seed = true;
 
 		size_t previous = ik_solutions.size();
