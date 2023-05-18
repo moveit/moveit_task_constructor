@@ -49,6 +49,18 @@
 #include <iterator>
 #include <ros/console.h>
 
+namespace {
+bool isIKSolutionValid(const planning_scene::PlanningScene* planning_scene,
+                       const kinematic_constraints::KinematicConstraintSet* constraint_set,
+                       moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
+                       const double* ik_solution) {
+	state->setJointGroupPositions(jmg, ik_solution);
+	state->update();
+	return (!planning_scene || !planning_scene->isStateColliding(*state, jmg->getName())) &&
+	       (!constraint_set || constraint_set->decide(*state).satisfied);
+}
+}  // namespace
+
 namespace moveit {
 namespace task_constructor {
 namespace stages {
@@ -62,6 +74,9 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	p.declare<bool>("ignore_collisions", false);
 	p.declare<double>("min_solution_distance", 0.1,
 	                  "minimum distance between seperate IK solutions for the same target");
+	p.declare<moveit_msgs::Constraints>(
+	    "constraints", moveit_msgs::Constraints(),
+	    "A set of constraints that the IK must obey; by default, this set of constraints is empty");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -356,9 +371,10 @@ void ComputeIK::compute() {
 		scene->getCurrentState().copyJointGroupPositions(jmg, compare_pose);
 
 	double min_solution_distance = props.get<double>("min_solution_distance");
+	moveit_msgs::Constraints constraints = props.get<moveit_msgs::Constraints>("constraints");
 
 	IKSolutions ik_solutions;
-	auto is_valid = [scene, ignore_collisions, min_solution_distance,
+	auto is_valid = [scene, ignore_collisions, min_solution_distance, robot_model, constraints,
 	                 &ik_solutions](robot_state::RobotState* state, const robot_model::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
@@ -369,13 +385,19 @@ void ComputeIK::compute() {
 		ik_solutions.emplace_back();
 		auto& solution{ ik_solutions.back() };
 		state->copyJointGroupPositions(jmg, solution.joint_positions);
+
+		kinematic_constraints::KinematicConstraintSet kset(robot_model);
+		kset.add(constraints, scene->getTransforms());
+		auto kset_ptr = kset.empty() ? nullptr : &kset;
+		bool constraints_valid = isIKSolutionValid(scene.get(), kset_ptr, state, jmg, joint_positions);
+
 		collision_detection::CollisionRequest req;
 		collision_detection::CollisionResult res;
 		req.contacts = true;
 		req.max_contacts = 1;
 		req.group_name = jmg->getName();
 		scene->checkCollision(req, res, *state);
-		solution.feasible = ignore_collisions || !res.collision;
+		solution.feasible = (ignore_collisions || !res.collision) && constraints_valid;
 		if (!res.contacts.empty()) {
 			solution.contact = res.contacts.begin()->second.front();
 		}
