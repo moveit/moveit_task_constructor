@@ -22,6 +22,7 @@ add_library(${PROJECT_NAME}
 
 	container.cpp
 	cost_terms.cpp
+	execution.cpp
 	introspection.cpp
 	marker_tools.cpp
 	merge.cpp

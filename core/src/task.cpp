@@ -38,10 +38,8 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
-#include <moveit_task_constructor_msgs/ExecuteTaskSolutionAction.h>
-
+#include <moveit/task_constructor/execution.h>
 #include <ros/ros.h>
-#include <actionlib/client/simple_action_client.h>
 
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
@@ -265,17 +263,8 @@ void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
-	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
-	ac.waitForServer();
-
-	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
-	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
-
-	ac.sendGoal(goal);
-	ac.waitForResult();
-	return ac.getResult()->error_code;
+bool Task::execute(const SolutionBase& s) {
+	return ::moveit::task_constructor::execute(s);
 }
 
 void Task::publishAllSolutions(bool wait) {

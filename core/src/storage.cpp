@@ -216,6 +216,10 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	std::copy(markers.begin(), markers.end(), info.markers.begin());
 }
 
+void SubTrajectory::visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const {
+	f(*this);
+}
+
 void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
@@ -233,6 +237,11 @@ double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const
 
 void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
+}
+
+void SolutionSequence::visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const {
+	for (const SolutionBase* s : subsolutions_)
+		s->visitSubTrajectories(f);
 }
 
 void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
@@ -272,6 +281,10 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 
 double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) const {
 	return f(*this, comment);
+}
+
+void WrappedSolution::visitSubTrajectories(const std::function<void(const SubTrajectory&)>& f) const {
+	wrapped_->visitSubTrajectories(f);
 }
 
 void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,

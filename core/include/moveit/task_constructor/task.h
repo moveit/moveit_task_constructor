@@ -126,8 +126,8 @@ public:
 	moveit::core::MoveItErrorCode plan(size_t max_solutions = 0);
 	/// interrupt current planning (or execution)
 	void preempt();
-	/// execute solution, return the result
-	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
+	/// execute solution (blocking), returns success
+	[[deprecated("Use plain function execute(SolutionBase) instead")]] bool execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;
