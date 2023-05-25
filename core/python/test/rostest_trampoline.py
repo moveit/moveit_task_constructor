@@ -4,10 +4,10 @@
 from __future__ import print_function
 import unittest
 import rostest
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 from moveit.task_constructor import core, stages
 from moveit.core.planning_scene import PlanningScene
-from geometry_msgs.msg import Vector3Stamped, Vector3
+from geometry_msgs.msg import Vector3Stamped, Vector3, PoseStamped
 from std_msgs.msg import Header
 
 PLANNING_GROUP = "manipulator"
@@ -75,7 +75,7 @@ class PyMoveRelX(stages.MoveRelative):
     def __init__(self, x, planner, name="Move ±x"):
         stages.MoveRelative.__init__(self, name, planner)
         self.group = PLANNING_GROUP
-        self.ik_frame = "tool0"
+        self.ik_frame = PoseStamped(header=Header(frame_id="tool0"))
         self.setDirection(
             Vector3Stamped(header=Header(frame_id="base_link"), vector=Vector3(x, 0, 0))
         )
@@ -131,5 +131,5 @@ class TestTrampolines(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    roscpp_init("test_mtc")
+    roscpp_initialize("test_mtc")
     rostest.rosrun("mtc", "trampoline", TestTrampolines)

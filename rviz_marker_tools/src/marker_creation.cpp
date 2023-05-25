@@ -165,12 +165,6 @@ void prepareMarker(vm::msg::Marker& m, int marker_type) {
 	m.points.clear();
 	m.colors.clear();
 
-	// ensure valid scale
-	if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0) {
-		m.scale.x = 1.0;
-		m.scale.y = 1.0;
-		m.scale.z = 1.0;
-	}
 	// ensure non-null orientation
 	if (m.pose.orientation.w == 0 && m.pose.orientation.x == 0 && m.pose.orientation.y == 0 && m.pose.orientation.z == 0)
 		m.pose.orientation.w = 1.0;
@@ -195,6 +189,7 @@ vm::msg::Marker& makeXYPlane(vm::msg::Marker& m) {
 	p[3].y = -1.0;
 	p[3].z = 0.0;
 
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::msg::Marker::TRIANGLE_LIST);
 	m.points.push_back(p[0]);
 	m.points.push_back(p[1]);
@@ -224,6 +219,7 @@ vm::msg::Marker& makeYZPlane(vm::msg::Marker& m) {
 
 /// create a cone of given angle along the x-axis
 vm::msg::Marker makeCone(double angle, vm::msg::Marker& m) {
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::msg::Marker::TRIANGLE_LIST);
 	geometry_msgs::msg::Point p[3];
 	p[0].x = p[0].y = p[0].z = 0.0;
@@ -303,6 +299,7 @@ vm::msg::Marker& makeArrow(vm::msg::Marker& m, double scale, bool tip_at_origin)
 }
 
 vm::msg::Marker& makeText(vm::msg::Marker& m, const std::string& text) {
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::msg::Marker::TEXT_VIEW_FACING);
 	m.text = text;
 	return m;

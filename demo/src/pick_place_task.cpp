@@ -37,6 +37,7 @@
 #include <Eigen/Geometry>
 #include <moveit_task_constructor_demo/pick_place_task.h>
 #include <geometry_msgs/msg/pose.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include "pick_place_demo_parameters.hpp"
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_demo");
@@ -117,8 +118,8 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 
 	// Cartesian planner
 	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
-	cartesian_planner->setMaxVelocityScaling(1.0);
-	cartesian_planner->setMaxAccelerationScaling(1.0);
+	cartesian_planner->setMaxVelocityScalingFactor(1.0);
+	cartesian_planner->setMaxAccelerationScalingFactor(1.0);
 	cartesian_planner->setStepSize(.01);
 
 	// Set task properties
@@ -133,7 +134,6 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *               Current State                      *
 	 *                                                  *
 	 ***************************************************/
-	Stage* current_state_ptr = nullptr;  // Forward current_state on to grasp pose generator
 	{
 		auto current_state = std::make_unique<stages::CurrentState>("current state");
 
@@ -147,8 +147,6 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 			}
 			return true;
 		});
-
-		current_state_ptr = applicability_filter.get();
 		t.add(std::move(applicability_filter));
 	}
 
@@ -157,10 +155,12 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *               Open Hand                          *
 	 *                                                  *
 	 ***************************************************/
+	Stage* initial_state_ptr = nullptr;
 	{  // Open Hand
 		auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
 		stage->setGroup(params.hand_group_name);
 		stage->setGoal(params.hand_open_pose);
+		initial_state_ptr = stage.get();  // remember start state for monitoring grasp pose generator
 		t.add(std::move(stage));
 	}
 
@@ -182,7 +182,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *               Pick Object                        *
 	 *                                                  *
 	 ***************************************************/
-	Stage* attach_object_stage = nullptr;  // Forward attach_object_stage to place pose generator
+	Stage* pick_stage_ptr = nullptr;
 	{
 		auto grasp = std::make_unique<SerialContainer>("pick object");
 		t.properties().exposeTo(grasp->properties(), { "eef", "hand", "group", "ik_frame" });
@@ -217,7 +217,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 			stage->setPreGraspPose(params.hand_open_pose);
 			stage->setObject(params.object_name);
 			stage->setAngleDelta(M_PI / 12);
-			stage->setMonitoredStage(current_state_ptr);  // Hook into current state
+			stage->setMonitoredStage(initial_state_ptr);  // hook into successful initial-phase solutions
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(stage));
@@ -257,7 +257,6 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
 			stage->attachObject(params.object_name, params.hand_frame);
-			attach_object_stage = stage.get();
 			grasp->insert(std::move(stage));
 		}
 
@@ -296,6 +295,8 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 			stage->allowCollisions({ params.object_name }, { params.surface_link }, false);
 			grasp->insert(std::move(stage));
 		}
+
+		pick_stage_ptr = grasp.get();  // remember for monitoring place pose generator
 
 		// Add grasp container to task
 		t.add(std::move(grasp));
@@ -358,7 +359,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 			p.pose = vectorToPose(params.place_pose);
 			p.pose.position.z += 0.5 * params.object_dimensions[0] + params.place_surface_offset;
 			stage->setPose(p);
-			stage->setMonitoredStage(attach_object_stage);  // Hook into attach_object_stage
+			stage->setMonitoredStage(pick_stage_ptr);  // hook into successful pick solutions
 
 			// Compute IK
 			auto wrapper = std::make_unique<stages::ComputeIK>("place pose IK", std::move(stage));
@@ -456,8 +457,8 @@ bool PickPlaceTask::execute() {
 	// // If you want to inspect the goal message, use this instead:
 	// actionlib::SimpleActionClient<moveit_task_constructor_msgs::msg::ExecuteTaskSolutionAction>
 	// execute("execute_task_solution", true); execute.waitForServer();
-	// moveit_task_constructor_msgs::msg::ExecuteTaskSolutionGoal execute_goal;
-	// task_->solutions().front()->fillMessage(execute_goal.solution);
+	// moveit_task_constructor_msgs::msg::ExecuteTaskSolution::Goal execute_goal;
+	// task_->solutions().front()->toMsg(execute_goal.solution);
 	// execute.sendGoalAndWait(execute_goal);
 	// execute_result = execute.getResult()->error_code;
 

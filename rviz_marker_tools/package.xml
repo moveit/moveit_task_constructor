@@ -1,9 +1,10 @@
 <package format="2">
 	<name>rviz_marker_tools</name>
-	<version>0.1.0</version>
+	<version>0.1.3</version>
 	<description>Tools for marker creation / handling</description>
 
 	<license>BSD</license>
+	<author email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</author>
 	<maintainer email="rhaschke@techfak.uni-bielefeld.de">Robert Haschke</maintainer>
 
 	<buildtool_depend>ament_cmake</buildtool_depend>

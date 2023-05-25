@@ -239,9 +239,12 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	init();
 
 	// Print state and return success if there are solutions otherwise the input error_code
-	const auto success_or = [this](const int32_t error_code) {
+	const auto success_or = [this](const int32_t error_code) -> int32_t {
+		if (numSolutions() > 0)
+			return moveit::core::MoveItErrorCode::SUCCESS;
 		printState();
-		return numSolutions() > 0 ? moveit::core::MoveItErrorCode::SUCCESS : error_code;
+		explainFailure();
+		return error_code;
 	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
@@ -276,8 +279,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	ac->wait_for_action_server();
 
 	moveit_task_constructor_msgs::action::ExecuteTaskSolution::Goal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
-	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+	s.toMsg(goal.solution, pimpl()->introspection_.get());
 
 	moveit_msgs::msg::MoveItErrorCodes error_code;
 	error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
@@ -345,6 +347,11 @@ const core::RobotModelConstPtr& Task::getRobotModel() const {
 
 void Task::printState(std::ostream& os) const {
 	os << *stages();
+}
+
+void Task::explainFailure(std::ostream& os) const {
+	os << "Failing stage(s):\n";
+	stages()->explainFailure(os);
 }
 }  // namespace task_constructor
 }  // namespace moveit

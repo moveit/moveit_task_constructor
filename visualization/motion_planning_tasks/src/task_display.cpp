@@ -80,7 +80,7 @@ TaskDisplay::TaskDisplay() : Display(), panel_requested_(false), received_task_d
 
 	task_solution_topic_property_ = new rviz_common::properties::RosTopicProperty(
 	    "Task Solution Topic", "", rosidl_generator_traits::data_type<moveit_task_constructor_msgs::msg::Solution>(),
-	    "The topic on which task solutions (moveit_msgs::Solution messages) are received", this,
+	    "The topic on which task solutions (moveit_msgs::msg::Solution messages) are received", this,
 	    SLOT(changedTaskSolutionTopic()), this);
 
 	trajectory_visual_.reset(new TaskSolutionVisualization(this, this));

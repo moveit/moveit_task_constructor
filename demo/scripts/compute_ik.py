@@ -6,9 +6,9 @@ from geometry_msgs.msg import PoseStamped, Pose, Vector3
 from std_msgs.msg import Header
 import time
 
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 
-roscpp_init("mtc_tutorial_compute_ik")
+roscpp_initialize("mtc_tutorial_compute_ik")
 
 # Specify the planning group
 group = "panda_arm"
@@ -40,7 +40,8 @@ generator.pose = PoseStamped(header=Header(frame_id="panda_link8"), pose=pose)
 # Wrap Cartesian generator into a ComputeIK stage to yield a joint pose
 computeIK = stages.ComputeIK("compute IK", generator)
 computeIK.group = group  # Use the group-specific IK solver
-computeIK.ik_frame = "panda_link8"  # Which end-effector frame should reach the target?
+# Which end-effector frame should reach the target?
+computeIK.ik_frame = PoseStamped(header=Header(frame_id="panda_link8"))
 computeIK.max_ik_solutions = 4  # Limit the number of IK solutions
 # [propertyTut14]
 props = computeIK.properties
