@@ -281,6 +281,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		success =
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
+		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
 		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 		reached_state->updateLinkTransforms();
 		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
@@ -311,6 +312,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
 			              linear, distance);
 		}
+	}
 	}
 
 	// store result
