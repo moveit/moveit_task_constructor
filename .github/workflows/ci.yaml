@@ -43,7 +43,7 @@ jobs:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
       DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
       UNDERLAY: /root/ws_moveit/install
-      DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master github:TAMS-Group/mtc_pour#master"
+      DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: ${{ github.workspace }}/.work
       CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
