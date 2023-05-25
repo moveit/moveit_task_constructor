@@ -98,11 +98,11 @@ namespace {
 // ??? TODO: provide callback methods in PlanningScene class / probably not very useful here though...
 // TODO: move into MoveIt core, lift active_components_only_ from fcl to common interface
 bool isTargetPoseCollidingInEEF(const planning_scene::PlanningSceneConstPtr& scene,
-                                robot_state::RobotState& robot_state, Eigen::Isometry3d pose,
-                                const robot_model::LinkModel* link, const robot_model::JointModelGroup* jmg = nullptr,
+                                moveit::core::RobotState& robot_state, Eigen::Isometry3d pose,
+                                const moveit::core::LinkModel* link, const moveit::core::JointModelGroup* jmg = nullptr,
                                 collision_detection::CollisionResult* collision_result = nullptr) {
 	// consider all rigidly connected parent links as well
-	const robot_model::LinkModel* parent = robot_model::RobotModel::getRigidlyConnectedParentLinkModel(link);
+	const moveit::core::LinkModel* parent = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link);
 	if (parent != link)  // transform pose into pose suitable to place parent
 		pose = pose * robot_state.getGlobalLinkTransform(link).inverse() * robot_state.getGlobalLinkTransform(parent);
 
@@ -116,10 +116,10 @@ bool isTargetPoseCollidingInEEF(const planning_scene::PlanningSceneConstPtr& sce
 	while (parent) {
 		pending_links.push_back(&parent->getName());
 		link = parent;
-		const robot_model::JointModel* joint = link->getParentJointModel();
+		const moveit::core::JointModel* joint = link->getParentJointModel();
 		parent = joint->getParentLinkModel();
 
-		if (joint->getType() != robot_model::JointModel::FIXED) {
+		if (joint->getType() != moveit::core::JointModel::FIXED) {
 			for (const std::string* name : pending_links)
 				acm.setDefaultEntry(*name, true);
 			pending_links.clear();
@@ -280,7 +280,7 @@ void ComputeIK::compute() {
 	}
 
 	// determine IK link from ik_frame
-	const robot_model::LinkModel* link = nullptr;
+	const moveit::core::LinkModel* link = nullptr;
 	geometry_msgs::PoseStamped ik_pose_msg;
 	const boost::any& value = props.get("ik_frame");
 	if (value.empty()) {  // property undefined
@@ -311,7 +311,7 @@ void ComputeIK::compute() {
 
 	// validate placed link for collisions
 	collision_detection::CollisionResult collisions;
-	robot_state::RobotState sandbox_state{ scene->getCurrentState() };
+	moveit::core::RobotState sandbox_state{ scene->getCurrentState() };
 	bool colliding =
 	    !ignore_collisions && isTargetPoseCollidingInEEF(scene, sandbox_state, target_pose, link, jmg, &collisions);
 
@@ -349,7 +349,7 @@ void ComputeIK::compute() {
 	std::vector<double> compare_pose;
 	const std::string& compare_pose_name = props.get<std::string>("default_pose");
 	if (!compare_pose_name.empty()) {
-		robot_state::RobotState compare_state(robot_model);
+		moveit::core::RobotState compare_state(robot_model);
 		compare_state.setToDefaultValues(jmg, compare_pose_name);
 		compare_state.copyJointGroupPositions(jmg, compare_pose);
 	} else
@@ -359,7 +359,7 @@ void ComputeIK::compute() {
 
 	IKSolutions ik_solutions;
 	auto is_valid = [scene, ignore_collisions, min_solution_distance,
-	                 &ik_solutions](robot_state::RobotState* state, const robot_model::JointModelGroup* jmg,
+	                 &ik_solutions](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
 			if (jmg->distance(joint_positions, sol.joint_positions.data()) < min_solution_distance)
@@ -419,7 +419,7 @@ void ComputeIK::compute() {
 				solution.markAsFailure(ss.str());
 			}
 			// set scene's robot state
-			robot_state::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
+			moveit::core::RobotState& solution_state = solution_scene->getCurrentStateNonConst();
 			solution_state.setJointGroupPositions(jmg, ik_solutions[i].joint_positions.data());
 			solution_state.update();
 

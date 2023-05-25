@@ -65,7 +65,7 @@ float DisplaySolution::getWayPointDurationFromPrevious(const IndexPair& idx_pair
 	return data_[idx_pair.first].trajectory_->getWayPointDurationFromPrevious(idx_pair.second);
 }
 
-const robot_state::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair& idx_pair) const {
+const moveit::core::RobotStatePtr& DisplaySolution::getWayPointPtr(const IndexPair& idx_pair) const {
 	return data_[idx_pair.first].trajectory_->getWayPointPtr(idx_pair.second);
 }
 

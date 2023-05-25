@@ -166,7 +166,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -282,7 +282,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
 		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
-			robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 			reached_state->updateLinkTransforms();
 			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
 

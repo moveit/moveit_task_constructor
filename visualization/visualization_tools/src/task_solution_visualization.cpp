@@ -209,7 +209,7 @@ void TaskSolutionVisualization::setName(const QString& name) {
 		slider_dock_panel_->setWindowTitle(name + " - Slider");
 }
 
-void TaskSolutionVisualization::onRobotModelLoaded(const robot_model::RobotModelConstPtr& robot_model) {
+void TaskSolutionVisualization::onRobotModelLoaded(const moveit::core::RobotModelConstPtr& robot_model) {
 	// Error check
 	if (!robot_model) {
 		ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot model found");

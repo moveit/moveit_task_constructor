@@ -130,9 +130,9 @@ void ExecuteTaskSolutionCapability::preemptCallback() {
 
 bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,
                                                         plan_execution::ExecutableMotionPlan& plan) {
-	robot_model::RobotModelConstPtr model = context_->planning_scene_monitor_->getRobotModel();
+	moveit::core::RobotModelConstPtr model = context_->planning_scene_monitor_->getRobotModel();
 
-	robot_state::RobotState state(model);
+	moveit::core::RobotState state(model);
 	{
 		planning_scene_monitor::LockedPlanningSceneRO scene(context_->planning_scene_monitor_);
 		state = scene->getCurrentState();

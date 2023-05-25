@@ -152,7 +152,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		planning_scene::PlanningScenePtr end = start->diff();
 		const moveit::core::JointModelGroup* jmg = final_goal_state.getJointModelGroup(pair.first);
 		final_goal_state.copyJointGroupPositions(jmg, positions);
-		robot_state::RobotState& goal_state = end->getCurrentStateNonConst();
+		moveit::core::RobotState& goal_state = end->getCurrentStateNonConst();
 		goal_state.setJointGroupPositions(jmg, positions);
 		goal_state.update();
 		intermediate_scenes.push_back(end);
