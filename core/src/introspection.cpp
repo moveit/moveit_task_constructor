@@ -154,9 +154,7 @@ void Introspection::registerSolution(const SolutionBase& s) {
 }
 
 void Introspection::fillSolution(moveit_task_constructor_msgs::Solution& msg, const SolutionBase& s) {
-	s.fillMessage(msg, this);
-	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
-
+	s.toMsg(msg, this);
 	msg.task_id = impl->task_id_;
 }
 

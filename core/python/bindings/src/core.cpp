@@ -124,9 +124,9 @@ void export_core(pybind11::module& m) {
 	        ":visualization_msgs:`Marker`: Markers to visualize important aspects of the trajectory (read-only)")
 	    .def(
 	        "toMsg",
-	        [](const SolutionBasePtr& s) {
+	        [](const SolutionBase& self) {
 		        moveit_task_constructor_msgs::Solution msg;
-		        s->fillMessage(msg);
+		        self.toMsg(msg);
 		        return msg;
 	        },
 	        "Convert to the ROS message ``Solution``");
@@ -440,6 +440,7 @@ void export_core(pybind11::module& m) {
 			        t.add(it->cast<Stage::pointer>());
 	        },
 	        "Append stage(s) to the task's top-level container")
+	    .def("insert", &Task::insert, "stage"_a, "before"_a = -1, "Insert stage before given index")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
@@ -494,7 +495,7 @@ void export_core(pybind11::module& m) {
 
 		        MoveGroupInterface::Plan plan;
 		        moveit_task_constructor_msgs::Solution serialized;
-		        solution->fillMessage(serialized);
+		        solution->toMsg(serialized);
 
 		        for (const moveit_task_constructor_msgs::SubTrajectory& traj : serialized.sub_trajectory) {
 			        if (!traj.trajectory.joint_trajectory.points.empty()) {
