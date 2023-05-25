@@ -95,9 +95,14 @@ class TestModifyPlanningScene(unittest.TestCase):
         self.psi.remove_world_object("block")  # restore original state
 
         s = self.task.solutions[0].toMsg()
-        for ps in [s.start_scene] + [s.sub_trajectory[i].scene_diff for i in [0, 1]]:
-            objects = [o.id for o in ps.world.collision_objects]
-            self.assertTrue(objects == ["block", "box"])
+
+        # block shouldn't be in start scene
+        objects = [o.id for o in s.start_scene.world.collision_objects]
+        self.assertTrue(objects == ["box"])
+
+        # only addObject(block) should add it
+        objects = [o.id for o in s.sub_trajectory[1].scene_diff.world.collision_objects]
+        self.assertTrue(objects == ["block", "box"])
 
     def DISABLED_test_bw_remove_object(self):
         mps = stages.ModifyPlanningScene("removeObject(box) backwards")

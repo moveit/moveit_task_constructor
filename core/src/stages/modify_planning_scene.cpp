@@ -149,17 +149,19 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 }
 
 void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& scene,
-                                                 moveit_msgs::CollisionObject& object, bool invert) {
-	auto op = object.operation;
+                                                 const moveit_msgs::CollisionObject& object, bool invert) {
+	const auto op = object.operation;
 	if (invert) {
 		if (op == moveit_msgs::CollisionObject::ADD)
-			op = moveit_msgs::CollisionObject::REMOVE;
+			// (temporarily) change operation to REMOVE to revert adding the object
+			const_cast<moveit_msgs::CollisionObject&>(object).operation = moveit_msgs::CollisionObject::REMOVE;
 		else if (op == moveit_msgs::CollisionObject::REMOVE)
 			throw std::runtime_error("cannot apply removeObject() backwards");
 	}
 
 	scene.processCollisionObjectMsg(object);
-	object.operation = op;
+	// restore previous operation (for next call)
+	const_cast<moveit_msgs::CollisionObject&>(object).operation = op;
 }
 }  // namespace stages
 }  // namespace task_constructor
