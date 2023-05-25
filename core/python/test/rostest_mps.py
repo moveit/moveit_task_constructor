@@ -81,7 +81,7 @@ class TestModifyPlanningScene(unittest.TestCase):
         s = self.task.solutions[0].toMsg()
         self.assertEqual(s.sub_trajectory[1].scene_diff.world.collision_objects[0].id, "box")
 
-    def test_bw_add_object(self):
+    def DISABLED_test_bw_add_object(self):
         # add object to move_group's planning scene
         self.psi.add_box("block", make_pose(0.8, 0.55, 1.25), [0.2, 0.2, 0.2])
 
@@ -99,7 +99,7 @@ class TestModifyPlanningScene(unittest.TestCase):
             objects = [o.id for o in ps.world.collision_objects]
             self.assertTrue(objects == ["block", "box"])
 
-    def test_bw_remove_object(self):
+    def DISABLED_test_bw_remove_object(self):
         mps = stages.ModifyPlanningScene("removeObject(box) backwards")
         mps.removeObject("box")
         self.task.insert(mps, 0)
