@@ -156,7 +156,7 @@ void initMotionPlanRequest(moveit_msgs::msg::MotionPlanRequest& req, const Prope
                            const moveit::core::JointModelGroup* jmg, double timeout) {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
-	req.allowed_planning_time = timeout;
+	req.allowed_planning_time = std::min(timeout, p.get<double>("timeout"));
 	req.start_state.is_diff = true;  // we don't specify an extra start state
 
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");

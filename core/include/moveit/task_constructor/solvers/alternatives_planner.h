@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2023, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of PickNik Inc. nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,34 +32,35 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner, Robert Haschke
-   Desc:    generate and validate a straight-line Cartesian path
+/* Authors: Sebastian Jahr, Robert Haschke
+   Desc:    Meta planner, running multiple planners in parallel
 */
 
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/planning_pipeline_interfaces/plan_responses_container.hpp>
+#include <moveit/planning_pipeline_interfaces/planning_pipeline_interfaces.hpp>
+#include <moveit/planning_pipeline_interfaces/solution_selection_functions.hpp>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <vector>
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(CartesianPath);
+MOVEIT_CLASS_FORWARD(AlternativesPlanner);
 
-/** Use MoveIt's computeCartesianPath() to generate a straigh-line path between to scenes */
-class CartesianPath : public PlannerInterface
+/** A meta planner that runs multiple alternative planners in parallel and returns the best solution.
+ *
+ * This is useful to try different planning strategies of increasing complexity,
+ * e.g. Cartesian or joint-space interpolation and OMPL, and choose the most suitable solution out of the ones produced.
+ */
+class AlternativesPlanner : public PlannerInterface, public std::vector<solvers::PlannerInterfacePtr>
 {
 public:
-	CartesianPath();
-
-	void setStepSize(double step_size) { setProperty("step_size", step_size); }
-	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
-	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
-
-	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
-	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
-	[[deprecated("Replace with setMaxAccelerationScaling")]]  // clang-format off
-	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
+	using PlannerList = std::vector<solvers::PlannerInterfacePtr>;
+	using PlannerList::PlannerList;  // inherit all std::vector constructors
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -71,6 +72,18 @@ public:
 	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
 	          double timeout, robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+
+	/** \brief Set solution selection function for parallel planning
+	 * \param [in] solution_selection_function New solution selection that will be used
+	 */
+	void setSolutionSelectionFunction(
+	    const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function) {
+		solution_selection_function_ = solution_selection_function;
+	};
+
+protected:
+	moveit::planning_pipeline_interfaces::SolutionSelectionFunction solution_selection_function_ =
+	    &moveit::planning_pipeline_interfaces::getShortestSolution;
 };
 }  // namespace solvers
 }  // namespace task_constructor

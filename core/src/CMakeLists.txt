@@ -18,6 +18,8 @@ add_library(${PROJECT_NAME} SHARED
 	${PROJECT_INCLUDE}/solvers/cartesian_path.h
 	${PROJECT_INCLUDE}/solvers/joint_interpolation.h
 	${PROJECT_INCLUDE}/solvers/pipeline_planner.h
+	${PROJECT_INCLUDE}/solvers/fallback_planner.h
+	${PROJECT_INCLUDE}/solvers/alternatives_planner.h
 
 	container.cpp
 	cost_terms.cpp
@@ -32,8 +34,10 @@ add_library(${PROJECT_NAME} SHARED
 
 	solvers/planner_interface.cpp
 	solvers/cartesian_path.cpp
-	solvers/pipeline_planner.cpp
 	solvers/joint_interpolation.cpp
+	solvers/pipeline_planner.cpp
+	solvers/fallback_planner.cpp
+	solvers/alternatives_planner.cpp
 )
 ament_target_dependencies(${PROJECT_NAME}
 	moveit_core

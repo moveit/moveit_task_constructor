@@ -49,6 +49,9 @@ MOVEIT_CLASS_FORWARD(PlanningScene);
 namespace robot_trajectory {
 MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
+namespace trajectory_processing {
+MOVEIT_CLASS_FORWARD(TimeParameterization);
+}
 namespace moveit {
 namespace core {
 MOVEIT_CLASS_FORWARD(LinkModel);
@@ -75,6 +78,12 @@ public:
 	const PropertyMap& properties() const { return properties_; }
 
 	void setProperty(const std::string& name, const boost::any& value) { properties_.set(name, value); }
+	void setTimeout(double timeout) { properties_.set("timeout", timeout); }
+	void setMaxVelocityScalingFactor(double factor) { properties_.set("max_velocity_scaling_factor", factor); }
+	void setMaxAccelerationScalingFactor(double factor) { properties_.set("max_acceleration_scaling_factor", factor); }
+	void setTimeParameterization(const trajectory_processing::TimeParameterizationPtr& tp) {
+		properties_.set("time_parameterization", tp);
+	}
 
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model) = 0;
 
