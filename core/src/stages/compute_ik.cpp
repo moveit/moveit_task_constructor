@@ -75,8 +75,7 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	p.declare<double>("min_solution_distance", 0.1,
 	                  "minimum distance between seperate IK solutions for the same target");
 	p.declare<moveit_msgs::Constraints>(
-	    "constraints", moveit_msgs::Constraints(),
-	    "A set of constraints that the IK must obey; by default, this set of constraints is empty");
+	    "constraints", moveit_msgs::Constraints(), "additional constraints to obey");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
