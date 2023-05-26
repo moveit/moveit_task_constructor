@@ -54,10 +54,8 @@ bool isIKSolutionValid(const planning_scene::PlanningScene* planning_scene,
                        const kinematic_constraints::KinematicConstraintSet* constraint_set,
                        moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
                        const double* ik_solution) {
-	state->setJointGroupPositions(jmg, ik_solution);
 	state->update();
-	return (!planning_scene || !planning_scene->isStateColliding(*state, jmg->getName())) &&
-	       (!constraint_set || constraint_set->decide(*state).satisfied);
+	return !constraint_set || constraint_set->decide(*state).satisfied;
 }
 }  // namespace
 
@@ -74,8 +72,7 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	p.declare<bool>("ignore_collisions", false);
 	p.declare<double>("min_solution_distance", 0.1,
 	                  "minimum distance between seperate IK solutions for the same target");
-	p.declare<moveit_msgs::Constraints>(
-	    "constraints", moveit_msgs::Constraints(), "additional constraints to obey");
+	p.declare<moveit_msgs::Constraints>("constraints", moveit_msgs::Constraints(), "additional constraints to obey");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -101,8 +98,9 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 struct IKSolution
 {
 	std::vector<double> joint_positions;
-	bool feasible;
+	bool collision_free;
 	collision_detection::Contact contact;
+	bool satisfies_constraints;
 };
 
 using IKSolutions = std::vector<IKSolution>;
@@ -371,9 +369,10 @@ void ComputeIK::compute() {
 
 	double min_solution_distance = props.get<double>("min_solution_distance");
 	moveit_msgs::Constraints constraints = props.get<moveit_msgs::Constraints>("constraints");
+	kinematic_constraints::KinematicConstraintSet kset(robot_model);
 
 	IKSolutions ik_solutions;
-	auto is_valid = [scene, ignore_collisions, min_solution_distance, robot_model, constraints,
+	auto is_valid = [scene, ignore_collisions, min_solution_distance, robot_model, constraints, &kset,
 	                 &ik_solutions](robot_state::RobotState* state, const robot_model::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
@@ -385,10 +384,10 @@ void ComputeIK::compute() {
 		auto& solution{ ik_solutions.back() };
 		state->copyJointGroupPositions(jmg, solution.joint_positions);
 
-		kinematic_constraints::KinematicConstraintSet kset(robot_model);
+		kset.clear();
 		kset.add(constraints, scene->getTransforms());
 		auto kset_ptr = kset.empty() ? nullptr : &kset;
-		bool constraints_valid = isIKSolutionValid(scene.get(), kset_ptr, state, jmg, joint_positions);
+		solution.satisfies_constraints = isIKSolutionValid(scene.get(), kset_ptr, state, jmg, joint_positions);
 
 		collision_detection::CollisionRequest req;
 		collision_detection::CollisionResult res;
@@ -396,11 +395,11 @@ void ComputeIK::compute() {
 		req.max_contacts = 1;
 		req.group_name = jmg->getName();
 		scene->checkCollision(req, res, *state);
-		solution.feasible = (ignore_collisions || !res.collision) && constraints_valid;
+		solution.collision_free = ignore_collisions || !res.collision;
 		if (!res.contacts.empty()) {
 			solution.contact = res.contacts.begin()->second.front();
 		}
-		return solution.feasible;
+		return solution.satisfies_constraints && solution.collision_free;
 	};
 
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
@@ -430,13 +429,20 @@ void ComputeIK::compute() {
 			solution.setComment(s.comment());
 			std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 
-			if (ik_solutions[i].feasible)
+			bool ik_solution_feasible = ik_solutions[i].collision_free && ik_solutions[i].satisfies_constraints;
+			if (ik_solution_feasible)
 				// compute cost as distance to compare_pose
 				solution.setCost(s.cost() + jmg->distance(ik_solutions[i].joint_positions.data(), compare_pose.data()));
-			else {  // found an IK solution, but this was not valid
+			else if (!ik_solutions[i].collision_free) {  // found an IK solution, but this was not valid because of
+				                                          // collisions
 				std::stringstream ss;
 				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '"
 				   << ik_solutions[i].contact.body_name_2 << "'";
+				solution.markAsFailure(ss.str());
+			} else if (!ik_solutions[i].satisfies_constraints) {  // found an IK solution, but this was not valid because
+				                                                   // of constraints
+				std::stringstream ss;
+				ss << "Constraints violated";
 				solution.markAsFailure(ss.str());
 			}
 			// set scene's robot state
