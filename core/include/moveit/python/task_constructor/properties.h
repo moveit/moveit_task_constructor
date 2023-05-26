@@ -35,12 +35,12 @@ private:
 	static boost::any fromPython(const pybind11::object& po) { return pybind11::cast<T>(po); }
 
 	template <class Q = T>
-	typename std::enable_if<ros::message_traits::IsMessage<Q>::value, std::string>::type rosMsgName() {
-		return ros::message_traits::DataType<T>::value();
+	typename std::enable_if<rosidl_generator_traits::is_message<Q>::value, std::string>::type rosMsgName() {
+		return rosidl_generator_traits::name<Q>();
 	}
 
 	template <class Q = T>
-	typename std::enable_if<!ros::message_traits::IsMessage<Q>::value, std::string>::type rosMsgName() {
+	typename std::enable_if<!rosidl_generator_traits::is_message<Q>::value, std::string>::type rosMsgName() {
 		return std::string();
 	}
 };

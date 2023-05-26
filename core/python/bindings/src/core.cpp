@@ -412,7 +412,7 @@ void export_core(pybind11::module& m) {
 	    .def_property_readonly("failures", &Task::failures, "Solutions: Failed Solutions of the stage (read-only)")
 	    .def_property("name", &Task::name, &Task::setName, "str: name of the task displayed e.g. in rviz")
 
-	    .def("loadRobotModel", &Task::loadRobotModel, "robot_description"_a = "robot_description",
+	    .def("loadRobotModel", &Task::loadRobotModel, "node"_a, "robot_description"_a = "robot_description",
 	         "Load robot model from given ROS parameter")
 	    .def("getRobotModel", &Task::getRobotModel)
 	    .def("enableIntrospection", &Task::enableIntrospection, "enabled"_a = true,
@@ -471,30 +471,7 @@ void export_core(pybind11::module& m) {
 	        "publish",
 	        [](Task& self, const SolutionBasePtr& solution) { self.introspection().publishSolution(*solution); },
 	        "solution"_a, "Publish the given solution to the ROS topic ``solution``")
-	    .def_static(
-	        "execute",
-	        [](const SolutionBasePtr& solution) {
-		        using namespace moveit::planning_interface;
-		        PlanningSceneInterface psi;
-		        MoveGroupInterface mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);
-
-		        MoveGroupInterface::Plan plan;
-		        moveit_task_constructor_msgs::msg::Solution serialized;
-		        solution->toMsg(serialized);
-
-		        for (const moveit_task_constructor_msgs::msg::SubTrajectory& traj : serialized.sub_trajectory) {
-			        if (!traj.trajectory.joint_trajectory.points.empty()) {
-				        plan.trajectory_ = traj.trajectory;
-				        if (!mgi.execute(plan)) {
-					        ROS_ERROR("Execution failed! Aborting!");
-					        return;
-				        }
-			        }
-			        psi.applyPlanningScene(traj.scene_diff);
-		        }
-		        ROS_INFO("Executed successfully");
-	        },
-	        "solution"_a, "Send given solution to ``move_group`` node for execution");
+	    .def("execute", &Task::execute, "solution"_a, "Send given solution to ``move_group`` node for execution");
 }
 }  // namespace python
 }  // namespace moveit

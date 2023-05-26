@@ -37,7 +37,7 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit/task_constructor/solvers/multi_planner.h>
-#include <moveit_msgs/WorkspaceParameters.h>
+#include <moveit_msgs/msg/workspace_parameters.hpp>
 #include "utils.h"
 
 namespace py = pybind11;
@@ -69,11 +69,9 @@ void export_solvers(py::module& m) {
 				from moveit.task_constructor import core
 
 				# Create and configure a planner instance
-				pipelinePlanner = core.PipelinePlanner()
-				pipelinePlanner.planner = 'PRMkConfigDefault'
+				pipelinePlanner = core.PipelinePlanner(node, 'ompl', 'PRMkConfigDefault')
 				pipelinePlanner.num_planning_attempts = 10
 			)")
-	    .property<std::string>("planner", "str: Planner ID")
 	    .property<uint>("num_planning_attempts", "int: Number of planning attempts")
 	    .property<moveit_msgs::msg::WorkspaceParameters>(
 	        "workspace_parameters",
@@ -81,7 +79,8 @@ void export_solvers(py::module& m) {
 	    .property<double>("goal_joint_tolerance", "float: Tolerance for reaching joint goals")
 	    .property<double>("goal_position_tolerance", "float: Tolerance for reaching position goals")
 	    .property<double>("goal_orientation_tolerance", "float: Tolerance for reaching orientation goals")
-	    .def(py::init<const std::string&>(), "pipeline"_a = std::string("ompl"));
+	    .def(py::init<const rclcpp::Node::SharedPtr&, const std::string&, const std::string&>(), "node"_a,
+	         "pipeline"_a = std::string("ompl"), "planner_id"_a = std::string(""));
 
 	properties::class_<JointInterpolationPlanner, PlannerInterface>(
 	    m, "JointInterpolationPlanner",

@@ -119,12 +119,15 @@ py::object PropertyConverterRegistry::toPython(const boost::any& value) {
 
 std::string rosMsgName(PyObject* object) {
 	py::object o = py::reinterpret_borrow<py::object>(object);
-	try {
-		return o.attr("_type").cast<std::string>();
-	} catch (const py::error_already_set& e) {
+	auto cls = o.attr("__class__");
+	auto name = cls.attr("__name__").cast<std::string>();
+	auto module = cls.attr("__module__").cast<std::string>();
+	auto pos = module.find(".msg");
+	if (pos == std::string::npos)
 		// object is not a ROS message type, return it's class name instead
-		return o.attr("__class__").attr("__name__").cast<std::string>();
-	}
+		return module + "." + name;
+	else
+		return module.substr(0, pos) + "/msg/" + name;
 }
 
 boost::any PropertyConverterRegistry::fromPython(const py::object& po) {

@@ -24,7 +24,6 @@ add_subdirectory(pybind11)
 # C++ wrapper code
 add_subdirectory(bindings)
 
-ament_python_install_package("src")
 
 if(BUILD_TESTING)
 	find_package(ament_cmake_pytest REQUIRED)

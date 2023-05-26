@@ -38,7 +38,7 @@
 #include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
 #include <moveit/planning_scene/planning_scene.h>
-#include <moveit_msgs/PlanningScene.h>
+#include <moveit_msgs/msg/planning_scene.hpp>
 #include <pybind11/stl.h>
 #include <py_binding_tools/ros_msg_typecasters.h>
 
@@ -357,7 +357,7 @@ void export_stages(pybind11::module& m) {
 			str: Name of the object in the planning scene, attached to the robot which should be placed
 		)")
 		.property<std::string>("eef", "str: Name of the end effector that should be used for grasping")
-		.property<geometry_msgs::msg::msg::PoseStamped>("pose", R"(
+		.property<geometry_msgs::msg::PoseStamped>("pose", R"(
 			PoseStamped_: The pose where the object should be placed, i.e. states should be sampled
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
@@ -393,7 +393,7 @@ void export_stages(pybind11::module& m) {
 			for an implementation of a task hierarchy that makes use of the
 			``GeneratePose`` stage.
 		)")
-	    .property<geometry_msgs::msg::msg::msg::PoseStamped>("pose", R"(
+	    .property<geometry_msgs::msg::PoseStamped>("pose", R"(
 			PoseStamped_: Set the pose, which should be spawned on each new solution of the monitored stage.
 
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html

@@ -19,6 +19,7 @@
   <exec_depend>moveit_configs_utils</exec_depend>
   <exec_depend>moveit_resources_panda_moveit_config</exec_depend>
   <exec_depend>moveit_task_constructor_capabilities</exec_depend>
+  <exec_depend>py_binding_tools</exec_depend>
 
   <export>
         <build_type>ament_cmake</build_type>
