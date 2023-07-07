@@ -97,6 +97,8 @@ protected:
 	moveit::core::JointModelGroupPtr merged_jmg_;
 	std::list<SubTrajectory> subsolutions_;
 	std::list<InterfaceState> states_;
+
+	std::string name_;
 };
 }  // namespace stages
 }  // namespace task_constructor

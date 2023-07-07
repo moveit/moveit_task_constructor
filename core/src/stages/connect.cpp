@@ -61,6 +61,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 	                                         "constraints to maintain during trajectory");
 	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
 	                                              std::make_shared<TimeOptimalTrajectoryGeneration>());
+
+	name_ = name;
 }
 
 void Connect::reset() {
@@ -149,6 +151,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 	bool success = false;
 	std::vector<double> positions;
+
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
 		planning_scene::PlanningScenePtr end = start->diff();
@@ -161,13 +164,16 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		sub_trajectories.push_back(trajectory);
 
-		// Do not push partial solutions
+		// Check if the end goal and the last waypoint are close. The trajectory should be marked as failure otherwise.
 		if (success) {
-			sub_trajectories.push_back(trajectory);
-		} else {
-			// Pushing a nullptr instead of a failed trajectory.
-			sub_trajectories.push_back(nullptr);
+			const auto distance = end->getCurrentState().distance(trajectory->getLastWayPoint());
+			if (distance > 0.05) {
+				RCLCPP_INFO_STREAM(LOGGER, "Stage Name : " << name_);
+				RCLCPP_INFO_STREAM(LOGGER, "The trajectory given by the plan function does not satisfy the goal state. Marking it as a failure");
+				success = false;
+			}
 		}
 
 		if (!success)
