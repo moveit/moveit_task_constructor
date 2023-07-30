@@ -143,16 +143,16 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		state = scene->getCurrentState();
 	}
 
-	plan.plan_components.reserve(solution.sub_trajectory.size());
+	plan.plan_components_.reserve(solution.sub_trajectory.size());
 	for (size_t i = 0; i < solution.sub_trajectory.size(); ++i) {
 		const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj = solution.sub_trajectory[i];
 
-		plan.plan_components.emplace_back();
-		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
+		plan.plan_components_.emplace_back();
+		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
 
 		// define individual variable for use in closure below
 		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
-		exec_traj.description = description;
+		exec_traj.description_ = description;
 
 		const moveit::core::JointModelGroup* group = nullptr;
 		{
@@ -169,8 +169,8 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 				RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());
 			}
 		}
-		exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
-		exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
+		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
 		// Check that sub trajectories that contain a valid trajectory have controllers configured.
 		if (!sub_traj.trajectory.joint_trajectory.points.empty() && sub_traj.execution_info.controller_names.empty()) {
@@ -179,12 +179,12 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			            "trajectory execution. This might lead to unexpected controller selection.",
 			            sub_traj.info.stage_id, solution.task_id.c_str());
 		}
-		exec_traj.controller_name = sub_traj.execution_info.controller_names;
+		exec_traj.controller_names_ = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success = [this,
-		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
-		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+		exec_traj.effect_on_success_ = [this,
+		                                &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
+		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
 			// Never modify joint state directly (only via robot trajectories)
 			scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
 			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
