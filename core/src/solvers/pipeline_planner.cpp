@@ -180,7 +180,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 
 	::planning_interface::MotionPlanResponse res;
 	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory;
+	result = res.trajectory_;
 	return success;
 }
 
@@ -205,7 +205,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 
 	::planning_interface::MotionPlanResponse res;
 	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory;
+	result = res.trajectory_;
 	return success;
 }
 }  // namespace solvers
