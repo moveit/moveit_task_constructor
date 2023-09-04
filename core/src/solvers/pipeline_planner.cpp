@@ -49,10 +49,6 @@
 #include <tf2_eigen/tf2_eigen.h>
 #endif
 
-namespace {
-const std::pair<std::string, std::string> DEFAULT_REQUESTED_PIPELINE =
-    std::pair<std::string, std::string>("ompl", "RRTConnect");
-}
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
