@@ -90,6 +90,9 @@ PipelinePlanner::PipelinePlanner(
 	properties().declare<bool>("publish_planning_requests", false,
 	                           "publish motion planning requests on topic " +
 	                               planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
+	properties().declare<std::unordered_map<std::string, std::string>>(
+	    "pipeline_id_planner_id_map", std::unordered_map<std::string, std::string>(),
+	    "Set of pipelines and planners used for planning");
 }
 
 bool PipelinePlanner::setPlannerId(const std::string& pipeline_name, const std::string& planner_id) {
@@ -173,7 +176,11 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
 	std::vector<moveit_msgs::msg::MotionPlanRequest> requests;
 	requests.reserve(pipeline_id_planner_id_map_.size());
 
-	for (auto const& pipeline_id_planner_id_pair : pipeline_id_planner_id_map_) {
+	auto const property_pipeline_id_planner_id_map =
+	    properties().get<std::unordered_map<std::string, std::string>>("pipeline_id_planner_id_map");
+	for (auto const& pipeline_id_planner_id_pair :
+	     (!property_pipeline_id_planner_id_map.empty() ? property_pipeline_id_planner_id_map :
+                                                        pipeline_id_planner_id_map_)) {
 		// Check that requested pipeline exists and skip it if it doesn't exist
 		if (planning_pipelines_.find(pipeline_id_planner_id_pair.first) == planning_pipelines_.end()) {
 			RCLCPP_WARN(
