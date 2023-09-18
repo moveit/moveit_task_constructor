@@ -529,7 +529,7 @@ void TaskView::onExecCurrentSolution() const {
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 
 	if (!d_ptr->exec_action_client_.waitForServer(ros::Duration(0.1))) {
-		ROS_ERROR("Failed to connect to task execution action");
+		ROS_ERROR("Failed to connect to the 'execute_task_solution' action server");
 		return;
 	}
 
