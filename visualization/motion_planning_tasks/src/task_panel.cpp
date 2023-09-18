@@ -87,8 +87,13 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	Q_D(TaskPanel);
 
 	// sync checked tool button with displayed widget
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	connect(d->tool_buttons_group, &QButtonGroup::idClicked, d->stackedWidget,
+	        [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#else
 	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
 	        d->stackedWidget, [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#endif
 	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
 	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
 
