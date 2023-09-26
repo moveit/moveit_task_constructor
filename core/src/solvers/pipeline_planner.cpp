@@ -97,13 +97,14 @@ PipelinePlanner::PipelinePlanner(
 
 bool PipelinePlanner::setPlannerId(const std::string& pipeline_name, const std::string& planner_id) {
 	// Only set ID if pipeline exists. It is not possible to create new pipelines with this command.
-	if (pipeline_id_planner_id_map_.count(pipeline_name) > 0) {
-		pipeline_id_planner_id_map_[pipeline_name] = planner_id;
+	if (pipeline_id_planner_id_map_.count(pipeline_name) == 0) {
+		RCLCPP_ERROR(node_->get_logger(),
+		             "PipelinePlanner does not have a pipeline called '%s'. Cannot set pipeline ID '%s'",
+		             pipeline_name.c_str(), planner_id.c_str());
+		return false;
 	}
-	RCLCPP_ERROR(node_->get_logger(),
-	             "PipelinePlanner does not have a pipeline called '%s'. Cannot set pipeline ID '%s'",
-	             pipeline_name.c_str(), planner_id.c_str());
-	return false;
+	pipeline_id_planner_id_map_[pipeline_name] = planner_id;
+	return true;
 }
 
 void PipelinePlanner::setStoppingCriterionFunction(

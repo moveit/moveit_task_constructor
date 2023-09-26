@@ -121,7 +121,7 @@ public:
 	 * \param [in] from Start planning scene
 	 * \param [in] to Goal planning scene (used to create goal constraints)
 	 * \param [in] joint_model_group Group of joints for which this trajectory is created
-	 * \param [in] timeout ?
+	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
@@ -137,7 +137,7 @@ public:
 	 * \param [in] offset Offset to be applied to a given target pose
 	 * \param [in] target Target pose
 	 * \param [in] joint_model_group Group of joints for which this trajectory is created
-	 * \param [in] timeout ?
+	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
@@ -151,14 +151,13 @@ public:
 protected:
 	/** \brief Function that actually uses the planning pipelines to solve the given planning problem. It is called by
 	 * the public plan function after the goal constraints are generated. This function uses a predefined number of
-	 * planning pipelines in parallel to solve the planning problem and choose the automatically the best (user-defined)
-	 * solution.
+	 * planning pipelines in parallel to solve the planning problem and choose the best (user-defined) solution.
 	 * \param [in] planning_scene Scene for which the planning should be solved
 	 * \param [in] joint_model_group
 	 * Group of joints for which this trajectory is created
 	 * \param [in] goal_constraints Set of constraints that need to
 	 * be satisfied by the solution
-	 * \param [in] timeout ?
+	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created
 	 * trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning
