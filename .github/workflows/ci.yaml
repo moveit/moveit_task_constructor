@@ -19,7 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: humble-source
           - IMAGE: rolling-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
