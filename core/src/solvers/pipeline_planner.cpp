@@ -124,6 +124,11 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 		planning_pipelines_ = moveit::planning_pipeline_interfaces::createPlanningPipelineMap(
 		    [&]() {
 			    // Create pipeline name vector from the keys of pipeline_id_planner_id_map_
+			    if (pipeline_id_planner_id_map_.empty()) {
+				    throw std::runtime_error("Cannot initialize PipelinePlanner: No planning pipeline was provided and "
+				                             "pipeline_id_planner_id_map_ is empty!");
+			    }
+
 			    std::vector<std::string> pipeline_names;
 			    for (const auto& pipeline_name_planner_id_pair : pipeline_id_planner_id_map_) {
 				    pipeline_names.push_back(pipeline_name_planner_id_pair.first);
@@ -131,6 +136,12 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 			    return pipeline_names;
 		    }(),
 		    robot_model, node_);
+	}
+
+	// Check if it is still empty
+	if (planning_pipelines_.empty()) {
+		throw std::runtime_error(
+		    "Cannot initialize PipelinePlanner: Could not create any valid entries for planning pipeline maps!");
 	}
 
 	// Configure all pipelines according to the configuration in properties
