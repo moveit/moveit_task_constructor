@@ -5,6 +5,14 @@ It draws on the planning capabilities of [MoveIt](https://moveit.ros.org/) to so
 A common interface, based on MoveIt's PlanningScene is used to pass solution hypotheses between stages.
 The framework enables the hierarchical organization of basic stages using *containers*, allowing for sequential as well as parallel compositions.
 
+## Branches
+
+This repository provides the following branches:
+
+- **master**: ROS 1 development
+- **ros2**: ROS 2 development, compatible with MoveIt 2 `main`
+- **humble**: ROS 2 stable branch for Humble support
+
 ## Videos
 
 - Demo video associated with [ICRA 2019 paper](https://pub.uni-bielefeld.de/download/2918864/2933599/paper.pdf)
