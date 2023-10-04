@@ -40,8 +40,7 @@ TEST(PR2, pick) {
 
 	auto node = rclcpp::Node::make_shared("pr2");
 	// planner used for connect
-	auto pipeline = std::make_shared<solvers::PipelinePlanner>(node);
-	pipeline->setPlannerId("RRTConnectkConfigDefault");
+	auto pipeline = std::make_shared<solvers::PipelinePlanner>(node, "ompl", "RRTConnectkConfigDefault");
 	// connect to pick
 	stages::Connect::GroupPlannerVector planners = { { "left_arm", pipeline }, { "left_gripper", pipeline } };
 	auto connect = std::make_unique<stages::Connect>("connect", planners);
