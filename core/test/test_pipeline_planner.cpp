@@ -7,6 +7,7 @@
 
 using namespace moveit::task_constructor;
 
+// Test fixture for PipelinePlanner
 struct PipelinePlannerTest : public testing::Test
 {
 	PipelinePlannerTest() {
