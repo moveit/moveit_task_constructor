@@ -84,12 +84,6 @@ PipelinePlanner::PipelinePlanner(
 	properties().declare<double>("goal_position_tolerance", 1e-4, "tolerance for reaching position goals");
 	properties().declare<double>("goal_orientation_tolerance", 1e-4, "tolerance for reaching orientation goals");
 	// Declare properties that configure the planning pipeline
-	properties().declare<bool>("display_motion_plans", false,
-	                           "publish generated solutions on topic " +
-	                               planning_pipeline::PlanningPipeline::DISPLAY_PATH_TOPIC);
-	properties().declare<bool>("publish_planning_requests", false,
-	                           "publish motion planning requests on topic " +
-	                               planning_pipeline::PlanningPipeline::MOTION_PLAN_REQUEST_TOPIC);
 	properties().declare<std::unordered_map<std::string, std::string>>(
 	    "pipeline_id_planner_id_map", std::unordered_map<std::string, std::string>(),
 	    "Set of pipelines and planners used for planning");
@@ -142,12 +136,6 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	if (planning_pipelines_.empty()) {
 		throw std::runtime_error(
 		    "Cannot initialize PipelinePlanner: Could not create any valid entries for planning pipeline maps!");
-	}
-
-	// Configure all pipelines according to the configuration in properties
-	for (auto const& name_pipeline_pair : planning_pipelines_) {
-		name_pipeline_pair.second->displayComputedMotionPlans(properties().get<bool>("display_motion_plans"));
-		name_pipeline_pair.second->publishReceivedRequests(properties().get<bool>("publish_planning_requests"));
 	}
 }
 
