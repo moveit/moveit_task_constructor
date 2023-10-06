@@ -35,6 +35,8 @@
 
 /* Authors: Michael Goerner, Luca Lach, Robert Haschke */
 
+#include <chrono>
+
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit_msgs/GetPlanningScene.h>
@@ -47,11 +49,14 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
+using namespace std::chrono_literals;
+constexpr std::chrono::duration<double> DEFAULT_TIMEOUT = 3s;
+
 CurrentState::CurrentState(const std::string& name) : Generator(name) {
 	auto& p = properties();
 	Property& timeout = p.property("timeout");
 	timeout.setDescription("max time to wait for get_planning_scene service");
-	timeout.setValue(-1.0);
+	timeout.setValue(DEFAULT_TIMEOUT.count());
 }
 
 void CurrentState::init(const moveit::core::RobotModelConstPtr& robot_model) {
