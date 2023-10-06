@@ -99,6 +99,9 @@ public:
 	                  const moveit::core::JointModelGroup* jmg, double timeout,
 	                  robot_trajectory::RobotTrajectoryPtr& result,
 	                  const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) = 0;
+
+	// get name of the planner
+	virtual std::string getPlannerId() const = 0;
 };
 }  // namespace solvers
 }  // namespace task_constructor

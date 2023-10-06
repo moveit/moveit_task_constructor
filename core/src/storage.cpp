@@ -215,6 +215,7 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::msg::SolutionInfo& inf
 	info.id = introspection ? introspection->solutionId(*this) : 0;
 	info.cost = this->cost();
 	info.comment = this->comment();
+	info.planner_id = this->plannerId();
 	const Introspection* ci = introspection;
 	info.stage_id = ci ? ci->stageId(this->creator()) : 0;
 
