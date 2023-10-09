@@ -67,6 +67,7 @@ PipelinePlanner::PipelinePlanner(
     const moveit::planning_pipeline_interfaces::StoppingCriterionFunction& stopping_criterion_callback,
     const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function)
   : node_(node)
+  , last_successful_planner_("")
   , pipeline_id_planner_id_map_(pipeline_id_planner_id_map)
   , stopping_criterion_callback_(stopping_criterion_callback)
   , solution_selection_function_(solution_selection_function) {
@@ -167,6 +168,8 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
                            const moveit::core::JointModelGroup* joint_model_group, double timeout,
                            robot_trajectory::RobotTrajectoryPtr& result,
                            const moveit_msgs::msg::Constraints& path_constraints) {
+	last_successful_planner_.clear();
+
 	// Construct a Cartesian target pose from the given target transform and offset
 	geometry_msgs::msg::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
@@ -230,10 +233,14 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
 		if (solution) {
 			// Choose the first solution trajectory as response
 			result = solution.trajectory;
+			last_successful_planner_ = solution.planner_id;
 			return bool(result);
 		}
 	}
 	return false;
+}
+std::string PipelinePlanner::getPlannerId() const {
+	return last_successful_planner_.empty() ? std::string("Unknown") : last_successful_planner_;
 }
 }  // namespace solvers
 }  // namespace task_constructor

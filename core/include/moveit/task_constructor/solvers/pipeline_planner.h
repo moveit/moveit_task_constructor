@@ -148,6 +148,12 @@ public:
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
+	/**
+	 * \brief Get planner name
+	 * \return Name of the last successful planner
+	 */
+	std::string getPlannerId() const override;
+
 protected:
 	/** \brief Function that actually uses the planning pipelines to solve the given planning problem. It is called by
 	 * the public plan function after the goal constraints are generated. This function uses a predefined number of
@@ -171,6 +177,8 @@ protected:
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints());
 
 	rclcpp::Node::SharedPtr node_;
+
+	std::string last_successful_planner_;
 
 	/** \brief Map of pipeline names (ids) and their corresponding planner ids. The planning problem is solved for every
 	 * pipeline-planner pair in this map. If no pipelines are passed via constructor argument, the pipeline names are

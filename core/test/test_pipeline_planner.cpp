@@ -23,6 +23,7 @@ TEST_F(PipelinePlannerTest, testInitialization) {
 	// WHEN a PipelinePlanner instance is initialized
 	// THEN it does not throw
 	EXPECT_NO_THROW(pipeline_planner.init(robot_model));
+	EXPECT_EQ(pipeline_planner.getPlannerId(), "Unknown");
 }
 
 TEST_F(PipelinePlannerTest, testWithoutPlanningPipelines) {
@@ -44,6 +45,7 @@ TEST_F(PipelinePlannerTest, testValidPlan) {
 	    std::make_shared<robot_trajectory::RobotTrajectory>(robot_model, robot_model->getJointModelGroup("group"));
 	// THEN it returns true
 	EXPECT_TRUE(pipeline_planner.plan(scene, scene, robot_model->getJointModelGroup("group"), 1.0, result));
+	EXPECT_EQ(pipeline_planner.getPlannerId(), "stomp");
 }
 
 TEST_F(PipelinePlannerTest, testInvalidPipelineID) {
