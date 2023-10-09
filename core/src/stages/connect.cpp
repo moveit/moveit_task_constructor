@@ -141,7 +141,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
-	std::vector<robot_trajectory::RobotTrajectoryConstPtr> sub_trajectories;
+	std::vector<PlannerIdTrajectoryPair> sub_trajectories;
 
 	std::vector<planning_scene::PlanningSceneConstPtr> intermediate_scenes;
 	planning_scene::PlanningSceneConstPtr start = from.scene();
@@ -161,7 +161,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
-		sub_trajectories.push_back(trajectory);  // include failed trajectory
+		sub_trajectories.push_back({ pair.second->getPlannerId(), trajectory });
 
 		if (!success)
 			break;
@@ -181,7 +181,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 }
 
 SolutionSequencePtr
-Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+Connect::makeSequential(const std::vector<PlannerIdTrajectoryPair>& sub_trajectories,
                         const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                         const InterfaceState& from, const InterfaceState& to) {
 	assert(!sub_trajectories.empty());
@@ -195,9 +195,10 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 	SolutionSequence::container_type sub_solutions;
 	for (const auto& sub : sub_trajectories) {
 		// persistently store sub solution
-		auto inserted = subsolutions_.insert(subsolutions_.end(), SubTrajectory(sub));
+		auto inserted = subsolutions_.insert(subsolutions_.end(),
+		                                     SubTrajectory(sub.trajectory, 0.0, std::string(""), sub.planner_id));
 		inserted->setCreator(this);
-		if (!sub)  // a null RobotTrajectoryPtr indicates a failure
+		if (!sub.trajectory)  // a null RobotTrajectoryPtr indicates a failure
 			inserted->markAsFailure();
 		// push back solution pointer
 		sub_solutions.push_back(&*inserted);
@@ -217,17 +218,29 @@ Connect::makeSequential(const std::vector<robot_trajectory::RobotTrajectoryConst
 	return std::make_shared<SolutionSequence>(std::move(sub_solutions));
 }
 
-SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
+SubTrajectoryPtr Connect::merge(const std::vector<PlannerIdTrajectoryPair>& sub_trajectories,
                                 const std::vector<planning_scene::PlanningSceneConstPtr>& intermediate_scenes,
                                 const moveit::core::RobotState& state) {
 	// no need to merge if there is only a single sub trajectory
 	if (sub_trajectories.size() == 1)
-		return std::make_shared<SubTrajectory>(sub_trajectories[0]);
+		return std::make_shared<SubTrajectory>(sub_trajectories.at(0).trajectory, 0.0, std::string(""),
+		                                       sub_trajectories.at(0).planner_id);
+
+	// split sub_trajectories into trajectories and joined planner_ids
+	std::string planner_ids;
+	std::vector<robot_trajectory::RobotTrajectoryConstPtr> subs;
+	subs.reserve(sub_trajectories.size());
+	for (auto it = sub_trajectories.begin(); it != sub_trajectories.end(); ++it) {
+		subs.push_back(it->trajectory);
+		if (it != sub_trajectories.begin())
+			planner_ids += ", ";
+		planner_ids += it->planner_id;
+	}
 
 	auto jmg = merged_jmg_.get();
 	assert(jmg);
 	auto timing = properties().get<TimeParameterizationPtr>("merge_time_parameterization");
-	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg, *timing);
+	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(subs, state, jmg, *timing);
 	if (!trajectory)
 		return SubTrajectoryPtr();
 
@@ -237,6 +250,7 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 		return SubTrajectoryPtr();
 
 	return std::make_shared<SubTrajectory>(trajectory);
+	return std::make_shared<SubTrajectory>(trajectory, 0.0, std::string(""), planner_ids);
 }
 }  // namespace stages
 }  // namespace task_constructor

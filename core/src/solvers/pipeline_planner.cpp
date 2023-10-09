@@ -165,6 +165,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
                            robot_trajectory::RobotTrajectoryPtr& result,
                            const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& map = properties().get<PipelineMap>("pipeline_id_planner_id_map");
+	last_successful_planner_ = "Unknown";
 
 	// Create a request for every planning pipeline that should run in parallel
 	std::vector<moveit_msgs::msg::MotionPlanRequest> requests;
@@ -205,6 +206,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
 		if (solution) {
 			// Choose the first solution trajectory as response
 			result = solution.trajectory;
+			last_successful_planner_ = solution.planner_id;
 			return bool(result);
 		}
 	}

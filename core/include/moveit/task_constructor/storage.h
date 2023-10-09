@@ -309,6 +309,9 @@ public:
 	const std::string& comment() const { return comment_; }
 	void setComment(const std::string& comment) { comment_ = comment; }
 
+	const std::string& plannerId() const { return planner_id_; }
+	void setPlannerId(const std::string& planner_id) { planner_id_ = planner_id; }
+
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
 
@@ -326,8 +329,8 @@ public:
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
 
 protected:
-	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "")
-	  : creator_(creator), cost_(cost), comment_(std::move(comment)) {}
+	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "", std::string planner_id = "")
+	  : creator_(creator), cost_(cost), comment_(std::move(comment)), planner_id_(std::move(planner_id)) {}
 
 private:
 	// back-pointer to creating stage, allows to access sub-solutions
@@ -336,6 +339,8 @@ private:
 	double cost_;
 	// comment for this solution, e.g. explanation of failure
 	std::string comment_;
+	// name of the planner used to create this solution
+	std::string planner_id_;
 	// markers for this solution, e.g. target frame or collision indicators
 	std::deque<visualization_msgs::msg::Marker> markers_;
 
@@ -351,8 +356,8 @@ class SubTrajectory : public SolutionBase
 public:
 	SubTrajectory(
 	    const robot_trajectory::RobotTrajectoryConstPtr& trajectory = robot_trajectory::RobotTrajectoryConstPtr(),
-	    double cost = 0.0, std::string comment = "")
-	  : SolutionBase(nullptr, cost, std::move(comment)), trajectory_(trajectory) {}
+	    double cost = 0.0, std::string comment = "", std::string planner_id = "")
+	  : SolutionBase(nullptr, cost, std::move(comment), std::move(planner_id)), trajectory_(trajectory) {}
 
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
