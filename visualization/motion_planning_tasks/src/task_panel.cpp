@@ -107,7 +107,7 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	// settings widget should come last
 	addSubPanel(new GlobalSettingsWidget(this, d->property_root), "Global Settings", QIcon(":/icons/settings.png"));
 
-	connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
+	// connect(d->button_show_stage_dock_widget, SIGNAL(clicked()), this, SLOT(showStageDockWidget()));
 
 	// if still undefined, this becomes the global instance
 	if (SINGLETON.isNull())
@@ -176,8 +176,8 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	setupUi(panel);
 	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
-	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
-	button_show_stage_dock_widget->setToolTip("Show available stages");
+	// button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
+	// button_show_stage_dock_widget->setToolTip("Show available stages");
 	property_root = new rviz::Property("Global Settings");
 }
 
