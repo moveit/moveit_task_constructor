@@ -229,6 +229,15 @@ void SubTrajectory::appendTo(moveit_task_constructor_msgs::msg::Solution& msg, I
 	moveit_task_constructor_msgs::msg::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
+	std::vector<std::string> controllers = creator()->me()->properties().get<std::vector<std::string>>("controllers");
+	if (!controllers.empty()) {
+		for (auto cn : controllers) {
+			std_msgs::String s;
+			s.data = cn;
+			t.controller_names.push_back(s);
+		}
+	}
+
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 

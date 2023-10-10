@@ -367,6 +367,9 @@ void ContainerBase::insert(Stage::pointer&& stage, int before) {
 
 	StagePrivate* impl = stage->pimpl();
 	impl->setParent(this);
+	if (!this->controllers().empty())
+		stage->setControllers(this->controllers());
+
 	ContainerBasePrivate::const_iterator where = pimpl()->childByIndex(before, true);
 	ContainerBasePrivate::iterator it = pimpl()->children_.insert(where, std::move(stage));
 	impl->setParentPosition(it);

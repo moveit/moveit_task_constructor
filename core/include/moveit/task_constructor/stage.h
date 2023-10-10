@@ -201,6 +201,9 @@ public:
 	/// marker namespace of solution markers
 	const std::string& markerNS() { return properties().get<std::string>("marker_ns"); }
 
+	void setControllers(std::vector<std::string> controllers) { setProperty("controllers", controllers); }
+	std::vector<std::string> controllers() { return properties().get<std::vector<std::string>>("controllers"); }
+
 	/// forwarding of properties between interface states
 	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
 	std::set<std::string> forwardedProperties() const {
