@@ -876,6 +876,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 
 inline void Fallbacks::replaceImpl() {
 	FallbacksPrivate *impl = pimpl();
+	if (pimpl()->interfaceFlags() == pimpl()->requiredInterface())
+		return;
 	switch (pimpl()->requiredInterface()) {
 		case GENERATE:
 			impl = new FallbacksPrivateGenerator(std::move(*impl));
