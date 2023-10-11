@@ -6,7 +6,7 @@ Panels:
       Expanded:
         - /Motion Planning Tasks1
       Splitter Ratio: 0.5393258333206177
-    Tree Height: 533
+    Tree Height: 597
   - Class: rviz/Help
     Name: Help
   - Class: rviz/Views
@@ -17,25 +17,24 @@ Panels:
   - Class: moveit_task_constructor/Motion Planning Tasks
     Global Settings:
       Task View Settings:
+        Old task handling: Keep
         Show Computation Times: true
         Task Expansion: All Expanded
     Name: Motion Planning Tasks
     Tasks View:
       property_splitter:
-        - 540
+        - 600
         - 0
       solution_sorting:
         column: 1
         order: 0
       solutions_splitter:
-        - 306
-        - 98
-      solutions_view_columns:
-        - 38
-        - 52
-        - 0
+        - 223
+        - 72
+      solutions_view_columns: ~
       tasks_view_columns:
-        - 226
+        - 107
+        - 38
         - 38
         - 38
 Preferences:
@@ -84,6 +83,65 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
+          panda_hand:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_leftfinger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link0:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link1:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link2:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link3:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link4:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link6:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link7:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link8:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          panda_rightfinger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
@@ -104,6 +162,65 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
+          panda_hand:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_leftfinger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link0:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link1:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link2:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link3:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link4:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link6:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link7:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          panda_link8:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+          panda_rightfinger:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
@@ -118,10 +235,10 @@ Visualization Manager:
         Voxel Coloring: Z-Axis
         Voxel Rendering: Occupied Voxels
       Show Trail: false
-      State Display Time: 0.05 s
+      State Display Time: REALTIME
       Task Solution Topic: /mtc_tutorial/solution
       Tasks:
-        Cartesian Path: 1
+        {}
       Trail Step Size: 1
       Value: true
   Enabled: true
@@ -139,8 +256,8 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz/XYOrbit
-      Distance: 1.3878222703933716
+      Class: rviz/Orbit
+      Distance: 1.7952697277069092
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -148,22 +265,22 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.30880630016326904
-        Y: -0.1259305477142334
-        Z: 1.3560062370743253e-6
+        X: 0.18215136229991913
+        Y: 0.0822998434305191
+        Z: 0.374462366104126
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.264797568321228
+      Pitch: 0.48479723930358887
       Target Frame: panda_link0
-      Yaw: 4.939944744110107
+      Yaw: 5.5999436378479
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 768
+  Height: 861
   Help:
     collapsed: false
   Hide Left Dock: false
@@ -172,9 +289,9 @@ Window Geometry:
     collapsed: false
   Motion Planning Tasks - Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000020000000000000177000002a6fc020000000ffb000000100044006900730070006c006100790073010000003d000002a6000000c900fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000a00560069006500770073000000026d000000b5000000a400fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c0069006400650072010000026f000000480000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000294000002410000000000000000fb00000024005200760069007a00560069007300750061006c0054006f006f006c0073004700750069000000027d0000004b0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000034f000001fb0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000032d000001fb0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000003c005400720061006a006500630074006f007200790020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb000000120020002d00200053006c00690064006500720000000000ffffffff0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000013d000001a600000000000000000000000100000198000002a6fc0200000002fb0000002a004d006f00740069006f006e00200050006c0061006e006e0069006e00670020005400610073006b0073010000003d00000254000000e600fffffffb0000003c004d006f00740069006f006e00200050006c0061006e006e0069006e00670020005400610073006b00730020002d00200053006c006900640065007201000002970000004c0000004100ffffff0000033a000002a600000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000002000000000000015600000303fc020000000efc0000003d00000303000000e60100001cfa000000000100000002fb000000100044006900730070006c0061007900730100000000000001770000015600fffffffb0000000a005600690065007700730100000000ffffffff0000010000fffffffb0000000800480065006c00700000000342000000bb0000006e00fffffffb0000000c00430061006d00650072006100000002ff000001610000000000000000fb0000001e004d006f00740069006f006e00200050006c0061006e006e0069006e00670100000374000001890000000000000000fb0000002e004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d00200053006c0069006400650072010000026f000000480000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000294000002410000000000000000fb00000024005200760069007a00560069007300750061006c0054006f006f006c0073004700750069000000027d0000004b0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000034f000001fb0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000032d000001fb0000000000000000fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000003c005400720061006a006500630074006f007200790020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb000000120020002d00200053006c00690064006500720000000000ffffffff0000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000013d000001a60000000000000000000000010000012b00000303fc0200000002fb0000002a004d006f00740069006f006e00200050006c0061006e006e0069006e00670020005400610073006b0073010000003d00000292000000e800fffffffb0000003c004d006f00740069006f006e00200050006c0061006e006e0069006e00670020005400610073006b00730020002d00200053006c006900640065007201000002d50000006b0000004100ffffff0000031d0000030300000001000000020000000100000002fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1621
-  X: 249
-  Y: 25
+  Width: 1450
+  X: 1920
+  Y: 28
