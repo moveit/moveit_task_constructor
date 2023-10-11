@@ -57,6 +57,20 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QToolButton" name="button_show_stage_dock_widget">
+       <property name="toolTip">
+        <string>Show available stages</string>
+       </property>
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="icon">
+        <iconset resource="resources.qrc">
+         <normaloff>:/icons/new-stage.png</normaloff>:/icons/new-stage.png</iconset>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
