@@ -13,12 +13,11 @@ constexpr double TAU = 2 * M_PI;
 
 using namespace moveit::task_constructor;
 
-/** Alternatives( 3 * FixedState with different states ) -> Fallbacks( MoveTo<CartesianPath>, MoveTo<PTP>, MoveTo<OMPL>
- * )
+/** Alternatives (3x FixedState with different states) -> Fallbacks(MoveTo<CartesianPath>, MoveTo<PTP>, MoveTo<OMPL>)
  *
  * This task demonstrates how to use the Fallbacks stage to try different planning approaches in propagator.
- * Note that the initial states are all different, so this task does not describe any real-world scenario (where all
- * plans should start from the same initial state for execution).
+ * Note that the initial states are all different, so this task does not describe any real-world scenario
+ * (where all plans should start from the same initial state for execution).
  */
 int main(int argc, char** argv) {
 	ros::init(argc, argv, "mtc_tutorial");
