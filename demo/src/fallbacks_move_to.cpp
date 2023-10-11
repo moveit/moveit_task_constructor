@@ -37,17 +37,11 @@ int main(int argc, char** argv) {
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 	cartesian->setJumpThreshold(2.0);
 
-	const auto ptp = []() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner") };
-		pp->setPlannerId("PTP");
-		return pp;
-	}();
+	auto ptp = std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner");
+	ptp->setPlannerId("PTP");
 
-	const auto rrtconnect = []() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>("ompl") };
-		pp->setPlannerId("RRTConnect");
-		return pp;
-	}();
+	auto rrtconnect = std::make_shared<solvers::PipelinePlanner>("ompl");
+	rrtconnect->setPlannerId("RRTConnect");
 
 	// target end state for all Task plans
 	std::map<std::string, double> target_state;
