@@ -55,6 +55,8 @@ bool isValidCharInName(char c);  // unfortunately this is not declared in ros/na
 }  // namespace names
 }  // namespace ros
 
+static const char* LOGGER = "introspection";
+
 namespace moveit {
 namespace task_constructor {
 
@@ -206,6 +208,9 @@ uint32_t Introspection::stageId(const Stage* const s) const {
 
 uint32_t Introspection::solutionId(const SolutionBase& s) {
 	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
+	if (result.second)  // new entry
+		ROS_DEBUG_STREAM_NAMED(LOGGER, "new solution #" << result.first->first << " (" << s.creator()->name()
+		                                                << "): " << s.cost() << " " << s.comment());
 	return result.first->first;
 }
 

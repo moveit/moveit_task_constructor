@@ -184,6 +184,7 @@ public:
 	void setName(const std::string& name);
 
 	uint32_t introspectionId() const;
+	Introspection* introspection() const;
 
 	/** set computation timeout (in seconds)
 	 *

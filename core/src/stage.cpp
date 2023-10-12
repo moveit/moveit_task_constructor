@@ -381,6 +381,9 @@ uint32_t Stage::introspectionId() const {
 		throw std::runtime_error("Task is not initialized yet or Introspection was disabled.");
 	return const_cast<const moveit::task_constructor::Introspection*>(pimpl_->introspection_)->stageId(this);
 }
+Introspection* Stage::introspection() const {
+	return pimpl_->introspection_;
+}
 
 void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest) {
 	const PropertyMap& src = source.properties();

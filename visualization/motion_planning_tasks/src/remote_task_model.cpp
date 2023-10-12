@@ -501,7 +501,15 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 			return item.id;
 
 		case Qt::ToolTipRole:
-			return item.comment;
+			switch (index.column()) {
+#if 1  // show internal solution id in first column return item
+				case 0:
+					return item.id;
+				default:
+					return item.comment;
+#endif
+			}
+			break;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {

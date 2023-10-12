@@ -99,6 +99,7 @@ void ConnectMockup::compute(const InterfaceState& from, const InterfaceState& to
 
 	auto solution{ std::make_shared<SubTrajectory>() };
 	solution->setCost(costs_.cost());
+	solution->setComment(std::to_string(from.priority().cost()) + " -> " + std::to_string(to.priority().cost()));
 	connect(from, to, solution);
 }
 
