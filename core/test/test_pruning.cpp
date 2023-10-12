@@ -6,8 +6,6 @@
 #include <list>
 #include <memory>
 
-#include <gtest/gtest.h>
-
 #ifndef TYPED_TEST_SUITE
 #define TYPED_TEST_SUITE(SUITE, TYPES) TYPED_TEST_CASE(SUITE, TYPES)
 #endif
@@ -100,14 +98,7 @@ TEST_F(Pruning, ConnectConnectForward) {
 	add(t, new GeneratorMockup({ 1, 2, 3 }));
 
 	t.plan();
-
-	ASSERT_EQ(t.solutions().size(), 3u * 2u);
-	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
-	auto expected_cost = expected_costs.begin();
-	for (const auto& s : t.solutions()) {
-		EXPECT_EQ(s->cost(), *expected_cost);
-		++expected_cost;
-	}
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(11, 12, 13, 21, 22, 23));
 	EXPECT_EQ(c1->runs_, 3u);
 	EXPECT_EQ(c2->runs_, 6u);  // expect 6 instead of 9 calls
 }
@@ -123,13 +114,7 @@ TEST_F(Pruning, ConnectConnectBackward) {
 
 	t.plan();
 
-	ASSERT_EQ(t.solutions().size(), 3u * 2u);
-	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
-	auto expected_cost = expected_costs.begin();
-	for (const auto& s : t.solutions()) {
-		EXPECT_EQ(s->cost(), *expected_cost);
-		++expected_cost;
-	}
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(11, 12, 13, 21, 22, 23));
 	EXPECT_EQ(c1->runs_, 6u);  // expect 6 instead of 9 calls
 	EXPECT_EQ(c2->runs_, 3u);
 }

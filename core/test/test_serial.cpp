@@ -9,7 +9,6 @@
 #include "models.h"
 #include <list>
 #include <memory>
-#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 using namespace planning_scene;
@@ -56,13 +55,7 @@ TEST_F(ConnectConnect, SuccSucc) {
 	add(t, new GeneratorMockup({ 0.0 }));
 
 	EXPECT_TRUE(t.plan());
-	ASSERT_EQ(t.solutions().size(), 3u * 2u);
-	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
-	auto expected_cost = expected_costs.begin();
-	for (const auto& s : t.solutions()) {
-		EXPECT_EQ(s->cost(), *expected_cost);
-		++expected_cost;
-	}
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(11, 12, 13, 21, 22, 23));
 }
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/218
