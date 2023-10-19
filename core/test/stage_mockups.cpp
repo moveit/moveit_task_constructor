@@ -46,6 +46,19 @@ double PredefinedCosts::cost() const {
 	return c;
 }
 
+void DelayingWrapper::compute() {
+	if (!delay_.empty()) {  // if empty, we don't delay
+		if (delay_.front() == 0)
+			delay_.pop_front();  // we can compute() now
+		else {
+			--delay_.front();  // continue delaying
+			return;
+		}
+	}
+	// forward to child, eventually generating multiple solutions at once
+	WrapperBase::compute();
+}
+
 GeneratorMockup::GeneratorMockup(PredefinedCosts&& costs, std::size_t solutions_per_compute)
   : Generator{ "GEN" + std::to_string(++id_) }
   , costs_{ std::move(costs) }

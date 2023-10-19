@@ -34,6 +34,7 @@ if (CATKIN_ENABLE_TESTING)
 		mtc_add_test("gmock" ${ARGN})
 	endmacro()
 
+	mtc_add_gmock(test_mockups.cpp)
 	mtc_add_gtest(test_stage.cpp)
 	mtc_add_gtest(test_container.cpp)
 	mtc_add_gmock(test_serial.cpp)
