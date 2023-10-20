@@ -69,3 +69,19 @@ TEST_F(ConnectConnect, FailSucc) {
 
 	EXPECT_FALSE(t.plan());
 }
+
+// https://github.com/ros-planning/moveit_task_constructor/issues/485#issuecomment-1760606116
+// TODO: Solutions are enumerated multiple times
+// TODO: invalid solutions leak into enumeration
+TEST_F(ConnectConnect, UniqueEnumeration) {
+	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
+	auto con1 = add(t, new ConnectMockup());
+	add(t, new GeneratorMockup({ 10.0, 20.0 }));
+	auto con2 = add(t, new ConnectMockup({ INF, 0.0, 0.0, 0.0 }));
+	add(t, new GeneratorMockup({ 100.0, 200.0 }));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(121, 122, 123, 211, 212, 213, 221, 222, 223));
+	EXPECT_EQ(con1->runs_, 3u * 2u);
+	EXPECT_EQ(con2->runs_, 2u * 2u);
+}

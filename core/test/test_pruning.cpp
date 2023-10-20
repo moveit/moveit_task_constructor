@@ -192,3 +192,18 @@ TEST_F(Pruning, TwoConnects) {
 
 	EXPECT_FALSE(t.plan());
 }
+
+TEST_F(Pruning, BackPropagateFailure) {
+	add(t, new GeneratorMockup({ 1.0 }));
+	auto con1 = add(t, new ConnectMockup());
+	add(t, new GeneratorMockup({ 10.0, 20.0 }, 2));  // create all solutions on first run
+	auto con2 = add(t, new ConnectMockup());
+	add(t, new GeneratorMockup({ 100.0, 200.0 }, 2));  // create all solutions on first run
+	// delay failure (INF) until CON2 has found first solution
+	add(t, new DelayingWrapper({ 1 }, std::make_unique<ForwardMockup>(PredefinedCosts({ INF, 2000 }))));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(2211, 2221));
+	EXPECT_EQ(con1->runs_, 2u);
+	EXPECT_EQ(con2->runs_, 3u);  // 100 - 20 is pruned
+}
