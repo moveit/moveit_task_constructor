@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 import time
 
-roscpp_init("mtc_tutorial_alternatives")
+roscpp_initialize("mtc_tutorial_alternatives")
 
 # Use the joint interpolation planner
 jointPlanner = core.JointInterpolationPlanner()

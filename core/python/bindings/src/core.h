@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <moveit/task_constructor/cost_terms.h>
 #include <moveit/utils/moveit_error_code.h>
 #include <pybind11/smart_holder.h>
 
@@ -108,9 +109,6 @@ public:
 }  // namespace task_constructor
 }  // namespace moveit
 
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
-
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::solvers::PlannerInterface)
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SolutionBase)
@@ -118,6 +116,14 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SubTrajectory)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(ordered<moveit::task_constructor::SolutionBaseConstPtr>)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::InterfaceState)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::core::MoveItErrorCode)
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::CostTerm)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::TrajectoryCostTerm)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::PathLength)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::DistanceToReference)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::TrajectoryDuration)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::LinkMotion)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::Clearance)
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Stage)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingEitherWay)

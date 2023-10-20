@@ -79,11 +79,12 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	planner_->init(robot_model);
 }
 
-static bool getJointStateFromOffset(const boost::any& direction, const moveit::core::JointModelGroup* jmg,
-                                    moveit::core::RobotState& robot_state) {
+static bool getJointStateFromOffset(const boost::any& direction, const Interface::Direction dir,
+                                    const moveit::core::JointModelGroup* jmg, moveit::core::RobotState& robot_state) {
 	try {
 		const auto& accepted = jmg->getActiveJointModels();
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
+		double sign = dir == Interface::Direction::FORWARD ? +1.0 : -1.0;
 		for (const auto& j : joints) {
 			auto jm = robot_state.getRobotModel()->getJointModel(j.first);
 			if (!jm || std::find(accepted.begin(), accepted.end(), jm) == accepted.end())
@@ -92,7 +93,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 			if (jm->getVariableCount() != 1)
 				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
 			auto index = jm->getFirstVariableIndex();
-			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
+			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + sign * j.second);
 			robot_state.enforceBounds(jm);
 		}
 		robot_state.update();
@@ -165,7 +166,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -189,7 +190,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
 
-	if (getJointStateFromOffset(direction, jmg, scene->getCurrentStateNonConst())) {
+	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 	} else {
@@ -280,35 +281,37 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		success =
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 
-		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
-		reached_state->updateLinkTransforms();
-		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
+		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
+			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+			reached_state->updateLinkTransforms();
+			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
 
-		double distance = 0.0;
-		if (use_rotation_distance) {
-			Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
-			distance = rotation.angle();
-		} else
-			distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
+			double distance = 0.0;
+			if (use_rotation_distance) {
+				Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
+				distance = rotation.angle();
+			} else
+				distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
 
-		// min_distance reached?
-		if (min_distance > 0.0) {
-			success = distance >= min_distance;
-			if (!success) {
-				char msg[100];
-				snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
-				solution.setComment(msg);
+			// min_distance reached?
+			if (min_distance > 0.0) {
+				success = distance >= min_distance;
+				if (!success) {
+					char msg[100];
+					snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
+					solution.setComment(msg);
+				}
+			} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
+				success = true;
+			} else if (!success)
+				solution.setComment("failed to move full distance");
+
+			// visualize plan
+			auto ns = props.get<std::string>("marker_ns");
+			if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
+				visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
+				              linear, distance);
 			}
-		} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
-			success = true;
-		} else if (!success)
-			solution.setComment("failed to move full distance");
-
-		// visualize plan
-		auto ns = props.get<std::string>("marker_ns");
-		if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
-			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
-			              linear, distance);
 		}
 	}
 

@@ -149,8 +149,9 @@ protected:
 
 protected:
 	// apply stored modifications to scene
-	InterfaceState apply(const InterfaceState& from, bool invert);
-	void processCollisionObject(planning_scene::PlanningScene& scene, const moveit_msgs::CollisionObject& object);
+	std::pair<InterfaceState, SubTrajectory> apply(const InterfaceState& from, bool invert);
+	void processCollisionObject(planning_scene::PlanningScene& scene, const moveit_msgs::CollisionObject& object,
+	                            bool invert);
 	void attachObjects(planning_scene::PlanningScene& scene, const std::pair<std::string, std::pair<Names, bool>>& pair,
 	                   bool invert);
 	void allowCollisions(planning_scene::PlanningScene& scene, const CollisionMatrixPairs& pairs, bool invert);

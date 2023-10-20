@@ -428,6 +428,11 @@ bool Stage::storeFailures() const {
 	return pimpl()->storeFailures();
 }
 
+void Stage::explainFailure(std::ostream& os) const {
+	if (!failures().empty())
+		os << ": " << failures().front()->comment();
+}
+
 PropertyMap& Stage::properties() {
 	return pimpl()->properties_;
 }
@@ -615,6 +620,14 @@ template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceStat
                                                              SubTrajectory&& trajectory);
 template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
                                                               SubTrajectory&& trajectory);
+
+void PropagatingEitherWay::computeForward(const InterfaceState& from) {
+	computeGeneric<Interface::FORWARD>(from);
+}
+
+void PropagatingEitherWay::computeBackward(const InterfaceState& to) {
+	computeGeneric<Interface::BACKWARD>(to);
+}
 
 template <Interface::Direction dir>
 void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {

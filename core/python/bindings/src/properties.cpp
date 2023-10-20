@@ -39,9 +39,6 @@ namespace py = pybind11;
 using namespace py::literals;
 using namespace moveit::task_constructor;
 
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
-
 namespace moveit {
 namespace python {
 namespace {
@@ -57,7 +54,7 @@ class PropertyConverterRegistry
 	typedef std::map<std::type_index, Entry> RegistryMap;
 	RegistryMap types_;
 	// map from ros-msg-names to entry in types_
-	typedef std::map<std::string, RegistryMap::iterator> RosMsgTypeNameMap;
+	using RosMsgTypeNameMap = std::map<std::string, RegistryMap::iterator>;
 	RosMsgTypeNameMap msg_names_;
 
 public:
@@ -71,7 +68,7 @@ public:
 
 	static boost::any fromPython(const py::object& bpo);
 };
-static PropertyConverterRegistry registry_singleton_;
+static PropertyConverterRegistry REGISTRY_SINGLETON;
 
 PropertyConverterRegistry::PropertyConverterRegistry() {
 	// register property converters
@@ -103,8 +100,8 @@ py::object PropertyConverterRegistry::toPython(const boost::any& value) {
 	if (value.empty())
 		return py::object();
 
-	auto it = registry_singleton_.types_.find(value.type());
-	if (it == registry_singleton_.types_.end()) {
+	auto it = REGISTRY_SINGLETON.types_.find(value.type());
+	if (it == REGISTRY_SINGLETON.types_.end()) {
 		std::string msg("No Python -> C++ conversion for: ");
 		msg += boost::core::demangle(value.type().name());
 		PyErr_SetString(PyExc_TypeError, msg.c_str());
@@ -149,8 +146,8 @@ boost::any PropertyConverterRegistry::fromPython(const py::object& po) {
 		return py::cast<std::string>(o);
 
 	const std::string& ros_msg_name = rosMsgName(o);
-	auto it = registry_singleton_.msg_names_.find(ros_msg_name);
-	if (it == registry_singleton_.msg_names_.end()) {
+	auto it = REGISTRY_SINGLETON.msg_names_.find(ros_msg_name);
+	if (it == REGISTRY_SINGLETON.msg_names_.end()) {
 		std::string msg("No Python -> C++ conversion for: ");
 		msg += ros_msg_name;
 		PyErr_SetString(PyExc_TypeError, msg.c_str());
@@ -165,7 +162,7 @@ boost::any PropertyConverterRegistry::fromPython(const py::object& po) {
 bool PropertyConverterBase::insert(const std::type_index& type_index, const std::string& ros_msg_name,
                                    moveit::python::PropertyConverterBase::to_python_converter_function to,
                                    moveit::python::PropertyConverterBase::from_python_converter_function from) {
-	return registry_singleton_.insert(type_index, ros_msg_name, to, from);
+	return REGISTRY_SINGLETON.insert(type_index, ros_msg_name, to, from);
 }
 
 void export_properties(py::module& m) {

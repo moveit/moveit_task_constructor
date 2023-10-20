@@ -1,10 +1,13 @@
 #pragma once
 
-#include <moveit/python/python_tools/ros_types.h>
-#include <moveit/python/python_tools/geometry_msg_types.h>
+#include <pybind11/smart_holder.h>
+#include <moveit/python/pybind_rosmsg_typecasters.h>
 #include <moveit/task_constructor/properties.h>
 #include <boost/any.hpp>
 #include <typeindex>
+
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
 
 namespace moveit {
 namespace python {
@@ -12,8 +15,8 @@ namespace python {
 class PYBIND11_EXPORT PropertyConverterBase
 {
 public:
-	typedef pybind11::object (*to_python_converter_function)(const boost::any&);
-	typedef boost::any (*from_python_converter_function)(const pybind11::object&);
+	using to_python_converter_function = pybind11::object (*)(const boost::any&);
+	using from_python_converter_function = boost::any (*)(const pybind11::object&);
 
 protected:
 	static bool insert(const std::type_index& type_index, const std::string& ros_msg_name,
@@ -50,7 +53,7 @@ namespace properties {
  */
 
 template <typename type_, typename... options>
-class class_ : public pybind11::classh<type_, options...>
+class class_ : public pybind11::classh<type_, options...>  // NOLINT(readability-identifier-naming)
 {
 	using base_class_ = pybind11::classh<type_, options...>;
 

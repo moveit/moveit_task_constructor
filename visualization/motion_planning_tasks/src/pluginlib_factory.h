@@ -45,7 +45,7 @@
 #include <vector>
 
 #ifndef Q_MOC_RUN
-#include <pluginlib/class_loader.h>
+#include <pluginlib/class_loader.hpp>
 #include <rviz/load_resource.h>
 #include <functional>
 #endif

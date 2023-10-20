@@ -52,10 +52,10 @@ struct PlannerCache
 {
 	using PlannerID = std::tuple<std::string, std::string>;
 	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
-	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const moveit::core::RobotModel>, PlannerMap> >;
 	ModelList cache_;
 
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
+	PlannerMap::mapped_type& retrieve(const moveit::core::RobotModelConstPtr& model, const PlannerID& id) {
 		// find model in cache_ and remove expired entries while doing so
 		ModelList::iterator model_it = cache_.begin();
 		while (model_it != cache_.end()) {
@@ -143,7 +143,7 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
                            const moveit::core::JointModelGroup* jmg, double timeout) {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
-	req.allowed_planning_time = timeout;
+	req.allowed_planning_time = std::min(timeout, p.get<double>("timeout"));
 	req.start_state.is_diff = true;  // we don't specify an extra start state
 
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");

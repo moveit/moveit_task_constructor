@@ -44,7 +44,6 @@
 #include <moveit/robot_state/robot_state.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
 #include <chrono>
 #include <functional>
 #include <iterator>

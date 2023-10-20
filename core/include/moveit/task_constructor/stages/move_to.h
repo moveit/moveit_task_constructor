@@ -66,10 +66,8 @@ public:
 	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
-	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Isometry3d pose;
-		pose = p;
-		setIKFrame(pose, link);
+	void setIKFrame(const T& pose, const std::string& link) {
+		setIKFrame(Eigen::Isometry3d(pose), link);
 	}
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 

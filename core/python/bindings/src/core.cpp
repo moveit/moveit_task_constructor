@@ -33,6 +33,8 @@
  *********************************************************************/
 
 #include "core.h"
+#include <pybind11/stl.h>
+#include <pybind11/functional.h>
 #include <moveit/python/task_constructor/properties.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task.h>
@@ -97,7 +99,7 @@ void export_core(pybind11::module& m) {
 	/// translate InitStageException into InitStageError
 	static py::exception<InitStageException> init_stage_error(m, "InitStageError");
 	/// provide extended error description for InitStageException
-	py::register_exception_translator([](std::exception_ptr p) {
+	py::register_exception_translator([](std::exception_ptr p) {  // NOLINT(performance-unnecessary-value-param)
 		try {
 			if (p)
 				std::rethrow_exception(p);
@@ -122,9 +124,9 @@ void export_core(pybind11::module& m) {
 	        ":visualization_msgs:`Marker`: Markers to visualize important aspects of the trajectory (read-only)")
 	    .def(
 	        "toMsg",
-	        [](const SolutionBasePtr& s) {
+	        [](const SolutionBase& self) {
 		        moveit_task_constructor_msgs::Solution msg;
-		        s->fillMessage(msg);
+		        self.toMsg(msg);
 		        return msg;
 	        },
 	        "Convert to the ROS message ``Solution``");
@@ -157,6 +159,36 @@ void export_core(pybind11::module& m) {
 	    .def(PYBIND11_BOOL_ATTR,
 	         [](const moveit::core::MoveItErrorCode& err) { return pybind11::cast(static_cast<bool>(err)); });
 
+	py::classh<CostTerm>(m, "CostTerm", "Base class for cost calculation in stages");
+	auto tct = py::classh<TrajectoryCostTerm, CostTerm>(m, "TrajectoryCostTerm",
+	                                                    "Base class for cost calculation of trajectories");
+	py::enum_<TrajectoryCostTerm::Mode>(tct, "Mode", "Specify which states are considered for collision checking")
+	    .value("AUTO", TrajectoryCostTerm::Mode::AUTO, "TRAJECTORY (if available) or START_INTERFACE")
+	    .value("START_INTERFACE", TrajectoryCostTerm::Mode::START_INTERFACE, "Only consider start state")
+	    .value("END_INTERFACE", TrajectoryCostTerm::Mode::END_INTERFACE, "Only consider end state")
+	    .value("TRAJECTORY", TrajectoryCostTerm::Mode::TRAJECTORY, "Consider whole trajectory");
+
+	py::classh<cost::PathLength, TrajectoryCostTerm>(m, "PathLength",
+	                                                 "Computes joint-based path length along trajectory")
+	    .def(py::init<>())
+	    .def(py::init<std::vector<std::string>>())
+	    .def(py::init<std::map<std::string, double>>());
+	py::classh<cost::DistanceToReference, TrajectoryCostTerm>(m, "DistanceToReference",
+	                                                          "Computes joint-based distance to reference pose")
+	    .def(py::init<const moveit_msgs::RobotState&, TrajectoryCostTerm::Mode, std::map<std::string, double>>(),
+	         "reference"_a, "mode"_a = TrajectoryCostTerm::Mode::AUTO, "weights"_a = std::map<std::string, double>())
+	    .def(py::init<const std::map<std::string, double>&, TrajectoryCostTerm::Mode, std::map<std::string, double>>(),
+	         "reference"_a, "mode"_a = TrajectoryCostTerm::Mode::AUTO, "weights"_a = std::map<std::string, double>());
+	py::classh<cost::TrajectoryDuration, TrajectoryCostTerm>(m, "TrajectoryDuration", "Computes duration of trajectory")
+	    .def(py::init<>());
+	py::classh<cost::LinkMotion, TrajectoryCostTerm>(m, "LinkMotion",
+	                                                 "Computes Cartesian path length of given link along trajectory")
+	    .def(py::init<std::string>(), "link_name"_a);
+
+	py::classh<cost::Clearance, TrajectoryCostTerm>(m, "Clearance", "Computes inverse distance to collision objects")
+	    .def(py::init<bool, bool, std::string, TrajectoryCostTerm::Mode>(), "with_world"_a = true,
+	         "cumulative"_a = false, "group_property"_a = "group", "mode"_a = TrajectoryCostTerm::Mode::AUTO);
+
 	auto stage =
 	    properties::class_<Stage, PyStage<>>(m, "Stage", "Abstract base class of all stages.")
 	        .property<double>("timeout", "float: Maximally allowed time [s] per computation step")
@@ -168,6 +200,15 @@ void export_core(pybind11::module& m) {
 	                               "PropertyMap: PropertyMap of the stage (read-only)")
 	        .def_property_readonly("solutions", &Stage::solutions, "Successful Solutions of the stage (read-only)")
 	        .def_property_readonly("failures", &Stage::failures, "Solutions: Failed Solutions of the stage (read-only)")
+	        .def<void (Stage::*)(const CostTermConstPtr&)>("setCostTerm", &Stage::setCostTerm,
+	                                                       "Specify a CostTerm for calculation of stage costs")
+	        .def(
+	            "setCostTerm", [](Stage& self, const LambdaCostTerm::SubTrajectorySignature& f) { self.setCostTerm(f); },
+	            "Specify a function to calculate trajectory costs")
+	        .def(
+	            "setCostTerm",
+	            [](Stage& self, const LambdaCostTerm::SubTrajectoryShortSignature& f) { self.setCostTerm(f); },
+	            "Specify a function to calculate trajectory costs")
 	        .def("reset", &Stage::reset, "Reset the Stage. Clears all solutions, interfaces and inherited properties")
 	        .def("init", &Stage::init,
 	             "Initialize the stage once before planning. "
@@ -295,7 +336,7 @@ void export_core(pybind11::module& m) {
 			You can iterate of the children of a container and access them by name.)")
 	    .def(
 	        "add",
-	        [](ContainerBase& c, py::args args) {
+	        [](ContainerBase& c, const py::args& args) {
 		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
 			        c.add(it->cast<Stage::pointer>());
 	        },
@@ -310,6 +351,15 @@ void export_core(pybind11::module& m) {
 	        "__getitem__",
 	        [](const ContainerBase& c, const std::string& name) -> Stage* {
 		        Stage* child = c.findChild(name);
+		        if (!child)
+			        throw py::index_error();
+		        return child;
+	        },
+	        py::return_value_policy::reference_internal)
+	    .def(
+	        "__getitem__",
+	        [](const ContainerBase& c, int idx) -> Stage* {
+		        Stage* child = c[idx];
 		        if (!child)
 			        throw py::index_error();
 		        return child;
@@ -385,16 +435,26 @@ void export_core(pybind11::module& m) {
 	    .def("clear", &Task::clear, "Reset the stage task (and all its stages)")
 	    .def(
 	        "add",
-	        [](Task& t, py::args args) {
+	        [](Task& t, const py::args& args) {
 		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
 			        t.add(it->cast<Stage::pointer>());
 	        },
 	        "Append stage(s) to the task's top-level container")
+	    .def("insert", &Task::insert, "stage"_a, "before"_a = -1, "Insert stage before given index")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
 	        [](const Task& t, const std::string& name) -> Stage* {
 		        Stage* child = t.stages()->findChild(name);
+		        if (!child)
+			        throw py::index_error();
+		        return child;
+	        },
+	        py::return_value_policy::reference_internal)
+	    .def(
+	        "__getitem__",
+	        [](const Task& t, int idx) -> Stage* {
+		        Stage* child = t.stages()->operator[](idx);
 		        if (!child)
 			        throw py::index_error();
 		        return child;
@@ -407,6 +467,15 @@ void export_core(pybind11::module& m) {
 		        return py::make_iterator(children.begin(), children.end());
 	        },
 	        py::keep_alive<0, 1>())  // keep container alive as long as iterator lives
+	    .def(
+	        "setCostTerm", [](Task& self, const CostTermConstPtr& c) { self.setCostTerm(c); },
+	        "Specify a CostTerm for calculation of stage costs")
+	    .def(
+	        "setCostTerm", [](Task& self, const LambdaCostTerm::SubTrajectorySignature& f) { self.setCostTerm(f); },
+	        "Specify a function to calculate trajectory costs")
+	    .def(
+	        "setCostTerm", [](Task& self, const LambdaCostTerm::SubTrajectoryShortSignature& f) { self.setCostTerm(f); },
+	        "Specify a function to calculate trajectory costs")
 	    .def("reset", &Task::reset, "Reset task (and all its stages)")
 	    .def("init", py::overload_cast<>(&Task::init), "Initialize the task (and all its stages)")
 	    .def("plan", &Task::plan, "max_solutions"_a = 0, R"(
@@ -426,7 +495,7 @@ void export_core(pybind11::module& m) {
 
 		        MoveGroupInterface::Plan plan;
 		        moveit_task_constructor_msgs::Solution serialized;
-		        solution->fillMessage(serialized);
+		        solution->toMsg(serialized);
 
 		        for (const moveit_task_constructor_msgs::SubTrajectory& traj : serialized.sub_trajectory) {
 			        if (!traj.trajectory.joint_trajectory.points.empty()) {

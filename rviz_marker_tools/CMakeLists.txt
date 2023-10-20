@@ -6,6 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
 	visualization_msgs
 	roscpp
 	rviz
+	tf2_eigen
 )
 
 catkin_package(

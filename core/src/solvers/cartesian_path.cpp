@@ -71,7 +71,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
 
 	// reach pose of forward kinematics
 	return plan(from, *link, Eigen::Isometry3d::Identity(), to->getCurrentState().getGlobalLinkTransform(link), jmg,
-	            timeout, result, path_constraints);
+	            std::min(timeout, properties().get<double>("timeout")), result, path_constraints);
 }
 
 bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
@@ -89,7 +89,7 @@ bool CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from, cons
 	                                       const double* joint_positions) {
 		state->setJointGroupPositions(jmg, joint_positions);
 		state->update();
-		return !sandbox_scene->isStateColliding(const_cast<const robot_state::RobotState&>(*state), jmg->getName()) &&
+		return !sandbox_scene->isStateColliding(const_cast<const moveit::core::RobotState&>(*state), jmg->getName()) &&
 		       kcs.decide(*state).satisfied;
 	};
 

@@ -150,7 +150,7 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+	moveit::core::RobotState& robot_state = scene->getCurrentStateNonConst();
 	try {
 		applyPreGrasp(robot_state, jmg, props.property("pregrasp"));
 	} catch (const moveit::Exception& e) {

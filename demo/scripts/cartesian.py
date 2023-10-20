@@ -7,9 +7,9 @@ from moveit.task_constructor import core, stages
 from math import pi
 import time
 
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 
-roscpp_init("mtc_tutorial")
+roscpp_initialize("mtc_tutorial")
 
 # [cartesianTut1]
 group = "panda_arm"

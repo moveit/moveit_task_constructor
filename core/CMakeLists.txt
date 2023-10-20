@@ -25,7 +25,6 @@ catkin_package(
 		${PROJECT_NAME}
 		${PROJECT_NAME}_stages
 		${PROJECT_NAME}_stage_plugins
-		moveit_python_tools
 	INCLUDE_DIRS
 		include
 	CATKIN_DEPENDS

@@ -3,11 +3,11 @@
 
 from moveit.core import planning_scene
 from moveit.task_constructor import core, stages
-from moveit.python_tools import roscpp_init
+from moveit_commander.roscpp_initializer import roscpp_initialize
 from moveit.core.planning_scene import PlanningScene
 import time
 
-roscpp_init("mtc_tutorial_current_state")
+roscpp_initialize("mtc_tutorial_current_state")
 
 
 # Create a task

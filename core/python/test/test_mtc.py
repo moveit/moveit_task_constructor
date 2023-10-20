@@ -272,39 +272,59 @@ class TestStages(unittest.TestCase):
                 print("error in class {}: {}".format(stage, ex))
                 raise
 
-
-class TestContainer(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestContainer, self).__init__(*args, **kwargs)
-
-    def test_move(self):
-        container = core.SerialContainer()
+    def test_CostTerm(self):
         stage = stages.CurrentState()
-        container.add(stage)
-        with self.assertRaises(ValueError):
-            stage.name
-
-    def check(self, container):
-        container = core.SerialContainer()
-        container.add(stages.CurrentState("1"))
-        container.add(stages.CurrentState("2"))
-        container.add(stages.CurrentState("3"))
-        with self.assertRaises(IndexError):
-            container["unknown"]
-        child = container["2"]
-        self.assertEqual(child.name, "2")
-        self.assertEqual([child.name for child in container], ["1", "2", "3"])
-
-    def test_serial(self):
-        self.check(core.SerialContainer())
-
-    def test_task(self):
-        self.check(core.Task())
+        weights = {"joint_{}".format(i + 1): 1.0 for i in range(6)}
+        costs = core.PathLength(weights)
+        stage.setCostTerm(costs)
 
 
-class TestTask(unittest.TestCase):
+class BaseTestCases:
+    class ContainerTest(unittest.TestCase):
+        def __init__(self, ContainerType, *args, **kwargs):
+            super(BaseTestCases.ContainerTest, self).__init__(*args, **kwargs)
+            self.ContainerType = ContainerType
+            self.container = container = ContainerType()
+            container.add(stages.CurrentState("1"))
+            container.add(stages.CurrentState("2"))
+            container.add(stages.CurrentState("3"))
+
+        def test_move(self):
+            container = self.ContainerType()
+            stage = stages.CurrentState()
+            container.add(stage)
+            with self.assertRaises(ValueError):
+                stage.name
+
+        def test_access_by_name(self):
+            with self.assertRaises(IndexError):
+                self.container["unknown"]
+
+            child = self.container["2"]
+            self.assertEqual(child.name, "2")
+
+        def test_access_by_iterator(self):
+            self.assertEqual([child.name for child in self.container], ["1", "2", "3"])
+
+        def test_access_by_index(self):
+            self.assertEqual(self.container[0].name, "1")
+            self.assertEqual(self.container[1].name, "2")
+            self.assertEqual(self.container[-1].name, "3")
+            self.assertEqual(self.container[-2].name, "2")
+            with self.assertRaises(IndexError):
+                self.container[3]
+            with self.assertRaises(IndexError):
+                self.container[-4]
+
+
+class TestSerial(BaseTestCases.ContainerTest):
     def __init__(self, *args, **kwargs):
-        super(TestTask, self).__init__(*args, **kwargs)
+        super(TestSerial, self).__init__(core.SerialContainer, *args, **kwargs)
+
+
+class TestTask(BaseTestCases.ContainerTest):
+    def __init__(self, *args, **kwargs):
+        super(TestTask, self).__init__(core.Task, *args, **kwargs)
 
     def test(self):
         task = core.Task()

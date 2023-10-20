@@ -53,6 +53,7 @@ public:
 
 	size_t numChildren() const;
 	Stage* findChild(const std::string& name) const;
+	Stage* operator[](int index) const;
 
 	/** Callback function type used by traverse functions
 	 *  Receives currently visited Stage and current depth in hierarchy
@@ -75,6 +76,7 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
+	void explainFailure(std::ostream& os) const override;
 
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;

@@ -40,6 +40,7 @@
 #include <moveit/collision_detection/collision_common.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 
@@ -106,17 +107,23 @@ double Constant::operator()(const WrappedSolution& /*s*/, std::string& /*comment
 	return cost;
 }
 
+PathLength::PathLength(std::vector<std::string> joints) {
+	for (auto& j : joints)
+		this->joints.emplace(std::move(j), 1.0);
+}
+
 double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
-	std::vector<const robot_model::JointModel*> joint_models;
-	joint_models.reserve(joints.size());
+	std::map<const moveit::core::JointModel*, double> weights;
 	const auto& first_waypoint = traj->getWayPoint(0);
-	for (auto& joint : joints) {
-		joint_models.push_back(first_waypoint.getJointModel(joint));
+	for (auto& joint_weight : joints) {
+		const moveit::core::JointModel* jm = first_waypoint.getJointModel(joint_weight.first);
+		if (jm)
+			weights.emplace(jm, joint_weight.second);
 	}
 
 	double path_length{ 0.0 };
@@ -126,12 +133,64 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 		if (joints.empty()) {
 			path_length += last.distance(curr);
 		} else {
-			for (const auto& model : joint_models) {
-				path_length += last.distance(curr, model);
+			for (const auto& item : weights) {
+				path_length += item.second * last.distance(curr, item.first);
 			}
 		}
 	}
 	return path_length;
+}
+
+DistanceToReference::DistanceToReference(const moveit_msgs::RobotState& ref, Mode m, std::map<std::string, double> w)
+  : reference(ref), weights(std::move(w)), mode(m) {}
+
+DistanceToReference::DistanceToReference(const std::map<std::string, double>& ref, Mode m,
+                                         std::map<std::string, double> w)
+  : weights(std::move(w)), mode(m) {
+	reference.joint_state.name.reserve(ref.size());
+	reference.joint_state.position.reserve(ref.size());
+
+	for (auto& item : ref) {
+		reference.joint_state.name.push_back(item.first);
+		reference.joint_state.position.push_back(item.second);
+	}
+	reference.is_diff = true;
+}
+
+double DistanceToReference::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
+	const auto& state = (mode == Mode::END_INTERFACE) ? s.end() : s.start();
+	const auto& traj = s.trajectory();
+
+	moveit::core::RobotState ref_state = state->scene()->getCurrentState();
+	moveit::core::robotStateMsgToRobotState(reference, ref_state, false);
+
+	std::map<const moveit::core::JointModel*, double> w;
+	for (auto& item : weights) {
+		const moveit::core::JointModel* jm = ref_state.getJointModel(item.first);
+		if (jm)
+			w.emplace(jm, item.second);
+	}
+
+	auto distance = [this, &ref_state, &w](const moveit::core::RobotState& state) {
+		if (weights.empty()) {
+			return ref_state.distance(state);
+		} else {
+			double accumulated = 0.0;
+			for (const auto& item : w)
+				accumulated += item.second * ref_state.distance(state, item.first);
+			return accumulated;
+		}
+	};
+
+	if (mode == Mode::START_INTERFACE || mode == Mode::END_INTERFACE || (mode == Mode::AUTO && (traj == nullptr))) {
+		return distance(state->scene()->getCurrentState());
+	} else {
+		double accumulated = 0.0;
+		for (size_t i = 0; i < traj->getWayPointCount(); ++i)
+			accumulated += distance(traj->getWayPoint(i));
+		accumulated /= traj->getWayPointCount();
+		return accumulated;
+	}
 }
 
 double TrajectoryDuration::operator()(const SubTrajectory& s, std::string& /*comment*/) const {

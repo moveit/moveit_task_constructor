@@ -56,8 +56,10 @@ public:
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
 
-	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
-	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
+	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
+	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
+	[[deprecated("Replace with setMaxAccelerationScalingFactor")]]  // clang-format off
+	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 

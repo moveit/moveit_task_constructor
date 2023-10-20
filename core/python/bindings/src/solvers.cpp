@@ -39,6 +39,7 @@
 #include <moveit_msgs/WorkspaceParameters.h>
 
 namespace py = pybind11;
+using namespace py::literals;
 using namespace moveit::task_constructor;
 using namespace moveit::task_constructor::solvers;
 
@@ -79,7 +80,7 @@ void export_solvers(py::module& m) {
 	    .property<double>("goal_orientation_tolerance", "float: Tolerance for reaching orientation goals")
 	    .property<bool>("display_motion_plans", "bool: Publish generated solutions via a topic")
 	    .property<bool>("publish_planning_requests", "bool: Publish motion planning requests via a topic")
-	    .def(py::init<>());
+	    .def(py::init<const std::string&>(), "pipeline"_a = std::string("ompl"));
 
 	properties::class_<JointInterpolationPlanner, PlannerInterface>(
 	    m, "JointInterpolationPlanner",

@@ -49,6 +49,12 @@
 #include <sstream>
 #include <boost/bimap.hpp>
 
+namespace ros {
+namespace names {
+bool isValidCharInName(char c);  // unfortunately this is not declared in ros/names.h
+}  // namespace names
+}  // namespace ros
+
 namespace moveit {
 namespace task_constructor {
 
@@ -57,8 +63,10 @@ std::string getTaskId(const TaskPrivate* task) {
 	std::ostringstream oss;
 	char our_hostname[256] = { 0 };
 	gethostname(our_hostname, sizeof(our_hostname) - 1);
-	// Hostname could have `-` as a character but this is an invalid character in ROS so we replace it with `_`
-	std::replace(std::begin(our_hostname), std::end(our_hostname), '-', '_');
+	// Replace all invalid ROS-name chars with an underscore
+	std::replace_if(
+	    our_hostname, our_hostname + strlen(our_hostname),
+	    [](const char ch) { return !ros::names::isValidCharInName(ch); }, '_');
 	oss << our_hostname << "_" << getpid() << "_" << reinterpret_cast<std::size_t>(task);
 	return oss.str();
 }
@@ -146,9 +154,7 @@ void Introspection::registerSolution(const SolutionBase& s) {
 }
 
 void Introspection::fillSolution(moveit_task_constructor_msgs::Solution& msg, const SolutionBase& s) {
-	s.fillMessage(msg, this);
-	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
-
+	s.toMsg(msg, this);
 	msg.task_id = impl->task_id_;
 }
 
