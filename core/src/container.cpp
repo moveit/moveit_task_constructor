@@ -66,7 +66,7 @@ printChildrenInterfaces(const ContainerBasePrivate& container, bool success, con
 	if (success)
 		os << ++id << ' ';
 	if (const auto conn = dynamic_cast<const ConnectingPrivate*>(creator.pimpl()))
-		conn->printPendingPairs(os);
+		os << conn->pendingPairsPrinter();
 	os << std::endl;
 
 	for (const auto& child : container.children()) {

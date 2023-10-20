@@ -826,7 +826,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
 	}
 	os << std::setw(15) << " ";
-	printPendingPairs(os) << std::endl;
+	os << pendingPairsPrinter() << std::endl;
 #endif
 }
 
@@ -856,6 +856,7 @@ template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const 
                                                                           const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
+	ROS_DEBUG_STREAM("canCompute " << name() << ": " << pendingPairsPrinter());
 	// Do we still have feasible pending state pairs?
 	return !pending.empty() && pending.front().first->priority().enabled() &&
 	       pending.front().second->priority().enabled();
@@ -869,15 +870,16 @@ void ConnectingPrivate::compute() {
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
-std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& p) {
+	const auto* impl = p.instance_;
 	const char* reset = InterfaceState::colorForStatus(3);
-	for (const auto& candidate : pending) {
-		size_t first = getIndex(*starts(), candidate.first);
-		size_t second = getIndex(*ends(), candidate.second);
+	for (const auto& candidate : impl->pending) {
+		size_t first = getIndex(*impl->starts(), candidate.first);
+		size_t second = getIndex(*impl->ends(), candidate.second);
 		os << InterfaceState::colorForStatus(candidate.first->priority().status()) << first << reset << ":"
 		   << InterfaceState::colorForStatus(candidate.second->priority().status()) << second << reset << " ";
 	}
-	if (pending.empty())
+	if (impl->pending.empty())
 		os << "---";
 	return os;
 }
