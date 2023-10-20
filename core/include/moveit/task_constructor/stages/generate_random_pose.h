@@ -56,7 +56,7 @@ public:
 
 	/*
 	 * Function specification for pose dimension samplers.
-	 * The input paramter is the target_pose value used as seed, the returned value is the sampling result.
+	 * The input parameter is the target_pose value used as seed, the returned value is the sampling result.
 	 * */
 	typedef std::function<double(double)> PoseDimensionSampler;
 	enum PoseDimension
