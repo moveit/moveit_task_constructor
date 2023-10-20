@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	${PROJECT_INCLUDE}/stages/generate_pose.h
 	${PROJECT_INCLUDE}/stages/generate_grasp_pose.h
 	${PROJECT_INCLUDE}/stages/generate_place_pose.h
+	${PROJECT_INCLUDE}/stages/generate_random_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 	${PROJECT_INCLUDE}/stages/passthrough.h
 	${PROJECT_INCLUDE}/stages/predicate_filter.h
@@ -28,6 +29,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	generate_pose.cpp
 	generate_grasp_pose.cpp
 	generate_place_pose.cpp
+	generate_random_pose.cpp
 	compute_ik.cpp
 	passthrough.cpp
 	predicate_filter.cpp
