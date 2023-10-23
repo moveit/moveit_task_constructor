@@ -281,6 +281,12 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	moveit_task_constructor_msgs::action::ExecuteTaskSolution::Goal goal;
 	s.toMsg(goal.solution, pimpl()->introspection_.get());
 
+	// Reset joint values in scene diff
+	for (auto& sub_trajectory : goal.solution.sub_trajectory) {
+		sub_trajectory.scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
+		sub_trajectory.scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
+	}
+
 	moveit_msgs::msg::MoveItErrorCodes error_code;
 	error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
 	auto goal_handle_future = ac->async_send_goal(goal);
