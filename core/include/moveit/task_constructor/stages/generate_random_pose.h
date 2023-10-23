@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, PickNik Inc
+ *  Copyright (c) 2023, PickNik Inc
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -42,9 +42,7 @@
 
 #include <random>
 
-namespace moveit {
-namespace task_constructor {
-namespace stages {
+namespace moveit::task_constructor::stages {
 
 class GenerateRandomPose : public GeneratePose
 {
@@ -115,6 +113,4 @@ GenerateRandomPose::getPoseDimensionSampler<std::normal_distribution>(double std
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::uniform_real_distribution>(double range);
-}  // namespace stages
-}  // namespace task_constructor
-}  // namespace moveit
+} // namespace moveit::task_constructor::stages
