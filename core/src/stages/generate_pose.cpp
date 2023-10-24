@@ -76,9 +76,12 @@ void GeneratePose::compute() {
 	planning_scene::PlanningSceneConstPtr scene = s.end()->scene()->diff();
 
 	geometry_msgs::msg::PoseStamped target_pose = properties().get<geometry_msgs::msg::PoseStamped>("pose");
-	if (target_pose.header.frame_id.empty())
+	if (target_pose.header.frame_id.empty()) {
 		target_pose.header.frame_id = scene->getPlanningFrame();
-	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+		RCLCPP_WARN(rclcpp::get_logger("GenerateRandomPose"),
+		            "No target pose frame specified, defaulting to scene planning frame: '%s'",
+		            target_pose.header.frame_id.c_str());
+	} else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
 		RCLCPP_WARN(LOGGER, "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
 		return;
 	}
