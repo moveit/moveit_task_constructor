@@ -113,4 +113,4 @@ GenerateRandomPose::getPoseDimensionSampler<std::normal_distribution>(double std
 template <>
 GenerateRandomPose::PoseDimensionSampler
 GenerateRandomPose::getPoseDimensionSampler<std::uniform_real_distribution>(double range);
-} // namespace moveit::task_constructor::stages
+}  // namespace moveit::task_constructor::stages

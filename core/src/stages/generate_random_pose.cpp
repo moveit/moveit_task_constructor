@@ -56,8 +56,7 @@ namespace moveit::task_constructor::stages {
 GenerateRandomPose::GenerateRandomPose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
 	p.declare<geometry_msgs::msg::PoseStamped>("pose", "target pose to pass on in spawned states");
-	p.declare<size_t>("max_solutions", 20,
-	                  "maximum number of spawned solutions in case randomized sampling is enabled");
+	p.declare<size_t>("max_solutions", 20, "maximum number of spawned solutions in case randomized sampling is enabled");
 	p.property("timeout").setDefaultValue(1.0 /* seconds */);
 }
 
@@ -89,9 +88,12 @@ void GenerateRandomPose::compute() {
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
 	geometry_msgs::msg::PoseStamped target_pose = properties().get<geometry_msgs::msg::PoseStamped>("pose");
-	if (target_pose.header.frame_id.empty())
+	if (target_pose.header.frame_id.empty()) {
 		target_pose.header.frame_id = scene->getPlanningFrame();
-	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
+		RCLCPP_WARN(rclcpp::get_logger("GenerateRandomPose"),
+		            "No target pose frame specified, defaulting to scene planning frame: '%s'",
+		            target_pose.header.frame_id.c_str());
+	} else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
 		RCLCPP_WARN(rclcpp::get_logger("GenerateRandomPose"), "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
 		return;
 	}
@@ -155,4 +157,4 @@ void GenerateRandomPose::compute() {
 		elapsed_time = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
 	}
 }
-} // namespace moveit::task_constructor::stages
+}  // namespace moveit::task_constructor::stages
