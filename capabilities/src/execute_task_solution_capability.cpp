@@ -90,10 +90,17 @@ void ExecuteTaskSolutionCapability::initialize() {
 	// configure the action server
 	as_ = rclcpp_action::create_server<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    context_->moveit_cpp_->getNode(), "execute_task_solution",
-	    ActionServerType::GoalCallback(std::bind(&ExecuteTaskSolutionCapability::handleNewGoal, this,
-	                                             std::placeholders::_1, std::placeholders::_2)),
-	    ActionServerType::CancelCallback(
-	        std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this, std::placeholders::_1)),
+	    [this](const rclcpp_action::GoalUUID& /*uuid*/,
+	           const ExecuteTaskSolutionAction::Goal::ConstSharedPtr& /*goal*/) {
+		    if (last_goal_future_.valid() &&
+		        last_goal_future_.wait_for(std::chrono::seconds::zero()) != std::future_status::ready) {
+			    return rclcpp_action::GoalResponse::REJECT;
+		    }
+		    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+	    },
+	    [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
+		    return preemptCallback(goal_handle);
+	    },
 	    [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
 		    last_goal_future_ =
 		        std::async(std::launch::async, &ExecuteTaskSolutionCapability::goalCallback, this, goal_handle);
