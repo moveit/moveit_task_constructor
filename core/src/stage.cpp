@@ -865,7 +865,7 @@ template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const 
                                                                           const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
-	ROS_DEBUG_STREAM("canCompute " << name() << ": " << pendingPairsPrinter());
+	// ROS_DEBUG_STREAM("canCompute " << name() << ": " << pendingPairsPrinter());
 	// Do we still have feasible pending state pairs?
 	return !pending.empty() && pending.front().first->priority().enabled() &&
 	       pending.front().second->priority().enabled();
