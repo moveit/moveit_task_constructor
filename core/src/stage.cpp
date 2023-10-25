@@ -794,20 +794,29 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface<dir>();
 		bool have_enabled_opposites = false;
+
+		// other interface states to re-enable (post-poned because otherwise order in other_interface changes during loop)
+		std::vector<Interface::iterator> oit_to_enable;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
 				continue;
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
 			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
-			if (oit->priority().status() == InterfaceState::Status::ARMED)
-				parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+			if (oit->priority().status() == InterfaceState::Status::ARMED) {
+				oit_to_enable.push_back(oit);
+				have_enabled_opposites = true;
+			}
 			if (oit->priority().enabled())
 				have_enabled_opposites = true;
 
 			// Remember all pending states, regardless of their status!
 			pending.insert(make_pair<dir>(it, oit));
 		}
+		// actually re-enable other interface states, which were scheduled for re-enabling above
+		for (Interface::iterator oit : oit_to_enable)
+			parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+
 		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
 			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
 			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);

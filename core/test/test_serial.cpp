@@ -71,7 +71,6 @@ TEST_F(ConnectConnect, FailSucc) {
 }
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/485#issuecomment-1760606116
-// TODO: Solutions are enumerated multiple times
 TEST_F(ConnectConnect, UniqueEnumeration) {
 	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
 	auto con1 = add(t, new ConnectMockup());
