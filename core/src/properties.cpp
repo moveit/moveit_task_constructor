@@ -37,7 +37,8 @@
 */
 
 #include <moveit/task_constructor/properties.h>
-#include <boost/format.hpp>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 #include <functional>
 #include <ros/console.h>
 
@@ -290,8 +291,8 @@ void PropertyMap::performInitFrom(Property::SourceFlags source, const PropertyMa
 		} catch (const Property::undefined&) {
 		}
 
-		ROS_DEBUG_STREAM_NAMED(LOGNAME, pair.first << ": " << p.initialized_from_ << " -> " << source << ": "
-		                                           << Property::serialize(value));
+		ROS_DEBUG_STREAM_NAMED(LOGNAME, fmt::format("{}: {} -> {}: {}", pair.first, p.initialized_from_, source,
+		                                            Property::serialize(value)));
 		p.setCurrentValue(value);
 		p.initialized_from_ = source;
 	}
@@ -317,9 +318,8 @@ Property::undefined::undefined(const std::string& name, const std::string& msg) 
 	setName(name);
 }
 
-static boost::format TYPE_ERROR_FMT("type (%1%) doesn't match property's declared type (%2%)");
 Property::type_error::type_error(const std::string& current_type, const std::string& declared_type)
-  : Property::error(boost::str(TYPE_ERROR_FMT % current_type % declared_type)) {}
+  : Property::error(fmt::format("type {} doesn't match property's declared type {}", current_type, declared_type)) {}
 
 }  // namespace task_constructor
 }  // namespace moveit

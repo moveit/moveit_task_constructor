@@ -46,7 +46,7 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
-#include <boost/format.hpp>
+#include <fmt/core.h>
 #include <functional>
 
 using namespace std::placeholders;
@@ -232,7 +232,7 @@ inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Prio
 }
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	ROS_DEBUG_STREAM_NAMED("Pruning", "'" << child.name() << "' generated a failure");
+	ROS_DEBUG_STREAM_NAMED("Pruning", fmt::format("'{}' generated a failure", child.name()));
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
 			// just ignore: the pair of (new) states isn't known to us anyway
@@ -503,8 +503,8 @@ struct SolutionCollector
 };
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
-	ROS_DEBUG_STREAM_NAMED("SerialContainer", "'" << this->name() << "' received solution of child stage '"
-	                                              << current.creator()->name() << "'");
+	ROS_DEBUG_STREAM_NAMED("SerialContainer", fmt::format("'{}' received solution of child stage '{}'", this->name(),
+	                                                      current.creator()->name()));
 
 	// failures should never trigger this callback
 	assert(!current.isFailure());
@@ -573,10 +573,10 @@ void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2)
 	else if ((flags1 & READS_END) && (flags2 & WRITES_PREV_END))
 		stage2.setPrevEnds(stage1.ends());
 	else {
-		boost::format desc("cannot connect end interface of '%1%' (%2%) to start interface of '%3%' (%4%)");
-		desc % stage1.name() % flowSymbol<END_IF_MASK>(flags1);
-		desc % stage2.name() % flowSymbol<START_IF_MASK>(flags2);
-		throw InitStageException(*me(), desc.str());
+		throw InitStageException(
+		    *me(), fmt::format("cannot connect end interface of '{}' ({}) to start interface of '{}' ({})",  //
+		                       stage1.name(), flowSymbol<END_IF_MASK>(flags1),  //
+		                       stage2.name(), flowSymbol<START_IF_MASK>(flags2)));
 	}
 }
 
@@ -586,12 +586,10 @@ void SerialContainerPrivate::validateInterface(const StagePrivate& child, Interf
 	if (required == UNKNOWN)
 		return;  // cannot yet validate
 	InterfaceFlags child_interface = child.interfaceFlags() & mask;
-	if (required != child_interface) {
-		boost::format desc("%1% interface (%3%) of '%2%' does not match mine (%4%)");
-		desc % (mask == START_IF_MASK ? "start" : "end") % child.name();
-		desc % flowSymbol<mask>(child_interface) % flowSymbol<mask>(required);
-		throw InitStageException(*me_, desc.str());
-	}
+	if (required != child_interface)
+		throw InitStageException(*me_, fmt::format("{0} interface ({2}) of '{1}' does not match mine ({3})",
+		                                           (mask == START_IF_MASK ? "start" : "end"), child.name(),
+		                                           flowSymbol<mask>(child_interface), flowSymbol<mask>(required)));
 }
 
 // called by parent asking for pruning of this' interface
@@ -763,14 +761,12 @@ void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child,
 		valid = valid & ((external & mask) == (child_interface & mask));
 	}
 
-	if (!valid) {
-		boost::format desc("interface of '%1%' (%3% %4%) does not match %2% (%5% %6%).");
-		desc % child.name();
-		desc % (first ? "external one" : "other children's");
-		desc % flowSymbol<START_IF_MASK>(child_interface) % flowSymbol<END_IF_MASK>(child_interface);
-		desc % flowSymbol<START_IF_MASK>(external) % flowSymbol<END_IF_MASK>(external);
-		throw InitStageException(*me_, desc.str());
-	}
+	if (!valid)
+		throw InitStageException(*me_, fmt::format("interface of '{0}' ({2} {3}) does not match {1} ({4} {5}).",
+		                                           child.name(),
+		                                           (first ? "external one" : "other children's"),
+		                                           flowSymbol<START_IF_MASK>(child_interface), flowSymbol<END_IF_MASK>(child_interface),
+		                                           flowSymbol<START_IF_MASK>(external), flowSymbol<END_IF_MASK>(external)));
 }
 
 void ParallelContainerBasePrivate::validateConnectivity() const {
@@ -947,7 +943,7 @@ void FallbacksPrivateCommon::compute() {
 
 inline void FallbacksPrivateCommon::nextChild() {
 	if (std::next(current_) != children().end())
-		ROS_DEBUG_STREAM_NAMED("Fallbacks", "Child '" << (*current_)->name() << "' failed, trying next one.");
+		ROS_DEBUG_STREAM_NAMED("Fallbacks", fmt::format("Child '{}' failed, trying next one.", (*current_)->name()));
 	++current_;  // advance to next child
 }
 

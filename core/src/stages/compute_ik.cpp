@@ -48,6 +48,7 @@
 #include <functional>
 #include <iterator>
 #include <ros/console.h>
+#include <fmt/core.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -298,7 +299,8 @@ void ComputeIK::compute() {
 		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 
 		if (!scene->getCurrentState().knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			ROS_WARN_STREAM_NAMED("ComputeIK", "ik frame unknown in robot: '" << ik_pose_msg.header.frame_id << "'");
+			ROS_WARN_STREAM_NAMED("ComputeIK",
+			                      fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
 			return;
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;

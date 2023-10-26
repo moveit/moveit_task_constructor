@@ -19,6 +19,7 @@
 	<build_depend>roslint</build_depend>
 	<exec_depend>roscpp</exec_depend>
 
+	<depend>fmt</depend>
 	<depend>tf2_eigen</depend>
 	<depend>geometry_msgs</depend>
 	<depend>moveit_core</depend>

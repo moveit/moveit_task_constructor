@@ -25,6 +25,7 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 	${OGRE_LIBRARIES}
 	${QT_LIBRARIES}
 	${Boost_LIBRARIES}
+	fmt::fmt
 )
 target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
 target_include_directories(${MOVEIT_LIB_NAME} SYSTEM

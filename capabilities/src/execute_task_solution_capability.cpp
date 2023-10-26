@@ -43,6 +43,7 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/utils/message_checks.h>
 #include <moveit/utils/moveit_error_code.h>
+#include <fmt/format.h>
 
 namespace {
 
@@ -152,8 +153,9 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!joint_names.empty()) {
 				group = findJointModelGroup(*model, joint_names);
 				if (!group) {
-					ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {"
-					                                                  << boost::algorithm::join(joint_names, ", ") << "}");
+					ROS_ERROR_STREAM_NAMED(
+					    "ExecuteTaskSolution",
+					    fmt::format("Could not find JointModelGroup that actuates {{{}}}", fmt::join(joint_names, ", ")));
 					return false;
 				}
 				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution",

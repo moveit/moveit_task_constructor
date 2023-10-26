@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_capabilities)
 
+find_package(fmt REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   moveit_core
@@ -32,7 +33,7 @@ add_library(${PROJECT_NAME}
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} fmt::fmt)
 
 install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
