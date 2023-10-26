@@ -92,6 +92,7 @@ void ExecuteTaskSolutionCapability::initialize() {
 	    context_->moveit_cpp_->getNode(), "execute_task_solution",
 	    [this](const rclcpp_action::GoalUUID& /*uuid*/,
 	           const ExecuteTaskSolutionAction::Goal::ConstSharedPtr& /*goal*/) {
+                    // Reject new goal if another goal is currently processed
 		    if (last_goal_future_.valid() &&
 		        last_goal_future_.wait_for(std::chrono::seconds::zero()) != std::future_status::ready) {
 			    return rclcpp_action::GoalResponse::REJECT;
