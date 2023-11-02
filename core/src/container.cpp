@@ -365,10 +365,6 @@ void ContainerBase::insert(Stage::pointer&& stage, int before) {
 	if (!stage)
 		throw std::runtime_error(name() + ": received invalid stage pointer");
 
-	if (stage->trajectoryExecutionInfo().controller_names.empty()) {
-		stage->setTrajectoryExecutionInfo(this->trajectoryExecutionInfo());
-	}
-
 	StagePrivate* impl = stage->pimpl();
 	impl->setParent(this);
 
