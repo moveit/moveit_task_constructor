@@ -77,7 +77,7 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
-	if (from->isStateColliding(from_state, jmg->getName()))
+	if (from->isStateColliding(from_state, jmg->getName()) || !from_state.satisfiesBounds(jmg))
 		return false;
 
 	moveit::core::RobotState waypoint(from_state);
@@ -86,13 +86,13 @@ bool JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr
 		from_state.interpolate(to_state, t, waypoint);
 		result->addSuffixWayPoint(waypoint, t);
 
-		if (from->isStateColliding(waypoint, jmg->getName()))
+		if (from->isStateColliding(waypoint, jmg->getName()) || !waypoint.satisfiesBounds(jmg))
 			return false;
 	}
 
 	// add goal point
 	result->addSuffixWayPoint(to_state, 1.0);
-	if (from->isStateColliding(to_state, jmg->getName()))
+	if (from->isStateColliding(to_state, jmg->getName()) || !to_state.satisfiesBounds(jmg))
 		return false;
 
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
