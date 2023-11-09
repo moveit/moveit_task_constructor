@@ -230,6 +230,9 @@ void SubTrajectory::appendTo(moveit_task_constructor_msgs::Solution& msg, Intros
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
 	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
+	// reset JointStates (joints are already handled in trajectories)
+	t.scene_diff.robot_state.joint_state = sensor_msgs::JointState();
+	t.scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::MultiDOFJointState();
 }
 
 double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const {
