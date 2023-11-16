@@ -11,7 +11,6 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    print(moveit_config.planning_pipelines)
     fallbacks_move_to_task = Node(
         package="moveit_task_constructor_demo",
         executable="fallbacks_move_to",
