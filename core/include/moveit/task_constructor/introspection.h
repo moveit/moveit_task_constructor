@@ -80,6 +80,10 @@ public:
 	/// fill task state message for publishing the current task state
 	moveit_task_constructor_msgs::msg::TaskStatistics&
 	fillTaskStatistics(moveit_task_constructor_msgs::msg::TaskStatistics& msg);
+
+	/// Function to get a map between solution id and solutions.
+	std::map<uint32_t, moveit_task_constructor_msgs::msg::Solution> getAllSolutions();
+
 	/// publish the current state of task
 	void publishTaskState();
 

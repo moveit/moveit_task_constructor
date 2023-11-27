@@ -161,7 +161,7 @@ public:
 
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;
-	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
+	std::map<uint32_t, const SolutionBase*> id_solution_bimap_;
 };
 
 Introspection::Introspection(const TaskPrivate* task) : impl(new IntrospectionPrivate(task, this)) {}
@@ -213,9 +213,19 @@ void Introspection::publishAllSolutions(bool wait) {
 	};
 }
 
+std::map<uint32_t, moveit_task_constructor_msgs::msg::Solution> Introspection::getAllSolutions() {
+	std::map<uint32_t, moveit_task_constructor_msgs::msg::Solution> solution_id_map = {};
+	for (const auto& [solution_id, solution_base] : impl->id_solution_bimap_) {
+		moveit_task_constructor_msgs::msg::Solution solution;
+		fillSolution(solution, *solution_base);
+		solution_id_map[solution_id] = solution;
+	}
+	return solution_id_map;
+}
+
 const SolutionBase* Introspection::solutionFromId(uint id) const {
-	auto it = impl->id_solution_bimap_.left.find(id);
-	if (it == impl->id_solution_bimap_.left.end())
+	auto it = impl->id_solution_bimap_.find(id);
+	if (it == impl->id_solution_bimap_.end())
 		return nullptr;
 	return it->second;
 }
@@ -241,7 +251,7 @@ uint32_t Introspection::stageId(const Stage* const s) const {
 }
 
 uint32_t Introspection::solutionId(const SolutionBase& s) {
-	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
+	auto result = impl->id_solution_bimap_.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
 	return result.first->first;
 }
 
