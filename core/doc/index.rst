@@ -26,6 +26,6 @@ Organization of the documentation
 
   tutorials/index
   concepts
-  howto
+  howtopython
   api
   troubleshooting
