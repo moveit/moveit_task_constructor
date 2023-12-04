@@ -86,5 +86,3 @@ Parallel Container
 Parallel containers combine a set of stages to allow planning alternate solutions.
 
 | More information on parallel containers :ref:`Parallel Containers`.
-
-
