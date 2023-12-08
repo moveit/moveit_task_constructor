@@ -174,6 +174,15 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
 		exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 
+		// Check that sub trajectories that contain a valid trajectory have controllers configured.
+		if (!sub_traj.trajectory.joint_trajectory.points.empty() && sub_traj.execution_info.controller_names.empty()) {
+			RCLCPP_WARN(LOGGER,
+			            "The trajectory of stage '%i' from task '%s' does not have any controllers specified for "
+			            "trajectory execution. This might lead to unexpected controller selection.",
+			            sub_traj.info.stage_id, solution.task_id.c_str());
+		}
+		exec_traj.controller_name = sub_traj.execution_info.controller_names;
+
 		/* TODO add action feedback and markers */
 		exec_traj.effect_on_success = [this,
 		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
