@@ -11,7 +11,7 @@ using namespace moveit::task_constructor;
 struct PipelinePlannerTest : public testing::Test
 {
 	PipelinePlannerTest() {
-		node->declare_parameter<std::string>("STOMP.planning_plugin", "stomp_moveit/StompPlanner");
+		node->declare_parameter<std::vector<std::string>>("STOMP.planning_plugins", { "stomp_moveit/StompPlanner" });
 	};
 	const rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("test_pipeline_planner");
 	const moveit::core::RobotModelPtr robot_model = getModel();
