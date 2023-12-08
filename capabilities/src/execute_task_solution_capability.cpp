@@ -155,13 +155,11 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 	plan.plan_components.reserve(solution.sub_trajectory.size());
 	for (size_t i = 0; i < solution.sub_trajectory.size(); ++i) {
 		const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj = solution.sub_trajectory[i];
-
 		plan.plan_components.emplace_back();
 		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
 
 		// define individual variable for use in closure below
-		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
-		exec_traj.description = description;
+		exec_traj.description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
 
 		const moveit::core::JointModelGroup* group = nullptr;
 		{
@@ -180,21 +178,29 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		}
 		exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
 		exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+		// Check that sub trajectories that contain a valid trajectory have controllers configured.
+		if (!sub_traj.trajectory.joint_trajectory.points.empty() && sub_traj.execution_info.controller_names.empty()) {
+			RCLCPP_WARN(LOGGER,
+			            "The trajectory of stage '%i' from task '%s' does not have any controllers specified for "
+			            "trajectory execution. This might lead to unexpected controller selection.",
+			            sub_traj.info.stage_id, solution.task_id.c_str());
+		}
 		exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success = [this, sub_traj,
-		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
-			}
-			return true;
-		};
+		exec_traj.effect_on_success =
+		    [this, sub_traj, description = exec_traj.description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			    if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
+				    RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
+				    return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+			    }
+			    return true;
+		    };
 
 		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
-			RCLCPP_ERROR_STREAM(LOGGER, "invalid intermediate robot state in scene diff of SubTrajectory " << description);
+			RCLCPP_ERROR_STREAM(LOGGER, "invalid intermediate robot state in scene diff of SubTrajectory "
+			                                << exec_traj.description);
 			return false;
 		}
 	}
