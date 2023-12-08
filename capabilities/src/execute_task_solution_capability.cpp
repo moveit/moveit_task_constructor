@@ -188,13 +188,14 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success = [this, sub_traj, exec_traj](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << exec_traj.description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
-			}
-			return true;
-		};
+		exec_traj.effect_on_success =
+		    [this, sub_traj, description = exec_traj.description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			    if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
+				    RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
+				    return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+			    }
+			    return true;
+		    };
 
 		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
