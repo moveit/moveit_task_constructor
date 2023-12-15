@@ -176,7 +176,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
                            robot_trajectory::RobotTrajectoryPtr& result,
                            const moveit_msgs::msg::Constraints& path_constraints) {
 	// Create a request for every planning pipeline that should run in parallel
-	std::vector<moveit_msgs::msg::MotionPlanRequest> requests;
+	std::vector<::planning_interface::MotionPlanRequest> requests;
 	requests.reserve(pipeline_id_planner_id_map_.size());
 
 	auto const property_pipeline_id_planner_id_map =
@@ -193,7 +193,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
 			continue;
 		}
 		// Create MotionPlanRequest for pipeline
-		moveit_msgs::msg::MotionPlanRequest request;
+		::planning_interface::MotionPlanRequest request;
 		request.pipeline_id = pipeline_id_planner_id_pair.first;
 		request.group_name = joint_model_group->getName();
 		request.planner_id = pipeline_id_planner_id_pair.second;
@@ -206,7 +206,7 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning
 		request.goal_constraints.resize(1);
 		request.goal_constraints.at(0) = goal_constraints;
 		request.path_constraints = path_constraints;
-		requests.push_back(request);
+		requests.push_back(std::move(request));
 	}
 
 	// Run planning pipelines in parallel to create a vector of responses. If a solution selection function is provided,
