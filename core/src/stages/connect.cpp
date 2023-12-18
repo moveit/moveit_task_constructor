@@ -123,6 +123,9 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 			continue;  // ignore joints we plan for
 
 		const unsigned int num = jm->getVariableCount();
+		if (num == 0)
+			continue;  // The joint model doesn't have any variables (e.g. fixed).
+
 		Eigen::Map<const Eigen::VectorXd> positions_from(from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to(to.getJointPositions(jm), num);
 		if (!(positions_from - positions_to).isZero(1e-4)) {
