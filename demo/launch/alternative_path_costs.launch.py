@@ -16,6 +16,7 @@ def generate_launch_description():
         executable="alternative_path_costs",
         output="screen",
         parameters=[
+            moveit_config.joint_limits,
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,
             moveit_config.robot_description_kinematics,

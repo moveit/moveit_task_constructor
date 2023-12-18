@@ -11,13 +11,12 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    print(moveit_config.planning_pipelines)
     fallbacks_move_to_task = Node(
         package="moveit_task_constructor_demo",
         executable="fallbacks_move_to",
         output="screen",
         parameters=[
-            moveit_config.cartesian_limits,
+            moveit_config.pilz_cartesian_limits,
             moveit_config.joint_limits,
             moveit_config.planning_pipelines,
             moveit_config.robot_description,
