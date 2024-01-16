@@ -160,7 +160,10 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		const auto planner_solution_maybe = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		if (planner_solution_maybe.has_value()) {
+			success = planner_solution_maybe.value();
+		}
 		trajectory_planner_vector.push_back(PlannerIdTrajectoryPair({ pair.second->getPlannerId(), trajectory }));
 
 		if (!success)

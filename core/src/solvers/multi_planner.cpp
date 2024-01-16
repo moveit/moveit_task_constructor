@@ -49,10 +49,11 @@ void MultiPlanner::init(const core::RobotModelConstPtr& robot_model) {
 		p->init(robot_model);
 }
 
-bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                        const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
-                        double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                        const moveit_msgs::msg::Constraints& path_constraints) {
+tl::expected<bool, std::string> MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                   const planning_scene::PlanningSceneConstPtr& to,
+                                                   const moveit::core::JointModelGroup* jmg, double timeout,
+                                                   robot_trajectory::RobotTrajectoryPtr& result,
+                                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
@@ -71,11 +72,12 @@ bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	return false;
 }
 
-bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                        const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-                        const moveit::core::JointModelGroup* jmg, double timeout,
-                        robot_trajectory::RobotTrajectoryPtr& result,
-                        const moveit_msgs::msg::Constraints& path_constraints) {
+tl::expected<bool, std::string> MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                   const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                                   const Eigen::Isometry3d& target,
+                                                   const moveit::core::JointModelGroup* jmg, double timeout,
+                                                   robot_trajectory::RobotTrajectoryPtr& result,
+                                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 

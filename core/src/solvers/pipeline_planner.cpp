@@ -140,22 +140,24 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	}
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const planning_scene::PlanningSceneConstPtr& to,
-                           const moveit::core::JointModelGroup* joint_model_group, double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::msg::Constraints& path_constraints) {
+tl::expected<bool, std::string> PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                      const planning_scene::PlanningSceneConstPtr& to,
+                                                      const moveit::core::JointModelGroup* joint_model_group,
+                                                      double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	// Construct goal constraints from the goal planning scene
 	const auto goal_constraints = kinematic_constraints::constructGoalConstraints(
 	    to->getCurrentState(), joint_model_group, properties().get<double>("goal_joint_tolerance"));
 	return plan(from, joint_model_group, goal_constraints, timeout, result, path_constraints);
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                           const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target_eigen,
-                           const moveit::core::JointModelGroup* joint_model_group, double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::msg::Constraints& path_constraints) {
+tl::expected<bool, std::string> PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                      const moveit::core::LinkModel& link,
+                                                      const Eigen::Isometry3d& offset,
+                                                      const Eigen::Isometry3d& target_eigen,
+                                                      const moveit::core::JointModelGroup* joint_model_group,
+                                                      double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	last_successful_planner_.clear();
 
 	// Construct a Cartesian target pose from the given target transform and offset
@@ -170,11 +172,11 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	return plan(from, joint_model_group, goal_constraints, timeout, result, path_constraints);
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
-                           const moveit::core::JointModelGroup* joint_model_group,
-                           const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::msg::Constraints& path_constraints) {
+tl::expected<bool, std::string> PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
+                                                      const moveit::core::JointModelGroup* joint_model_group,
+                                                      const moveit_msgs::msg::Constraints& goal_constraints,
+                                                      double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	// Create a request for every planning pipeline that should run in parallel
 	std::vector<moveit_msgs::msg::MotionPlanRequest> requests;
 	requests.reserve(pipeline_id_planner_id_map_.size());
