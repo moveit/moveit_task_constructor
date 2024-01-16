@@ -148,7 +148,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
-	std::string comment;
+	std::string comment = "No planners specified";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -161,11 +161,14 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		success = bool(result);
 		sub_trajectories.push_back(trajectory);  // include failed trajectory
 
-		if (!success)
+		if (!success) {
+			comment = result.message;
 			break;
+		}
 
 		if (trajectory->getLastWayPoint().distance(goal_state, jmg) > max_distance) {
 			success = false;

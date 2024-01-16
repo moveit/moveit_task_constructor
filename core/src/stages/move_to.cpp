@@ -197,10 +197,14 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string comment = "";
 
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 	} else {  // Cartesian goal
 		// Where to go?
 		Eigen::Isometry3d target;
@@ -232,7 +236,11 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		Eigen::Isometry3d offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
 		// plan to Cartesian target
-		success = planner_->plan(state.scene(), *link, offset, target, jmg, timeout, robot_trajectory, path_constraints);
+		const auto result =
+		    planner_->plan(state.scene(), *link, offset, target, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 	}
 
 	// store result
@@ -248,7 +256,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		solution.setTrajectory(robot_trajectory);
 
 		if (!success)
-			solution.markAsFailure();
+			solution.markAsFailure(comment);
 
 		return true;
 	}
