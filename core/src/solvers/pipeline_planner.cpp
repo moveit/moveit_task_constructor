@@ -224,10 +224,16 @@ tl::expected<bool, std::string> PipelinePlanner::plan(const planning_scene::Plan
 			// Choose the first solution trajectory as response
 			result = solution.trajectory;
 			last_successful_planner_ = solution.planner_id;
-			return bool(result);
+			if (!bool(result))  // If the plan was not a success
+			{
+				return tl::make_unexpected(solution.error_code.source + " returned error code " +
+				                           moveit::core::errorCodeToString(solution.error_code) +
+				                           ". Reason : " + solution.error_code.message);  // Maybe print the error code too
+			}
+			return true;
 		}
 	}
-	return false;
+	return tl::make_unexpected("No solutions generated from Pipeline Planner");
 }
 std::string PipelinePlanner::getPlannerId() const {
 	return last_successful_planner_.empty() ? std::string("Unknown") : last_successful_planner_;

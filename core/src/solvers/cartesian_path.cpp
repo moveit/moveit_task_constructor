@@ -71,7 +71,7 @@ tl::expected<bool, std::string> CartesianPath::plan(const planning_scene::Planni
 	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
 	if (!link) {
 		RCLCPP_WARN_STREAM(LOGGER, "no unique tip for joint model group: " << jmg->getName());
-		return false;
+		return tl::make_unexpected("no unique tip for joint model group: " + jmg->getName());
 	}
 
 	// reach pose of forward kinematics
@@ -116,7 +116,10 @@ tl::expected<bool, std::string> CartesianPath::plan(const planning_scene::Planni
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 	                          props.get<double>("max_acceleration_scaling_factor"));
 
-	return achieved_fraction >= props.get<double>("min_fraction");
+	if (achieved_fraction >= props.get<double>("min_fraction")) {
+		return tl::make_unexpected("Min fraction not met. Achieved fraction : " + std::to_string(achieved_fraction));
+	}
+	return true;
 }
 }  // namespace solvers
 }  // namespace task_constructor

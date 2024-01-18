@@ -77,7 +77,7 @@ tl::expected<bool, std::string> JointInterpolationPlanner::plan(
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
 	if (from->isStateColliding(from_state, jmg->getName()) || !from_state.satisfiesBounds(jmg))
-		return false;
+		return tl::make_unexpected("Start state in collision or not within bounds");
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
@@ -86,13 +86,13 @@ tl::expected<bool, std::string> JointInterpolationPlanner::plan(
 		result->addSuffixWayPoint(waypoint, t);
 
 		if (from->isStateColliding(waypoint, jmg->getName()) || !waypoint.satisfiesBounds(jmg))
-			return false;
+			return tl::make_unexpected("One of the waypoint's state is in collision or not within bounds");
 	}
 
 	// add goal point
 	result->addSuffixWayPoint(to_state, 1.0);
 	if (from->isStateColliding(to_state, jmg->getName()) || !to_state.satisfiesBounds(jmg))
-		return false;
+		return tl::make_unexpected("Goal state in collision or not within bounds");
 
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
@@ -140,12 +140,12 @@ JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& fro
 		// TODO(v4hn): planners need a way to add feedback to failing plans
 		// in case of an invalid solution feedback should include unwanted collisions or violated constraints
 		RCLCPP_WARN(LOGGER, "IK failed for pose target");
-		return false;
+		return tl::make_unexpected("IK failed for pose target");
 	}
 	to->getCurrentStateNonConst().update();
 
 	if (std::chrono::steady_clock::now() >= deadline)
-		return false;
+		return tl::make_unexpected("Timed out");
 
 	return plan(from, to, jmg, timeout, result, path_constraints);
 }

@@ -195,6 +195,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string error_message = "";
 
 	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
@@ -202,6 +203,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		    planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 		if (planner_solution_maybe.has_value()) {
 			success = planner_solution_maybe.value();
+		}
+		if (!success) {
+			error_message = planner_solution_maybe.error();
 		}
 		solution.setPlannerId(planner_->getPlannerId());
 	} else {
@@ -295,6 +299,9 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (planner_solution_maybe.has_value()) {
 			success = planner_solution_maybe.value();
 		}
+		if (!success) {
+			error_message = planner_solution_maybe.error();
+		}
 		solution.setPlannerId(planner_->getPlannerId());
 
 		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
@@ -338,8 +345,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
-		if (!success)
+		if (!success && solution.comment().empty()) {
+			solution.markAsFailure(error_message);
+		} else if (!success) {
 			solution.markAsFailure();
+		}
 		return true;
 	}
 	return false;

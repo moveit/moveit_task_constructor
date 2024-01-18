@@ -148,6 +148,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
+	std::string error_message = "";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -164,6 +165,10 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		if (planner_solution_maybe.has_value()) {
 			success = planner_solution_maybe.value();
 		}
+		std::string error_message = "";
+		if (!success) {
+			error_message += planner_solution_maybe.error();
+		}
 		trajectory_planner_vector.push_back(PlannerIdTrajectoryPair({ pair.second->getPlannerId(), trajectory }));
 
 		if (!success)
@@ -179,7 +184,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (!solution)  // success == false or merging failed: store sequentially
 		solution = makeSequential(trajectory_planner_vector, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
-		solution->markAsFailure();
+		solution->markAsFailure("Hardcode an error message");
 
 	connect(from, to, solution);
 }

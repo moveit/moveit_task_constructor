@@ -205,6 +205,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string error_message = "";
 
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
@@ -212,6 +213,9 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		    planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 		if (planner_solution_maybe.has_value()) {
 			success = planner_solution_maybe.value();
+		}
+		if (!success) {
+			error_message = planner_solution_maybe.error();
 		}
 		solution.setPlannerId(planner_->getPlannerId());
 	} else {  // Cartesian goal
@@ -250,6 +254,9 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		if (planner_solution_maybe.has_value()) {
 			success = planner_solution_maybe.value();
 		}
+		if (!success) {
+			error_message = planner_solution_maybe.error();
+		}
 		solution.setPlannerId(planner_->getPlannerId());
 	}
 
@@ -266,7 +273,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		solution.setTrajectory(robot_trajectory);
 
 		if (!success)
-			solution.markAsFailure();
+			solution.markAsFailure(error_message);
 
 		return true;
 	}
