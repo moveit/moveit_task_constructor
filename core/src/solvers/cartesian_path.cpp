@@ -116,7 +116,7 @@ tl::expected<bool, std::string> CartesianPath::plan(const planning_scene::Planni
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 	                          props.get<double>("max_acceleration_scaling_factor"));
 
-	if (achieved_fraction >= props.get<double>("min_fraction")) {
+	if (achieved_fraction < props.get<double>("min_fraction")) {
 		return tl::make_unexpected("Min fraction not met. Achieved fraction : " + std::to_string(achieved_fraction));
 	}
 	return true;
