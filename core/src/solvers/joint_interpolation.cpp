@@ -59,10 +59,11 @@ JointInterpolationPlanner::JointInterpolationPlanner() {
 
 void JointInterpolationPlanner::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 
-tl::expected<bool, std::string> JointInterpolationPlanner::plan(
-    const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-    const moveit::core::JointModelGroup* jmg, double /*timeout*/, robot_trajectory::RobotTrajectoryPtr& result,
-    const moveit_msgs::msg::Constraints& /*path_constraints*/) {
+MoveItErrorCode JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                const planning_scene::PlanningSceneConstPtr& to,
+                                                const moveit::core::JointModelGroup* jmg, double /*timeout*/,
+                                                robot_trajectory::RobotTrajectoryPtr& result,
+                                                const moveit_msgs::msg::Constraints& /*path_constraints*/) {
 	const auto& props = properties();
 
 	// Get maximum joint distance
@@ -77,7 +78,7 @@ tl::expected<bool, std::string> JointInterpolationPlanner::plan(
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
 	if (from->isStateColliding(from_state, jmg->getName()) || !from_state.satisfiesBounds(jmg))
-		return tl::make_unexpected("Start state in collision or not within bounds");
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Start state in collision or not within bounds");
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
@@ -86,13 +87,14 @@ tl::expected<bool, std::string> JointInterpolationPlanner::plan(
 		result->addSuffixWayPoint(waypoint, t);
 
 		if (from->isStateColliding(waypoint, jmg->getName()) || !waypoint.satisfiesBounds(jmg))
-			return tl::make_unexpected("One of the waypoint's state is in collision or not within bounds");
+			return MoveItErrorCode(MoveItErrorCodes::FAILURE,
+			                       "One of the waypoint's state is in collision or not within bounds");
 	}
 
 	// add goal point
 	result->addSuffixWayPoint(to_state, 1.0);
 	if (from->isStateColliding(to_state, jmg->getName()) || !to_state.satisfiesBounds(jmg))
-		return tl::make_unexpected("Goal state in collision or not within bounds");
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Goal state in collision or not within bounds");
 
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
@@ -112,15 +114,15 @@ tl::expected<bool, std::string> JointInterpolationPlanner::plan(
 		}
 	}
 
-	return true;
+	return MoveItErrorCode(MoveItErrorCodes::SUCCESS);
 }
 
-tl::expected<bool, std::string>
-JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                                const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-                                const moveit::core::JointModelGroup* jmg, double timeout,
-                                robot_trajectory::RobotTrajectoryPtr& result,
-                                const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                                const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                                const Eigen::Isometry3d& target,
+                                                const moveit::core::JointModelGroup* jmg, double timeout,
+                                                robot_trajectory::RobotTrajectoryPtr& result,
+                                                const moveit_msgs::msg::Constraints& path_constraints) {
 	timeout = std::min(timeout, properties().get<double>("timeout"));
 	const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration<double, std::ratio<1>>(timeout);
 
@@ -140,12 +142,13 @@ JointInterpolationPlanner::plan(const planning_scene::PlanningSceneConstPtr& fro
 		// TODO(v4hn): planners need a way to add feedback to failing plans
 		// in case of an invalid solution feedback should include unwanted collisions or violated constraints
 		RCLCPP_WARN(LOGGER, "IK failed for pose target");
-		return tl::make_unexpected("IK failed for pose target");
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "IK failed for pose target.");
 	}
 	to->getCurrentStateNonConst().update();
 
-	if (std::chrono::steady_clock::now() >= deadline)
-		return tl::make_unexpected("Timed out");
+	if (std::chrono::steady_clock::now() >= deadline) {
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Timed out.");
+	}
 
 	return plan(from, to, jmg, timeout, result, path_constraints);
 }

@@ -126,7 +126,7 @@ public:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
 	 */
-	tl::expected<bool, std::string> plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
 	          const core::JointModelGroup* joint_model_group, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
 	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
@@ -142,7 +142,7 @@ public:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
 	 */
-	tl::expected<bool, std::string> plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
 	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
 	          const moveit::core::JointModelGroup* joint_model_group, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,
@@ -170,7 +170,7 @@ protected:
 	 * problem
 	 * \return true If the solver found a successful solution for the given planning problem
 	 */
-	tl::expected<bool, std::string> plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
+	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
 	          const moveit::core::JointModelGroup* joint_model_group,
 	          const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
 	          robot_trajectory::RobotTrajectoryPtr& result,

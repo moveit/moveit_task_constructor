@@ -209,13 +209,13 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		const auto planner_solution_maybe =
+		const auto planner_solution_status =
 		    planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
-		if (planner_solution_maybe.has_value()) {
-			success = planner_solution_maybe.value();
+		if (bool(planner_solution_status)) {
+			success = true;
 		}
 		if (!success) {
-			error_message = planner_solution_maybe.error();
+			error_message = planner_solution_status.message;
 		}
 		solution.setPlannerId(planner_->getPlannerId());
 	} else {  // Cartesian goal
@@ -249,13 +249,13 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		Eigen::Isometry3d offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
 		// plan to Cartesian target
-		const auto planner_solution_maybe =
+		const auto planner_solution_status =
 		    planner_->plan(state.scene(), *link, offset, target, jmg, timeout, robot_trajectory, path_constraints);
-		if (planner_solution_maybe.has_value()) {
-			success = planner_solution_maybe.value();
+		if (bool(planner_solution_status)) {
+			success = true;
 		}
 		if (!success) {
-			error_message = planner_solution_maybe.error();
+			error_message = planner_solution_status.message;
 		}
 		solution.setPlannerId(planner_->getPlannerId());
 	}
