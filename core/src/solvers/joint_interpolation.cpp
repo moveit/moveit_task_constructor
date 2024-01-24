@@ -139,8 +139,6 @@ MoveItErrorCode JointInterpolationPlanner::plan(const planning_scene::PlanningSc
 	} };
 
 	if (!to->getCurrentStateNonConst().setFromIK(jmg, target * offset.inverse(), link.getName(), timeout, is_valid)) {
-		// TODO(v4hn): planners need a way to add feedback to failing plans
-		// in case of an invalid solution feedback should include unwanted collisions or violated constraints
 		RCLCPP_WARN(LOGGER, "IK failed for pose target");
 		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "IK failed for pose target.");
 	}
