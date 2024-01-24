@@ -124,7 +124,7 @@ public:
 	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
-	 * \return true If the solver found a successful solution for the given planning problem
+	 * \return MoveItErrorCode - Return MoveItErrorCodes::SUCCESS if solver found a successful solution. Otherwise, return an appropriate error type and message explaining why it failed.
 	 */
 	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
 	          const core::JointModelGroup* joint_model_group, double timeout,
@@ -140,7 +140,7 @@ public:
 	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
-	 * \return true If the solver found a successful solution for the given planning problem
+	 * \return MoveItErrorCode - Return MoveItErrorCodes::SUCCESS if solver found a successful solution. Otherwise, return an appropriate error type and message explaining why it failed.
 	 */
 	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
 	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
