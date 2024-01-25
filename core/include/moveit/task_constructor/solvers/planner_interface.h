@@ -41,6 +41,7 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit_msgs/msg/constraints.hpp>
 #include <moveit/task_constructor/properties.h>
+#include <moveit/utils/moveit_error_code.h>
 #include <Eigen/Geometry>
 
 namespace planning_scene {
@@ -63,6 +64,9 @@ MOVEIT_CLASS_FORWARD(JointModelGroup);
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
+
+using MoveItErrorCode = moveit::core::MoveItErrorCode;
+using MoveItErrorCodes = moveit_msgs::msg::MoveItErrorCodes;
 
 MOVEIT_CLASS_FORWARD(PlannerInterface);
 class PlannerInterface
@@ -88,17 +92,17 @@ public:
 	virtual void init(const moveit::core::RobotModelConstPtr& robot_model) = 0;
 
 	/// plan trajectory between to robot states
-	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	                  const moveit::core::JointModelGroup* jmg, double timeout,
-	                  robot_trajectory::RobotTrajectoryPtr& result,
-	                  const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) = 0;
+	virtual MoveItErrorCode
+	plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	     const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	     const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) = 0;
 
 	/// plan trajectory from current robot state to Cartesian target, such that pose(link)*offset == target
-	virtual bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	                  const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-	                  const moveit::core::JointModelGroup* jmg, double timeout,
-	                  robot_trajectory::RobotTrajectoryPtr& result,
-	                  const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) = 0;
+	virtual MoveItErrorCode
+	plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	     const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+	     double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	     const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) = 0;
 
 	// get name of the planner
 	virtual std::string getPlannerId() const = 0;

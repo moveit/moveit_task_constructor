@@ -148,6 +148,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
+	std::string error_message = "";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -160,11 +161,17 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		const auto planner_solution_status = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		if (bool(planner_solution_status)) {
+			success = true;
+		}
+
 		trajectory_planner_vector.push_back(PlannerIdTrajectoryPair({ pair.second->getPlannerId(), trajectory }));
 
-		if (!success)
+		if (!success) {
+			error_message = planner_solution_status.message;
 			break;
+		}
 
 		// continue from reached state
 		start = end;
@@ -176,7 +183,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (!solution)  // success == false or merging failed: store sequentially
 		solution = makeSequential(trajectory_planner_vector, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
-		solution->markAsFailure();
+		solution->markAsFailure(error_message);
 
 	connect(from, to, solution);
 }

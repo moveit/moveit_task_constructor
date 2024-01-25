@@ -49,49 +49,50 @@ void MultiPlanner::init(const core::RobotModelConstPtr& robot_model) {
 		p->init(robot_model);
 }
 
-bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                        const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
-                        double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                        const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                   const planning_scene::PlanningSceneConstPtr& to,
+                                   const moveit::core::JointModelGroup* jmg, double timeout,
+                                   robot_trajectory::RobotTrajectoryPtr& result,
+                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
 	for (const auto& p : *this) {
 		if (remaining_time < 0)
-			return false;  // timeout
+			return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Timeout");  // timeout
 		if (result)
 			result->clear();
 		if (p->plan(from, to, jmg, remaining_time, result, path_constraints))
-			return true;
+			return MoveItErrorCode(MoveItErrorCodes::SUCCESS);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 	}
-	return false;
+	return MoveItErrorCode(MoveItErrorCodes::FAILURE);
 }
 
-bool MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                        const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-                        const moveit::core::JointModelGroup* jmg, double timeout,
-                        robot_trajectory::RobotTrajectoryPtr& result,
-                        const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                   const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                   const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+                                   double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
 	for (const auto& p : *this) {
 		if (remaining_time < 0)
-			return false;  // timeout
+			return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Timeout");  // timeout
 		if (result)
 			result->clear();
 		if (p->plan(from, link, offset, target, jmg, remaining_time, result, path_constraints))
-			return true;
+			return MoveItErrorCode(MoveItErrorCodes::SUCCESS);
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 	}
-	return false;
+	return MoveItErrorCode(MoveItErrorCodes::FAILURE);
 }
 }  // namespace solvers
 }  // namespace task_constructor
