@@ -98,6 +98,9 @@ public:
 	void insert(Stage::pointer&& stage, int before = -1) override;
 	void clear() final;
 
+	/// creates a flat buffer of stages in breath-first search order
+	void fillFlatBufferStages();
+
 	/// enable introspection publishing for use with rviz
 	void enableIntrospection(bool enable = true);
 	Introspection& introspection();
@@ -150,6 +153,7 @@ public:
 	/// access stage tree
 	ContainerBase* stages();
 	const ContainerBase* stages() const;
+	const ContainerBase* stages(uint32_t stage_id) const;
 
 	/// properties access
 	PropertyMap& properties();
@@ -165,6 +169,8 @@ protected:
 
 private:
 	using WrapperBase::init;
+
+	std::vector<const ContainerBase*> bfs_stages_;  // breadth-first search
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {

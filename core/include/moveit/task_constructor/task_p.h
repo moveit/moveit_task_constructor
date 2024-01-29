@@ -58,6 +58,7 @@ public:
 
 	const std::string& ns() const { return ns_; }
 	const ContainerBase* stages() const;
+	const ContainerBase* stages(uint32_t stage_id) const;
 
 private:
 	std::string ns_;

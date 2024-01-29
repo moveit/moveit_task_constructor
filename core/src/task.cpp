@@ -92,6 +92,13 @@ const ContainerBase* TaskPrivate::stages() const {
 	return children().empty() ? nullptr : static_cast<ContainerBase*>(children().front().get());
 }
 
+const ContainerBase* Task::stages(uint32_t stage_id) const {
+	if (stage_id < bfs_stages_.size()) {
+		return bfs_stages_[stage_id];
+	}
+	return nullptr;
+}
+
 Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
   : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
 	setPruning(false);
@@ -141,6 +148,15 @@ void Task::loadRobotModel(const std::string& robot_description) {
 	setRobotModel(impl->robot_model_loader_->getModel());
 	if (!impl->robot_model_)
 		throw Exception("Task failed to construct RobotModel");
+}
+
+void Task::fillFlatBufferStages() {
+	bfs_stages_.clear();
+	auto stage_cb = [&](const moveit::task_constructor::Stage& stage, unsigned int depth) -> bool {
+		bfs_stages_.push_back(static_cast<const ContainerBase*>(&stage));
+		return true;
+	};
+	stages()->traverseRecursively(stage_cb);
 }
 
 void Task::add(Stage::pointer&& stage) {
