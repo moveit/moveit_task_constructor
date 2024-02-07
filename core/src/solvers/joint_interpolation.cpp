@@ -77,8 +77,13 @@ MoveItErrorCode JointInterpolationPlanner::plan(const planning_scene::PlanningSc
 
 	// add first point
 	result->addSuffixWayPoint(from->getCurrentState(), 0.0);
-	if (from->isStateColliding(from_state, jmg->getName()) || !from_state.satisfiesBounds(jmg))
-		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Start state in collision or not within bounds");
+	if (from->isStateColliding(from_state, jmg->getName())) {
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Start state is in collision!");
+	}
+
+	if (!from_state.satisfiesBounds(jmg)) {
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Start state is not within bounds!");
+	}
 
 	moveit::core::RobotState waypoint(from_state);
 	double delta = d < 1e-6 ? 1.0 : props.get<double>("max_step") / d;
@@ -86,15 +91,24 @@ MoveItErrorCode JointInterpolationPlanner::plan(const planning_scene::PlanningSc
 		from_state.interpolate(to_state, t, waypoint);
 		result->addSuffixWayPoint(waypoint, t);
 
-		if (from->isStateColliding(waypoint, jmg->getName()) || !waypoint.satisfiesBounds(jmg))
-			return MoveItErrorCode(MoveItErrorCodes::FAILURE,
-			                       "One of the waypoint's state is in collision or not within bounds");
+		if (from->isStateColliding(waypoint, jmg->getName())) {
+			return MoveItErrorCode(MoveItErrorCodes::FAILURE, "One of the waypoint's state is in collision!");
+		}
+
+		if (!waypoint.satisfiesBounds(jmg)) {
+			return MoveItErrorCode(MoveItErrorCodes::FAILURE, "One of the waypoint's state is not within bounds!");
+		}
 	}
 
 	// add goal point
 	result->addSuffixWayPoint(to_state, 1.0);
-	if (from->isStateColliding(to_state, jmg->getName()) || !to_state.satisfiesBounds(jmg))
-		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Goal state in collision or not within bounds");
+	if (from->isStateColliding(to_state, jmg->getName())) {
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Goal state is in collision!");
+	}
+
+	if (!to_state.satisfiesBounds(jmg)) {
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE, "Goal state is not within bounds!");
+	}
 
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
 	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
