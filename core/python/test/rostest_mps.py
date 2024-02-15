@@ -25,7 +25,7 @@ class TestModifyPlanningScene(unittest.TestCase):
     def setUp(self):
         super(TestModifyPlanningScene, self).setUp()
         self.psi = PlanningSceneInterface(synchronous=True)
-        self.make_box = self.psi._PlanningSceneInterface__make_box
+        self.make_box = self.psi.make_box
         # insert a box to collide with
         self.psi.add_box("box", make_pose(0.8, 0.25, 1.25), [0.2, 0.2, 0.2])
         self.task = task = core.Task()
