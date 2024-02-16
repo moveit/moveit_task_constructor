@@ -301,10 +301,20 @@ private:
 };
 PIMPL_FUNCTIONS(MonitoringGenerator)
 
+// Print pending pairs of a ConnectingPrivate instance
+class ConnectingPrivate;
+struct PendingPairsPrinter
+{
+	const ConnectingPrivate* const instance_;
+	PendingPairsPrinter(const ConnectingPrivate* c) : instance_(c) {}
+};
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
+
 class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 	friend struct FallbacksPrivateConnect;
+	friend std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
@@ -337,7 +347,7 @@ public:
 	template <Interface::Direction dir>
 	bool hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const;
 
-	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
+	PendingPairsPrinter pendingPairsPrinter() const { return PendingPairsPrinter(this); }
 
 private:
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
@@ -352,5 +362,6 @@ private:
 	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
+
 }  // namespace task_constructor
 }  // namespace moveit

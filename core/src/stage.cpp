@@ -381,6 +381,9 @@ uint32_t Stage::introspectionId() const {
 		throw std::runtime_error("Task is not initialized yet or Introspection was disabled.");
 	return const_cast<const moveit::task_constructor::Introspection*>(pimpl_->introspection_)->stageId(this);
 }
+Introspection* Stage::introspection() const {
+	return pimpl_->introspection_;
+}
 
 void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest) {
 	const PropertyMap& src = source.properties();
@@ -791,20 +794,29 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
 		InterfacePtr other_interface = pullInterface<dir>();
 		bool have_enabled_opposites = false;
+
+		// other interface states to re-enable (post-poned because otherwise order in other_interface changes during loop)
+		std::vector<Interface::iterator> oit_to_enable;
 		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
 			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
 				continue;
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
 			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
-			if (oit->priority().status() == InterfaceState::Status::ARMED)
-				parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+			if (oit->priority().status() == InterfaceState::Status::ARMED) {
+				oit_to_enable.push_back(oit);
+				have_enabled_opposites = true;
+			}
 			if (oit->priority().enabled())
 				have_enabled_opposites = true;
 
 			// Remember all pending states, regardless of their status!
 			pending.insert(make_pair<dir>(it, oit));
 		}
+		// actually re-enable other interface states, which were scheduled for re-enabling above
+		for (Interface::iterator oit : oit_to_enable)
+			parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+
 		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
 			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
 			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
@@ -823,7 +835,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
 	}
 	os << std::setw(15) << " ";
-	printPendingPairs(os) << std::endl;
+	os << pendingPairsPrinter() << std::endl;
 #endif
 }
 
@@ -853,6 +865,7 @@ template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const 
                                                                           const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
+	// ROS_DEBUG_STREAM("canCompute " << name() << ": " << pendingPairsPrinter());
 	// Do we still have feasible pending state pairs?
 	return !pending.empty() && pending.front().first->priority().enabled() &&
 	       pending.front().second->priority().enabled();
@@ -866,15 +879,16 @@ void ConnectingPrivate::compute() {
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
-std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& p) {
+	const auto* impl = p.instance_;
 	const char* reset = InterfaceState::colorForStatus(3);
-	for (const auto& candidate : pending) {
-		size_t first = getIndex(*starts(), candidate.first);
-		size_t second = getIndex(*ends(), candidate.second);
+	for (const auto& candidate : impl->pending) {
+		size_t first = getIndex(*impl->starts(), candidate.first);
+		size_t second = getIndex(*impl->ends(), candidate.second);
 		os << InterfaceState::colorForStatus(candidate.first->priority().status()) << first << reset << ":"
 		   << InterfaceState::colorForStatus(candidate.second->priority().status()) << second << reset << " ";
 	}
-	if (pending.empty())
+	if (impl->pending.empty())
 		os << "---";
 	return os;
 }
