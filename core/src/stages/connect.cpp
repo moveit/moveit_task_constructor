@@ -182,8 +182,13 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 				Eigen::Map<const Eigen::VectorXd> positions_last_waypoint(
 				    trajectory->getWayPoint(waypoint_count - 1).getJointPositions(jm), num);
 
+				double min_distance;
 				for (std::size_t i = 0; i < num; ++i) {
-					double min_distance = angles::shortest_angular_distance(positions_last_waypoint[i], positions_goal[i]);
+					if (jm->getType() == robot_state::JointModel::REVOLUTE)
+						min_distance = angles::shortest_angular_distance(positions_last_waypoint[i], positions_goal[i]);
+					else
+						min_distance = positions_last_waypoint[i], positions_goal[i];
+
 					ROS_DEBUG_STREAM_NAMED(
 					    "Connect", "angular deviation: " << min_distance << " between trajectory last waypoint and goal.");
 
