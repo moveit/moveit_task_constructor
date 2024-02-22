@@ -65,6 +65,9 @@ class Connect : public Connecting
 {
 protected:
 	bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const override;
+	bool validateEndTrajectoryDeviation(const moveit::core::JointModelGroup* jmg,
+	                                    const robot_trajectory::RobotTrajectoryPtr trajectory,
+	                                    const moveit::core::RobotState& goal_state, std::string& comment);
 
 public:
 	enum MergeMode

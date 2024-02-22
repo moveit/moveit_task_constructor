@@ -134,6 +134,51 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 	return true;
 }
 
+bool Connect::validateEndTrajectoryDeviation(const moveit::core::JointModelGroup* jmg,
+                                             const robot_trajectory::RobotTrajectoryPtr trajectory,
+                                             const moveit::core::RobotState& goal_state, std::string& comment) {
+	const std::size_t waypoint_count = trajectory->getWayPointCount();
+
+	if (!waypoint_count) {
+		comment = "Cannot validate end trajectory deviation with an empty trajectory";
+		return false;
+	}
+
+	for (const moveit::core::JointModel* jm : jmg->getJointModels()) {
+		const unsigned int num = jm->getVariableCount();
+
+		if (!num)
+			continue;
+
+		Eigen::Map<const Eigen::VectorXd> positions_goal(goal_state.getJointPositions(jm), num);
+		Eigen::Map<const Eigen::VectorXd> positions_last_waypoint(
+		    trajectory->getWayPoint(waypoint_count - 1).getJointPositions(jm), num);
+
+		double min_distance;
+		for (std::size_t i = 0; i < num; ++i) {
+			if (jm->getType() == robot_state::JointModel::REVOLUTE)
+				min_distance = angles::shortest_angular_distance(positions_last_waypoint[i], positions_goal[i]);
+			else
+				min_distance = positions_last_waypoint[i], positions_goal[i];
+
+			ROS_DEBUG_STREAM_NAMED("Connect",
+			                       "angular deviation: " << min_distance << " between trajectory last waypoint and goal.");
+
+			if (std::abs(min_distance) > 1e-4) {
+				std::stringstream ss;
+				ss << "Deviation in joint " << jm->getName() << ": [" << positions_last_waypoint.transpose() << "] != ["
+				   << positions_goal.transpose() << "]";
+				comment = ss.str();
+				ROS_ERROR_STREAM_NAMED("Connect", comment);
+
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
@@ -148,8 +193,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
-	bool deviation = false;
-	std::stringstream deviation_comment;
+	std::string deviation_comment;
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -168,48 +212,10 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		if (!success)
 			break;
 
-		// validate position deviation from trajectory last waypoint to goal
-		const std::size_t waypoint_count = trajectory->getWayPointCount();
+		// validate position deviation: trajectory last waypoint to goal
+		success = validateEndTrajectoryDeviation(jmg, trajectory, goal_state, deviation_comment);
 
-		if (waypoint_count) {
-			for (const moveit::core::JointModel* jm : jmg->getJointModels()) {
-				const unsigned int num = jm->getVariableCount();
-
-				if (!num)
-					continue;
-
-				Eigen::Map<const Eigen::VectorXd> positions_goal(goal_state.getJointPositions(jm), num);
-				Eigen::Map<const Eigen::VectorXd> positions_last_waypoint(
-				    trajectory->getWayPoint(waypoint_count - 1).getJointPositions(jm), num);
-
-				double min_distance;
-				for (std::size_t i = 0; i < num; ++i) {
-					if (jm->getType() == robot_state::JointModel::REVOLUTE)
-						min_distance = angles::shortest_angular_distance(positions_last_waypoint[i], positions_goal[i]);
-					else
-						min_distance = positions_last_waypoint[i], positions_goal[i];
-
-					ROS_DEBUG_STREAM_NAMED(
-					    "Connect", "angular deviation: " << min_distance << " between trajectory last waypoint and goal.");
-
-					if (std::abs(min_distance) > 1e-4) {
-						deviation_comment << "Deviation in joint " << jm->getName() << ": ["
-						                  << positions_last_waypoint.transpose() << "] != [" << positions_goal.transpose()
-						                  << "]";
-						ROS_ERROR_STREAM_NAMED("Connect", deviation_comment.str());
-
-						deviation = true;
-						success = false;
-						break;
-					}
-				}
-
-				if (deviation)
-					break;
-			}
-		}
-
-		if (deviation)
+		if (!success)
 			break;
 
 		// continue from reached state
@@ -223,8 +229,8 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
 		solution->markAsFailure();
-	if (deviation)  // deviation error
-		solution->setComment(deviation_comment.str());
+	if (!deviation_comment.empty())  // deviation error
+		solution->setComment(deviation_comment);
 	connect(from, to, solution);
 }
 
