@@ -159,7 +159,7 @@ bool Connect::validateEndTrajectoryDeviation(const moveit::core::JointModelGroup
 			if (jm->getType() == robot_state::JointModel::REVOLUTE)
 				min_distance = angles::shortest_angular_distance(positions_last_waypoint[i], positions_goal[i]);
 			else
-				min_distance = positions_last_waypoint[i], positions_goal[i];
+				min_distance = positions_last_waypoint[i] - positions_goal[i];
 
 			ROS_DEBUG_STREAM_NAMED("Connect",
 			                       "angular deviation: " << min_distance << " between trajectory last waypoint and goal.");
