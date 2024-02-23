@@ -67,7 +67,8 @@ protected:
 	bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const override;
 	bool validateEndTrajectoryDeviation(const moveit::core::JointModelGroup* jmg,
 	                                    const robot_trajectory::RobotTrajectoryPtr trajectory,
-	                                    const moveit::core::RobotState& goal_state, std::string& comment);
+	                                    const moveit::core::RobotState& goal_state, double max_joint_deviation,
+	                                    std::string& comment);
 
 public:
 	enum MergeMode
@@ -79,6 +80,7 @@ public:
 	using GroupPlannerVector = std::vector<std::pair<std::string, solvers::PlannerInterfacePtr> >;
 	Connect(const std::string& name = "connect", const GroupPlannerVector& planners = {});
 
+	void setMaxJointDeviation(double max_joint_deviation) { setProperty("max_joint_deviation", max_joint_deviation); }
 	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}

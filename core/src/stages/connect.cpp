@@ -57,6 +57,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
+	p.declare<double>("max_joint_deviation", 1e-4,
+	                  "maximum allowed joint position difference between end-state and goal-sate ");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
@@ -136,7 +138,8 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 
 bool Connect::validateEndTrajectoryDeviation(const moveit::core::JointModelGroup* jmg,
                                              const robot_trajectory::RobotTrajectoryPtr trajectory,
-                                             const moveit::core::RobotState& goal_state, std::string& comment) {
+                                             const moveit::core::RobotState& goal_state, double max_joint_deviation,
+                                             std::string& comment) {
 	const std::size_t waypoint_count = trajectory->getWayPointCount();
 
 	if (!waypoint_count) {
@@ -164,7 +167,7 @@ bool Connect::validateEndTrajectoryDeviation(const moveit::core::JointModelGroup
 			ROS_DEBUG_STREAM_NAMED("Connect",
 			                       "angular deviation: " << min_distance << " between trajectory last waypoint and goal.");
 
-			if (std::abs(min_distance) > 1e-4) {
+			if (std::abs(min_distance) > max_joint_deviation) {
 				std::stringstream ss;
 				ss << "Deviation in joint " << jm->getName() << ": [" << positions_last_waypoint.transpose() << "] != ["
 				   << positions_goal.transpose() << "]";
@@ -183,6 +186,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
 	MergeMode mode = props.get<MergeMode>("merge_mode");
+	double max_joint_deviation = props.get<double>("max_joint_deviation");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
@@ -213,7 +217,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 			break;
 
 		// validate position deviation: trajectory last waypoint to goal
-		success = validateEndTrajectoryDeviation(jmg, trajectory, goal_state, deviation_comment);
+		success = validateEndTrajectoryDeviation(jmg, trajectory, goal_state, max_joint_deviation, deviation_comment);
 
 		if (!success)
 			break;
