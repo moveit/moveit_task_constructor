@@ -55,6 +55,7 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
+	p.declare<double>("max_distance", 1e-4, "maximally accepted distance between end and goal sate");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
@@ -136,6 +137,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
 	MergeMode mode = props.get<MergeMode>("merge_mode");
+	double max_distance = props.get<double>("max_distance");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
@@ -146,6 +148,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
+	std::string comment;
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -164,6 +167,12 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		if (!success)
 			break;
 
+		if (trajectory->getLastWayPoint().distance(goal_state, jmg) > max_distance) {
+			success = false;
+			comment = "Trajectory end-point deviates too much from goal state";
+			break;
+		}
+
 		// continue from reached state
 		start = end;
 	}
@@ -174,7 +183,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (!solution)  // success == false or merging failed: store sequentially
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
-		solution->markAsFailure();
+		solution->markAsFailure(comment);
 	connect(from, to, solution);
 }
 
