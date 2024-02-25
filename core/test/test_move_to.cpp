@@ -3,8 +3,10 @@
 
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/stages/move_to.h>
+#include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
+#include <moveit/task_constructor/solvers/cartesian_path.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
@@ -149,7 +151,33 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 	EXPECT_ONE_SOLUTION;
 }
 
-// This test require a running rosmaster
+// Using a Cartesian interpolation planner targeting a joint-space goal, which is
+// transformed into a Cartesian goal by FK, should fail if the two poses are on different
+// IK solution branches. In this case, the end-state, although reaching the Cartesian goal,
+// will strongly deviate from the joint-space goal.
+TEST(Panda, connectCartesianBranchesFails) {
+	Task t;
+	t.setRobotModel(loadModel());
+	auto scene = std::make_shared<PlanningScene>(t.getRobotModel());
+	scene->getCurrentStateNonConst().setToDefaultValues();
+	scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "ready");
+	t.add(std::make_unique<stages::FixedState>("start", scene));
+
+	stages::Connect::GroupPlannerVector planner = { { "panda_arm", std::make_shared<solvers::CartesianPath>() } };
+	t.add(std::make_unique<stages::Connect>("connect", planner));
+
+	// target an elbow-left instead of an elbow-right solution (different solution branch)
+	scene = scene->diff();
+	scene->getCurrentStateNonConst().setJointGroupPositions(
+	    "panda_arm", std::vector<double>({ 2.72, 0.78, -2.63, -2.35, 0.36, 1.57, 0.48 }));
+
+	t.add(std::make_unique<stages::FixedState>("end", scene));
+	EXPECT_FALSE(t.plan());
+	EXPECT_STREQ(t.findChild("connect")->failures().front()->comment().c_str(),
+	             "Trajectory end-point deviates too much from goal state");
+}
+
+// This test requires a running rosmaster
 TEST(Task, taskMoveConstructor) {
 	auto create_task = [] {
 		moveit::core::RobotModelConstPtr robot_model = getModel();
