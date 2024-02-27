@@ -44,14 +44,9 @@ namespace stages {
 
 PropertyPassThrough::PropertyPassThrough(const std::string& name) : PropagatingEitherWay(name) {}
 
-void PropertyPassThrough::computeForward(const InterfaceState& from) {
-	planning_scene::PlanningScenePtr to = from.scene()->diff();
-	sendForward(from, InterfaceState(to), SubTrajectory());
-}
-
-void PropertyPassThrough::computeBackward(const InterfaceState& to) {
-	planning_scene::PlanningScenePtr from = to.scene()->diff();
-	sendBackward(InterfaceState(from), to, SubTrajectory());
+bool PropertyPassThrough::compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+                                  SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) {
+	return true;
 }
 
 }  // namespace stages

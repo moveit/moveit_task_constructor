@@ -52,8 +52,8 @@ class PropertyPassThrough : public PropagatingEitherWay
 public:
 	PropertyPassThrough(const std::string& name = "property passthrough");
 
-	void computeForward(const InterfaceState& from) override;
-	void computeBackward(const InterfaceState& to) override;
+	bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+	             SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) override;
 };
 }  // namespace stages
 }  // namespace task_constructor
