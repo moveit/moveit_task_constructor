@@ -10,7 +10,6 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 	Eigen3
 	geometry_msgs
 	rclcpp
-	rviz2
 	tf2_eigen
 	urdfdom_headers
 	visualization_msgs

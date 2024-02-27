@@ -15,7 +15,6 @@
 	<depend>geometry_msgs</depend>
 	<depend>moveit_common</depend>
 	<depend>rclcpp</depend>
-	<depend>rviz2</depend>
 	<depend>tf2_eigen</depend>
 	<depend>urdfdom_headers</depend>
 	<depend>visualization_msgs</depend>
