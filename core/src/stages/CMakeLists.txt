@@ -10,6 +10,7 @@ add_library(${PROJECT_NAME}_stages
 	${PROJECT_INCLUDE}/stages/generate_place_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 	${PROJECT_INCLUDE}/stages/passthrough.h
+	${PROJECT_INCLUDE}/stages/property_passthrough.h
 	${PROJECT_INCLUDE}/stages/predicate_filter.h
 
 	${PROJECT_INCLUDE}/stages/connect.h
@@ -30,6 +31,7 @@ add_library(${PROJECT_NAME}_stages
 	generate_place_pose.cpp
 	compute_ik.cpp
 	passthrough.cpp
+	property_passthrough.cpp
 	predicate_filter.cpp
 
 	connect.cpp
