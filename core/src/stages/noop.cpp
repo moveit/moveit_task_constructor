@@ -2,7 +2,6 @@
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2017, Bielefeld University
- *  Copyright (c) 2017, Hamburg University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,29 +31,24 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+
 /* Authors: Captain Yoshi */
 
-#pragma once
+#include <moveit/task_constructor/stages/noop.h>
 
-#include <moveit/task_constructor/stage.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-/** Generic passthrough Propagator for storing user defined properties
- *
- * Useful for post-planning purposes
- */
+NoOp::NoOp(const std::string& name) : PropagatingEitherWay(name) {}
 
-class PropertyPassThrough : public PropagatingEitherWay
-{
-public:
-	PropertyPassThrough(const std::string& name = "property passthrough");
+bool NoOp::compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+                   SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) {
+	return true;
+}
 
-	bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
-	             SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) override;
-};
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit
