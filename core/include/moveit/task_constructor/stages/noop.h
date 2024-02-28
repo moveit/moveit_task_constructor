@@ -50,10 +50,11 @@ namespace stages {
 class NoOp : public PropagatingEitherWay
 {
 public:
-	NoOp(const std::string& name = "no-op");
+	inline NoOp(const std::string& name = "no-op");
 
-	bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
-	             SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) override;
+private:
+	inline bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
+	                    SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) override;
 };
 }  // namespace stages
 }  // namespace task_constructor
