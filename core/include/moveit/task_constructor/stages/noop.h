@@ -42,9 +42,9 @@ namespace moveit {
 namespace task_constructor {
 namespace stages {
 
-/** Generic no-op stage for storing user defined properties
- *
- * Useful for post-planning purposes
+/** no-op stage, which doesn't modify the interface state nor adds a trajectory.
+ *  However, it can be used to store custom stage properties,
+ *  which in turn can be queried post-planning to steer the execution.
  */
 
 class NoOp : public PropagatingEitherWay
