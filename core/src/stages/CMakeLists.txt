@@ -31,7 +31,6 @@ add_library(${PROJECT_NAME}_stages
 	generate_place_pose.cpp
 	compute_ik.cpp
 	passthrough.cpp
-	noop.cpp
 	predicate_filter.cpp
 
 	connect.cpp
