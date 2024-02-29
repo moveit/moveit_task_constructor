@@ -5,7 +5,6 @@ find_package(catkin REQUIRED COMPONENTS
 	geometry_msgs
 	visualization_msgs
 	roscpp
-	rviz
 	tf2_eigen
 )
 
@@ -18,7 +17,6 @@ catkin_package(
 		geometry_msgs
 		visualization_msgs
 		roscpp
-		rviz
 )
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})

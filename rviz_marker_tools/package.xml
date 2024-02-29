@@ -12,6 +12,5 @@
 	<depend>visualization_msgs</depend>
 	<depend>geometry_msgs</depend>
 	<depend>roscpp</depend>
-	<depend>rviz</depend>
 	<depend>tf2_eigen</depend>
 </package>
