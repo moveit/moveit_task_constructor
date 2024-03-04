@@ -36,6 +36,7 @@
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -52,8 +53,9 @@ public:
 	NoOp(const std::string& name = "no-op") : PropagatingEitherWay(name){};
 
 private:
-	bool compute(const InterfaceState& /*state*/, planning_scene::PlanningScenePtr& /*scene*/,
-	             SubTrajectory& /*trajectory*/, Interface::Direction /*dir*/) override {
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& /*trajectory*/,
+	             Interface::Direction /*dir*/) override {
+		scene = state.scene()->diff();
 		return true;
 	};
 };
