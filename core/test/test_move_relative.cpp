@@ -154,6 +154,39 @@ TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateAttachedIKFrame) {
 	EXPECT_CONST_POSITION(move->solutions().front(), attached_object);
 }
 
+// Issue #338
+// ----------
+// Using a Cartesian interpolation planner with a collision in it's trajectory
+// should fail. This is not the case when setting the min/max cartesian distance
+// with the Pilz Industiral Motion Planner. The invalid motion plan, which is
+// detected, is marked as successfull if the minimum distance has been reached.
+// Unlike MoveIt Cartesian Interpolator, the Pilz Industrial Motion Planner does
+// not check for collision by default. This results in the trajectory still
+// containing waypoints that are in collision.
+TEST_F(PandaMoveRelative_PilzIndustrialMotionPlanner, cartesianPilzCollisionMinMaxDistance) {
+	planner->setPlannerId("LIN");
+	planner->setProperty("max_velocity_scaling_factor", 0.1);
+	planner->setProperty("max_acceleration_scaling_factor", 0.1);
+
+	const std::string object{ "object" };
+	geometry_msgs::Pose object_pose;
+	object_pose.position.z = 0.01;
+	object_pose.orientation.w = 1.0;
+
+	scene->processCollisionObjectMsg(createObject(object, object_pose));
+
+	move->setIKFrame("panda_hand");
+	move->setMinMaxDistance(0.01, 0.1);
+	move->setDirection([] {
+		geometry_msgs::Vector3Stamped vector3;
+		vector3.header.frame_id = "panda_hand";
+		vector3.vector.z = 1.0;
+		return vector3;
+	}());
+
+	ASSERT_FALSE(t.plan()) << "Plan has succeeded";
+}
+
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "move_relative_test");
