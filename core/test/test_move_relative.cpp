@@ -4,6 +4,7 @@
 #include <moveit/task_constructor/stages/move_relative.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
 #include <moveit/task_constructor/solvers/cartesian_path.h>
+#include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
@@ -51,6 +52,12 @@ struct PandaMoveRelative : public testing::Test
 struct PandaMoveRelative_CartesianPath : public PandaMoveRelative<solvers::CartesianPath>
 {
 	PandaMoveRelative_CartesianPath() : PandaMoveRelative(std::make_shared<solvers::CartesianPath>()) {}
+};
+
+struct PandaMoveRelative_PilzIndustrialMotionPlanner : public PandaMoveRelative<solvers::PipelinePlanner>
+{
+	PandaMoveRelative_PilzIndustrialMotionPlanner()
+	  : PandaMoveRelative(std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner")) {}
 };
 
 moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id) {
