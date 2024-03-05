@@ -60,13 +60,12 @@ struct PandaMoveRelative_PilzIndustrialMotionPlanner : public PandaMoveRelative<
 	  : PandaMoveRelative(std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner")) {}
 };
 
-moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id) {
-	moveit_msgs::AttachedCollisionObject aco;
-	aco.link_name = "panda_hand";
-	aco.object.header.frame_id = aco.link_name;
-	aco.object.operation = aco.object.ADD;
-	aco.object.id = id;
-	aco.object.primitives.resize(1, [] {
+moveit_msgs::CollisionObject createObject(const std::string& id, const geometry_msgs::Pose& pose) {
+	moveit_msgs::CollisionObject co;
+	co.header.frame_id = "panda_hand";
+	co.operation = co.ADD;
+	co.id = id;
+	co.primitives.resize(1, [] {
 		shape_msgs::SolidPrimitive p;
 		p.type = p.SPHERE;
 		p.dimensions.resize(1);
@@ -74,10 +73,23 @@ moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id)
 		return p;
 	}());
 
+	co.pose = pose;
+	return co;
+}
+
+moveit_msgs::CollisionObject createObject(const std::string& id) {
 	geometry_msgs::Pose p;
 	p.position.x = 0.1;
 	p.orientation.w = 1.0;
-	aco.object.pose = p;
+
+	return createObject(id, p);
+}
+
+moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id) {
+	moveit_msgs::AttachedCollisionObject aco;
+	aco.link_name = "panda_hand";
+	aco.object = createObject(id);
+
 	return aco;
 }
 
