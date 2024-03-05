@@ -21,15 +21,17 @@ constexpr double TAU{ 2 * M_PI };
 constexpr double EPS{ 5e-5 };
 
 // provide a basic test fixture that prepares a Task
+template <typename Planner>
 struct PandaMoveRelative : public testing::Test
 {
 	Task t;
 	stages::MoveRelative* move;
 	PlanningScenePtr scene;
+	std::shared_ptr<Planner> planner;
 
 	const JointModelGroup* group;
 
-	PandaMoveRelative() {
+	PandaMoveRelative(std::shared_ptr<Planner> planner) : planner(planner) {
 		t.setRobotModel(loadModel());
 
 		group = t.getRobotModel()->getJointModelGroup("panda_arm");
@@ -39,11 +41,16 @@ struct PandaMoveRelative : public testing::Test
 		scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "ready");
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
-		auto move_relative = std::make_unique<stages::MoveRelative>("move", std::make_shared<solvers::CartesianPath>());
+		auto move_relative = std::make_unique<stages::MoveRelative>("move", planner);
 		move_relative->setGroup(group->getName());
 		move = move_relative.get();
 		t.add(std::move(move_relative));
 	}
+};
+
+struct PandaMoveRelative_CartesianPath : public PandaMoveRelative<solvers::CartesianPath>
+{
+	PandaMoveRelative_CartesianPath() : PandaMoveRelative(std::make_shared<solvers::CartesianPath>()) {}
 };
 
 moveit_msgs::AttachedCollisionObject createAttachedObject(const std::string& id) {
@@ -85,7 +92,7 @@ void expect_const_position(const SolutionBaseConstPtr& solution, const std::stri
 		expect_const_position(__VA_ARGS__);                         \
 	}
 
-TEST_F(PandaMoveRelative, cartesianRotateEEF) {
+TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateEEF) {
 	move->setDirection([] {
 		geometry_msgs::TwistStamped twist;
 		twist.header.frame_id = "world";
@@ -97,7 +104,7 @@ TEST_F(PandaMoveRelative, cartesianRotateEEF) {
 	EXPECT_CONST_POSITION(move->solutions().front(), group->getOnlyOneEndEffectorTip()->getName());
 }
 
-TEST_F(PandaMoveRelative, cartesianCircular) {
+TEST_F(PandaMoveRelative_CartesianPath, cartesianCircular) {
 	const std::string tip = "panda_hand";
 	auto offset = Eigen::Translation3d(0, 0, 0.1);
 	move->setIKFrame(offset, tip);
@@ -112,7 +119,7 @@ TEST_F(PandaMoveRelative, cartesianCircular) {
 	EXPECT_CONST_POSITION(move->solutions().front(), tip, Eigen::Isometry3d(offset));
 }
 
-TEST_F(PandaMoveRelative, cartesianRotateAttachedIKFrame) {
+TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateAttachedIKFrame) {
 	const std::string attached_object{ "attached_object" };
 	scene->processAttachedCollisionObjectMsg(createAttachedObject(attached_object));
 	move->setIKFrame(attached_object);
