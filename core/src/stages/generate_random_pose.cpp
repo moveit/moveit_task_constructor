@@ -57,9 +57,8 @@ namespace stages {
 
 GenerateRandomPose::GenerateRandomPose(const std::string& name) : GeneratePose(name) {
 	auto& p = properties();
-	p.declare<geometry_msgs::PoseStamped>("pose", "target pose to pass on in spawned states");
-	p.declare<size_t>("max_solutions", 20,
-	                  "limit of the number of spawned solution in case randomized sampling is enabled");
+	p.declare<size_t>("max_solutions", 20, "maximum number of spawned solutions");
+	p.property("pose").setDescription("seed pose");
 	p.property("timeout").setDefaultValue(1.0 /* seconds */);
 }
 
