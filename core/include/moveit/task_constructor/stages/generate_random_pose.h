@@ -54,10 +54,8 @@ public:
 	bool canCompute() const override;
 	void compute() override;
 
-	/*
-	 * Function specification for pose dimension samplers.
-	 * The input parameter is the target_pose value used as seed, the returned value is the sampling result.
-	 * */
+	/** Function signature for pose dimension samplers.
+	 * The input parameter is the seed, the returned value is the sampling result. */
 	typedef std::function<double(double)> PoseDimensionSampler;
 	enum PoseDimension
 	{
@@ -69,40 +67,34 @@ public:
 		YAW
 	};
 
-	/*
-	 * Configure a RandomNumberDistribution (see https://en.cppreference.com/w/cpp/numeric/random) sampler for a
-	 * PoseDimension (X/Y/Z/ROLL/PITCH/YAW) for randomizing the pose.
-	 * The distribution_param is applied to the specified distribution method while the target pose value is used as
-	 * seed. The order in which the PoseDimension samplers are specified matters as the samplers are applied in sequence.
+	/** Configure a RandomNumberDistribution sampler for a PoseDimension (X/Y/Z/ROLL/PITCH/YAW)
+	 *
+	 * RandomNumberDistribution is a template class that generates random numbers according to a specific distribution
+	 * (see https://en.cppreference.com/w/cpp/numeric/random).
+	 * Supported distributions are: std::normal_distribution and std::uniform_real_distribution.
+	 * The width parameter specifies the standard deviation resp. the range of the uniform distribution.
+	 *
+	 * The order in which the PoseDimension samplers are specified matters as the samplers are applied in sequence.
 	 * That way it's possible to implement different Euler angles (i.e. XYZ, ZXZ, YXY) or even construct more complex
 	 * sampling regions by applying translations after rotations.
-	 * Currently supported distributions are:
-	 * * std::uniform_real_distrubtion: distribution_param specifies the full value range around the target_pose value
-	 * * std::normal_distribution: distribution_param is used as stddev, target_pose value is mean
-	 *
-	 * Other distributions can be used by setting the PoseDimensionSampler directly using the function overload.
 	 */
 	template <template <class Realtype = double> class RandomNumberDistribution>
-	void sampleDimension(const PoseDimension pose_dimension, double distribution_param) {
-		sampleDimension(pose_dimension, getPoseDimensionSampler<RandomNumberDistribution>(distribution_param));
+	void sampleDimension(const PoseDimension pose_dimension, double width) {
+		sampleDimension(pose_dimension, getPoseDimensionSampler<RandomNumberDistribution>(width));
 	}
 
-	/*
-	 * Specify a sampling function of type PoseDimensionSampler for randomizing a pose dimension.
-	 */
+	/** Specify a sampling function of type PoseDimensionSampler for randomizing a pose dimension. */
 	void sampleDimension(const PoseDimension pose_dimension, const PoseDimensionSampler& pose_dimension_sampler) {
 		pose_dimension_samplers_.emplace_back(std::make_pair(pose_dimension, pose_dimension_sampler));
 	}
 
-	/*
-	 * Limits the number of generated solutions
-	 */
+	/** Limit the number of generated solutions */
 	void setMaxSolutions(size_t max_solutions) { setProperty("max_solutions", max_solutions); }
 
 private:
-	/* \brief Allocate the sampler function for the specified random distribution */
+	/** Allocate the sampler function for the specified random distribution */
 	template <template <class Realtype = double> class RandomNumberDistribution>
-	PoseDimensionSampler getPoseDimensionSampler(double /* distribution_param */) {
+	PoseDimensionSampler getPoseDimensionSampler(double /* width */) {
 		static_assert(sizeof(RandomNumberDistribution<double>) == -1, "This distribution type is not supported!");
 		throw 0;  // suppress -Wreturn-type
 	}

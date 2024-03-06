@@ -90,11 +90,11 @@ void GenerateRandomPose::compute() {
 		return;
 
 	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
-	geometry_msgs::PoseStamped target_pose = properties().get<geometry_msgs::PoseStamped>("pose");
-	if (target_pose.header.frame_id.empty())
-		target_pose.header.frame_id = scene->getPlanningFrame();
-	else if (!scene->knowsFrameTransform(target_pose.header.frame_id)) {
-		ROS_WARN_NAMED("GenerateRandomPose", "Unknown frame: '%s'", target_pose.header.frame_id.c_str());
+	geometry_msgs::PoseStamped seed_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	if (seed_pose.header.frame_id.empty())
+		seed_pose.header.frame_id = scene->getPlanningFrame();
+	else if (!scene->knowsFrameTransform(seed_pose.header.frame_id)) {
+		ROS_WARN_NAMED("GenerateRandomPose", "Unknown frame: '%s'", seed_pose.header.frame_id.c_str());
 		return;
 	}
 
@@ -110,23 +110,22 @@ void GenerateRandomPose::compute() {
 		spawn(std::move(state), std::move(trajectory));
 	};
 
-	// Spawn initial pose
-	spawn_target_pose(target_pose);
+	spawn_target_pose(seed_pose);
 
 	if (pose_dimension_samplers_.empty())
 		return;
 
-	// Use target pose as seed pose
-	geometry_msgs::PoseStamped seed_pose = target_pose;
+	geometry_msgs::PoseStamped sample_pose = seed_pose;
 	Eigen::Isometry3d seed, sample;
 	tf2::fromMsg(seed_pose.pose, seed);
 	double elapsed_time = 0.0;
 	const auto start_time = std::chrono::steady_clock::now();
 	size_t spawned_solutions = 0;
 	const size_t max_solutions = properties().get<size_t>("max_solutions");
+
 	while (elapsed_time < timeout() && ++spawned_solutions < max_solutions) {
-		// Randomize pose using specified dimension samplers applied in the order
-		// in which they have been specified
+		// Randomize pose using specified dimension samplers applied
+		// in the order in which they have been specified
 		sample = seed;
 		for (const auto& pose_dim_sampler : pose_dimension_samplers_) {
 			switch (pose_dim_sampler.first) {
@@ -149,10 +148,8 @@ void GenerateRandomPose::compute() {
 					sample.rotate(Eigen::AngleAxisd(pose_dim_sampler.second(0.0), Eigen::Vector3d::UnitZ()));
 			}
 		}
-		target_pose.pose = tf2::toMsg(sample);
-
-		// Spawn sampled pose
-		spawn_target_pose(target_pose);
+		sample_pose.pose = tf2::toMsg(sample);
+		spawn_target_pose(sample_pose);
 
 		elapsed_time = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
 	}
