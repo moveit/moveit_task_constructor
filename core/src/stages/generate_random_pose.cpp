@@ -88,7 +88,8 @@ void GenerateRandomPose::compute() {
 	if (upstream_solutions_.empty())
 		return;
 
-	planning_scene::PlanningScenePtr scene = upstream_solutions_.pop()->end()->scene()->diff();
+	const SolutionBase& s = *upstream_solutions_.pop();
+	planning_scene::PlanningScenePtr scene = s.end()->scene()->diff();
 	geometry_msgs::PoseStamped seed_pose = properties().get<geometry_msgs::PoseStamped>("pose");
 	if (seed_pose.header.frame_id.empty())
 		seed_pose.header.frame_id = scene->getPlanningFrame();
@@ -99,6 +100,7 @@ void GenerateRandomPose::compute() {
 
 	const auto& spawn_target_pose = [&](const geometry_msgs::PoseStamped& target_pose) {
 		InterfaceState state(scene);
+		forwardProperties(*s.end(), state);  // forward registered properties from received solution
 		state.properties().set("target_pose", target_pose);
 
 		SubTrajectory trajectory;
