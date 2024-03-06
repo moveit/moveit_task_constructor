@@ -187,6 +187,28 @@ TEST_F(PandaMoveRelative_PilzIndustrialMotionPlanner, cartesianPilzCollisionMinM
 	ASSERT_FALSE(t.plan()) << "Plan has succeeded";
 }
 
+// Set a collision at the end of the trajectory. The plan will succeed
+// because the minimum distance is cleared.
+TEST_F(PandaMoveRelative_CartesianPath, cartesianCollisionMinMaxDistance) {
+	const std::string object{ "object" };
+	geometry_msgs::Pose object_pose;
+	object_pose.position.z = 0.4;
+	object_pose.orientation.w = 1.0;
+
+	scene->processCollisionObjectMsg(createObject(object, object_pose));
+
+	move->setIKFrame("panda_hand");
+	move->setMinMaxDistance(0.01, 0.5);
+	move->setDirection([] {
+		geometry_msgs::Vector3Stamped vector3;
+		vector3.header.frame_id = "panda_hand";
+		vector3.vector.z = 1.0;
+		return vector3;
+	}());
+
+	ASSERT_TRUE(t.plan()) << "Failed to plan";
+}
+
 int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "move_relative_test");
