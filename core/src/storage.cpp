@@ -226,6 +226,8 @@ void SubTrajectory::appendTo(moveit_task_constructor_msgs::Solution& msg, Intros
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
+	t.execution_info = creator()->trajectoryExecutionInfo();
+
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
