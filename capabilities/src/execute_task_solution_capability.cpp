@@ -85,12 +85,12 @@ void ExecuteTaskSolutionCapability::initialize() {
 	// configure the action server
 	as_.reset(new actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>(
 	    root_node_handle_, "execute_task_solution",
-	    std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1), false));
+	    std::bind(&ExecuteTaskSolutionCapability::execCallback, this, std::placeholders::_1), false));
 	as_->registerPreemptCallback(std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this));
 	as_->start();
 }
 
-void ExecuteTaskSolutionCapability::goalCallback(
+void ExecuteTaskSolutionCapability::execCallback(
     const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal) {
 	moveit_task_constructor_msgs::ExecuteTaskSolutionResult result;
 

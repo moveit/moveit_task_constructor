@@ -61,7 +61,7 @@ private:
 	bool constructMotionPlan(const moveit_task_constructor_msgs::Solution& solution,
 	                         plan_execution::ExecutableMotionPlan& plan);
 
-	void goalCallback(const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal);
+	void execCallback(const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal);
 	void preemptCallback();
 
 	std::unique_ptr<actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>> as_;
