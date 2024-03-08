@@ -170,11 +170,15 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.controller_names_ = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this, sub_traj,
+		exec_traj.effect_on_success_ = [this,
+		                                &scene_diff = const_cast<::moveit_msgs::PlanningScene&>(sub_traj.scene_diff),
 		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
+			scene_diff.robot_state.joint_state = sensor_msgs::JointState();
+			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::MultiDOFJointState();
+
+			if (!moveit::core::isEmpty(scene_diff)) {
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+				return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
 			}
 			return true;
 		};
