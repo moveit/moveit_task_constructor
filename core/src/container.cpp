@@ -67,7 +67,7 @@ printChildrenInterfaces(const ContainerBasePrivate& container, bool success, con
 	if (success)
 		os << ++id << ' ';
 	if (const auto conn = dynamic_cast<const ConnectingPrivate*>(creator.pimpl()))
-		conn->printPendingPairs(os);
+		os << conn->pendingPairsPrinter();
 	os << std::endl;
 
 	for (const auto& child : container.children()) {
@@ -488,7 +488,8 @@ struct SolutionCollector
 			solutions.emplace_back(std::make_pair(trace, prio));
 		} else {
 			for (SolutionBase* successor : next) {
-				assert(!successor->isFailure());  // We shouldn't have invalid solutions
+				if (successor->isFailure())
+					continue;  // skip failures
 				trace.push_back(successor);
 				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
 				trace.pop_back();
@@ -878,6 +879,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 
 inline void Fallbacks::replaceImpl() {
 	FallbacksPrivate *impl = pimpl();
+	if (pimpl()->interfaceFlags() == pimpl()->requiredInterface())
+		return;
 	switch (pimpl()->requiredInterface()) {
 		case GENERATE:
 			impl = new FallbacksPrivateGenerator(std::move(*impl));

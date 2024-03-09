@@ -48,6 +48,7 @@
 
 #include <functional>
 
+using namespace std::chrono_literals;
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor.task");
 
 namespace {
@@ -276,7 +277,10 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	auto node = rclcpp::Node::make_shared("_", options);
 	auto ac = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node, "execute_task_solution");
-	ac->wait_for_action_server();
+	if (!ac->wait_for_action_server(0.5s)) {
+		RCLCPP_ERROR(node->get_logger(), "Failed to connect to the 'execute_task_solution' action server");
+		return moveit::core::MoveItErrorCode::FAILURE;
+	}
 
 	moveit_task_constructor_msgs::action::ExecuteTaskSolution::Goal goal;
 	s.toMsg(goal.solution, pimpl()->introspection_.get());

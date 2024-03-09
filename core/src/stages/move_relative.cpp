@@ -195,10 +195,14 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string comment = "";
 
 	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 		solution.setPlannerId(planner_->getPlannerId());
 	} else {
 		// Cartesian targets require an IK reference frame
@@ -286,8 +290,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		// offset from link to ik_frame
 		const Eigen::Isometry3d& offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
-		success =
+		auto result =
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 		solution.setPlannerId(planner_->getPlannerId());
 
 		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
@@ -332,7 +339,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		solution.setTrajectory(robot_trajectory);
 
 		if (!success)
-			solution.markAsFailure();
+			solution.markAsFailure(comment);
 		return true;
 	}
 	return false;

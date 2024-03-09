@@ -115,10 +115,10 @@ public:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
 	 */
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	          const core::JointModelGroup* joint_model_group, double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	            const core::JointModelGroup* joint_model_group, double timeout,
+	            robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 	/** \brief Plan a trajectory from a planning scene 'from' to a Cartesian target pose with an offset
 	 * \param [in] from Start planning scene
@@ -131,11 +131,11 @@ public:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true If the solver found a successful solution for the given planning problem
 	 */
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-	          const moveit::core::JointModelGroup* joint_model_group, double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	            const moveit::core::JointModelGroup* joint_model_group, double timeout,
+	            robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 	std::string getPlannerId() const override { return last_successful_planner_; }
 
@@ -149,11 +149,11 @@ protected:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true if the solver found a successful solution for the given planning problem
 	 */
-	bool plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
-	          const moveit::core::JointModelGroup* joint_model_group,
-	          const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints());
+	Result plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
+	            const moveit::core::JointModelGroup* joint_model_group,
+	            const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
+	            robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints());
 
 	rclcpp::Node::SharedPtr node_;
 

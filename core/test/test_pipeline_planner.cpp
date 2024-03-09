@@ -20,10 +20,8 @@ struct PipelinePlannerTest : public testing::Test
 TEST_F(PipelinePlannerTest, testInitialization) {
 	// GIVEN a valid robot model, ROS node and PipelinePlanner
 	auto pipeline_planner = solvers::PipelinePlanner(node, "STOMP", "stomp");
-	// WHEN a PipelinePlanner instance is initialized
-	// THEN it does not throw
+	// WHEN a PipelinePlanner instance is initialized THEN it does not throw
 	EXPECT_NO_THROW(pipeline_planner.init(robot_model));
-	EXPECT_EQ(pipeline_planner.getPlannerId(), "Unknown");
 }
 
 TEST_F(PipelinePlannerTest, testWithoutPlanningPipelines) {

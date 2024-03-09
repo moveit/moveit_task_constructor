@@ -50,6 +50,8 @@
 #include <boost/bimap.hpp>
 #include <rcutils/isalnum_no_locale.h>
 
+static auto LOGGER = rclcpp::get_logger("introspection");
+
 namespace moveit {
 namespace task_constructor {
 
@@ -242,6 +244,9 @@ uint32_t Introspection::stageId(const Stage* const s) const {
 
 uint32_t Introspection::solutionId(const SolutionBase& s) {
 	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
+	if (result.second)  // new entry
+		RCLCPP_DEBUG_STREAM(LOGGER, "new solution #" << result.first->first << " (" << s.creator()->name()
+		                                             << "): " << s.cost() << " " << s.comment());
 	return result.first->first;
 }
 

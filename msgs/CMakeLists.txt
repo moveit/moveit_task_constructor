@@ -9,23 +9,24 @@ find_package(visualization_msgs REQUIRED)
 
 # ROS messages, services and actions
 set(msg_files
-	"msg/Property.msg"
-	"msg/Solution.msg"
-	"msg/SolutionInfo.msg"
-	"msg/StageDescription.msg"
-	"msg/StageStatistics.msg"
-	"msg/SubSolution.msg"
-	"msg/SubTrajectory.msg"
-	"msg/TaskDescription.msg"
-	"msg/TaskStatistics.msg"
+	msg/Property.msg
+	msg/Solution.msg
+	msg/SolutionInfo.msg
+	msg/StageDescription.msg
+	msg/StageStatistics.msg
+	msg/SubSolution.msg
+	msg/SubTrajectory.msg
+	msg/TaskDescription.msg
+	msg/TaskStatistics.msg
+	msg/TrajectoryExecutionInfo.msg
 )
 
 set(srv_files
-	"srv/GetSolution.srv"
+	srv/GetSolution.srv
 )
 
 set(action_files
-	"action/ExecuteTaskSolution.action"
+	action/ExecuteTaskSolution.action
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}

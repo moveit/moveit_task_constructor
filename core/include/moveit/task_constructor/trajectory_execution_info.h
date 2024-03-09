@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Bielefeld University
+ *  Copyright (c) 2022, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of PickNik Inc. nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,43 +32,14 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Robert Haschke
-   Desc:    plan using MoveIt's PlanningPipeline
-*/
+/* Authors: Joe Schornak, Sebastian Jahr */
 
 #pragma once
 
-#include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/macros/class_forward.h>
+#include <moveit_task_constructor_msgs/msg/trajectory_execution_info.hpp>
 
 namespace moveit {
 namespace task_constructor {
-namespace solvers {
-
-MOVEIT_CLASS_FORWARD(JointInterpolationPlanner);
-
-/** Interpolate a trajectory between states in joint space
- *
- * Fails if direct joint space interpolation fails.
- */
-class JointInterpolationPlanner : public PlannerInterface
-{
-public:
-	JointInterpolationPlanner();
-
-	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-
-	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	            const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
-
-	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
-
-	std::string getPlannerId() const override { return "JointInterpolationPlanner"; }
-};
-}  // namespace solvers
+using TrajectoryExecutionInfo = moveit_task_constructor_msgs::msg::TrajectoryExecutionInfo;
 }  // namespace task_constructor
 }  // namespace moveit

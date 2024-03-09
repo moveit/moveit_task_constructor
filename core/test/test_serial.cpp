@@ -9,7 +9,6 @@
 #include "models.h"
 #include <list>
 #include <memory>
-#include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;
 using namespace planning_scene;
@@ -56,13 +55,7 @@ TEST_F(ConnectConnect, SuccSucc) {
 	add(t, new GeneratorMockup({ 0.0 }));
 
 	EXPECT_TRUE(t.plan());
-	ASSERT_EQ(t.solutions().size(), 3u * 2u);
-	std::vector<double> expected_costs = { 11, 12, 13, 21, 22, 23 };
-	auto expected_cost = expected_costs.begin();
-	for (const auto& s : t.solutions()) {
-		EXPECT_EQ(s->cost(), *expected_cost);
-		++expected_cost;
-	}
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(11, 12, 13, 21, 22, 23));
 }
 
 // https://github.com/ros-planning/moveit_task_constructor/issues/218
@@ -75,4 +68,18 @@ TEST_F(ConnectConnect, FailSucc) {
 	add(t, new ForwardMockup(PredefinedCosts::constant(0.0), 0));
 
 	EXPECT_FALSE(t.plan());
+}
+
+// https://github.com/ros-planning/moveit_task_constructor/issues/485#issuecomment-1760606116
+TEST_F(ConnectConnect, UniqueEnumeration) {
+	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
+	auto con1 = add(t, new ConnectMockup());
+	add(t, new GeneratorMockup({ 10.0, 20.0 }));
+	auto con2 = add(t, new ConnectMockup({ INF, 0.0, 0.0, 0.0 }));
+	add(t, new GeneratorMockup({ 100.0, 200.0 }));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(121, 122, 123, 211, 212, 213, 221, 222, 223));
+	EXPECT_EQ(con1->runs_, 3u * 2u);
+	EXPECT_EQ(con2->runs_, 2u * 2u);
 }
