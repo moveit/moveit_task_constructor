@@ -3,8 +3,6 @@
 
 #include "stage_mockups.h"
 
-#include <gtest/gtest.h>
-
 namespace moveit {
 namespace task_constructor {
 

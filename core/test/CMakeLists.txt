@@ -38,7 +38,7 @@ if (CATKIN_ENABLE_TESTING)
 	mtc_add_gtest(test_stage.cpp)
 	mtc_add_gtest(test_container.cpp)
 	mtc_add_gmock(test_serial.cpp)
-	mtc_add_gtest(test_pruning.cpp)
+	mtc_add_gmock(test_pruning.cpp)
 	mtc_add_gtest(test_properties.cpp)
 	mtc_add_gtest(test_cost_terms.cpp)
 

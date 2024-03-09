@@ -90,7 +90,7 @@ void GenerateRandomPose::compute() {
 
 	const SolutionBase& s = *upstream_solutions_.pop();
 	planning_scene::PlanningScenePtr scene = s.end()->scene()->diff();
-	geometry_msgs::PoseStamped seed_pose = properties().get<geometry_msgs::PoseStamped>("pose");
+	auto seed_pose = properties().get<geometry_msgs::PoseStamped>("pose");
 	if (seed_pose.header.frame_id.empty())
 		seed_pose.header.frame_id = scene->getPlanningFrame();
 	else if (!scene->knowsFrameTransform(seed_pose.header.frame_id)) {
@@ -116,7 +116,7 @@ void GenerateRandomPose::compute() {
 	if (pose_dimension_samplers_.empty())
 		return;
 
-	geometry_msgs::PoseStamped sample_pose = seed_pose;
+	auto sample_pose = seed_pose;
 	Eigen::Isometry3d seed, sample;
 	tf2::fromMsg(seed_pose.pose, seed);
 	double elapsed_time = 0.0;
