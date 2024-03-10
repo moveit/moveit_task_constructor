@@ -23,7 +23,8 @@ task.add(currentState)
 
 # Create a planner instance that is used to connect
 # the current state to the grasp approach pose
-pipelinePlanner = core.PipelinePlanner(node, "ompl", "RRTConnectkConfigDefault")
+pipelinePlanner = core.PipelinePlanner(node)
+pipelinePlanner.planner = "RRTConnectkConfigDefault"
 planners = [(group, pipelinePlanner)]
 
 # Connect the two stages
