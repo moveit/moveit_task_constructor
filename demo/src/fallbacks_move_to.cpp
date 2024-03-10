@@ -37,12 +37,14 @@ int main(int argc, char** argv) {
 	cartesian->setJumpThreshold(2.0);
 
 	const auto ptp = [&node]() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>(node, "pilz_industrial_motion_planner", "PTP") };
+		auto pp{ std::make_shared<solvers::PipelinePlanner>(node, "pilz_industrial_motion_planner") };
+		pp->setPlannerId("PTP");
 		return pp;
 	}();
 
 	const auto rrtconnect = [&node]() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>(node, "ompl", "RRTConnectkConfigDefault") };
+		auto pp{ std::make_shared<solvers::PipelinePlanner>(node, "ompl") };
+		pp->setPlannerId("RRTConnect");
 		return pp;
 	}();
 
