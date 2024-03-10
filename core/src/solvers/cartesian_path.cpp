@@ -100,7 +100,7 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
-	    moveit::core::JumpThreshold::relative(props.get<double>("jump_threshold")), is_valid,
+	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid,
 	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"),
 	    props.get<kinematics::KinematicsBase::IKCostFn>("kinematics_cost_fn"), offset);
 
