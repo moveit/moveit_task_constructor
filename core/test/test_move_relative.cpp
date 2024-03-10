@@ -33,7 +33,8 @@ solvers::CartesianPathPtr create<solvers::CartesianPath>(const rclcpp::Node::Sha
 }
 template <>
 solvers::PipelinePlannerPtr create<solvers::PipelinePlanner>(const rclcpp::Node::SharedPtr& node) {
-	auto p = std::make_shared<solvers::PipelinePlanner>(node, "pilz_industrial_motion_planner", "LIN");
+	auto p = std::make_shared<solvers::PipelinePlanner>(node, "pilz_industrial_motion_planner");
+	p->setPlannerId("LIN");
 	p->setProperty("max_velocity_scaling_factor", 0.1);
 	p->setProperty("max_acceleration_scaling_factor", 0.1);
 	return p;
