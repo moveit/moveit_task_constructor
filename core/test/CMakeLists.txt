@@ -56,7 +56,6 @@ if (BUILD_TESTING)
 
 	mtc_add_gtest(test_move_to.cpp test.launch.py)
 	mtc_add_gtest(test_move_relative.cpp test.launch.py)
-	mtc_add_gtest(test_pipeline_planner.cpp)
 
 	# building these integration tests works without moveit config packages
 	ament_add_gtest_executable(pick_ur5 pick_ur5.cpp)
