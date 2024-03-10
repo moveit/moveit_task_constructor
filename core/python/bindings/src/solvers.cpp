@@ -70,9 +70,11 @@ void export_solvers(py::module& m) {
 				from moveit.task_constructor import core
 
 				# Create and configure a planner instance
-				pipelinePlanner = core.PipelinePlanner(node, 'ompl', 'PRMkConfigDefault')
+				pipelinePlanner = core.PipelinePlanner()
+				pipelinePlanner.planner = 'PRMkConfigDefault'
 				pipelinePlanner.num_planning_attempts = 10
 			)")
+	    .property<std::string>("planner", "str: Planner ID")
 	    .property<uint>("num_planning_attempts", "int: Number of planning attempts")
 	    .property<moveit_msgs::msg::WorkspaceParameters>(
 	        "workspace_parameters",
@@ -80,8 +82,8 @@ void export_solvers(py::module& m) {
 	    .property<double>("goal_joint_tolerance", "float: Tolerance for reaching joint goals")
 	    .property<double>("goal_position_tolerance", "float: Tolerance for reaching position goals")
 	    .property<double>("goal_orientation_tolerance", "float: Tolerance for reaching orientation goals")
-	    .def(py::init<const rclcpp::Node::SharedPtr&, const std::string&, const std::string&>(), "node"_a,
-	         "pipeline"_a = std::string("ompl"), "planner_id"_a = std::string(""));
+	    .def(py::init<const rclcpp::Node::SharedPtr&, const std::string&>(), "node"_a,
+	         "pipeline"_a = std::string("ompl"));
 
 	properties::class_<JointInterpolationPlanner, PlannerInterface>(
 	    m, "JointInterpolationPlanner",
