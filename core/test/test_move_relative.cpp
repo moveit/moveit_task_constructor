@@ -21,8 +21,23 @@ using namespace moveit::core;
 constexpr double TAU{ 2 * M_PI };
 constexpr double EPS{ 5e-5 };
 
-// provide a basic test fixture that prepares a Task
 template <typename Planner>
+std::shared_ptr<Planner> create();
+template <>
+solvers::CartesianPathPtr create<solvers::CartesianPath>() {
+	return std::make_shared<solvers::CartesianPath>();
+}
+template <>
+solvers::PipelinePlannerPtr create<solvers::PipelinePlanner>() {
+	auto p = std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner");
+	p->setPlannerId("LIN");
+	p->setProperty("max_velocity_scaling_factor", 0.1);
+	p->setProperty("max_acceleration_scaling_factor", 0.1);
+	return p;
+}
+
+// provide a basic test fixture that prepares a Task
+template <typename Planner = solvers::CartesianPath>
 struct PandaMoveRelative : public testing::Test
 {
 	Task t;
@@ -32,7 +47,7 @@ struct PandaMoveRelative : public testing::Test
 
 	const JointModelGroup* group;
 
-	PandaMoveRelative(std::shared_ptr<Planner> planner) : planner(planner) {
+	PandaMoveRelative() : planner(create<Planner>()) {
 		t.setRobotModel(loadModel());
 
 		group = t.getRobotModel()->getJointModelGroup("panda_arm");
@@ -48,17 +63,7 @@ struct PandaMoveRelative : public testing::Test
 		t.add(std::move(move_relative));
 	}
 };
-
-struct PandaMoveRelativeCartesian : public PandaMoveRelative<solvers::CartesianPath>
-{
-	PandaMoveRelativeCartesian() : PandaMoveRelative(std::make_shared<solvers::CartesianPath>()) {}
-};
-
-struct PandaMoveRelativePilz : public PandaMoveRelative<solvers::PipelinePlanner>
-{
-	PandaMoveRelativePilz()
-	  : PandaMoveRelative(std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner")) {}
-};
+using PandaMoveRelativeCartesian = PandaMoveRelative<solvers::CartesianPath>;
 
 moveit_msgs::CollisionObject createObject(const std::string& id, const geometry_msgs::Pose& pose) {
 	moveit_msgs::CollisionObject co;
@@ -154,59 +159,29 @@ TEST_F(PandaMoveRelativeCartesian, cartesianRotateAttachedIKFrame) {
 	EXPECT_CONST_POSITION(move->solutions().front(), attached_object);
 }
 
-// Issue #338
-// ----------
-// Using a Cartesian interpolation planner with a collision in it's trajectory
-// should fail. This is not the case when setting the min/max cartesian distance
-// with the Pilz Industiral Motion Planner. The invalid motion plan, which is
-// detected, is marked as successfull if the minimum distance has been reached.
-// Unlike MoveIt Cartesian Interpolator, the Pilz Industrial Motion Planner does
-// not check for collision by default. This results in the trajectory still
-// containing waypoints that are in collision.
-TEST_F(PandaMoveRelativePilz, cartesianPilzCollisionMinMaxDistance) {
-	planner->setPlannerId("LIN");
-	planner->setProperty("max_velocity_scaling_factor", 0.1);
-	planner->setProperty("max_acceleration_scaling_factor", 0.1);
-
-	const std::string object{ "object" };
-	geometry_msgs::Pose object_pose;
-	object_pose.position.z = 0.01;
-	object_pose.orientation.w = 1.0;
-
-	scene->processCollisionObjectMsg(createObject(object, object_pose));
-
-	move->setIKFrame("panda_hand");
-	move->setMinMaxDistance(0.01, 0.1);
-	move->setDirection([] {
-		geometry_msgs::Vector3Stamped vector3;
-		vector3.header.frame_id = "panda_hand";
-		vector3.vector.z = 1.0;
-		return vector3;
-	}());
-
-	ASSERT_FALSE(t.plan()) << "Plan has succeeded";
-}
-
-// Set a collision at the end of the trajectory. The plan will succeed
-// because the minimum distance is cleared.
-TEST_F(PandaMoveRelativeCartesian, cartesianCollisionMinMaxDistance) {
+using PlannerTypes = ::testing::Types<solvers::CartesianPath, solvers::PipelinePlanner>;
+TYPED_TEST_SUITE(PandaMoveRelative, PlannerTypes);
+TYPED_TEST(PandaMoveRelative, cartesianCollisionMinMaxDistance) {
 	const std::string object{ "object" };
 	geometry_msgs::Pose object_pose;
 	object_pose.position.z = 0.4;
 	object_pose.orientation.w = 1.0;
 
-	scene->processCollisionObjectMsg(createObject(object, object_pose));
+	this->scene->processCollisionObjectMsg(createObject(object, object_pose));
 
-	move->setIKFrame("panda_hand");
-	move->setMinMaxDistance(0.01, 0.5);
-	move->setDirection([] {
+	this->move->setIKFrame("panda_hand");
+	this->move->setDirection([] {
 		geometry_msgs::Vector3Stamped vector3;
 		vector3.header.frame_id = "panda_hand";
 		vector3.vector.z = 1.0;
 		return vector3;
 	}());
 
-	ASSERT_TRUE(t.plan()) << "Failed to plan";
+	ASSERT_FALSE(this->t.plan()) << "Plan should fail due to collision";
+
+	this->t.reset();
+	this->move->setMinMaxDistance(0.01, 0.5);
+	ASSERT_TRUE(this->t.plan()) << "Plan should succeed due to min distance reached";
 }
 
 int main(int argc, char** argv) {
