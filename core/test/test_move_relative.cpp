@@ -170,18 +170,17 @@ TYPED_TEST(PandaMoveRelative, cartesianCollisionMinMaxDistance) {
 	this->scene->processCollisionObjectMsg(createObject(object, object_pose));
 
 	this->move->setIKFrame("panda_hand");
-	this->move->setDirection([] {
-		geometry_msgs::Vector3Stamped vector3;
-		vector3.header.frame_id = "panda_hand";
-		vector3.vector.z = 1.0;
-		return vector3;
-	}());
-
-	ASSERT_FALSE(this->t.plan()) << "Plan should fail due to collision";
+	geometry_msgs::Vector3Stamped v;
+	v.header.frame_id = "panda_hand";
+	v.vector.z = 0.5;
+	this->move->setDirection(v);
+	EXPECT_FALSE(this->t.plan()) << "Plan should fail due to collision";
 
 	this->t.reset();
-	this->move->setMinMaxDistance(0.01, 0.5);
-	ASSERT_TRUE(this->t.plan()) << "Plan should succeed due to min distance reached";
+	v.vector.z = 1.0;
+	this->move->setDirection(v);
+	this->move->setMinMaxDistance(0.1, 0.5);
+	EXPECT_TRUE(this->t.plan()) << "Plan should succeed due to min distance reached";
 }
 
 int main(int argc, char** argv) {
