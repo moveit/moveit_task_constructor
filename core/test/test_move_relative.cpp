@@ -49,14 +49,14 @@ struct PandaMoveRelative : public testing::Test
 	}
 };
 
-struct PandaMoveRelative_CartesianPath : public PandaMoveRelative<solvers::CartesianPath>
+struct PandaMoveRelativeCartesian : public PandaMoveRelative<solvers::CartesianPath>
 {
-	PandaMoveRelative_CartesianPath() : PandaMoveRelative(std::make_shared<solvers::CartesianPath>()) {}
+	PandaMoveRelativeCartesian() : PandaMoveRelative(std::make_shared<solvers::CartesianPath>()) {}
 };
 
-struct PandaMoveRelative_PilzIndustrialMotionPlanner : public PandaMoveRelative<solvers::PipelinePlanner>
+struct PandaMoveRelativePilz : public PandaMoveRelative<solvers::PipelinePlanner>
 {
-	PandaMoveRelative_PilzIndustrialMotionPlanner()
+	PandaMoveRelativePilz()
 	  : PandaMoveRelative(std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner")) {}
 };
 
@@ -105,13 +105,13 @@ void expect_const_position(const SolutionBaseConstPtr& solution, const std::stri
 	}
 }
 
-#define EXPECT_CONST_POSITION(...)                                \
-	{                                                              \
-		SCOPED_TRACE("expect_constant_position(" #__VA_ARGS__ ")"); \
-		expect_const_position(__VA_ARGS__);                         \
+#define EXPECT_CONST_POSITION(...)                             \
+	{                                                           \
+		SCOPED_TRACE("expect_const_position(" #__VA_ARGS__ ")"); \
+		expect_const_position(__VA_ARGS__);                      \
 	}
 
-TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateEEF) {
+TEST_F(PandaMoveRelativeCartesian, cartesianRotateEEF) {
 	move->setDirection([] {
 		geometry_msgs::TwistStamped twist;
 		twist.header.frame_id = "world";
@@ -123,7 +123,7 @@ TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateEEF) {
 	EXPECT_CONST_POSITION(move->solutions().front(), group->getOnlyOneEndEffectorTip()->getName());
 }
 
-TEST_F(PandaMoveRelative_CartesianPath, cartesianCircular) {
+TEST_F(PandaMoveRelativeCartesian, cartesianCircular) {
 	const std::string tip = "panda_hand";
 	auto offset = Eigen::Translation3d(0, 0, 0.1);
 	move->setIKFrame(offset, tip);
@@ -138,7 +138,7 @@ TEST_F(PandaMoveRelative_CartesianPath, cartesianCircular) {
 	EXPECT_CONST_POSITION(move->solutions().front(), tip, Eigen::Isometry3d(offset));
 }
 
-TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateAttachedIKFrame) {
+TEST_F(PandaMoveRelativeCartesian, cartesianRotateAttachedIKFrame) {
 	const std::string attached_object{ "attached_object" };
 	scene->processAttachedCollisionObjectMsg(createAttachedObject(attached_object));
 	move->setIKFrame(attached_object);
@@ -163,7 +163,7 @@ TEST_F(PandaMoveRelative_CartesianPath, cartesianRotateAttachedIKFrame) {
 // Unlike MoveIt Cartesian Interpolator, the Pilz Industrial Motion Planner does
 // not check for collision by default. This results in the trajectory still
 // containing waypoints that are in collision.
-TEST_F(PandaMoveRelative_PilzIndustrialMotionPlanner, cartesianPilzCollisionMinMaxDistance) {
+TEST_F(PandaMoveRelativePilz, cartesianPilzCollisionMinMaxDistance) {
 	planner->setPlannerId("LIN");
 	planner->setProperty("max_velocity_scaling_factor", 0.1);
 	planner->setProperty("max_acceleration_scaling_factor", 0.1);
@@ -189,7 +189,7 @@ TEST_F(PandaMoveRelative_PilzIndustrialMotionPlanner, cartesianPilzCollisionMinM
 
 // Set a collision at the end of the trajectory. The plan will succeed
 // because the minimum distance is cleared.
-TEST_F(PandaMoveRelative_CartesianPath, cartesianCollisionMinMaxDistance) {
+TEST_F(PandaMoveRelativeCartesian, cartesianCollisionMinMaxDistance) {
 	const std::string object{ "object" };
 	geometry_msgs::Pose object_pose;
 	object_pose.position.z = 0.4;
