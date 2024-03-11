@@ -196,7 +196,8 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
                                                const moveit_msgs::MotionPlanRequest& req,
                                                robot_trajectory::RobotTrajectoryPtr& result) {
 	::planning_interface::MotionPlanResponse res;
-	bool success = planner_->generatePlan(from, req, res);
+	planner_->generatePlan(from, req, res);
+	auto success = static_cast<bool>(res.error_code_);
 	result = res.trajectory_;
 	return { success, success ? std::string() : static_cast<std::string>(res.error_code_) };
 }
