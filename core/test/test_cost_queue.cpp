@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
-#ifndef TYPED_TEST_SUITE
+#ifndef TYPED_TEST_SUITE  // for Melodic
 #define TYPED_TEST_SUITE(SUITE, TYPES) TYPED_TEST_CASE(SUITE, TYPES)
 #endif
 
