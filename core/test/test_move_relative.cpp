@@ -185,6 +185,8 @@ TYPED_TEST(PandaMoveRelative, cartesianCollisionMinMaxDistance) {
 	this->move->setDirection(v);
 	this->move->setMinMaxDistance(0.1, 0.5);
 	EXPECT_TRUE(this->t.plan()) << "Plan should succeed due to min distance reached";
+	auto trajectory = std::dynamic_pointer_cast<const SubTrajectory>(this->move->solutions().front());
+	EXPECT_TRUE(this->scene->isPathValid(*trajectory->trajectory(), "panda_arm", false));
 }
 
 int main(int argc, char** argv) {
