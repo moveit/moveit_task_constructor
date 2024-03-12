@@ -240,10 +240,7 @@ void SubTrajectory::appendTo(moveit_task_constructor_msgs::msg::Solution& msg, I
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
-	if (this->end()->scene()->getParent() == this->start()->scene())
-		this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
-	else
-		this->end()->scene()->getPlanningSceneMsg(t.scene_diff);
+	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 }
 
 double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const {
