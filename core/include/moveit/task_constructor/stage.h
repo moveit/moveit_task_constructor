@@ -365,6 +365,7 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
+	void spawn(InterfaceState&& from, InterfaceState&& to, SubTrajectory&& trajectory);
 	void spawn(InterfaceState&& state, SubTrajectory&& trajectory);
 	void spawn(InterfaceState&& state, double cost) {
 		SubTrajectory trajectory;

@@ -136,6 +136,7 @@ public:
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
 	template <Interface::Direction>
 	inline void send(const InterfaceState& start, InterfaceState&& end, const SolutionBasePtr& solution);
+	void spawn(InterfaceState&& from, InterfaceState&& to, const SolutionBasePtr& solution);
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
