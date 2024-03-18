@@ -127,8 +127,7 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 
 		// Check if it is still empty
 		if (planning_pipelines_.empty()) {
-			throw std::runtime_error(
-			    "Cannot initialize PipelinePlanner: Could not create any valid entries for planning pipeline maps!");
+			throw std::runtime_error("Failed to initialize PipelinePlanner: Could not create any valid pipeline");
 		}
 	} else {
 		// Validate that all pipelines use the task's robot model
