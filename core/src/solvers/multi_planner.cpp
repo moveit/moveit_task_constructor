@@ -49,58 +49,54 @@ void MultiPlanner::init(const core::RobotModelConstPtr& robot_model) {
 		p->init(robot_model);
 }
 
-PlannerInterface::Result MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                            const planning_scene::PlanningSceneConstPtr& to,
-                                            const moveit::core::JointModelGroup* jmg, double timeout,
-                                            robot_trajectory::RobotTrajectoryPtr& result,
-                                            const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                   const planning_scene::PlanningSceneConstPtr& to,
+                                   const moveit::core::JointModelGroup* jmg, double timeout,
+                                   robot_trajectory::RobotTrajectoryPtr& result,
+                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
-	std::string comment = "No planner specified";
+	MoveItErrorCodes error_code = MoveItErrorCode(MoveItErrorCodes::FAILURE, "No planner specified");
 	for (const auto& p : *this) {
 		if (remaining_time < 0)
-			return { false, "timeout" };
+			return MoveItErrorCode(MoveItErrorCodes::TIMED_OUT, "Timeout");
 		if (result)
 			result->clear();
-		auto r = p->plan(from, to, jmg, remaining_time, result, path_constraints);
-		if (r)
-			return r;
-		else
-			comment = r.message;
+		error_code = p->plan(from, to, jmg, remaining_time, result, path_constraints);
+		if (error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+			return error_code;
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 	}
-	return { false, comment };
+	return error_code;
 }
 
-PlannerInterface::Result MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                            const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
-                                            const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
-                                            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                                            const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode MultiPlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                   const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                   const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+                                   double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+                                   const moveit_msgs::msg::Constraints& path_constraints) {
 	double remaining_time = std::min(timeout, properties().get<double>("timeout"));
 	auto start_time = std::chrono::steady_clock::now();
 
-	std::string comment = "No planner specified";
+	MoveItErrorCodes error_code = MoveItErrorCode(MoveItErrorCodes::FAILURE, "No planner specified");
 	for (const auto& p : *this) {
 		if (remaining_time < 0)
 			return { false, "timeout" };
 		if (result)
 			result->clear();
-		auto r = p->plan(from, link, offset, target, jmg, remaining_time, result, path_constraints);
-		if (r)
-			return r;
-		else
-			comment = r.message;
+		error_code = p->plan(from, link, offset, target, jmg, remaining_time, result, path_constraints);
+		if (error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+			return error_code;
 
 		auto now = std::chrono::steady_clock::now();
 		remaining_time -= std::chrono::duration<double>(now - start_time).count();
 		start_time = now;
 	}
-	return { false, comment };
+	return error_code;
 }
 }  // namespace solvers
 }  // namespace task_constructor

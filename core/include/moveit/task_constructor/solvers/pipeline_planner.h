@@ -59,10 +59,10 @@ MOVEIT_CLASS_FORWARD(PipelinePlanner);
 class PipelinePlanner : public PlannerInterface
 {
 public:
-	/** Simple Constructor to use only a single pipeline
+	/** \brief Simple Constructor to use only a single pipeline
 	 * \param [in] node ROS 2 node
 	 * \param [in] pipeline_name Name of the planning pipeline to be used.
-	 * This is also the assumed namespace where the parameters of this pipeline can be found
+	 * This is also the assumed namespace where the parameters of this pipeline can be found.
 	 * \param [in] planner_id Planner id to be used for planning. Empty string means default.
 	 */
 	PipelinePlanner(const rclcpp::Node::SharedPtr& node, const std::string& pipeline_name = "ompl",
@@ -71,13 +71,16 @@ public:
 
 	/** \brief Constructor
 	 * \param [in] node ROS 2 node
-	 * \param [in] pipeline_id_planner_id_map map containing pairs of pipeline and plugin names to be used for planning
-	 * \param [in] stopping_criterion_callback callback to decide when to stop parallel planning
-	 * \param [in] solution_selection_function callback to choose the best solution from multiple ran pipelines
+	 * \param [in] pipeline_id_planner_id_map Map containing pairs of pipeline and plugin names to be used for planning
+	 * \param [in] planning_pipelines Optional: A map with the names and initialized corresponding planning pipelines
+	 * \param [in] stopping_criterion_callback Optional: Callback to decide when to stop parallel planning
+	 * \param [in] solution_selection_function Optional: Callback to choose the best solution from multiple ran pipelines
 	 */
 	PipelinePlanner(
 	    const rclcpp::Node::SharedPtr& node,
 	    const std::unordered_map<std::string, std::string>& pipeline_id_planner_id_map,
+	    const std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>& planning_pipelines =
+	        std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>(),
 	    const moveit::planning_pipeline_interfaces::StoppingCriterionFunction& stopping_criterion_callback = nullptr,
 	    const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function =
 	        &moveit::planning_pipeline_interfaces::getShortestSolution);
@@ -101,7 +104,9 @@ public:
 	void setSolutionSelectionFunction(
 	    const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function);
 
-	/** \brief If not yet done, initialize pipelines from pipeline_id_planner_id_map
+	/** \brief This function is called when an MTC task that uses this solver is initialized. If no pipelines are
+	 * configured when this function is invoked, the planning pipelines named in the 'pipeline_id_planner_id_map' are
+	 * initialized with the given robot model.
 	 * \param [in] robot_model robot model used to initialize the planning pipelines of this solver
 	 */
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
@@ -113,14 +118,15 @@ public:
 	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
-	 * \return true If the solver found a successful solution for the given planning problem
+	 * \return MoveItErrorCode - Return MoveItErrorCodes::SUCCESS if solver found a successful solution. Otherwise,
+	 * return an appropriate error type and message explaining why it failed.
 	 */
-	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	            const core::JointModelGroup* joint_model_group, double timeout,
-	            robot_trajectory::RobotTrajectoryPtr& result,
-	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+	MoveItErrorCode
+	plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	     const core::JointModelGroup* joint_model_group, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	     const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
-	/** \brief Plan a trajectory from a planning scene 'from' to a Cartesian target pose with an offset
+	/** \brief Plan a trajectory from a planning scene 'from' to a target pose with an offset
 	 * \param [in] from Start planning scene
 	 * \param [in] link Link for which a target pose is given
 	 * \param [in] offset Offset to be applied to a given target pose
@@ -129,18 +135,26 @@ public:
 	 * \param [in] timeout Maximum planning timeout for an individual stage that is using the pipeline planner in seconds
 	 * \param [in] result Reference to the location where the created trajectory is stored if planning is successful
 	 * \param [in] path_constraints Path contraints for the planning problem
-	 * \return true If the solver found a successful solution for the given planning problem
+	 * \return MoveItErrorCode - Return MoveItErrorCodes::SUCCESS if solver found a successful solution. Otherwise,
+	 * return an appropriate error type and message explaining why it failed.
 	 */
-	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
-	            const moveit::core::JointModelGroup* joint_model_group, double timeout,
-	            robot_trajectory::RobotTrajectoryPtr& result,
-	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
+	MoveItErrorCode
+	plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	     const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	     const moveit::core::JointModelGroup* joint_model_group, double timeout,
+	     robot_trajectory::RobotTrajectoryPtr& result,
+	     const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
+	/**
+	 * \brief Get planner name
+	 * \return Name of the last successful planner
+	 */
 	std::string getPlannerId() const override { return last_successful_planner_; }
 
 protected:
-	/** \brief Actual plan() implementation, targeting the given goal_constraints.
+	/** \brief Function that actually uses the planning pipelines to solve the given planning problem. It is called by
+	 * the public plan function after the goal constraints are generated. This function uses a predefined number of
+	 * planning pipelines in parallel to solve the planning problem and choose the best (user-defined) solution.
 	 * \param [in] planning_scene Scene for which the planning should be solved
 	 * \param [in] joint_model_group Group of joints for which this trajectory is created
 	 * \param [in] goal_constraints Set of constraints that need to be satisfied by the solution
@@ -149,17 +163,18 @@ protected:
 	 * \param [in] path_constraints Path contraints for the planning problem
 	 * \return true if the solver found a successful solution for the given planning problem
 	 */
-	Result plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
-	            const moveit::core::JointModelGroup* joint_model_group,
-	            const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
-	            robot_trajectory::RobotTrajectoryPtr& result,
-	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints());
+	MoveItErrorCode plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
+	                     const moveit::core::JointModelGroup* joint_model_group,
+	                     const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
+	                     robot_trajectory::RobotTrajectoryPtr& result,
+	                     const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints());
 
 	rclcpp::Node::SharedPtr node_;
 
 	std::string last_successful_planner_;
 
-	/** \brief Map of instantiated (and named) planning pipelines. */
+	/** \brief Map of pipelines names and planning pipelines. This map is used to quickly search for a requested motion
+	 * planning pipeline when during plan(..) */
 	std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr> planning_pipelines_;
 
 	moveit::planning_pipeline_interfaces::StoppingCriterionFunction stopping_criterion_callback_;

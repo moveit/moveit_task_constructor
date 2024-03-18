@@ -54,14 +54,22 @@ namespace task_constructor {
 namespace solvers {
 
 using PipelineMap = std::unordered_map<std::string, std::string>;
+;
 
 PipelinePlanner::PipelinePlanner(
     const rclcpp::Node::SharedPtr& node, const PipelineMap& pipeline_id_planner_id_map,
+    const std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
     const moveit::planning_pipeline_interfaces::StoppingCriterionFunction& stopping_criterion_callback,
     const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function)
   : node_(node)
+  , last_successful_planner_("")
   , stopping_criterion_callback_(stopping_criterion_callback)
   , solution_selection_function_(solution_selection_function) {
+	// If the pipeline name - pipeline map is passed as constructor argument, use it. Otherwise, it will be created in
+	// the init(..) function
+	if (!planning_pipelines.empty()) {
+		planning_pipelines_ = planning_pipelines;
+	}
 	// Declare properties of the MotionPlanRequest
 	properties().declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
 	properties().declare<moveit_msgs::msg::WorkspaceParameters>(
@@ -77,7 +85,7 @@ PipelinePlanner::PipelinePlanner(
 
 bool PipelinePlanner::setPlannerId(const std::string& pipeline_name, const std::string& planner_id) {
 	// Only set ID if pipeline exists. It is not possible to create new pipelines with this command.
-	PipelineMap map = properties().get<PipelineMap>("pipeline_id_planner_id_map");
+	PipelineMap& map = properties().get<PipelineMap>("pipeline_id_planner_id_map");
 	auto it = map.find(pipeline_name);
 	if (it == map.end()) {
 		RCLCPP_ERROR(node_->get_logger(),
@@ -100,9 +108,9 @@ void PipelinePlanner::setSolutionSelectionFunction(
 }
 
 void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
-	// Create planning pipelines once from pipeline_id_planner_id_map.
-	// We assume that all parameters required by the pipeline can be found
-	// in the namespace of the pipeline name.
+	// If no planning pipelines exist, create them based on the pipeline names provided in pipeline_id_planner_id_map_.
+	// The assumption here is that all parameters required by the planning pipeline can be found in a namespace that
+	// equals the pipeline name.
 	if (planning_pipelines_.empty()) {
 		auto map = properties().get<PipelineMap>("pipeline_id_planner_id_map");
 		// Create pipeline name vector from the keys of pipeline_id_planner_id_map_
@@ -116,9 +124,11 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 		}
 		planning_pipelines_ = moveit::planning_pipeline_interfaces::createPlanningPipelineMap(std::move(pipeline_names),
 		                                                                                      robot_model, node_);
+
 		// Check if it is still empty
 		if (planning_pipelines_.empty()) {
-			throw std::runtime_error("Failed to initialize PipelinePlanner: Could not create any valid pipeline");
+			throw std::runtime_error(
+			    "Cannot initialize PipelinePlanner: Could not create any valid entries for planning pipeline maps!");
 		}
 	} else {
 		// Validate that all pipelines use the task's robot model
@@ -131,23 +141,23 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	}
 }
 
-PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                               const planning_scene::PlanningSceneConstPtr& to,
-                                               const moveit::core::JointModelGroup* joint_model_group, double timeout,
-                                               robot_trajectory::RobotTrajectoryPtr& result,
-                                               const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                      const planning_scene::PlanningSceneConstPtr& to,
+                                      const moveit::core::JointModelGroup* joint_model_group, double timeout,
+                                      robot_trajectory::RobotTrajectoryPtr& result,
+                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	// Construct goal constraints from the goal planning scene
 	const auto goal_constraints = kinematic_constraints::constructGoalConstraints(
 	    to->getCurrentState(), joint_model_group, properties().get<double>("goal_joint_tolerance"));
 	return plan(from, joint_model_group, goal_constraints, timeout, result, path_constraints);
 }
 
-PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                               const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
-                                               const Eigen::Isometry3d& target_eigen,
-                                               const moveit::core::JointModelGroup* joint_model_group, double timeout,
-                                               robot_trajectory::RobotTrajectoryPtr& result,
-                                               const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                      const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                      const Eigen::Isometry3d& target_eigen,
+                                      const moveit::core::JointModelGroup* joint_model_group, double timeout,
+                                      robot_trajectory::RobotTrajectoryPtr& result,
+                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	// Construct a Cartesian target pose from the given target transform and offset
 	geometry_msgs::msg::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
@@ -160,11 +170,11 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
 	return plan(from, joint_model_group, goal_constraints, timeout, result, path_constraints);
 }
 
-PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
-                                               const moveit::core::JointModelGroup* joint_model_group,
-                                               const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
-                                               robot_trajectory::RobotTrajectoryPtr& result,
-                                               const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& planning_scene,
+                                      const moveit::core::JointModelGroup* joint_model_group,
+                                      const moveit_msgs::msg::Constraints& goal_constraints, double timeout,
+                                      robot_trajectory::RobotTrajectoryPtr& result,
+                                      const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& map = properties().get<PipelineMap>("pipeline_id_planner_id_map");
 	last_successful_planner_ = "Unknown";
 
@@ -174,8 +184,11 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
 
 	for (const auto& [pipeline_id, planner_id] : map) {
 		// Check that requested pipeline exists and skip it if it doesn't exist
-		if (planning_pipelines_.count(pipeline_id) == 0) {
-			RCLCPP_WARN(node_->get_logger(), "Pipeline '%s' was not created. Skipping.", pipeline_id.c_str());
+		if (planning_pipelines_.find(pipeline_id) == planning_pipelines_.end()) {
+			RCLCPP_WARN(
+			    node_->get_logger(),
+			    "Pipeline '%s' is not available of this PipelineSolver instance. Skipping a request for this pipeline.",
+			    pipeline_id.c_str());
 			continue;
 		}
 		// Create MotionPlanRequest for pipeline
@@ -208,11 +221,10 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
 			// Choose the first solution trajectory as response
 			result = solution.trajectory;
 			last_successful_planner_ = solution.planner_id;
-			return { true, "" };
+			return MoveItErrorCode(solution.error_code.val, solution.error_code.message, solution.error_code.source);
 		}
-		return { false, solution.error_code.message };
 	}
-	return { false, "No solutions generated from Pipeline Planner" };
+	return MoveItErrorCode(MoveItErrorCodes::FAILURE, "No solutions generated from Pipeline Planner");
 }
 
 }  // namespace solvers

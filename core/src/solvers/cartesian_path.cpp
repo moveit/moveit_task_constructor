@@ -63,11 +63,11 @@ CartesianPath::CartesianPath() {
 
 void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 
-PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                             const planning_scene::PlanningSceneConstPtr& to,
-                                             const moveit::core::JointModelGroup* jmg, double timeout,
-                                             robot_trajectory::RobotTrajectoryPtr& result,
-                                             const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                    const planning_scene::PlanningSceneConstPtr& to,
+                                    const moveit::core::JointModelGroup* jmg, double timeout,
+                                    robot_trajectory::RobotTrajectoryPtr& result,
+                                    const moveit_msgs::msg::Constraints& path_constraints) {
 	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
 	if (!link)
 		return { false, "no unique tip for joint model group: " + jmg->getName() };
@@ -77,11 +77,11 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	            std::min(timeout, properties().get<double>("timeout")), result, path_constraints);
 }
 
-PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
-                                             const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
-                                             const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
-                                             double /*timeout*/, robot_trajectory::RobotTrajectoryPtr& result,
-                                             const moveit_msgs::msg::Constraints& path_constraints) {
+MoveItErrorCode CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                    const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                    const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+                                    double /*timeout*/, robot_trajectory::RobotTrajectoryPtr& result,
+                                    const moveit_msgs::msg::Constraints& path_constraints) {
 	const auto& props = properties();
 	planning_scene::PlanningScenePtr sandbox_scene = from->diff();
 
@@ -114,9 +114,10 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	                          props.get<double>("max_acceleration_scaling_factor"));
 
 	if (achieved_fraction < props.get<double>("min_fraction")) {
-		return { false, "min_fraction not met. Achieved: " + std::to_string(achieved_fraction) };
+		return MoveItErrorCode(MoveItErrorCodes::FAILURE,
+		                       "Min fraction not met. Achieved fraction : " + std::to_string(achieved_fraction));
 	}
-	return { true, "achieved fraction: " + std::to_string(achieved_fraction) };
+	return MoveItErrorCode(MoveItErrorCodes::SUCCESS, "achieved fraction: " + std::to_string(achieved_fraction));
 }
 }  // namespace solvers
 }  // namespace task_constructor

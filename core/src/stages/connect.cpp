@@ -163,7 +163,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		const auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
 		success = bool(result);
 		sub_trajectories.push_back({ pair.second->getPlannerId(), trajectory });
 
@@ -261,7 +261,6 @@ SubTrajectoryPtr Connect::merge(const std::vector<PlannerIdTrajectoryPair>& sub_
 	                                              properties().get<moveit_msgs::msg::Constraints>("path_constraints")))
 		return SubTrajectoryPtr();
 
-	return std::make_shared<SubTrajectory>(trajectory);
 	return std::make_shared<SubTrajectory>(trajectory, 0.0, std::string(""), planner_ids);
 }
 }  // namespace stages

@@ -209,7 +209,7 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		const auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 		success = bool(result);
 		if (!success)
 			comment = result.message;
