@@ -13,4 +13,5 @@
 	<depend>geometry_msgs</depend>
 	<depend>roscpp</depend>
 	<depend>tf2_eigen</depend>
+	<depend>liburdfdom-dev</depend>
 </package>

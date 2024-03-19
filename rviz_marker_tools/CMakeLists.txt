@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	tf2_eigen
 )
+find_package(urdfdom REQUIRED)
 
 catkin_package(
 	LIBRARIES
@@ -17,6 +18,8 @@ catkin_package(
 		geometry_msgs
 		visualization_msgs
 		roscpp
+	DEPENDS
+		urdfdom
 )
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/${PROJECT_NAME})
