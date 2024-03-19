@@ -261,7 +261,6 @@ SubTrajectoryPtr Connect::merge(const std::vector<PlannerIdTrajectoryPair>& sub_
 	                                              properties().get<moveit_msgs::msg::Constraints>("path_constraints")))
 		return SubTrajectoryPtr();
 
-	return std::make_shared<SubTrajectory>(trajectory);
 	return std::make_shared<SubTrajectory>(trajectory, 0.0, std::string(""), planner_ids);
 }
 }  // namespace stages
