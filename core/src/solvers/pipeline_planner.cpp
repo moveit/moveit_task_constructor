@@ -58,18 +58,12 @@ using PipelineMap = std::unordered_map<std::string, std::string>;
 
 PipelinePlanner::PipelinePlanner(
     const rclcpp::Node::SharedPtr& node, const PipelineMap& pipeline_id_planner_id_map,
-    const std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>& planning_pipelines,
     const moveit::planning_pipeline_interfaces::StoppingCriterionFunction& stopping_criterion_callback,
     const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function)
   : node_(node)
   , last_successful_planner_("")
   , stopping_criterion_callback_(stopping_criterion_callback)
   , solution_selection_function_(solution_selection_function) {
-	// If the pipeline name - pipeline map is passed as constructor argument, use it. Otherwise, it will be created in
-	// the init(..) function
-	if (!planning_pipelines.empty()) {
-		planning_pipelines_ = planning_pipelines;
-	}
 	// Declare properties of the MotionPlanRequest
 	properties().declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
 	properties().declare<moveit_msgs::msg::WorkspaceParameters>(

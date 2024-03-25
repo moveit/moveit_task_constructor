@@ -72,15 +72,12 @@ public:
 	/** \brief Constructor
 	 * \param [in] node ROS 2 node
 	 * \param [in] pipeline_id_planner_id_map Map containing pairs of pipeline and plugin names to be used for planning
-	 * \param [in] planning_pipelines Optional: A map with the names and initialized corresponding planning pipelines
 	 * \param [in] stopping_criterion_callback Optional: Callback to decide when to stop parallel planning
 	 * \param [in] solution_selection_function Optional: Callback to choose the best solution from multiple ran pipelines
 	 */
 	PipelinePlanner(
 	    const rclcpp::Node::SharedPtr& node,
 	    const std::unordered_map<std::string, std::string>& pipeline_id_planner_id_map,
-	    const std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>& planning_pipelines =
-	        std::unordered_map<std::string, planning_pipeline::PlanningPipelinePtr>(),
 	    const moveit::planning_pipeline_interfaces::StoppingCriterionFunction& stopping_criterion_callback = nullptr,
 	    const moveit::planning_pipeline_interfaces::SolutionSelectionFunction& solution_selection_function =
 	        &moveit::planning_pipeline_interfaces::getShortestSolution);
