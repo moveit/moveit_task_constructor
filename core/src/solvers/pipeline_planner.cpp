@@ -54,7 +54,6 @@ namespace task_constructor {
 namespace solvers {
 
 using PipelineMap = std::unordered_map<std::string, std::string>;
-;
 
 PipelinePlanner::PipelinePlanner(
     const rclcpp::Node::SharedPtr& node, const PipelineMap& pipeline_id_planner_id_map,
