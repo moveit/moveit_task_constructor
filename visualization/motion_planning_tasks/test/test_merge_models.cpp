@@ -60,7 +60,6 @@ void modifySourceModel(QAbstractItemModel* src, T* proxy, const QModelIndex& src
 	bool called = false;
 	const char* new_value = "foo";
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	auto con =
 	    proxy->connect(proxy, &T::dataChanged,
 	                   [&called, &src_index, new_value](const QModelIndex& topLeft, const QModelIndex& bottomRight) {
@@ -73,14 +72,11 @@ void modifySourceModel(QAbstractItemModel* src, T* proxy, const QModelIndex& src
 		                   EXPECT_STREQ(topLeft.data().toString().toLatin1().data(), new_value);
 		                   called = true;
 	                   });
-#endif
 
 	EXPECT_TRUE(src->setData(src_index, new_value));
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 	proxy->disconnect(con);
 	EXPECT_TRUE(called);
-#endif
 }
 
 TEST(TreeMergeModel, basics) {
