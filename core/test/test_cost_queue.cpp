@@ -5,10 +5,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
-#ifndef TYPED_TEST_SUITE
-#define TYPED_TEST_SUITE(SUITE, TYPES) TYPED_TEST_CASE(SUITE, TYPES)
-#endif
-
 namespace mtc = moveit::task_constructor;
 
 // type-trait functions for OrderedTest<T>

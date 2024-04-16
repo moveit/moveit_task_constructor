@@ -114,7 +114,7 @@ void export_stages(pybind11::module& m) {
 		.def("addObject", &ModifyPlanningScene::addObject, R"(
 			Add a CollisionObject_ to the planning scene
 
-			.. _CollisionObject: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/CollisionObject.html
+			.. _CollisionObject: https://docs.ros.org/en/noetic/api/moveit_msgs/html/msg/CollisionObject.html
 
 		)", "collision_object"_a)
 		.def("removeObject", &ModifyPlanningScene::removeObject,
