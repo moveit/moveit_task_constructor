@@ -5,9 +5,9 @@ from moveit.task_constructor import core, stages
 from geometry_msgs.msg import PoseStamped
 import time
 
-from moveit_commander.roscpp_initializer import roscpp_initialize
+from py_binding_tools import roscpp_init
 
-roscpp_initialize("mtc_tutorial")
+roscpp_init("mtc_tutorial")
 
 # Create a task container
 task = core.Task()

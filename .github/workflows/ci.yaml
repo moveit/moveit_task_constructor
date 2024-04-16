@@ -130,7 +130,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update -q
-          apt-get install -y doxygen graphviz python3-pip
+          apt-get install -y doxygen graphviz python3-pip ros-noetic-py-binding-tools
           pip install -r core/doc/requirements.txt
 
       - name: Download ICI workspace

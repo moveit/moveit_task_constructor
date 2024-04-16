@@ -1,13 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from moveit_commander.roscpp_initializer import roscpp_initialize
+from py_binding_tools import roscpp_init
 from moveit.task_constructor import core, stages
 from moveit_commander import PlanningSceneInterface
 from geometry_msgs.msg import PoseStamped, TwistStamped
 import time
 
-roscpp_initialize("pickplace")
+roscpp_init("pickplace")
 
 # [pickAndPlaceTut1]
 # Specify robot parameters

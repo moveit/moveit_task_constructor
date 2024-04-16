@@ -6,9 +6,9 @@ from geometry_msgs.msg import PoseStamped, Pose, Vector3
 from std_msgs.msg import Header
 import time
 
-from moveit_commander.roscpp_initializer import roscpp_initialize
+from py_binding_tools import roscpp_init
 
-roscpp_initialize("mtc_tutorial_compute_ik")
+roscpp_init("mtc_tutorial_compute_ik")
 
 # Specify the planning group
 group = "panda_arm"
