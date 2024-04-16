@@ -105,7 +105,7 @@ jobs:
           workdir: ${{ env.BASEDIR }}/target_ws
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
         with:
           files: ${{ env.BASEDIR }}/target_ws/coverage.info
@@ -121,7 +121,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: |
@@ -146,7 +146,7 @@ jobs:
           sphinx-build -W -b linkcheck core/doc _site
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
 
   # Deployment job
   deploy:
@@ -159,4 +159,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
