@@ -55,7 +55,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
-	p.declare<double>("max_distance", 1e-4, "maximally accepted joint configuration distance between trajectory endpoint and goal state");
+	p.declare<double>("max_distance", 1e-4,
+	                  "maximally accepted joint configuration distance between trajectory endpoint and goal state");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
