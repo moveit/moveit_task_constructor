@@ -270,11 +270,8 @@ void Task::preempt() {
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	// Add random ID to prevent warnings about multiple publishers within the same node
-	rclcpp::NodeOptions options;
-	options.arguments(
-	    { "--ros-args", "-r",
-	      "__node:=moveit_task_constructor_executor_" + std::to_string(reinterpret_cast<std::size_t>(this)) });
-	auto node = rclcpp::Node::make_shared("_", options);
+	auto node = rclcpp::Node::make_shared("moveit_task_constructor_executor_" +
+	                                      std::to_string(reinterpret_cast<std::size_t>(this)));
 	auto ac = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node, "execute_task_solution");
 	if (!ac->wait_for_action_server(0.5s)) {

@@ -108,9 +108,7 @@ class IntrospectionPrivate
 {
 public:
 	IntrospectionPrivate(const TaskPrivate* task, Introspection* self) : task_(task), task_id_(getTaskId(task)) {
-		rclcpp::NodeOptions options;
-		options.arguments({ "--ros-args", "-r", "__node:=introspection_" + task_id_ });
-		node_ = rclcpp::Node::make_shared("_", task_->ns(), options);
+		node_ = rclcpp::Node::make_shared("introspection_" + task_id_, task_->ns());
 		executor_.add_node(node_);
 		task_description_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskDescription>(
 		    DESCRIPTION_TOPIC, rclcpp::QoS(2).transient_local());
