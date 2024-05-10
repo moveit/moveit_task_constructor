@@ -72,6 +72,15 @@ void ModifyPlanningScene::removeObject(const std::string& object_name) {
 	collision_objects_.push_back(obj);
 }
 
+void ModifyPlanningScene::moveObject(const moveit_msgs::CollisionObject& collision_object) {
+	if (collision_object.operation != moveit_msgs::CollisionObject::MOVE) {
+		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": moveObject is called with object's operation not set "
+		                                                        "to MOVE -- ignoring the object");
+		return;
+	}
+	collision_objects_.push_back(collision_object);
+}
+
 void ModifyPlanningScene::allowCollisions(const Names& first, const Names& second, bool allow) {
 	collision_matrix_edits_.push_back(CollisionMatrixPairs({ first, second, allow }));
 }
@@ -128,7 +137,7 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 	InterfaceState state(scene);
 	SubTrajectory traj;
 	try {
-		// add/remove objects
+		// add/remove/move objects
 		for (auto& collision_object : collision_objects_)
 			processCollisionObject(*scene, collision_object, invert);
 
@@ -157,6 +166,8 @@ void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& 
 			const_cast<moveit_msgs::CollisionObject&>(object).operation = moveit_msgs::CollisionObject::REMOVE;
 		else if (op == moveit_msgs::CollisionObject::REMOVE)
 			throw std::runtime_error("cannot apply removeObject() backwards");
+		else if (op == moveit_msgs::CollisionObject::MOVE)
+			throw std::runtime_error("cannot apply moveObject() backwards");
 	}
 
 	scene.processCollisionObjectMsg(object);

@@ -81,6 +81,8 @@ public:
 	void addObject(const moveit_msgs::CollisionObject& collision_object);
 	/// Remove an object from the planning scene
 	void removeObject(const std::string& object_name);
+	/// Move an object from the planning scene
+	void moveObject(const moveit_msgs::CollisionObject& collision_object);
 
 	/// conviency methods accepting a single object name
 	inline void attachObject(const std::string& object, const std::string& link);
