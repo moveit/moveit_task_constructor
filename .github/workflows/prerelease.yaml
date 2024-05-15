@@ -13,7 +13,7 @@ jobs:
   default:
     strategy:
       matrix:
-        distro: [noetic]
+        distro: [humble]
 
     env:
       # https://github.com/ros-industrial/industrial_ci/issues/666
