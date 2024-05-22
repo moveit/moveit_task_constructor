@@ -147,10 +147,30 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 	std::vector<planning_scene::PlanningSceneConstPtr> intermediate_scenes;
 	planning_scene::PlanningSceneConstPtr start = from.scene();
+	// check start state for collisions
+	collision_detection::CollisionRequest c_req;
+	collision_detection::CollisionResult c_res;
+	c_req.contacts = true;
+	c_req.max_contacts = 100;
+	c_req.max_contacts_per_pair = 5;
+	c_req.verbose = false;
+	std::string comment;
+	start->checkCollision(c_req, c_res);
+	if (c_res.collision) {
+		comment = "The following links pair's are in collision at the start state:";
+		for(const auto& link_pair: c_res.contacts)
+			comment += " (" + link_pair.first.first + ", " + link_pair.first.second + ")";
+		RCLCPP_ERROR(LOGGER, "%s", comment.c_str());
+		SolutionBasePtr solution;
+		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
+		solution->markAsFailure(comment);
+		return;
+	}
+
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
-	std::string comment = "No planners specified";
+	comment = "No planners specified";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state

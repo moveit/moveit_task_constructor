@@ -44,5 +44,5 @@
     approach_object_max_dist: 0.15
 
     # Valid height range when lifting an object after pick
-    lift_object_min_dist: 0.01
-    lift_object_max_dist: 0.1
+    lift_object_min_dist: 0.1
+    lift_object_max_dist: 0.2

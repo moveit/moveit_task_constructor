@@ -95,6 +95,10 @@ void setupDemoScene(const pick_place_task_demo::Params& params) {
 	moveit::planning_interface::PlanningSceneInterface psi;
 	if (params.spawn_table)
 		spawnObject(psi, createTable(params));
+	pick_place_task_demo::Params my_params(params);
+	my_params.table_pose[2] += 0.4;
+	my_params.table_name = "MyTable";
+	spawnObject(psi, createTable(my_params));
 	spawnObject(psi, createObject(params));
 }
 
@@ -265,7 +269,8 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 		 ***************************************************/
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow collision (object,support)");
-			stage->allowCollisions({ params.object_name }, { params.surface_link }, true);
+			stage->allowCollisions({ params.object_name }, { params.surface_link }, false);
+			stage->allowCollisions({ params.object_name }, { "MyTable" }, true);
 			grasp->insert(std::move(stage));
 		}
 
@@ -293,6 +298,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("forbid collision (object,surface)");
 			stage->allowCollisions({ params.object_name }, { params.surface_link }, false);
+			stage->allowCollisions({ params.object_name }, { "MyTable" }, false);
 			grasp->insert(std::move(stage));
 		}
 
