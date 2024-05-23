@@ -323,6 +323,8 @@ void export_stages(pybind11::module& m) {
 
 			For an example, see :ref:`How-To-Guides <subsubsec-howto-connect>`.
 		)")
+	    .property<stages::Connect::MergeMode>("merge_mode", "Defines the merge strategy to use")
+	    .property<double>("max_distance", "maximally accepted distance between end and goal sate")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         "name"_a = std::string("connect"), "planners"_a);
 
