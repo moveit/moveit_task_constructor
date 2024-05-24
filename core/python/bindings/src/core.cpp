@@ -86,9 +86,8 @@ void setForwardedProperties(Stage& self, const py::object& names) {
 			for (auto item : names)
 				s.emplace(item.cast<std::string>());
 	} catch (const py::cast_error& e) {
-		// manually translate cast_error to type error
-		PyErr_SetString(PyExc_TypeError, e.what());
-		throw py::error_already_set();
+		// translate cast_error to type_error with an informative message
+		throw py::type_error("Expecting a string or a list of strings");
 	}
 	self.setForwardedProperties(s);
 }

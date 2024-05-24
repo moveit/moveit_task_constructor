@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
-from moveit_commander.roscpp_initializer import roscpp_initialize
+from py_binding_tools import roscpp_init
 import time
 
-roscpp_initialize("mtc_tutorial_current_state")
+roscpp_init("mtc_tutorial_current_state")
 
 # Create a task
 task = core.Task()

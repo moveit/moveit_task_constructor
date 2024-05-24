@@ -11,6 +11,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	${PROJECT_INCLUDE}/stages/generate_place_pose.h
 	${PROJECT_INCLUDE}/stages/compute_ik.h
 	${PROJECT_INCLUDE}/stages/passthrough.h
+	${PROJECT_INCLUDE}/stages/noop.h
 	${PROJECT_INCLUDE}/stages/predicate_filter.h
 
 	${PROJECT_INCLUDE}/stages/connect.h

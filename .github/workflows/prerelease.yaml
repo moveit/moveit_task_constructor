@@ -5,24 +5,24 @@ name: pre-release
 
 on:
   workflow_dispatch:
+    inputs:
+      ROS_DISTRO:
+        type: string
+        required: true
+        description: 'ROS distribution codename:'
+        default: noetic
 
 permissions:
   contents: read # to fetch code (actions/checkout)
 
 jobs:
   default:
-    strategy:
-      matrix:
-        distro: [noetic]
-
     env:
-      # https://github.com/ros-industrial/industrial_ci/issues/666
-      BUILDER: catkin_make_isolated
-      ROS_DISTRO: ${{ matrix.distro }}
+      ROS_DISTRO: ${{ inputs.ROS_DISTRO }}
       PRERELEASE: true
       BASEDIR: ${{ github.workspace }}/.work
 
-    name: "${{ matrix.distro }}"
+    name: "${{ inputs.ROS_DISTRO }}"
     runs-on: ubuntu-latest
     steps:
       - name: "Free up disk space"

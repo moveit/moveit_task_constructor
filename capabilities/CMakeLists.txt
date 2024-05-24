@@ -8,6 +8,8 @@ find_package(moveit_common REQUIRED)
 moveit_package()
 find_package(moveit_core REQUIRED)
 find_package(moveit_ros_move_group REQUIRED)
+find_package(moveit_ros_planning REQUIRED)
+find_package(moveit_task_constructor_core REQUIRED)
 find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -21,6 +23,8 @@ ament_target_dependencies(${PROJECT_NAME}
                           rclcpp_action
                           moveit_core
                           moveit_ros_move_group
+                          moveit_ros_planning
+                          moveit_task_constructor_core
                           moveit_task_constructor_msgs
 )
 
@@ -31,6 +35,8 @@ install(TARGETS ${PROJECT_NAME}
 pluginlib_export_plugin_description_file(moveit_ros_move_group capabilities_plugin_description.xml)
 ament_export_dependencies(moveit_core)
 ament_export_dependencies(moveit_ros_move_group)
+ament_export_dependencies(moveit_ros_planning)
+ament_export_dependencies(moveit_task_constructor_core)
 ament_export_dependencies(moveit_task_constructor_msgs)
 ament_export_dependencies(pluginlib)
 ament_export_dependencies(rclcpp_action)

@@ -16,7 +16,7 @@
 	<depend>moveit_common</depend>
 	<depend>rclcpp</depend>
 	<depend>tf2_eigen</depend>
-	<depend>urdfdom_headers</depend>
+	<depend>urdfdom</depend>
 	<depend>visualization_msgs</depend>
 
 	<export>
