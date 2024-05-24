@@ -29,3 +29,10 @@ The validation process runs sequentially through a ``SerialContainer``. Here, ``
 ``moveTo`` as a propagator can operate, in principle, forwards and backwards. By default, the operation direction is inferred automatically. Here, as ``connect`` requires a reading end-interface, moveTo should seemingly operate backwards. However, now the whole pipeline is incompatible to the enclosing container's interface: a task requires a generator-type interface as it generates solutions - there is no input interface to read from. Hence, the *reading* end interface (←) of ``moveto`` conflicts with a *writing* end interface of the task.
 
 Obviously, in a ``ParallelContainer`` all (direct) children need to share a common interface.
+
+Debugging using RViz
+--------------------
+
+The Motion Planning Tasks panel in RViz lists all the stages in the MTC task being executed.
+Solutions for each stage can be examined by clicking on the stage name.
+The failed solutions will contain descriptive reasons for failure.
