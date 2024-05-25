@@ -44,6 +44,7 @@
 #include <moveit/task_constructor/cost_queue.h>
 
 #include <ros/console.h>
+#include <fmt/core.h>
 
 #include <ostream>
 #include <chrono>
@@ -144,7 +145,7 @@ public:
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
-		ROS_DEBUG_STREAM_NAMED("Stage", "Computing stage '" << name() << "'");
+		ROS_DEBUG_STREAM_NAMED("Stage", fmt::format("Computing stage '{}'", name()));
 		auto compute_start_time = std::chrono::steady_clock::now();
 		try {
 			compute();

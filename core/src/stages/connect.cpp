@@ -42,6 +42,8 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 
 using namespace trajectory_processing;
 
@@ -95,7 +97,7 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 		try {
 			merged_jmg_.reset(task_constructor::merge(groups));
 		} catch (const std::runtime_error& e) {
-			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("{}: {}. Disabling merging.", this->name(), e.what()));
 		}
 	}
 
@@ -126,8 +128,8 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 		Eigen::Map<const Eigen::VectorXd> positions_from(from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to(to.getJointPositions(jm), num);
 		if (!(positions_from - positions_to).isZero(1e-4)) {
-			ROS_INFO_STREAM_NAMED("Connect", "Deviation in joint " << jm->getName() << ": [" << positions_from.transpose()
-			                                                       << "] != [" << positions_to.transpose() << "]");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("Deviation in joint {}: [{}] != [{}]", jm->getName(),
+			                                             positions_from.transpose(), positions_to.transpose()));
 			return false;
 		}
 	}
