@@ -112,7 +112,7 @@ jobs:
 
   doc:
     # https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake
-    if: github.repository_owner == 'ros-planning'
+    if: github.repository_owner == 'moveit'
     runs-on: ubuntu-latest
     needs: ici
     container:
@@ -150,7 +150,7 @@ jobs:
 
   # Deployment job
   deploy:
-    if: github.repository_owner == 'ros-planning' && github.ref == 'refs/heads/master'
+    if: github.repository_owner == 'moveit' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     needs: doc
     environment:

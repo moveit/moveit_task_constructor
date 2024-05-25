@@ -211,7 +211,7 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 	// we mark the first state with ARMED and all other states down the tree with PRUNED.
 	// This allows us to re-enable the ARMED state, but not the PRUNED states,
 	// when new states arrive in a Connecting stage.
-	// For details, https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+	// For details, https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
 	if (status == InterfaceState::Status::ARMED)
 		status = InterfaceState::Status::PRUNED;  // only the first state is marked as ARMED
 

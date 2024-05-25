@@ -809,7 +809,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 				continue;
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
-			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+			// https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
 			if (oit->priority().status() == InterfaceState::Status::ARMED) {
 				oit_to_enable.push_back(oit);
 				have_enabled_opposites = true;

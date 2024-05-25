@@ -46,7 +46,7 @@ struct TestBase : public TaskTestBase
 };
 
 using ConnectConnect = TestBase;
-// https://github.com/ros-planning/moveit_task_constructor/issues/182
+// https://github.com/moveit/moveit_task_constructor/issues/182
 TEST_F(ConnectConnect, SuccSucc) {
 	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
 	add(t, new Connect());
@@ -58,7 +58,7 @@ TEST_F(ConnectConnect, SuccSucc) {
 	EXPECT_COSTS(t.solutions(), ::testing::ElementsAre(11, 12, 13, 21, 22, 23));
 }
 
-// https://github.com/ros-planning/moveit_task_constructor/issues/218
+// https://github.com/moveit/moveit_task_constructor/issues/218
 TEST_F(ConnectConnect, FailSucc) {
 	add(t, new GeneratorMockup());
 	add(t, new Connect({ INF }, true));
@@ -70,7 +70,7 @@ TEST_F(ConnectConnect, FailSucc) {
 	EXPECT_FALSE(t.plan());
 }
 
-// https://github.com/ros-planning/moveit_task_constructor/issues/485#issuecomment-1760606116
+// https://github.com/moveit/moveit_task_constructor/issues/485#issuecomment-1760606116
 TEST_F(ConnectConnect, UniqueEnumeration) {
 	add(t, new GeneratorMockup({ 1.0, 2.0, 3.0 }));
 	auto con1 = add(t, new ConnectMockup());
