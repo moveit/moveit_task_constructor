@@ -1,3 +1,5 @@
+#include <pybind11/pybind11.h>
+
 namespace moveit {
 namespace python {
 namespace {
