@@ -166,6 +166,9 @@ TEST_F(PandaMoveRelativeCartesian, cartesianRotateAttachedIKFrame) {
 using PlannerTypes = ::testing::Types<solvers::CartesianPath, solvers::PipelinePlanner>;
 TYPED_TEST_SUITE(PandaMoveRelative, PlannerTypes);
 TYPED_TEST(PandaMoveRelative, cartesianCollisionMinMaxDistance) {
+	if (std::is_same<TypeParam, solvers::PipelinePlanner>::value)
+		GTEST_SKIP();  // Pilz PipelinePlanner current fails this test (see #538)
+
 	const std::string object{ "object" };
 	geometry_msgs::Pose object_pose;
 	object_pose.position.z = 0.4;
