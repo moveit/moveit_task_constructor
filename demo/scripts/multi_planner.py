@@ -12,8 +12,7 @@ ompl_pipelinePlanner.planner = "RRTConnectkConfigDefault"
 pilz_pipelinePlanner = core.PipelinePlanner("pilz_industrial_motion_planner")
 pilz_pipelinePlanner.planner = "PTP"
 multiPlanner = core.MultiPlanner()
-multiPlanner.add(ompl_pipelinePlanner)
-multiPlanner.add(pilz_pipelinePlanner)
+multiPlanner.add(pilz_pipelinePlanner, ompl_pipelinePlanner)
 
 # Create a task
 task = core.Task()

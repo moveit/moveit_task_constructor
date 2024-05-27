@@ -136,7 +136,7 @@ void export_solvers(py::module& m) {
 		        for (auto it = args.begin(), end = args.end(); it != end; ++it)
 			        self.push_back(it->cast<PlannerInterfacePtr>());
 	        },
-	        "Insert a planner")
+	        "Insert one or more planners")
 	    .def(
 	        "clear", [](MultiPlanner& self) { self.clear(); }, "Remove all planners")
 	    .def(py::init<>());
