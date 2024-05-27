@@ -63,14 +63,14 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	          const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
-	          double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 };
 }  // namespace solvers
 }  // namespace task_constructor

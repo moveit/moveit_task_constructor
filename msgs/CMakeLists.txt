@@ -19,6 +19,7 @@ add_message_files(DIRECTORY msg FILES
 	SubTrajectory.msg
 	TaskDescription.msg
 	TaskStatistics.msg
+	TrajectoryExecutionInfo.msg
 )
 
 add_service_files(DIRECTORY srv FILES

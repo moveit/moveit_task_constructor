@@ -34,6 +34,18 @@ struct PredefinedCosts : CostTerm
 
 constexpr double INF{ std::numeric_limits<double>::infinity() };
 
+/* wrapper stage to delay solutions by a given number of steps */
+struct DelayingWrapper : public WrapperBase
+{
+	std::list<unsigned int> delay_;
+	/* delay list specifies the number of steps each received solution should be delayed */
+	DelayingWrapper(std::list<unsigned int> delay, Stage::pointer&& child)
+	  : WrapperBase("delayer", std::move(child)), delay_{ std::move(delay) } {}
+
+	void compute() override;
+	void onNewSolution(const SolutionBase& s) override { liftSolution(s); }
+};
+
 struct GeneratorMockup : public Generator
 {
 	planning_scene::PlanningScenePtr ps_;
@@ -47,8 +59,8 @@ struct GeneratorMockup : public Generator
 	// default to one solution to avoid infinity loops
 	GeneratorMockup(PredefinedCosts&& costs = PredefinedCosts{ std::list<double>{ 0.0 }, true },
 	                std::size_t solutions_per_compute = 1);
-	GeneratorMockup(std::initializer_list<double> costs)
-	  : GeneratorMockup{ PredefinedCosts{ std::list<double>{ costs }, true } } {}
+	GeneratorMockup(std::initializer_list<double> costs, std::size_t solutions_per_compute = 1)
+	  : GeneratorMockup{ PredefinedCosts{ std::list<double>{ costs }, true }, solutions_per_compute } {}
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;

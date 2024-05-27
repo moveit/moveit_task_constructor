@@ -13,7 +13,12 @@ constexpr double TAU = 2 * M_PI;
 
 using namespace moveit::task_constructor;
 
-/** CurrentState -> Fallbacks( MoveTo<CartesianPath>, MoveTo<PTP>, MoveTo<OMPL> )*/
+/** Alternatives (3x FixedState with different states) -> Fallbacks(MoveTo<CartesianPath>, MoveTo<PTP>, MoveTo<OMPL>)
+ *
+ * This task demonstrates how to use the Fallbacks stage to try different planning approaches in propagator.
+ * Note that the initial states are all different, so this task does not describe any real-world scenario
+ * (where all plans should start from the same initial state for execution).
+ */
 int main(int argc, char** argv) {
 	ros::init(argc, argv, "mtc_tutorial");
 
@@ -22,6 +27,7 @@ int main(int argc, char** argv) {
 
 	// setup Task
 	Task t;
+	t.setName("fallback strategies in MoveTo");
 	t.loadRobotModel();
 	const moveit::core::RobotModelConstPtr robot{ t.getRobotModel() };
 
@@ -31,19 +37,13 @@ int main(int argc, char** argv) {
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
 	cartesian->setJumpThreshold(2.0);
 
-	const auto ptp = []() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner") };
-		pp->setPlannerId("PTP");
-		return pp;
-	}();
+	auto ptp = std::make_shared<solvers::PipelinePlanner>("pilz_industrial_motion_planner");
+	ptp->setPlannerId("PTP");
 
-	const auto rrtconnect = []() {
-		auto pp{ std::make_shared<solvers::PipelinePlanner>("ompl") };
-		pp->setPlannerId("RRTConnectkConfigDefault");
-		return pp;
-	}();
+	auto rrtconnect = std::make_shared<solvers::PipelinePlanner>("ompl");
+	rrtconnect->setPlannerId("RRTConnect");
 
-	// target state for Task
+	// target end state for all Task plans
 	std::map<std::string, double> target_state;
 	robot->getJointModelGroup("panda_arm")->getVariableDefaultPositions("ready", target_state);
 	target_state["panda_joint1"] = +TAU / 8;
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 
 	{
 		// can reach target with Cartesian motion
-		auto fixed{ std::make_unique<stages::FixedState>("current state") };
+		auto fixed{ std::make_unique<stages::FixedState>("close to target state in workspace") };
 		auto scene{ initial_scene->diff() };
 		scene->getCurrentStateNonConst().setVariablePositions({ { "panda_joint1", -TAU / 8 } });
 		fixed->setState(scene);
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 	}
 	{
 		// Cartesian motion to target is impossible, but PTP is collision-free
-		auto fixed{ std::make_unique<stages::FixedState>("current state") };
+		auto fixed{ std::make_unique<stages::FixedState>("directly reachable without collision") };
 		auto scene{ initial_scene->diff() };
 		scene->getCurrentStateNonConst().setVariablePositions({
 		    { "panda_joint1", +TAU / 8 },
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 	}
 	{
 		// Cartesian and PTP motion to target would be in collision
-		auto fixed = std::make_unique<stages::FixedState>("current state");
+		auto fixed{ std::make_unique<stages::FixedState>("getting to target requires collision avoidance") };
 		auto scene{ initial_scene->diff() };
 		scene->getCurrentStateNonConst().setVariablePositions({ { "panda_joint1", -TAU / 8 } });
 		scene->processCollisionObjectMsg([]() {
@@ -122,8 +122,6 @@ int main(int argc, char** argv) {
 	t.add(std::move(fallbacks));
 
 	try {
-		t.init();
-		std::cout << t << std::endl;
 		t.plan();
 	} catch (const InitStageException& e) {
 		std::cout << e << std::endl;

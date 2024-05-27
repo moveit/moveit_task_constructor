@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2017, Hamburg University
+ *  Copyright (c) 2022, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of PickNik Inc. nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,39 +32,14 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Authors: Michael Goerner
-   Desc:    Generator Stage for simple grasp poses
-*/
+/* Authors: Joe Schornak, Sebastian Jahr */
 
 #pragma once
 
-#include <moveit/task_constructor/stages/generate_pose.h>
+#include <moveit_task_constructor_msgs/TrajectoryExecutionInfo.h>
 
 namespace moveit {
 namespace task_constructor {
-namespace stages {
-
-class GenerateGraspPose : public GeneratePose
-{
-public:
-	GenerateGraspPose(const std::string& name = "generate grasp pose");
-
-	void init(const core::RobotModelConstPtr& robot_model) override;
-	void compute() override;
-
-	void setEndEffector(const std::string& eef) { setProperty("eef", eef); }
-	void setObject(const std::string& object) { setProperty("object", object); }
-	void setAngleDelta(double delta) { setProperty("angle_delta", delta); }
-	void setRotationAxis(const Eigen::Vector3d& axis) { setProperty("rotation_axis", axis); }
-
-	void setPreGraspPose(const std::string& pregrasp) { properties().set("pregrasp", pregrasp); }
-	void setPreGraspPose(const moveit_msgs::RobotState& pregrasp) { properties().set("pregrasp", pregrasp); }
-	void setGraspPose(const std::string& grasp) { properties().set("grasp", grasp); }
-	void setGraspPose(const moveit_msgs::RobotState& grasp) { properties().set("grasp", grasp); }
-
-protected:
-	void onNewSolution(const SolutionBase& s) override;
-};
-}  // namespace stages
+using TrajectoryExecutionInfo = moveit_task_constructor_msgs::TrajectoryExecutionInfo;
 }  // namespace task_constructor
 }  // namespace moveit

@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
@@ -79,16 +80,19 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	          const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	            const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	          const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
-	          double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
 protected:
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit_msgs::MotionPlanRequest& req,
+	            robot_trajectory::RobotTrajectoryPtr& result);
+
 	std::string pipeline_name_;
 	planning_pipeline::PlanningPipelinePtr planner_;
 };

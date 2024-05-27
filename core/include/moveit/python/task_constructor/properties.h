@@ -1,7 +1,7 @@
 #pragma once
 
 #include <pybind11/smart_holder.h>
-#include <moveit/python/pybind_rosmsg_typecasters.h>
+#include <py_binding_tools/ros_msg_typecasters.h>
 #include <moveit/task_constructor/properties.h>
 #include <boost/any.hpp>
 #include <typeindex>
