@@ -86,9 +86,8 @@ void setForwardedProperties(Stage& self, const py::object& names) {
 			for (auto item : names)
 				s.emplace(item.cast<std::string>());
 	} catch (const py::cast_error& e) {
-		// manually translate cast_error to type error
-		PyErr_SetString(PyExc_TypeError, e.what());
-		throw py::error_already_set();
+		// translate cast_error to type_error with an informative message
+		throw py::type_error("Expecting a string or a list of strings");
 	}
 	self.setForwardedProperties(s);
 }
@@ -124,9 +123,9 @@ void export_core(pybind11::module& m) {
 	        ":visualization_msgs:`Marker`: Markers to visualize important aspects of the trajectory (read-only)")
 	    .def(
 	        "toMsg",
-	        [](const SolutionBasePtr& s) {
-		        moveit_task_constructor_msgs::Solution msg;
-		        s->fillMessage(msg);
+	        [](const SolutionBase& self) {
+		        moveit_task_constructor_msgs::msg::Solution msg;
+		        self.toMsg(msg);
 		        return msg;
 	        },
 	        "Convert to the ROS message ``Solution``");
@@ -175,7 +174,7 @@ void export_core(pybind11::module& m) {
 	    .def(py::init<std::map<std::string, double>>());
 	py::classh<cost::DistanceToReference, TrajectoryCostTerm>(m, "DistanceToReference",
 	                                                          "Computes joint-based distance to reference pose")
-	    .def(py::init<const moveit_msgs::RobotState&, TrajectoryCostTerm::Mode, std::map<std::string, double>>(),
+	    .def(py::init<const moveit_msgs::msg::RobotState&, TrajectoryCostTerm::Mode, std::map<std::string, double>>(),
 	         "reference"_a, "mode"_a = TrajectoryCostTerm::Mode::AUTO, "weights"_a = std::map<std::string, double>())
 	    .def(py::init<const std::map<std::string, double>&, TrajectoryCostTerm::Mode, std::map<std::string, double>>(),
 	         "reference"_a, "mode"_a = TrajectoryCostTerm::Mode::AUTO, "weights"_a = std::map<std::string, double>());
@@ -440,6 +439,7 @@ void export_core(pybind11::module& m) {
 			        t.add(it->cast<Stage::pointer>());
 	        },
 	        "Append stage(s) to the task's top-level container")
+	    .def("insert", &Task::insert, "stage"_a, "before"_a = -1, "Insert stage before given index")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
@@ -493,10 +493,10 @@ void export_core(pybind11::module& m) {
 		        MoveGroupInterface mgi(solution->start()->scene()->getRobotModel()->getJointModelGroupNames()[0]);
 
 		        MoveGroupInterface::Plan plan;
-		        moveit_task_constructor_msgs::Solution serialized;
-		        solution->fillMessage(serialized);
+		        moveit_task_constructor_msgs::msg::Solution serialized;
+		        solution->toMsg(serialized);
 
-		        for (const moveit_task_constructor_msgs::SubTrajectory& traj : serialized.sub_trajectory) {
+		        for (const moveit_task_constructor_msgs::msg::SubTrajectory& traj : serialized.sub_trajectory) {
 			        if (!traj.trajectory.joint_trajectory.points.empty()) {
 				        plan.trajectory_ = traj.trajectory;
 				        if (!mgi.execute(plan)) {

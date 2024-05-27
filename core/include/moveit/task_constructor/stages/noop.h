@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, Bielefeld University
+ *  Copyright (c) 2024, Sherbrooke University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -31,38 +31,34 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
+/* Authors: Captain Yoshi */
 
-#include <moveit/python/python_tools/ros_init.h>
-#include <ros/init.h>
+#pragma once
+
+#include <moveit/task_constructor/stage.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit {
-namespace python {
+namespace task_constructor {
+namespace stages {
 
-boost::mutex InitProxy::lock_;
-std::unique_ptr<InitProxy> InitProxy::singleton_instance_;
+/** no-op stage, which doesn't modify the interface state nor adds a trajectory.
+ *  However, it can be used to store custom stage properties,
+ *  which in turn can be queried post-planning to steer the execution.
+ */
 
-void InitProxy::init(const std::string& node_name, const std::map<std::string, std::string>& remappings,
-                     uint32_t options) {
-	boost::mutex::scoped_lock slock(lock_);
-	if (!singleton_instance_ && !ros::isInitialized())
-		singleton_instance_.reset(new InitProxy(node_name, remappings, options));
-}
+class NoOp : public PropagatingEitherWay
+{
+public:
+	NoOp(const std::string& name = "no-op") : PropagatingEitherWay(name){};
 
-void InitProxy::shutdown() {
-	boost::mutex::scoped_lock slock(lock_);
-	singleton_instance_.reset();
-}
-
-InitProxy::InitProxy(const std::string& node_name, const std::map<std::string, std::string>& remappings,
-                     uint32_t options) {
-	ros::init(remappings, node_name, options | ros::init_options::NoSigintHandler);
-	spinner.reset(new ros::AsyncSpinner(1));
-	spinner->start();
-}
-
-InitProxy::~InitProxy() {
-	spinner->stop();
-	spinner.reset();
-}
-}  // namespace python
+private:
+	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& /*trajectory*/,
+	             Interface::Direction /*dir*/) override {
+		scene = state.scene()->diff();
+		return true;
+	};
+};
+}  // namespace stages
+}  // namespace task_constructor
 }  // namespace moveit

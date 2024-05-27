@@ -1,7 +1,7 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, Bielefeld University
+ *  Copyright (c) 2022, PickNik Inc.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -14,7 +14,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of Bielefeld University nor the names of its
+ *   * Neither the name of PickNik Inc. nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,22 +32,14 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <pybind11/smart_holder.h>
-#include <pybind11/stl.h>
-#include <moveit/python/python_tools/ros_init.h>
-#include <ros/init.h>
+/* Authors: Joe Schornak, Sebastian Jahr */
 
-namespace py = pybind11;
-using namespace moveit::python;
+#pragma once
 
-PYBIND11_MODULE(pymoveit_python_tools, m) {
-	m.doc() = "MoveIt python tools";
+#include <moveit_task_constructor_msgs/msg/trajectory_execution_info.hpp>
 
-	m.def("roscpp_init", &InitProxy::init, "Initialize C++ ROS", py::arg("node_name") = "moveit_python_wrapper",
-	      py::arg("remappings") = std::map<std::string, std::string>(), py::arg("options") = 0);
-	m.def("roscpp_shutdown", &InitProxy::shutdown, "Shutdown C++ ROS");
-
-	py::enum_<ros::InitOption>(m, "InitOption")
-	    .value("AnonymousName", ros::init_options::AnonymousName)
-	    .value("NoRosout", ros::init_options::NoRosout);
-}
+namespace moveit {
+namespace task_constructor {
+using TrajectoryExecutionInfo = moveit_task_constructor_msgs::msg::TrajectoryExecutionInfo;
+}  // namespace task_constructor
+}  // namespace moveit

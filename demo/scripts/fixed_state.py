@@ -3,7 +3,7 @@
 
 from moveit.core import planning_scene
 from moveit.task_constructor import core, stages
-from moveit.python_tools import roscpp_init
+from py_binding_tools import roscpp_init
 from moveit.core.planning_scene import PlanningScene
 import time
 

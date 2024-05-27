@@ -3,7 +3,7 @@
 
 from moveit.task_constructor import core, stages
 from geometry_msgs.msg import PoseStamped
-from moveit.python_tools import roscpp_init
+from py_binding_tools import roscpp_init
 import time
 
 roscpp_init("mtc_tutorial_compute_ik")

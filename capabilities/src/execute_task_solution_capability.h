@@ -63,18 +63,22 @@ private:
 	bool constructMotionPlan(const moveit_task_constructor_msgs::msg::Solution& solution,
 	                         plan_execution::ExecutableMotionPlan& plan);
 
-	void goalCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
+	void execCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle);
 
 	rclcpp_action::CancelResponse
-	preemptCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle);
+	preemptCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle);
 
-	/** Always accept the goal */
+	/** Only accept the goal if we aren't executing one */
 	rclcpp_action::GoalResponse handleNewGoal(const rclcpp_action::GoalUUID& /*uuid*/,
-	                                          const ExecuteTaskSolutionAction::Goal::ConstSharedPtr /*goal*/) const {
+	                                          const ExecuteTaskSolutionAction::Goal::ConstSharedPtr& /*goal*/) const {
+		if (last_goal_future_.valid() &&
+		    last_goal_future_.wait_for(std::chrono::seconds::zero()) != std::future_status::ready)
+			return rclcpp_action::GoalResponse::REJECT;
 		return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 	}
 
 	ActionServerType::SharedPtr as_;
+	std::future<void> last_goal_future_;
 };
 
 }  // namespace move_group

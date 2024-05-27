@@ -67,7 +67,7 @@ printChildrenInterfaces(const ContainerBasePrivate& container, bool success, con
 	if (success)
 		os << ++id << ' ';
 	if (const auto conn = dynamic_cast<const ConnectingPrivate*>(creator.pimpl()))
-		conn->printPendingPairs(os);
+		os << conn->pendingPairsPrinter();
 	os << std::endl;
 
 	for (const auto& child : container.children()) {
@@ -447,6 +447,20 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 		throw errors;
 }
 
+void ContainerBase::explainFailure(std::ostream& os) const {
+	for (const auto& stage : pimpl()->children()) {
+		if (!stage->solutions().empty())
+			continue;  // skip deeper traversal, this stage produced solutions
+		if (stage->numFailures()) {
+			os << stage->name() << " (0/" << stage->numFailures() << ")";
+			stage->explainFailure(os);
+			os << std::endl;
+			break;
+		}
+		stage->explainFailure(os);  // recursively process children
+	}
+}
+
 std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	ContainerBase::StageCallback processor = [&os](const Stage& stage, unsigned int depth) -> bool {
 		os << std::string(2 * depth, ' ') << *stage.pimpl() << std::endl;
@@ -474,7 +488,8 @@ struct SolutionCollector
 			solutions.emplace_back(std::make_pair(trace, prio));
 		} else {
 			for (SolutionBase* successor : next) {
-				assert(!successor->isFailure());  // We shouldn't have invalid solutions
+				if (successor->isFailure())
+					continue;  // skip failures
 				trace.push_back(successor);
 				traverse(*successor, prio + InterfaceState::Priority(1, successor->cost()));
 				trace.pop_back();
@@ -692,6 +707,7 @@ void SerialContainer::compute() {
 	}
 }
 
+
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
@@ -863,6 +879,8 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 
 inline void Fallbacks::replaceImpl() {
 	FallbacksPrivate *impl = pimpl();
+	if (pimpl()->interfaceFlags() == pimpl()->requiredInterface())
+		return;
 	switch (pimpl()->requiredInterface()) {
 		case GENERATE:
 			impl = new FallbacksPrivateGenerator(std::move(*impl));

@@ -92,7 +92,7 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz_common::Panel(parent), d_ptr(new Ta
 
 	// sync checked tool button with displayed widget
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::idClicked), d->stackedWidget,
+	connect(d->tool_buttons_group, &QButtonGroup::idClicked, d->stackedWidget,
 	        [d](int index) { d->stackedWidget->setCurrentIndex(index); });
 #else
 	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
@@ -181,7 +181,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
-	button_show_stage_dock_widget->setToolTip("Show available stages");
+	button_show_stage_dock_widget->setVisible(false);  // hide for now
 	property_root = new rviz_common::properties::Property("Global Settings");
 }
 
@@ -228,9 +228,7 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 	setupUi(view);
 
-	rclcpp::NodeOptions options;
-	options.arguments({ "--ros-args", "-r", "__node:=task_view_private" });
-	node_ = rclcpp::Node::make_shared("_", "", options);
+	node_ = rclcpp::Node::make_shared("task_view_private", "");
 	exec_action_client_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node_, "execute_task_solution");
 
@@ -545,7 +543,7 @@ void TaskView::onExecCurrentSolution() const {
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 
 	if (!d_ptr->exec_action_client_->wait_for_action_server(std::chrono::milliseconds(100))) {
-		RCLCPP_ERROR(LOGGER, "Failed to connect to task execution action");
+		RCLCPP_ERROR(LOGGER, "Failed to connect to the 'execute_task_solution' action server");
 		return;
 	}
 

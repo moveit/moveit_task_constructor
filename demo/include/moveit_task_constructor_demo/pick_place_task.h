@@ -59,12 +59,6 @@
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 #include "pick_place_demo_parameters.hpp"
 
-#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
-#include <tf2_eigen/tf2_eigen.hpp>
-#else
-#include <tf2_eigen/tf2_eigen.h>
-#endif
-
 #pragma once
 
 namespace moveit_task_constructor_demo {

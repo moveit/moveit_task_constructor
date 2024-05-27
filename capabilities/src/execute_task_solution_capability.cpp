@@ -95,11 +95,14 @@ void ExecuteTaskSolutionCapability::initialize() {
 	    ActionServerType::CancelCallback(
 	        std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this, std::placeholders::_1)),
 	    ActionServerType::AcceptedCallback(
-	        std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1)));
+	        [this](const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
+		        last_goal_future_ =
+		            std::async(std::launch::async, &ExecuteTaskSolutionCapability::execCallback, this, goal_handle);
+	        }));
 }
 
-void ExecuteTaskSolutionCapability::goalCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> goal_handle) {
+void ExecuteTaskSolutionCapability::execCallback(
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
 	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
 
 	const auto& goal = goal_handle->get_goal();
@@ -126,7 +129,7 @@ void ExecuteTaskSolutionCapability::goalCallback(
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
-    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>> /*goal_handle*/) {
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& /*goal_handle*/) {
 	if (context_->plan_execution_)
 		context_->plan_execution_->stop();
 	return rclcpp_action::CancelResponse::ACCEPT;
@@ -142,16 +145,16 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		state = scene->getCurrentState();
 	}
 
-	plan.plan_components_.reserve(solution.sub_trajectory.size());
+	plan.plan_components.reserve(solution.sub_trajectory.size());
 	for (size_t i = 0; i < solution.sub_trajectory.size(); ++i) {
 		const moveit_task_constructor_msgs::msg::SubTrajectory& sub_traj = solution.sub_trajectory[i];
 
-		plan.plan_components_.emplace_back();
-		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components_.back();
+		plan.plan_components.emplace_back();
+		plan_execution::ExecutableTrajectory& exec_traj = plan.plan_components.back();
 
 		// define individual variable for use in closure below
 		const std::string description = std::to_string(i + 1) + "/" + std::to_string(solution.sub_trajectory.size());
-		exec_traj.description_ = description;
+		exec_traj.description = description;
 
 		const moveit::core::JointModelGroup* group = nullptr;
 		{
@@ -168,15 +171,28 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 				RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());
 			}
 		}
-		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
-		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+		exec_traj.trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
+		exec_traj.trajectory->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+
+		// Check that sub trajectories that contain a valid trajectory have controllers configured.
+		if (!sub_traj.trajectory.joint_trajectory.points.empty() && sub_traj.execution_info.controller_names.empty()) {
+			RCLCPP_WARN(LOGGER,
+			            "The trajectory of stage '%i' from task '%s' does not have any controllers specified for "
+			            "trajectory execution. This might lead to unexpected controller selection.",
+			            sub_traj.info.stage_id, solution.task_id.c_str());
+		}
+		exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this, sub_traj,
-		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
+		exec_traj.effect_on_success = [this,
+		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
+		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
+			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
+
+			if (!moveit::core::isEmpty(scene_diff)) {
 				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+				return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
 			}
 			return true;
 		};
@@ -193,5 +209,5 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 
 }  // namespace move_group
 
-#include <class_loader/class_loader.hpp>
-CLASS_LOADER_REGISTER_CLASS(move_group::ExecuteTaskSolutionCapability, move_group::MoveGroupCapability)
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(move_group::ExecuteTaskSolutionCapability, move_group::MoveGroupCapability)

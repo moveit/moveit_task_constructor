@@ -87,6 +87,9 @@ public:
 	const std::string& name() const { return stages()->name(); }
 	void setName(const std::string& name) { stages()->setName(name); }
 
+	Stage* findChild(const std::string& name) const { return stages()->findChild(name); }
+	Stage* operator[](int index) const { return stages()->operator[](index); }
+
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
 	void setRobotModel(const moveit::core::RobotModelConstPtr& robot_model);
@@ -130,6 +133,9 @@ public:
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;
+
+	/// print an explanation for a planning failure to os
+	void explainFailure(std::ostream& os = std::cout) const override;
 
 	size_t numSolutions() const { return solutions().size(); }
 	const ordered<SolutionBaseConstPtr>& solutions() const { return stages()->solutions(); }

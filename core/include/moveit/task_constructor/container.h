@@ -76,6 +76,7 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
+	void explainFailure(std::ostream& os) const override;
 
 	/// called by a (direct) child when a new solution becomes available
 	virtual void onNewSolution(const SolutionBase& s) = 0;
@@ -163,7 +164,7 @@ class Fallbacks : public ParallelContainerBase
 	inline void replaceImpl();
 
 public:
-	PRIVATE_CLASS(Fallbacks);
+	PRIVATE_CLASS(Fallbacks)
 	Fallbacks(const std::string& name = "fallbacks");
 
 	void reset() override;

@@ -48,17 +48,23 @@
 
 #include <sstream>
 #include <boost/bimap.hpp>
+#include <rcutils/isalnum_no_locale.h>
+
+static auto LOGGER = rclcpp::get_logger("introspection");
 
 namespace moveit {
 namespace task_constructor {
 
 namespace {
 std::string getTaskId(const TaskPrivate* task) {
+	static const std::string ALLOWED = "_/";
 	std::ostringstream oss;
 	char our_hostname[256] = { 0 };
 	gethostname(our_hostname, sizeof(our_hostname) - 1);
-	// Hostname could have `-` as a character but this is an invalid character in ROS so we replace it with `_`
-	std::replace(std::begin(our_hostname), std::end(our_hostname), '-', '_');
+	// Replace all invalid ROS-name chars with an underscore
+	std::replace_if(
+	    our_hostname, our_hostname + strlen(our_hostname),
+	    [](const char ch) { return !rcutils_isalnum_no_locale(ch) && ALLOWED.find(ch) == std::string::npos; }, '_');
 	oss << our_hostname << "_" << getpid() << "_" << reinterpret_cast<std::size_t>(task);
 	return oss.str();
 }
@@ -102,9 +108,7 @@ class IntrospectionPrivate
 {
 public:
 	IntrospectionPrivate(const TaskPrivate* task, Introspection* self) : task_(task), task_id_(getTaskId(task)) {
-		rclcpp::NodeOptions options;
-		options.arguments({ "--ros-args", "-r", "__node:=introspection_" + task_id_ });
-		node_ = rclcpp::Node::make_shared("_", task_->ns(), options);
+		node_ = rclcpp::Node::make_shared("introspection_" + task_id_, task_->ns());
 		executor_.add_node(node_);
 		task_description_publisher_ = node_->create_publisher<moveit_task_constructor_msgs::msg::TaskDescription>(
 		    DESCRIPTION_TOPIC, rclcpp::QoS(2).transient_local());
@@ -186,9 +190,7 @@ void Introspection::registerSolution(const SolutionBase& s) {
 }
 
 void Introspection::fillSolution(moveit_task_constructor_msgs::msg::Solution& msg, const SolutionBase& s) {
-	s.fillMessage(msg, this);
-	s.start()->scene()->getPlanningSceneMsg(msg.start_scene);
-
+	s.toMsg(msg, this);
 	msg.task_id = impl->task_id_;
 }
 
@@ -240,6 +242,9 @@ uint32_t Introspection::stageId(const Stage* const s) const {
 
 uint32_t Introspection::solutionId(const SolutionBase& s) {
 	auto result = impl->id_solution_bimap_.left.insert(std::make_pair(1 + impl->id_solution_bimap_.size(), &s));
+	if (result.second)  // new entry
+		RCLCPP_DEBUG_STREAM(LOGGER, "new solution #" << result.first->first << " (" << s.creator()->name()
+		                                             << "): " << s.cost() << " " << s.comment());
 	return result.first->first;
 }
 

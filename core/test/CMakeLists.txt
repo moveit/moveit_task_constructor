@@ -7,9 +7,10 @@ if (BUILD_TESTING)
 	find_package(ament_cmake_gtest REQUIRED)
 	find_package(ament_cmake_gmock REQUIRED)
 	find_package(launch_testing_ament_cmake REQUIRED)
+	ament_find_gmock()
 
 	add_library(gtest_utils SHARED gtest_value_printers.cpp models.cpp stage_mockups.cpp)
-
+	target_include_directories(gtest_utils PUBLIC ${GMOCK_INCLUDE_DIRS})
 	target_link_libraries(gtest_utils ${PROJECT_NAME})
 
 	macro(mtc_add_test TYPE)
@@ -41,10 +42,11 @@ if (BUILD_TESTING)
 		mtc_add_test("gmock" ${ARGN})
 	endmacro()
 
+	mtc_add_gmock(test_mockups.cpp)
 	mtc_add_gtest(test_stage.cpp)
 	mtc_add_gtest(test_container.cpp)
-	mtc_add_gtest(test_serial.cpp)
-	mtc_add_gtest(test_pruning.cpp)
+	mtc_add_gmock(test_serial.cpp)
+	mtc_add_gmock(test_pruning.cpp)
 	mtc_add_gtest(test_properties.cpp)
 	mtc_add_gtest(test_cost_terms.cpp)
 
@@ -54,6 +56,7 @@ if (BUILD_TESTING)
 
 	mtc_add_gtest(test_move_to.cpp move_to.launch.py)
 	mtc_add_gtest(test_move_relative.cpp move_to.launch.py)
+	mtc_add_gtest(test_pipeline_planner.cpp)
 
 	# building these integration tests works without moveit config packages
 	ament_add_gtest_executable(pick_ur5 pick_ur5.cpp)

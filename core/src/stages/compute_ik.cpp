@@ -105,7 +105,7 @@ namespace {
 // TODO: move into MoveIt core, lift active_components_only_ from fcl to common interface
 bool isTargetPoseCollidingInEEF(const planning_scene::PlanningSceneConstPtr& scene,
                                 moveit::core::RobotState& robot_state, Eigen::Isometry3d pose,
-                                const moveit::core::LinkModel* link,
+                                const moveit::core::LinkModel* link, const moveit::core::JointModelGroup* jmg = nullptr,
                                 collision_detection::CollisionResult* collision_result = nullptr) {
 	// consider all rigidly connected parent links as well
 	const moveit::core::LinkModel* parent = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link);
@@ -136,6 +136,8 @@ bool isTargetPoseCollidingInEEF(const planning_scene::PlanningSceneConstPtr& sce
 	collision_detection::CollisionRequest req;
 	collision_detection::CollisionResult result;
 	req.contacts = (collision_result != nullptr);
+	if (jmg)
+		req.group_name = jmg->getName();
 	collision_detection::CollisionResult& res = collision_result ? *collision_result : result;
 	scene->checkCollision(req, res, robot_state, acm);
 	return res.collision;
@@ -316,7 +318,7 @@ void ComputeIK::compute() {
 	collision_detection::CollisionResult collisions;
 	moveit::core::RobotState sandbox_state{ scene->getCurrentState() };
 	bool colliding =
-	    !ignore_collisions && isTargetPoseCollidingInEEF(scene, sandbox_state, target_pose, link, &collisions);
+	    !ignore_collisions && isTargetPoseCollidingInEEF(scene, sandbox_state, target_pose, link, jmg, &collisions);
 
 	// frames at target pose and ik frame
 	std::deque<visualization_msgs::msg::Marker> frame_markers;
@@ -376,6 +378,7 @@ void ComputeIK::compute() {
 		collision_detection::CollisionResult res;
 		req.contacts = true;
 		req.max_contacts = 1;
+		req.group_name = jmg->getName();
 		scene->checkCollision(req, res, *state);
 		solution.feasible = ignore_collisions || !res.collision;
 		if (!res.contacts.empty()) {
@@ -390,8 +393,10 @@ void ComputeIK::compute() {
 	double remaining_time = timeout();
 	auto start_time = std::chrono::steady_clock::now();
 	while (ik_solutions.size() < max_ik_solutions && remaining_time > 0) {
-		if (tried_current_state_as_seed)
+		if (tried_current_state_as_seed) {
 			sandbox_state.setToRandomPositions(jmg);
+			sandbox_state.update();
+		}
 		tried_current_state_as_seed = true;
 
 		size_t previous = ik_solutions.size();

@@ -295,7 +295,7 @@ void TaskListModel::processTaskStatisticsMessage(const moveit_task_constructor_m
 DisplaySolutionPtr TaskListModel::processSolutionMessage(const moveit_task_constructor_msgs::msg::Solution& msg) {
 	auto it = remote_tasks_.find(msg.task_id);
 	if (it == remote_tasks_.cend())
-		return DisplaySolutionPtr();  // unkown task
+		return DisplaySolutionPtr();  // unknown task
 
 	RemoteTaskModel* remote_task = it->second;
 	if (!remote_task)

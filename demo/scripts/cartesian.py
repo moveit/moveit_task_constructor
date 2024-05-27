@@ -7,7 +7,7 @@ from moveit.task_constructor import core, stages
 from math import pi
 import time
 
-from moveit.python_tools import roscpp_init
+from py_binding_tools import roscpp_init
 
 roscpp_init("mtc_tutorial")
 

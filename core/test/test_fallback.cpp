@@ -175,17 +175,3 @@ TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 22, 121));
 }
-
-int main(int argc, char** argv) {
-	for (int i = 1; i < argc; ++i) {
-		if (strcmp(argv[i], "--debug") == 0) {
-			if (rcutils_logging_set_logger_level("moveit_robot_model.robot_model", RCUTILS_LOG_SEVERITY_FATAL) !=
-			    RCUTILS_RET_OK)
-				throw std::runtime_error("Failed to set logger level to RCUTILS_LOG_SEVERITY_ERROR");
-			break;
-		}
-	}
-
-	testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
