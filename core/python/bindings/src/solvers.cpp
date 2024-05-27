@@ -38,6 +38,7 @@
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit/task_constructor/solvers/multi_planner.h>
 #include <moveit_msgs/WorkspaceParameters.h>
+#include "utils.h"
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -49,26 +50,6 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(PipelinePlanner)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(JointInterpolationPlanner)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(CartesianPath)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(MultiPlanner)
-
-namespace {
-
-// utility function to normalize index: negative indeces reference from the end
-size_t normalize_index(size_t size, long index) {
-	if (index < 0)
-		index += size;
-	if (index >= long(size) || index < 0)
-		throw pybind11::index_error("Index out of range");
-	return index;
-}
-
-// implement operator[](index)
-template <typename T>
-typename T::value_type get_item(const T& container, long index) {
-	auto it = container.begin();
-	std::advance(it, normalize_index(container.size(), index));
-	return *it;
-}
-}  // anonymous namespace
 
 namespace moveit {
 namespace python {
