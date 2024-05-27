@@ -24,7 +24,7 @@ This repository provides the following branches:
 
 ## Tutorial
 
-We provide a tutorial for a pick-and-place pipeline without bells & whistles [as part of the MoveIt tutorials](https://ros-planning.github.io/moveit_tutorials/doc/moveit_task_constructor/moveit_task_constructor_tutorial.html).
+We provide a tutorial for a pick-and-place pipeline without bells & whistles [as part of the MoveIt tutorials](https://moveit.github.io/moveit_tutorials/doc/moveit_task_constructor/moveit_task_constructor_tutorial.html).
 
 ## Roadmap
 

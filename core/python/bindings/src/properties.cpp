@@ -43,6 +43,14 @@ namespace moveit {
 namespace python {
 namespace {
 
+/** In order to assign new property values in Python, we need to convert the Python object
+ *  to a boost::any instance of the correct type. As the C++ type cannot be inferred from
+ *  the Python type, we can support this assignment only for a few basic types (see fromPython())
+ *  as well as ROS message types. For other types, a generic assignment via
+ *  stage.properties["property"] = value
+ *  is not possible. Instead, use the .property<Type> declaration on the stage to allow for
+ *  direct assignment like this: stage.property = value
+ **/
 class PropertyConverterRegistry
 {
 	struct Entry
@@ -102,10 +110,8 @@ py::object PropertyConverterRegistry::toPython(const boost::any& value) {
 
 	auto it = REGISTRY_SINGLETON.types_.find(value.type());
 	if (it == REGISTRY_SINGLETON.types_.end()) {
-		std::string msg("No Python -> C++ conversion for: ");
-		msg += boost::core::demangle(value.type().name());
-		PyErr_SetString(PyExc_TypeError, msg.c_str());
-		throw py::error_already_set();
+		std::string name = boost::core::demangle(value.type().name());
+		throw py::type_error("No Python -> C++ conversion for: " + name);
 	}
 
 	return it->second.to_(value);
@@ -115,12 +121,9 @@ std::string rosMsgName(PyObject* object) {
 	py::object o = py::reinterpret_borrow<py::object>(object);
 	try {
 		return o.attr("_type").cast<std::string>();
-	} catch (const py::error_already_set&) {
-		// change error to TypeError
-		std::string msg = o.attr("__class__").attr("__name__").cast<std::string>();
-		msg += " is not a ROS message type";
-		PyErr_SetString(PyExc_TypeError, msg.c_str());
-		throw py::error_already_set();
+	} catch (const py::error_already_set& e) {
+		// object is not a ROS message type, return it's class name instead
+		return o.attr("__class__").attr("__name__").cast<std::string>();
 	}
 }
 
@@ -129,30 +132,17 @@ boost::any PropertyConverterRegistry::fromPython(const py::object& po) {
 
 	if (PyBool_Check(o))
 		return (o == Py_True);
-#if PY_MAJOR_VERSION >= 3
 	if (PyLong_Check(o))
 		return PyLong_AS_LONG(o);
-#else
-	if (PyInt_Check(o))
-		return PyInt_AS_LONG(o);
-#endif
 	if (PyFloat_Check(o))
 		return PyFloat_AS_DOUBLE(o);
-#if PY_MAJOR_VERSION >= 3
 	if (PyUnicode_Check(o))
-#else
-	if (PyString_Check(o))
-#endif
 		return py::cast<std::string>(o);
 
 	const std::string& ros_msg_name = rosMsgName(o);
 	auto it = REGISTRY_SINGLETON.msg_names_.find(ros_msg_name);
-	if (it == REGISTRY_SINGLETON.msg_names_.end()) {
-		std::string msg("No Python -> C++ conversion for: ");
-		msg += ros_msg_name;
-		PyErr_SetString(PyExc_TypeError, msg.c_str());
-		throw py::error_already_set();
-	}
+	if (it == REGISTRY_SINGLETON.msg_names_.end())
+		throw py::type_error("No C++ conversion available for (property) type: " + ros_msg_name);
 
 	return it->second->second.from_(po);
 }

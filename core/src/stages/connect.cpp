@@ -42,6 +42,8 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 
 using namespace trajectory_processing;
 
@@ -55,7 +57,8 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
-	p.declare<double>("max_distance", 1e-4, "maximally accepted distance between end and goal sate");
+	p.declare<double>("max_distance", 1e-4,
+	                  "maximally accepted joint configuration distance between trajectory endpoint and goal state");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
 	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
@@ -94,7 +97,7 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 		try {
 			merged_jmg_.reset(task_constructor::merge(groups));
 		} catch (const std::runtime_error& e) {
-			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("{}: {}. Disabling merging.", this->name(), e.what()));
 		}
 	}
 
@@ -125,8 +128,8 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 		Eigen::Map<const Eigen::VectorXd> positions_from(from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to(to.getJointPositions(jm), num);
 		if (!(positions_from - positions_to).isZero(1e-4)) {
-			ROS_INFO_STREAM_NAMED("Connect", "Deviation in joint " << jm->getName() << ": [" << positions_from.transpose()
-			                                                       << "] != [" << positions_to.transpose() << "]");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("Deviation in joint {}: [{}] != [{}]", jm->getName(),
+			                                             positions_from.transpose(), positions_to.transpose()));
 			return false;
 		}
 	}
@@ -148,7 +151,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
-	std::string comment;
+	std::string comment = "No planners specified";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
@@ -161,11 +164,14 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		success = bool(result);
 		sub_trajectories.push_back(trajectory);  // include failed trajectory
 
-		if (!success)
+		if (!success) {
+			comment = result.message;
 			break;
+		}
 
 		if (trajectory->getLastWayPoint().distance(goal_state, jmg) > max_distance) {
 			success = false;

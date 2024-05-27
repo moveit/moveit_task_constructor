@@ -94,10 +94,9 @@ public:
 	 */
 	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost, Status status = ENABLED)
-		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
-			assert(std::isfinite(cost));
-		}
+		Priority(unsigned int depth, double cost, Status status)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {}
+		Priority(unsigned int depth, double cost) : Priority(depth, cost, std::isfinite(cost) ? ENABLED : PRUNED) {}
 		// Constructor copying depth and cost, but modifying its status
 		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 

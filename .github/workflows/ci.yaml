@@ -19,10 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: master-source
-            TARGET_CMAKE_ARGS: >-
-              -DCMAKE_BUILD_TYPE=Release
-              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls"
           - IMAGE: noetic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
@@ -55,7 +51,7 @@ jobs:
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -72,7 +68,7 @@ jobs:
 
       - id: ici
         name: Run industrial_ci
-        uses: rhaschke/industrial_ci@clang-tidy
+        uses: rhaschke/industrial_ci@master
         env: ${{ matrix.env }}
 
       - name: Upload ici's target_ws/install folder
@@ -82,14 +78,14 @@ jobs:
           subdir: target_ws/install
 
       - name: Upload test artifacts (on failure)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
         with:
           name: test-results-${{ matrix.env.IMAGE }}${{ matrix.env.NAME && '-' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && '-clang-tidy' || '' }}
           path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
 
       - name: Upload clang-tidy fixes (on failure)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure() && steps.ici.outputs.clang_tidy_checks
         with:
           name: clang-tidy-fixes.yaml
@@ -109,28 +105,28 @@ jobs:
           workdir: ${{ env.BASEDIR }}/target_ws
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
         with:
           files: ${{ env.BASEDIR }}/target_ws/coverage.info
 
   doc:
     # https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake
-    if: github.repository_owner == 'ros-planning'
+    if: github.repository_owner == 'moveit'
     runs-on: ubuntu-latest
     needs: ici
     container:
       image: moveit/moveit:noetic-source
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup Pages
-        uses: actions/configure-pages@v2
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: |
           apt-get update -q
-          apt-get install -y doxygen graphviz python3-pip
+          apt-get install -y doxygen graphviz python3-pip ros-noetic-py-binding-tools
           pip install -r core/doc/requirements.txt
 
       - name: Download ICI workspace
@@ -150,11 +146,11 @@ jobs:
           sphinx-build -W -b linkcheck core/doc _site
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
 
   # Deployment job
   deploy:
-    if: github.repository_owner == 'ros-planning' && github.ref == 'refs/heads/master'
+    if: github.repository_owner == 'moveit' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     needs: doc
     environment:
@@ -163,4 +159,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4

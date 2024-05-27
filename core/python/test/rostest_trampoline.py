@@ -4,7 +4,7 @@
 from __future__ import print_function
 import unittest
 import rostest
-from moveit_commander.roscpp_initializer import roscpp_initialize
+from py_binding_tools import roscpp_init
 from moveit.task_constructor import core, stages
 from moveit.core.planning_scene import PlanningScene
 from geometry_msgs.msg import Vector3Stamped, Vector3, PoseStamped
@@ -131,5 +131,5 @@ class TestTrampolines(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    roscpp_initialize("test_mtc")
+    roscpp_init("test_mtc")
     rostest.rosrun("mtc", "trampoline", TestTrampolines)

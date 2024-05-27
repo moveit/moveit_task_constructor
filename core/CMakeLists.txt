@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1.3)
 project(moveit_task_constructor_core)
 
 find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	roslint
 	tf2_eigen
@@ -13,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	visualization_msgs
 	rviz_marker_tools
+	py_binding_tools
 )
 
 option(MOVEIT_CI_WARNINGS "Enable all warnings used by CI" OFF) # We use our own set of warnings

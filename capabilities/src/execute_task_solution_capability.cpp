@@ -43,6 +43,7 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/utils/message_checks.h>
 #include <moveit/utils/moveit_error_code.h>
+#include <fmt/format.h>
 
 namespace {
 
@@ -85,12 +86,12 @@ void ExecuteTaskSolutionCapability::initialize() {
 	// configure the action server
 	as_.reset(new actionlib::SimpleActionServer<moveit_task_constructor_msgs::ExecuteTaskSolutionAction>(
 	    root_node_handle_, "execute_task_solution",
-	    std::bind(&ExecuteTaskSolutionCapability::goalCallback, this, std::placeholders::_1), false));
+	    std::bind(&ExecuteTaskSolutionCapability::execCallback, this, std::placeholders::_1), false));
 	as_->registerPreemptCallback(std::bind(&ExecuteTaskSolutionCapability::preemptCallback, this));
 	as_->start();
 }
 
-void ExecuteTaskSolutionCapability::goalCallback(
+void ExecuteTaskSolutionCapability::execCallback(
     const moveit_task_constructor_msgs::ExecuteTaskSolutionGoalConstPtr& goal) {
 	moveit_task_constructor_msgs::ExecuteTaskSolutionResult result;
 
@@ -109,12 +110,7 @@ void ExecuteTaskSolutionCapability::goalCallback(
 		result.error_code = context_->plan_execution_->executeAndMonitor(plan);
 	}
 
-#if HAVE_MOVEIT_ERROR_CODE_TO_STRING
 	const std::string response = moveit::core::MoveItErrorCode::toString(result.error_code);
-#else
-	const std::string response = context_->plan_execution_->getErrorCodeString(result.error_code);
-#endif
-
 	if (result.error_code.val == moveit_msgs::MoveItErrorCodes::SUCCESS)
 		as_->setSucceeded(result, response);
 	else if (result.error_code.val == moveit_msgs::MoveItErrorCodes::PREEMPTED)
@@ -157,8 +153,9 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!joint_names.empty()) {
 				group = findJointModelGroup(*model, joint_names);
 				if (!group) {
-					ROS_ERROR_STREAM_NAMED("ExecuteTaskSolution", "Could not find JointModelGroup that actuates {"
-					                                                  << boost::algorithm::join(joint_names, ", ") << "}");
+					ROS_ERROR_STREAM_NAMED(
+					    "ExecuteTaskSolution",
+					    fmt::format("Could not find JointModelGroup that actuates {{{}}}", fmt::join(joint_names, ", ")));
 					return false;
 				}
 				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution",
@@ -167,13 +164,18 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		}
 		exec_traj.trajectory_ = std::make_shared<robot_trajectory::RobotTrajectory>(model, group);
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
+		exec_traj.controller_names_ = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this, sub_traj,
+		exec_traj.effect_on_success_ = [this,
+		                                &scene_diff = const_cast<::moveit_msgs::PlanningScene&>(sub_traj.scene_diff),
 		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			if (!moveit::core::isEmpty(sub_traj.scene_diff)) {
+			scene_diff.robot_state.joint_state = sensor_msgs::JointState();
+			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::MultiDOFJointState();
+
+			if (!moveit::core::isEmpty(scene_diff)) {
 				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(sub_traj.scene_diff);
+				return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
 			}
 			return true;
 		};

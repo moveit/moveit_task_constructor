@@ -3,9 +3,9 @@
 	<version>0.1.3</version>
 	<description>MoveIt Task Pipeline</description>
 
-	<url type="website">https://github.com/ros-planning/moveit_task_constructor</url>
-	<url type="repository">https://github.com/ros-planning/moveit_task_constructor</url>
-	<url type="bugtracker">https://github.com/ros-planning/moveit_task_constructor/issues</url>
+	<url type="website">https://github.com/moveit/moveit_task_constructor</url>
+	<url type="repository">https://github.com/moveit/moveit_task_constructor</url>
+	<url type="bugtracker">https://github.com/moveit/moveit_task_constructor/issues</url>
 
 	<license>BSD</license>
 	<maintainer email="me@v4hn.de">Michael Goerner</maintainer>
@@ -19,12 +19,14 @@
 	<build_depend>roslint</build_depend>
 	<exec_depend>roscpp</exec_depend>
 
+	<depend>fmt</depend>
 	<depend>tf2_eigen</depend>
 	<depend>geometry_msgs</depend>
 	<depend>moveit_core</depend>
 	<depend>moveit_ros_planning</depend>
 	<depend>moveit_ros_planning_interface</depend>
 	<depend>moveit_task_constructor_msgs</depend>
+	<depend>py_binding_tools</depend>
 	<depend>visualization_msgs</depend>
 	<depend>rviz_marker_tools</depend>
 
@@ -32,7 +34,6 @@
 	<test_depend>rostest</test_depend>
 	<test_depend>moveit_resources_fanuc_moveit_config</test_depend>
 	<test_depend>moveit_planners</test_depend>
-	<test_depend>moveit_commander</test_depend>
 
 	<export>
 		<moveit_task_constructor_core plugin="${prefix}/motion_planning_stages_plugin_description.xml" />

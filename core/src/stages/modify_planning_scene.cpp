@@ -41,6 +41,7 @@
 #include <moveit/task_constructor/cost_terms.h>
 
 #include <moveit/planning_scene/planning_scene.h>
+#include <fmt/core.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -58,8 +59,9 @@ void ModifyPlanningScene::attachObjects(const Names& objects, const std::string&
 
 void ModifyPlanningScene::addObject(const moveit_msgs::CollisionObject& collision_object) {
 	if (collision_object.operation != moveit_msgs::CollisionObject::ADD) {
-		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": addObject is called with object's operation not set "
-		                                                        "to ADD -- ignoring the object");
+		ROS_ERROR_STREAM_NAMED(
+		    "ModifyPlanningScene",
+		    fmt::format("{}: addObject is called with object's operation not set to ADD -- ignoring the object", name()));
 		return;
 	}
 	collision_objects_.push_back(collision_object);
@@ -70,6 +72,15 @@ void ModifyPlanningScene::removeObject(const std::string& object_name) {
 	obj.id = object_name;
 	obj.operation = moveit_msgs::CollisionObject::REMOVE;
 	collision_objects_.push_back(obj);
+}
+
+void ModifyPlanningScene::moveObject(const moveit_msgs::CollisionObject& collision_object) {
+	if (collision_object.operation != moveit_msgs::CollisionObject::MOVE) {
+		ROS_ERROR_STREAM_NAMED("ModifyPlanningScene", name() << ": moveObject is called with object's operation not set "
+		                                                        "to MOVE -- ignoring the object");
+		return;
+	}
+	collision_objects_.push_back(collision_object);
 }
 
 void ModifyPlanningScene::allowCollisions(const Names& first, const Names& second, bool allow) {
@@ -101,7 +112,7 @@ void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
 	if (invert)
 		attach = !attach;
 	obj.object.operation = attach ? static_cast<int8_t>(moveit_msgs::CollisionObject::ADD) :
-	                                static_cast<int8_t>(moveit_msgs::CollisionObject::REMOVE);
+                                   static_cast<int8_t>(moveit_msgs::CollisionObject::REMOVE);
 	for (const std::string& name : pair.second.first) {
 		obj.object.id = name;
 		scene.processAttachedCollisionObjectMsg(obj);
@@ -128,7 +139,7 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 	InterfaceState state(scene);
 	SubTrajectory traj;
 	try {
-		// add/remove objects
+		// add/remove/move objects
 		for (auto& collision_object : collision_objects_)
 			processCollisionObject(*scene, collision_object, invert);
 
@@ -142,6 +153,17 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 
 		if (callback_)
 			callback_(scene, properties());
+
+		// check for collisions
+		collision_detection::CollisionRequest req;
+		collision_detection::CollisionResult res;
+		req.contacts = true;
+		req.max_contacts = 1;
+		scene->checkCollision(req, res);
+		if (res.collision) {
+			const auto contact = res.contacts.begin()->second.front();
+			traj.markAsFailure(contact.body_name_1 + " colliding with " + contact.body_name_2);
+		}
 	} catch (const std::exception& e) {
 		traj.markAsFailure(e.what());
 	}
@@ -157,6 +179,8 @@ void ModifyPlanningScene::processCollisionObject(planning_scene::PlanningScene& 
 			const_cast<moveit_msgs::CollisionObject&>(object).operation = moveit_msgs::CollisionObject::REMOVE;
 		else if (op == moveit_msgs::CollisionObject::REMOVE)
 			throw std::runtime_error("cannot apply removeObject() backwards");
+		else if (op == moveit_msgs::CollisionObject::MOVE)
+			throw std::runtime_error("cannot apply moveObject() backwards");
 	}
 
 	scene.processCollisionObjectMsg(object);

@@ -7,9 +7,6 @@
 #include <rviz/frame_manager.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
-#ifndef RVIZ_TF1
-#include <tf/tf.h>
-#endif
 #include <tf2_msgs/TF2Error.h>
 #include <ros/console.h>
 
@@ -71,15 +68,6 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext* context, Ogre::Sce
 	Ogre::Vector3 pos = Ogre::Vector3::ZERO;
 
 	try {
-#ifdef RVIZ_TF1
-		tf::TransformListener* tf = context->getFrameManager()->getTFClient();
-		tf::StampedTransform tm;
-		tf->lookupTransform(planning_frame_, fixed_frame, ros::Time(), tm);
-		auto q = tm.getRotation();
-		auto p = tm.getOrigin();
-		quat = Ogre::Quaternion(q.w(), -q.x(), -q.y(), -q.z());
-		pos = Ogre::Vector3(p.x(), p.y(), p.z());
-#else
 		std::shared_ptr<tf2_ros::Buffer> tf = context->getFrameManager()->getTF2BufferPtr();
 		geometry_msgs::TransformStamped tm;
 		tm = tf->lookupTransform(planning_frame_, fixed_frame, ros::Time());
@@ -87,7 +75,6 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext* context, Ogre::Sce
 		auto p = tm.transform.translation;
 		quat = Ogre::Quaternion(q.w, -q.x, -q.y, -q.z);
 		pos = Ogre::Vector3(p.x, p.y, p.z);
-#endif
 	} catch (const tf2::TransformException& e) {
 		ROS_WARN_STREAM_NAMED("MarkerVisualization", e.what());
 		return false;
