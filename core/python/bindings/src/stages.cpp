@@ -197,7 +197,7 @@ void export_stages(pybind11::module& m) {
 			the planning scene are allowed.
 		)")
 	    .property<double>("min_solution_distance", "reject solution that are closer than this to previously found solutions")
-		 .property<moveit_msgs::Constraints>("constraints", "additional constraints to obey")
+	    .property<moveit_msgs::Constraints>("constraints", "additional constraints to obey")
 	    .property<geometry_msgs::PoseStamped>("ik_frame", R"(
 			PoseStamped_: Specify the frame with respect
 			to which the inverse kinematics
