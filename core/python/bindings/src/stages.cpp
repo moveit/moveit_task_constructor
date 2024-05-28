@@ -40,7 +40,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_msgs/PlanningScene.h>
 #include <pybind11/stl.h>
-#include <moveit/python/pybind_rosmsg_typecasters.h>
+#include <py_binding_tools/ros_msg_typecasters.h>
 
 namespace py = pybind11;
 using namespace py::literals;
@@ -105,6 +105,8 @@ void export_stages(pybind11::module& m) {
 		                         const std::string& attach_link) {
 			self.attachObjects(elementOrList<std::string>(names), attach_link, false);
 		}, "Detach multiple objects from a robot link", "names"_a, "attach_link"_a)
+		.def("allowCollisions", [](ModifyPlanningScene& self, const std::string& object, bool allow) {self.allowCollisions(object, allow);},
+			"Allow or disable all collisions involving the given object", "object"_a, "enable_collision"_a = true)
 		.def("allowCollisions", [](ModifyPlanningScene& self,
 	        const py::object& first, const py::object& second, bool enable_collision) {
 			self.allowCollisions(elementOrList<std::string>(first), elementOrList<std::string>(second), enable_collision);
@@ -112,9 +114,12 @@ void export_stages(pybind11::module& m) {
 		.def("addObject", &ModifyPlanningScene::addObject, R"(
 			Add a CollisionObject_ to the planning scene
 
-			.. _CollisionObject: https://docs.ros.org/en/melodic/api/moveit_msgs/html/msg/CollisionObject.html
+			.. _CollisionObject: https://docs.ros.org/en/noetic/api/moveit_msgs/html/msg/CollisionObject.html
 
-		)", "collision_object"_a);
+		)", "collision_object"_a)
+		.def("removeObject", &ModifyPlanningScene::removeObject,
+			"Remove a CollisionObject_ from the planning scene", "name"_a)
+		;
 
 	properties::class_<CurrentState, Stage>(m, "CurrentState", R"(
 			Fetch the current PlanningScene / real robot state via the ``get_planning_scene`` service.
@@ -318,6 +323,8 @@ void export_stages(pybind11::module& m) {
 
 			For an example, see :ref:`How-To-Guides <subsubsec-howto-connect>`.
 		)")
+	    .property<stages::Connect::MergeMode>("merge_mode", "Defines the merge strategy to use")
+	    .property<double>("max_distance", "maximally accepted distance between end and goal sate")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         "name"_a = std::string("connect"), "planners"_a);
 

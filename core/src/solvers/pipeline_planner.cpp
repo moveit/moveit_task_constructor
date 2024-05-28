@@ -52,10 +52,10 @@ struct PlannerCache
 {
 	using PlannerID = std::tuple<std::string, std::string>;
 	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
-	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const moveit::core::RobotModel>, PlannerMap> >;
 	ModelList cache_;
 
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
+	PlannerMap::mapped_type& retrieve(const moveit::core::RobotModelConstPtr& model, const PlannerID& id) {
 		// find model in cache_ and remove expired entries while doing so
 		ModelList::iterator model_it = cache_.begin();
 		while (model_it != cache_.end()) {
@@ -152,10 +152,11 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const planning_scene::PlanningSceneConstPtr& to,
+                                               const moveit::core::JointModelGroup* jmg, double timeout,
+                                               robot_trajectory::RobotTrajectoryPtr& result,
+                                               const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
@@ -165,17 +166,15 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	                                                                          props.get<double>("goal_joint_tolerance"));
 	req.path_constraints = path_constraints;
 
-	::planning_interface::MotionPlanResponse res;
-	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory_;
-	return success;
+	return plan(from, req, result);
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                           const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target_eigen,
-                           const moveit::core::JointModelGroup* jmg, double timeout,
-                           robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                               const Eigen::Isometry3d& target_eigen,
+                                               const moveit::core::JointModelGroup* jmg, double timeout,
+                                               robot_trajectory::RobotTrajectoryPtr& result,
+                                               const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
@@ -190,11 +189,18 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	    props.get<double>("goal_orientation_tolerance"));
 	req.path_constraints = path_constraints;
 
+	return plan(from, req, result);
+}
+
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const moveit_msgs::MotionPlanRequest& req,
+                                               robot_trajectory::RobotTrajectoryPtr& result) {
 	::planning_interface::MotionPlanResponse res;
 	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return success;
+	return { success, success ? std::string() : static_cast<std::string>(res.error_code_) };
 }
+
 }  // namespace solvers
 }  // namespace task_constructor
 }  // namespace moveit

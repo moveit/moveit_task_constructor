@@ -5,10 +5,14 @@ from moveit.task_constructor import core, stages
 from py_binding_tools import roscpp_init
 import time
 
-roscpp_init("mtc_tutorial_alternatives")
+roscpp_init("mtc_tutorial")
 
-# Use the joint interpolation planner
-jointPlanner = core.JointInterpolationPlanner()
+ompl_pipelinePlanner = core.PipelinePlanner("ompl")
+ompl_pipelinePlanner.planner = "RRTConnectkConfigDefault"
+pilz_pipelinePlanner = core.PipelinePlanner("pilz_industrial_motion_planner")
+pilz_pipelinePlanner.planner = "PTP"
+multiPlanner = core.MultiPlanner()
+multiPlanner.add(pilz_pipelinePlanner, ompl_pipelinePlanner)
 
 # Create a task
 task = core.Task()
@@ -19,7 +23,6 @@ currentState = stages.CurrentState("current state")
 # Add the current state to the task hierarchy
 task.add(currentState)
 
-# [initAndConfigAlternatives]
 # The alternatives stage supports multiple execution paths
 alternatives = core.Alternatives("Alternatives")
 
@@ -46,20 +49,19 @@ goalConfig2 = {
 }
 
 # First motion plan to compare
-moveTo1 = stages.MoveTo("Move To Goal Configuration 1", jointPlanner)
+moveTo1 = stages.MoveTo("Move To Goal Configuration 1", multiPlanner)
 moveTo1.group = "panda_arm"
 moveTo1.setGoal(goalConfig1)
 alternatives.insert(moveTo1)
 
 # Second motion plan to compare
-moveTo2 = stages.MoveTo("Move To Goal Configuration 2", jointPlanner)
+moveTo2 = stages.MoveTo("Move To Goal Configuration 2", multiPlanner)
 moveTo2.group = "panda_arm"
 moveTo2.setGoal(goalConfig2)
 alternatives.insert(moveTo2)
 
 # Add the alternatives stage to the task hierarchy
 task.add(alternatives)
-# [initAndConfigAlternatives]
 
 if task.plan():
     task.publish(task.solutions[0])

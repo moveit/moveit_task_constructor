@@ -94,10 +94,9 @@ public:
 	 */
 	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost, Status status = ENABLED)
-		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
-			assert(std::isfinite(cost));
-		}
+		Priority(unsigned int depth, double cost, Status status)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {}
+		Priority(unsigned int depth, double cost) : Priority(depth, cost, std::isfinite(cost) ? ENABLED : PRUNED) {}
 		// Constructor copying depth and cost, but modifying its status
 		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 
@@ -311,9 +310,11 @@ public:
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
 
+	/// convert solution to message
+	void toMsg(moveit_task_constructor_msgs::Solution& solution, Introspection* introspection = nullptr) const;
 	/// append this solution to Solution msg
-	virtual void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                         Introspection* introspection = nullptr) const = 0;
+	virtual void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	                      Introspection* introspection = nullptr) const = 0;
 	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
 	/// required to dispatch to type-specific CostTerm methods via vtable
@@ -354,7 +355,7 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -387,7 +388,7 @@ public:
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -418,8 +419,8 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
-	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                 Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	              Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 

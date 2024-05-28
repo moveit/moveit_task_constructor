@@ -33,6 +33,7 @@
  *********************************************************************/
 
 #include "core.h"
+#include "utils.h"
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 #include <moveit/python/task_constructor/properties.h>
@@ -52,23 +53,6 @@ namespace python {
 
 namespace {
 
-// utility function to normalize index: negative indeces reference from the end
-size_t normalize_index(size_t size, long index) {
-	if (index < 0)
-		index += size;
-	if (index >= long(size) || index < 0)
-		throw pybind11::index_error("Index out of range");
-	return index;
-}
-
-// implement operator[](index)
-template <typename T>
-typename T::value_type get_item(const T& container, long index) {
-	auto it = container.begin();
-	std::advance(it, normalize_index(container.size(), index));
-	return *it;
-}
-
 py::list getForwardedProperties(const Stage& self) {
 	py::list l;
 	for (const std::string& value : self.forwardedProperties())
@@ -86,9 +70,8 @@ void setForwardedProperties(Stage& self, const py::object& names) {
 			for (auto item : names)
 				s.emplace(item.cast<std::string>());
 	} catch (const py::cast_error& e) {
-		// manually translate cast_error to type error
-		PyErr_SetString(PyExc_TypeError, e.what());
-		throw py::error_already_set();
+		// translate cast_error to type_error with an informative message
+		throw py::type_error("Expecting a string or a list of strings");
 	}
 	self.setForwardedProperties(s);
 }
@@ -124,9 +107,9 @@ void export_core(pybind11::module& m) {
 	        ":visualization_msgs:`Marker`: Markers to visualize important aspects of the trajectory (read-only)")
 	    .def(
 	        "toMsg",
-	        [](const SolutionBasePtr& s) {
+	        [](const SolutionBase& self) {
 		        moveit_task_constructor_msgs::Solution msg;
-		        s->fillMessage(msg);
+		        self.toMsg(msg);
 		        return msg;
 	        },
 	        "Convert to the ROS message ``Solution``");
@@ -440,6 +423,7 @@ void export_core(pybind11::module& m) {
 			        t.add(it->cast<Stage::pointer>());
 	        },
 	        "Append stage(s) to the task's top-level container")
+	    .def("insert", &Task::insert, "stage"_a, "before"_a = -1, "Insert stage before given index")
 	    .def("__len__", [](const Task& t) { t.stages()->numChildren(); })
 	    .def(
 	        "__getitem__",
@@ -494,7 +478,7 @@ void export_core(pybind11::module& m) {
 
 		        MoveGroupInterface::Plan plan;
 		        moveit_task_constructor_msgs::Solution serialized;
-		        solution->fillMessage(serialized);
+		        solution->toMsg(serialized);
 
 		        for (const moveit_task_constructor_msgs::SubTrajectory& traj : serialized.sub_trajectory) {
 			        if (!traj.trajectory.joint_trajectory.points.empty()) {

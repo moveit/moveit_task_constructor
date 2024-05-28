@@ -39,6 +39,7 @@
 
 #pragma once
 
+#include "trajectory_execution_info.h"
 #include "utils.h"
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/storage.h>
@@ -184,6 +185,7 @@ public:
 	void setName(const std::string& name);
 
 	uint32_t introspectionId() const;
+	Introspection* introspection() const;
 
 	/** set computation timeout (in seconds)
 	 *
@@ -200,6 +202,14 @@ public:
 	void setMarkerNS(const std::string& marker_ns) { setProperty("marker_ns", marker_ns); }
 	/// marker namespace of solution markers
 	const std::string& markerNS() { return properties().get<std::string>("marker_ns"); }
+
+	/// Set and get info to use when executing the stage's trajectory
+	void setTrajectoryExecutionInfo(TrajectoryExecutionInfo trajectory_execution_info) {
+		setProperty("trajectory_execution_info", trajectory_execution_info);
+	}
+	TrajectoryExecutionInfo trajectoryExecutionInfo() const {
+		return properties().get<TrajectoryExecutionInfo>("trajectory_execution_info");
+	}
 
 	/// forwarding of properties between interface states
 	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
@@ -355,6 +365,7 @@ public:
 
 	virtual bool canCompute() const = 0;
 	virtual void compute() = 0;
+	void spawn(InterfaceState&& from, InterfaceState&& to, SubTrajectory&& trajectory);
 	void spawn(InterfaceState&& state, SubTrajectory&& trajectory);
 	void spawn(InterfaceState&& state, double cost) {
 		SubTrajectory trajectory;

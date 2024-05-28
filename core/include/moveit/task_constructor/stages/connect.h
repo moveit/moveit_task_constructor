@@ -76,6 +76,7 @@ public:
 	using GroupPlannerVector = std::vector<std::pair<std::string, solvers::PlannerInterfacePtr> >;
 	Connect(const std::string& name = "connect", const GroupPlannerVector& planners = {});
 
+	void setMaxDistance(double max_distance) { setProperty("max_distance", max_distance); }
 	void setPathConstraints(moveit_msgs::Constraints path_constraints) {
 		setProperty("path_constraints", std::move(path_constraints));
 	}

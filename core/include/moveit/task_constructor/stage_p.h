@@ -44,6 +44,7 @@
 #include <moveit/task_constructor/cost_queue.h>
 
 #include <ros/console.h>
+#include <fmt/core.h>
 
 #include <ostream>
 #include <chrono>
@@ -136,6 +137,7 @@ public:
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
 	template <Interface::Direction>
 	inline void send(const InterfaceState& start, InterfaceState&& end, const SolutionBasePtr& solution);
+	void spawn(InterfaceState&& from, InterfaceState&& to, const SolutionBasePtr& solution);
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
@@ -143,7 +145,7 @@ public:
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
-		ROS_DEBUG_STREAM_NAMED("Stage", "Computing stage '" << name() << "'");
+		ROS_DEBUG_STREAM_NAMED("Stage", fmt::format("Computing stage '{}'", name()));
 		auto compute_start_time = std::chrono::steady_clock::now();
 		try {
 			compute();
@@ -301,10 +303,20 @@ private:
 };
 PIMPL_FUNCTIONS(MonitoringGenerator)
 
+// Print pending pairs of a ConnectingPrivate instance
+class ConnectingPrivate;
+struct PendingPairsPrinter
+{
+	const ConnectingPrivate* const instance_;
+	PendingPairsPrinter(const ConnectingPrivate* c) : instance_(c) {}
+};
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
+
 class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
 	friend struct FallbacksPrivateConnect;
+	friend std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
@@ -337,7 +349,7 @@ public:
 	template <Interface::Direction dir>
 	bool hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const;
 
-	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
+	PendingPairsPrinter pendingPairsPrinter() const { return PendingPairsPrinter(this); }
 
 private:
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
@@ -352,5 +364,6 @@ private:
 	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
+
 }  // namespace task_constructor
 }  // namespace moveit

@@ -87,8 +87,13 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	Q_D(TaskPanel);
 
 	// sync checked tool button with displayed widget
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	connect(d->tool_buttons_group, &QButtonGroup::idClicked, d->stackedWidget,
+	        [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#else
 	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
 	        d->stackedWidget, [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#endif
 	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
 	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
 
@@ -172,7 +177,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
-	button_show_stage_dock_widget->setToolTip("Show available stages");
+	button_show_stage_dock_widget->setVisible(false);  // hide for now
 	property_root = new rviz::Property("Global Settings");
 }
 
@@ -529,7 +534,7 @@ void TaskView::onExecCurrentSolution() const {
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 
 	if (!d_ptr->exec_action_client_.waitForServer(ros::Duration(0.1))) {
-		ROS_ERROR("Failed to connect to task execution action");
+		ROS_ERROR("Failed to connect to the 'execute_task_solution' action server");
 		return;
 	}
 

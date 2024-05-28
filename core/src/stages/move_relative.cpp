@@ -166,7 +166,7 @@ static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Inter
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
                            SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -189,10 +189,14 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string comment = "";
 
 	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 	} else {
 		// Cartesian targets require an IK reference frame
 		const moveit::core::LinkModel* link;
@@ -278,38 +282,43 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		// offset from link to ik_frame
 		const Eigen::Isometry3d& offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
-		success =
+		auto result =
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 
-		robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
-		reached_state->updateLinkTransforms();
-		const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
+		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
+			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+			reached_state->updateLinkTransforms();
+			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
 
-		double distance = 0.0;
-		if (use_rotation_distance) {
-			Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
-			distance = rotation.angle();
-		} else
-			distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
+			double distance = 0.0;
+			if (use_rotation_distance) {
+				Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
+				distance = rotation.angle();
+			} else
+				distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
 
-		// min_distance reached?
-		if (min_distance > 0.0) {
-			success = distance >= min_distance;
-			if (!success) {
-				char msg[100];
-				snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
-				solution.setComment(msg);
+			// min_distance reached?
+			if (min_distance > 0.0) {
+				success = distance >= min_distance;
+				if (!success) {
+					char msg[100];
+					snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
+					solution.setComment(msg);
+				}
+			} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
+				success = true;
+			} else if (!success)
+				solution.setComment("failed to move full distance");
+
+			// visualize plan
+			auto ns = props.get<std::string>("marker_ns");
+			if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
+				visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
+				              linear, distance);
 			}
-		} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
-			success = true;
-		} else if (!success)
-			solution.setComment("failed to move full distance");
-
-		// visualize plan
-		auto ns = props.get<std::string>("marker_ns");
-		if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
-			visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
-			              linear, distance);
 		}
 	}
 
@@ -321,7 +330,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		solution.setTrajectory(robot_trajectory);
 
 		if (!success)
-			solution.markAsFailure();
+			solution.markAsFailure(comment);
 		return true;
 	}
 	return false;

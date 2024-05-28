@@ -204,6 +204,11 @@ void SolutionBase::markAsFailure(const std::string& msg) {
 	}
 }
 
+void SolutionBase::toMsg(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
+	appendTo(msg, introspection);
+	start()->scene()->getPlanningSceneMsg(msg.start_scene);
+}
+
 void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection) const {
 	info.id = introspection ? introspection->solutionId(*this) : 0;
 	info.cost = this->cost();
@@ -216,15 +221,20 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, In
 	std::copy(markers.begin(), markers.end(), info.markers.begin());
 }
 
-void SubTrajectory::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
+void SubTrajectory::appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor_msgs::SubTrajectory& t = msg.sub_trajectory.back();
 	SolutionBase::fillInfo(t.info, introspection);
 
+	t.execution_info = creator()->trajectoryExecutionInfo();
+
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
-	this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
+	if (this->end()->scene()->getParent() == this->start()->scene())
+		this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
+	else
+		this->end()->scene()->getPlanningSceneMsg(t.scene_diff);
 }
 
 double SubTrajectory::computeCost(const CostTerm& f, std::string& comment) const {
@@ -235,7 +245,7 @@ void SolutionSequence::push_back(const SolutionBase& solution) {
 	subsolutions_.push_back(&solution);
 }
 
-void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
+void SolutionSequence::appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const {
 	moveit_task_constructor_msgs::SubSolution sub_msg;
 	SolutionBase::fillInfo(sub_msg.info, introspection);
 
@@ -257,7 +267,7 @@ void SolutionSequence::fillMessage(moveit_task_constructor_msgs::Solution& msg, 
 	msg.sub_trajectory.reserve(msg.sub_trajectory.size() + subsolutions_.size());
 	for (const SolutionBase* s : subsolutions_) {
 		size_t current = msg.sub_trajectory.size();
-		s->fillMessage(msg, introspection);
+		s->appendTo(msg, introspection);
 
 		// zero IDs of sub solutions with same creator as this
 		if (s->creator() == this->creator()) {
@@ -274,9 +284,8 @@ double SolutionSequence::computeCost(const CostTerm& f, std::string& comment) co
 	return f(*this, comment);
 }
 
-void WrappedSolution::fillMessage(moveit_task_constructor_msgs::Solution& solution,
-                                  Introspection* introspection) const {
-	wrapped_->fillMessage(solution, introspection);
+void WrappedSolution::appendTo(moveit_task_constructor_msgs::Solution& solution, Introspection* introspection) const {
+	wrapped_->appendTo(solution, introspection);
 
 	// prepend this solutions info as a SubSolution msg
 	moveit_task_constructor_msgs::SubSolution sub_msg;

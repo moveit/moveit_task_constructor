@@ -267,11 +267,13 @@ void Task::preempt() {
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
-	ac.waitForServer();
+	if (!ac.waitForServer(ros::Duration(0.5))) {
+		ROS_ERROR("Failed to connect to the 'execute_task_solution' action server");
+		return moveit::core::MoveItErrorCode::FAILURE;
+	}
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
-	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+	s.toMsg(goal.solution, pimpl()->introspection_.get());
 
 	ac.sendGoal(goal);
 	ac.waitForResult();
