@@ -80,7 +80,9 @@ void setForwardedProperties(Stage& self, const py::object& names) {
 
 void export_core(pybind11::module& m) {
 	/// translate InitStageException into InitStageError
-	static py::exception<InitStageException> init_stage_error(m, "InitStageError");
+	PYBIND11_CONSTINIT static py::gil_safe_call_once_and_store<py::object> exc_storage;
+	exc_storage.call_once_and_store_result([&]() { return py::exception<InitStageException>(m, "InitStageError"); });
+
 	/// provide extended error description for InitStageException
 	py::register_exception_translator([](std::exception_ptr p) {  // NOLINT(performance-unnecessary-value-param)
 		try {
@@ -89,7 +91,7 @@ void export_core(pybind11::module& m) {
 		} catch (const InitStageException& e) {
 			std::stringstream message;
 			message << e;
-			init_stage_error(message.str().c_str());
+			py::set_error(exc_storage.get_stored(), message.str().c_str());
 		}
 	});
 
