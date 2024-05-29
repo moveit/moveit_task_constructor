@@ -17,8 +17,3 @@ RobotModelPtr getModel() {
 	builder.addEndEffector("eef", "link2", "group", "eef_group");
 	return builder.build();
 }
-
-moveit::core::RobotModelPtr loadModel(const rclcpp::Node::SharedPtr& node) {
-	robot_model_loader::RobotModelLoader loader(node);
-	return loader.getModel();
-}

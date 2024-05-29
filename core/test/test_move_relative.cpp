@@ -26,18 +26,18 @@ struct PandaMoveRelative : public testing::Test
 	Task t;
 	stages::MoveRelative* move;
 	PlanningScenePtr scene;
-	rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("panda_move_relative");
+	rclcpp::Node::SharedPtr node;
 
 	const JointModelGroup* group;
 
 	PandaMoveRelative() {
-		t.setRobotModel(loadModel(node));
+		t.loadRobotModel(rclcpp::Node::make_shared("panda_move_relative"));
 
 		group = t.getRobotModel()->getJointModelGroup("panda_arm");
 
 		scene = std::make_shared<PlanningScene>(t.getRobotModel());
 		scene->getCurrentStateNonConst().setToDefaultValues();
-		scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "ready");
+		scene->getCurrentStateNonConst().setToDefaultValues(group, "ready");
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
 		auto move_relative = std::make_unique<stages::MoveRelative>("move", std::make_shared<solvers::CartesianPath>());

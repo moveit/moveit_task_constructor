@@ -34,20 +34,22 @@ struct PandaMoveTo : public testing::Test
 	Task t;
 	stages::MoveTo* move_to;
 	PlanningScenePtr scene;
-	rclcpp::Node::SharedPtr node = rclcpp::Node::make_shared("panda_move_to");
+	rclcpp::Node::SharedPtr node;
 
 	PandaMoveTo() {
+		node = rclcpp::Node::make_shared("panda_move_to");
 		t.loadRobotModel(node);
+
+		auto group = t.getRobotModel()->getJointModelGroup("panda_arm");
 
 		scene = std::make_shared<PlanningScene>(t.getRobotModel());
 		scene->getCurrentStateNonConst().setToDefaultValues();
-		scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"),
-		                                                    "extended");
+		scene->getCurrentStateNonConst().setToDefaultValues(group, "extended");
 		t.add(std::make_unique<stages::FixedState>("start", scene));
 
 		auto move = std::make_unique<stages::MoveTo>("move", std::make_shared<solvers::JointInterpolationPlanner>());
 		move_to = move.get();
-		move_to->setGroup("panda_arm");
+		move_to->setGroup(group->getName());
 		t.add(std::move(move));
 	}
 };
@@ -162,7 +164,7 @@ TEST_F(PandaMoveTo, poseIKFrameAttachedSubframeTarget) {
 // will strongly deviate from the joint-space goal.
 TEST(Panda, connectCartesianBranchesFails) {
 	Task t;
-	t.setRobotModel(loadModel(rclcpp::Node::make_shared("panda_move_to")));
+	t.loadRobotModel(rclcpp::Node::make_shared("panda_move_to"));
 	auto scene = std::make_shared<PlanningScene>(t.getRobotModel());
 	scene->getCurrentStateNonConst().setToDefaultValues();
 	scene->getCurrentStateNonConst().setToDefaultValues(t.getRobotModel()->getJointModelGroup("panda_arm"), "ready");

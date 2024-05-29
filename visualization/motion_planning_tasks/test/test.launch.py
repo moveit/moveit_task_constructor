@@ -13,36 +13,29 @@ import pytest
 
 @pytest.mark.launch_test
 def generate_test_description():
-    test_task_model = GTest(
-        path=[
-            PathJoinSubstitution(
-                [
-                    LaunchConfiguration("test_binary_dir"),
-                    "moveit_task_constructor_visualization-test-task_model",
-                ]
-            )
-        ],
+    test_exec = GTest(
+        path=[LaunchConfiguration("test_binary")],
         output="screen",
     )
     return (
         LaunchDescription(
             [
                 DeclareLaunchArgument(
-                    name="test_binary_dir",
-                    description="Binary directory of package containing test executables",
+                    name="test_binary",
+                    description="Test executable",
                 ),
-                test_task_model,
+                test_exec,
                 KeepAliveProc(),
                 ReadyToTest(),
             ]
         ),
-        {"test_task_model": test_task_model},
+        {"test_exec": test_exec},
     )
 
 
 class TestTerminatingProcessStops(unittest.TestCase):
-    def test_gtest_run_complete(self, proc_info, test_task_model):
-        proc_info.assertWaitForShutdown(process=test_task_model, timeout=4000.0)
+    def test_gtest_run_complete(self, proc_info, test_exec):
+        proc_info.assertWaitForShutdown(process=test_exec, timeout=4000.0)
 
 
 @launch_testing.post_shutdown_test()

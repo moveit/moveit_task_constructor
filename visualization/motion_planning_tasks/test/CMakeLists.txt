@@ -19,6 +19,6 @@ if (BUILD_TESTING)
 	ament_add_gtest_executable(${PROJECT_NAME}-test-task_model test_task_model.cpp)
 	target_link_libraries(${PROJECT_NAME}-test-task_model
 		motion_planning_tasks_rviz_plugin)
-	add_launch_test(test_task_model.launch.py
-		ARGS "test_binary_dir:=$<TARGET_FILE_DIR:${PROJECT_NAME}-test-task_model>")
+	add_launch_test(test.launch.py
+		ARGS "test_binary:=$<TARGET_FILE:${PROJECT_NAME}-test-task_model>")
 endif()
