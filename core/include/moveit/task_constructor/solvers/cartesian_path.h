@@ -52,6 +52,10 @@ class CartesianPath : public PlannerInterface
 public:
 	CartesianPath();
 
+	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
+
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
