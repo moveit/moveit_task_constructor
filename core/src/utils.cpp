@@ -48,7 +48,7 @@ namespace task_constructor {
 namespace utils {
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
-                         const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
+                         const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame) {
 	auto get_tip = [&jmg]() -> const moveit::core::LinkModel* {
 		// determine IK frame from group
@@ -60,10 +60,12 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 		return tips[0];
 	};
 
+	error_msg = "";
+
 	if (property.value().empty()) {  // property undefined
 		robot_link = get_tip();
 		if (!robot_link) {
-			solution.markAsFailure("missing ik_frame");
+			error_msg = "missing ik_frame";
 			return false;
 		}
 		tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
@@ -77,13 +79,13 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 		if (!found && !ik_pose_msg.header.frame_id.empty()) {
 			std::stringstream ss;
 			ss << "ik_frame specified in unknown frame '" << ik_pose_msg.header.frame_id << "'";
-			solution.markAsFailure(ss.str());
+			error_msg = ss.str();
 			return false;
 		}
 		if (!robot_link)
 			robot_link = get_tip();
 		if (!robot_link) {
-			solution.markAsFailure("ik_frame doesn't specify a link frame");
+			error_msg = "ik_frame doesn't specify a link frame";
 			return false;
 		} else if (!found) {  // use robot link's frame as reference by default
 			ref_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);

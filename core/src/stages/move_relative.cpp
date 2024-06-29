@@ -200,10 +200,13 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	} else {
 		// Cartesian targets require an IK reference frame
 		const moveit::core::LinkModel* link;
+		std::string error_msg;
 		Eigen::Isometry3d ik_pose_world;
 
-		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, solution, link, ik_pose_world))
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, error_msg, link, ik_pose_world)) {
+			solution.markAsFailure(error_msg);
 			return false;
+		}
 
 		bool use_rotation_distance = false;  // measure achieved distance as rotation?
 		Eigen::Vector3d linear;  // linear translation

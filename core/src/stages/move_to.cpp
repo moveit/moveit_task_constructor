@@ -213,8 +213,12 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 
 		const moveit::core::LinkModel* link;
 		Eigen::Isometry3d ik_pose_world;
-		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, solution, link, ik_pose_world))
+		std::string error_msg;
+
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, error_msg, link, ik_pose_world)) {
+			solution.markAsFailure(error_msg);
 			return false;
+		}
 
 		if (!getPoseGoal(goal, scene, target) && !getPointGoal(goal, ik_pose_world, scene, target)) {
 			solution.markAsFailure(std::string("invalid goal type: ") + goal.type().name());
