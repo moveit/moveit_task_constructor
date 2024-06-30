@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/robot_state/cartesian_interpolator.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -57,7 +58,9 @@ public:
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
-	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
+	void setPrecision(const moveit::core::CartesianPrecision& precision) { setProperty("precision", precision); }
+	[[deprecated("Replace with setPrecision")]]  // clang-format off
+	void setJumpThreshold(double /*jump_threshold*/) {}
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
 
 	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
