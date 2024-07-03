@@ -65,23 +65,20 @@ TEST_F(Pruning, ConnectReactivatesPrunedPaths) {
 // same as before, but wrapping Connect into a container
 template <typename T>
 struct PruningContainerTests : public Pruning
-{
-	void test() {
-		add(t, new BackwardMockup);
-		add(t, new GeneratorMockup({ 0 }));
-		auto c = new T();
-		add(*c, new ConnectMockup());
-		add(t, c);
-		add(t, new GeneratorMockup({ 0 }));
+{};
 
-		EXPECT_TRUE(t.plan());
-		EXPECT_EQ(t.solutions().size(), 1u);
-	}
-};
-using ContainerTypes = ::testing::Types<SerialContainer>;  // TODO: fails for Fallbacks!
+using ContainerTypes = ::testing::Types<SerialContainer, Fallbacks>;
 TYPED_TEST_SUITE(PruningContainerTests, ContainerTypes);
 TYPED_TEST(PruningContainerTests, ConnectReactivatesPrunedPaths) {
-	this->test();
+	this->add(this->t, new BackwardMockup);
+	this->add(this->t, new GeneratorMockup({ 0 }));
+	auto c = new TypeParam();
+	this->add(*c, new ConnectMockup());
+	this->add(this->t, c);
+	this->add(this->t, new GeneratorMockup({ 0 }));
+
+	EXPECT_TRUE(this->t.plan());
+	EXPECT_EQ(this->t.solutions().size(), 1u);
 }
 
 TEST_F(Pruning, ConnectConnectForward) {
