@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 option(MOVEIT_CI_WARNINGS "Enable all warnings used by CI" OFF) # We use our own set of warnings
+option(ENABLE_PRUNING "Enable pruning on failed solutions" OFF)
 moveit_build_options()
 
 catkin_python_setup()
@@ -39,6 +40,9 @@ catkin_package(
 )
 
 add_compile_options(-fvisibility-inlines-hidden)
+if(ENABLE_PRUNING)
+	add_compile_definitions(ENABLE_PRUNING)
+endif()
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
