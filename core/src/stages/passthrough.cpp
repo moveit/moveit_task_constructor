@@ -34,20 +34,6 @@
 /* Author: Michael 'v4hn' Goerner */
 
 #include <moveit/task_constructor/stages/passthrough.h>
-#include <moveit/task_constructor/storage.h>
-#include <moveit/task_constructor/marker_tools.h>
-
-#include <moveit/task_constructor/container_p.h>
-
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/robot_state/conversions.h>
-#include <moveit/robot_state/robot_state.h>
-
-#include <Eigen/Geometry>
-#include <chrono>
-#include <functional>
-#include <iterator>
-#include <ros/console.h>
 
 namespace moveit {
 namespace task_constructor {
