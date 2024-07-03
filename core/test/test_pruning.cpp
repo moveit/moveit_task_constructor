@@ -127,6 +127,19 @@ TEST_F(Pruning, PropagateIntoContainer) {
 	EXPECT_EQ(con->runs_, 0u);
 }
 
+TEST_F(Pruning, PropagateIntoContainerAndReactivate) {
+	add(t, new GeneratorMockup({ 0 }));
+
+	auto serial = add(t, new SerialContainer());
+	auto con = add(*serial, new ConnectMockup({ 10, 20 }));
+	add(*serial, new GeneratorMockup({ 0, 1 }));
+
+	add(t, new ForwardMockup({ INF, 0 }));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_EQ(con->runs_, 1u);
+}
+
 TEST_F(Pruning, PropagateFromContainerPull) {
 	auto back = add(t, new BackwardMockup());
 	add(t, new BackwardMockup());
