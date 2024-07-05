@@ -40,9 +40,7 @@ catkin_package(
 )
 
 add_compile_options(-fvisibility-inlines-hidden)
-if(ENABLE_PRUNING)
-	add_compile_definitions(ENABLE_PRUNING)
-endif()
+add_compile_definitions(ENABLE_PRUNING=$<BOOL:${ENABLE_PRUNING}>)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 

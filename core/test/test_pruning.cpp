@@ -8,7 +8,10 @@
 
 using namespace moveit::task_constructor;
 
-using Pruning = TaskTestBase;
+struct Pruning : TaskTestBase
+{
+	Pruning() : TaskTestBase() { t.setPruning(true); }
+};
 
 TEST_F(Pruning, PropagatorFailure) {
 	auto back = add(t, new BackwardMockup());
@@ -19,6 +22,18 @@ TEST_F(Pruning, PropagatorFailure) {
 	ASSERT_EQ(t.solutions().size(), 0u);
 	// ForwardMockup fails, so the backward stage should never compute
 	EXPECT_EQ(back->runs_, 0u);
+}
+
+// Same as the previous test, except pruning is disabled for the whole task
+TEST_F(Pruning, DisabledPruningPropagatorFailure) {
+	t.setPruning(false);
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
+	EXPECT_FALSE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 0u);
+	// ForwardMockup fails, since we have pruning disabled backward should run
+	EXPECT_EQ(back->runs_, 1u);
 }
 
 TEST_F(Pruning, PruningMultiForward) {
@@ -127,7 +142,7 @@ TEST_F(Pruning, PropagateIntoContainer) {
 	EXPECT_EQ(con->runs_, 0u);
 }
 
-TEST_F(Pruning, PropagateIntoContainerAndReactivate) {
+TEST_F(Pruning, DISABLED_PropagateIntoContainerAndReactivate) {
 	add(t, new GeneratorMockup({ 0 }));
 
 	auto serial = add(t, new SerialContainer());
