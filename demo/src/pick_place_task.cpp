@@ -144,7 +144,7 @@ void PickPlaceTask::loadParameters() {
 	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
 }
 
-// Initialize the task pipeline
+// Initialize the task pipeline, defining individual movement stages
 bool PickPlaceTask::init() {
 	ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
 	const std::string object = object_name_;
