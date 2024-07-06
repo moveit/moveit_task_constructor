@@ -34,7 +34,7 @@
 
 /* Author: Robert Haschke */
 
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 #include "task_display.h"
 #include "task_panel.h"
 

@@ -54,8 +54,8 @@ class EnumProperty;
 namespace moveit_rviz_plugin {
 
 class TaskSolutionVisualization;
-MOVEIT_CLASS_FORWARD(TaskListModel)
-MOVEIT_CLASS_FORWARD(TaskPanel)
+MOVEIT_CLASS_FORWARD(TaskListModel);
+MOVEIT_CLASS_FORWARD(TaskPanel);
 
 /// Base class for all sub panels within the Task Panel
 class SubPanel : public QWidget
@@ -64,8 +64,8 @@ class SubPanel : public QWidget
 public:
 	SubPanel(QWidget* parent = nullptr) : QWidget(parent) {}
 
-	virtual void save(rviz::Config config) {}
-	virtual void load(const rviz::Config& config) {}
+	virtual void save(rviz::Config /*config*/) {}  // NOLINT(performance-unnecessary-value-param)
+	virtual void load(const rviz::Config& /*config*/) {}
 
 Q_SIGNALS:
 	void configChanged();
@@ -156,10 +156,10 @@ protected Q_SLOTS:
 	void onOldTaskHandlingChanged();
 
 private:
-	Q_PRIVATE_SLOT(d_ptr, void _q_configureInsertedModels(QModelIndex, int, int));
+	Q_PRIVATE_SLOT(d_ptr, void configureInsertedModels(QModelIndex, int, int));
 
 Q_SIGNALS:
-	void oldTaskHandlingChanged(int);
+	void oldTaskHandlingChanged(int old_task_handling);
 };
 
 class GlobalSettingsWidgetPrivate;

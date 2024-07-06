@@ -1,0 +1,21 @@
+PROJECT_NAME           = MTC
+INPUT                  = ../include/ ../src/
+RECURSIVE              = YES
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+HTML_OUTPUT            = _cpp
+XML_OUTPUT             = _doxygenxml
+XML_PROGRAMLISTING     = YES
+
+ALIASES                = "rst=\verbatim embed:rst"
+ALIASES               += "endrst=\endverbatim"
+
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+
+EXCLUDE_SYMBOLS        = *Private
+EXCLUDE_SYMBOLS       += class_
+EXCLUDE_SYMBOLS       += declval*

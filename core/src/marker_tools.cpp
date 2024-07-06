@@ -1,7 +1,6 @@
 #include <moveit/task_constructor/marker_tools.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/robot_state.h>
-#include <eigen_conversions/eigen_msg.h>
 
 namespace vm = visualization_msgs;
 
@@ -10,8 +9,8 @@ namespace task_constructor {
 
 /** generate marker msgs to visualize the planning scene, calling the given callback for each of them
  *  object_names: set of links to include (or all if empty) */
-void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& callback,
-                               const std::vector<std::string>& object_names) {
+void generateMarkersForObjects(const planning_scene::PlanningSceneConstPtr& scene, const MarkerCallback& /*callback*/,
+                               const std::vector<std::string>& /*object_names*/) {
 	scene->printKnownObjects(std::cout);
 	/*
 	   const std::vector<std::string>* names = object_names.empty() ? &scene->getCollisionObjectMsg()
@@ -86,7 +85,7 @@ const std::string& materialName(const urdf::Visual& element) {
 	return element.material_name;
 }
 template <>
-const std::string& materialName(const urdf::Collision& element) {
+const std::string& materialName(const urdf::Collision& /*element*/) {
 	static std::string empty;
 	return empty;
 }
@@ -123,6 +122,8 @@ void generateMarkers(const moveit::core::RobotState& robot_state, const MarkerCa
 		auto element_handler = [&](const T& element) {
 			if (element && element->geometry) {
 				createGeometryMarker(m, *element->geometry, element->origin, materialColor(*model, materialName(*element)));
+				if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0)
+					return;  // skip zero-size marker
 				m.pose = rviz_marker_tools::composePoses(robot_state.getGlobalLinkTransform(name), m.pose);
 				callback(m, name);
 				valid_found = true;

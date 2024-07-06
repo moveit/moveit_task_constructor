@@ -155,7 +155,7 @@ RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex& index) const {
 
 	// internal pointer refers to parent node
 	Node* parent = static_cast<Node*>(index.internalPointer());
-	Q_ASSERT(index.row() >= 0 && (size_t)index.row() < parent->children_.size());
+	Q_ASSERT(index.row() >= 0 && static_cast<size_t>(index.row()) < parent->children_.size());
 	return parent->children_.at(index.row()).get();
 }
 
@@ -209,7 +209,7 @@ QModelIndex RemoteTaskModel::index(int row, int column, const QModelIndex& paren
 		return QModelIndex();
 
 	Node* p = node(parent);
-	if (!p || row < 0 || (size_t)row >= p->children_.size())
+	if (!p || row < 0 || static_cast<size_t>(row) >= p->children_.size())
 		return QModelIndex();
 
 	p->children_[row]->node_flags_ |= WAS_VISITED;
@@ -422,17 +422,13 @@ DisplaySolutionPtr RemoteTaskModel::getSolution(const QModelIndex& index) {
 			// request solution via service
 			moveit_task_constructor_msgs::GetSolution srv;
 			srv.request.solution_id = id;
-			try {
-				if (get_solution_client_.call(srv)) {
-					id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
-					return result;
-				} else {  // on failure mark remote task as destroyed: don't retrieve more solutions
-					get_solution_client_.shutdown();
-					flags_ |= IS_DESTROYED;
-				}
-			} catch (const std::exception& e) {
-				ROS_ERROR("exception: %s", e.what());
+			if (get_solution_client_.call(srv)) {
+				id_to_solution_[id] = result = processSolutionMessage(srv.response.solution);
+				return result;
 			}
+			// on failure mark remote task as destroyed: don't retrieve more solutions
+			get_solution_client_.shutdown();
+			flags_ |= IS_DESTROYED;
 		}
 		return result;
 	}
@@ -466,11 +462,11 @@ typename T::iterator insert(T& c, typename T::value_type&& item) {
 
 RemoteSolutionModel::RemoteSolutionModel(QObject* parent) : QAbstractTableModel(parent) {}
 
-int RemoteSolutionModel::rowCount(const QModelIndex& parent) const {
+int RemoteSolutionModel::rowCount(const QModelIndex& /*parent*/) const {
 	return sorted_.size();
 }
 
-int RemoteSolutionModel::columnCount(const QModelIndex& parent) const {
+int RemoteSolutionModel::columnCount(const QModelIndex& /*parent*/) const {
 	return 3;
 }
 
@@ -486,6 +482,7 @@ QVariant RemoteSolutionModel::headerData(int section, Qt::Orientation orientatio
 					case 2:
 						return tr("comment");
 				}
+				break;
 			case Qt::TextAlignmentRole:
 				return Qt::AlignLeft;
 		}
@@ -504,7 +501,13 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 			return item.id;
 
 		case Qt::ToolTipRole:
+#if 0  // show internal solution id in first column
+			if (index.column() == 0)
+				return item.id;
+#endif
+			// usually just show the comment
 			return item.comment;
+			break;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {
@@ -519,6 +522,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 				case 2:
 					return item.comment;
 			}
+			break;
 
 		case Qt::ForegroundRole:
 			if (std::isinf(item.cost))

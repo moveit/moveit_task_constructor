@@ -1,0 +1,162 @@
+# This config uses industrial_ci (https://github.com/ros-industrial/industrial_ci.git).
+# For troubleshooting, see readme (https://github.com/ros-industrial/industrial_ci/blob/master/README.rst)
+
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  ici:
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - IMAGE: noetic-source
+            NAME: ccov
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
+          - IMAGE: noetic-source
+            CLANG_TIDY: true
+            TARGET_CMAKE_ARGS: >-
+              -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wold-style-cast"
+          - IMAGE: noetic-source
+            NAME: asan
+            DOCKER_RUN_OPTS: >-
+              -e PRELOAD=libasan.so.5
+              -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions"
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+
+    env:
+      CATKIN_LINT: true
+      CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
+      DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
+      UNDERLAY: /root/ws_moveit/install
+      DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master"
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      BASEDIR: ${{ github.workspace }}/.work
+      CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
+      # perform full clang-tidy check only on manual trigger (workflow_dispatch), PRs do check changed files, otherwise nothing
+      CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
+      CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
+      CXX: ${{ matrix.env.CLANG_TIDY && 'clang++' }}
+
+    name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache ccache
+        uses: rhaschke/cache@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}
+            ccache-${{ env.CACHE_PREFIX }}
+        env:
+          GHA_CACHE_SAVE: always
+
+      - id: ici
+        name: Run industrial_ci
+        uses: rhaschke/industrial_ci@master
+        env: ${{ matrix.env }}
+
+      - name: Upload ici's target_ws/install folder
+        uses: rhaschke/upload-ici-workspace@main
+        if: success() && matrix.env.CLANG_TIDY
+        with:
+          subdir: target_ws/install
+
+      - name: Upload test artifacts (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure() && (steps.ici.outputs.run_target_test || steps.ici.outputs.target_test_results)
+        with:
+          name: test-results-${{ matrix.env.IMAGE }}${{ matrix.env.NAME && '-' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && '-clang-tidy' || '' }}
+          path: ${{ env.BASEDIR }}/target_ws/**/test_results/**/*.xml
+
+      - name: Upload clang-tidy fixes (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure() && steps.ici.outputs.clang_tidy_checks
+        with:
+          name: clang-tidy-fixes.yaml
+          path: ${{ env.BASEDIR }}/clang-tidy-fixes.yaml
+
+      - name: Show clang-tidy warnings
+        if: always() && matrix.env.CLANG_TIDY
+        uses: asarium/clang-tidy-action@v1
+        with:
+          fixesFile: ${{ env.BASEDIR }}/clang-tidy-fixes.yaml
+
+      - name: Generate codecov report
+        uses: rhaschke/lcov-action@main
+        if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
+        with:
+          docker: $DOCKER_IMAGE
+          workdir: ${{ env.BASEDIR }}/target_ws
+          ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
+      - name: Upload codecov report
+        uses: codecov/codecov-action@v4
+        if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
+        with:
+          files: ${{ env.BASEDIR }}/target_ws/coverage.info
+
+  doc:
+    # https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake
+    if: github.repository_owner == 'moveit'
+    runs-on: ubuntu-latest
+    needs: ici
+    container:
+      image: moveit/moveit:noetic-source
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: |
+          apt-get update -q
+          apt-get install -y doxygen graphviz python3-pip ros-noetic-py-binding-tools
+          pip install -r core/doc/requirements.txt
+
+      - name: Download ICI workspace
+        uses: rhaschke/download-ici-workspace@main
+
+      - name: Build Documentation
+        shell: bash
+        run: |
+          source ici/setup.bash
+          (cd core/doc; doxygen)
+          sphinx-build core/doc _site
+      - name: Validate links
+        if: false
+        shell: bash
+        run: |
+          source ici/setup.bash
+          sphinx-build -W -b linkcheck core/doc _site
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+
+  # Deployment job
+  deploy:
+    if: github.repository_owner == 'moveit' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    needs: doc
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

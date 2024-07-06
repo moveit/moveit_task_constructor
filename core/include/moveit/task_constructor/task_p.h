@@ -42,7 +42,7 @@
 #include <moveit/task_constructor/task.h>
 
 namespace robot_model_loader {
-MOVEIT_CLASS_FORWARD(RobotModelLoader)
+MOVEIT_CLASS_FORWARD(RobotModelLoader);
 }
 
 namespace moveit {
@@ -51,14 +51,13 @@ namespace task_constructor {
 class TaskPrivate : public WrapperBasePrivate
 {
 	friend class Task;
+	TaskPrivate& operator=(TaskPrivate&& other);
 
 public:
 	TaskPrivate(Task* me, const std::string& ns);
+
 	const std::string& ns() const { return ns_; }
 	const ContainerBase* stages() const;
-
-protected:
-	static void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 private:
 	std::string ns_;

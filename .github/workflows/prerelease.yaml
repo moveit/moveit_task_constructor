@@ -1,0 +1,41 @@
+# This config uses industrial_ci (https://github.com/ros-industrial/industrial_ci.git).
+# For troubleshooting, see readme (https://github.com/ros-industrial/industrial_ci/blob/master/README.rst)
+
+name: pre-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ROS_DISTRO:
+        type: string
+        required: true
+        description: 'ROS distribution codename:'
+        default: noetic
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  default:
+    env:
+      ROS_DISTRO: ${{ inputs.ROS_DISTRO }}
+      PRERELEASE: true
+      BASEDIR: ${{ github.workspace }}/.work
+
+    name: "${{ inputs.ROS_DISTRO }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Free up disk space"
+        run: |
+          sudo apt-get -qq purge build-essential "ghc*"
+          sudo apt-get clean
+          # cleanup docker images not used by us
+          docker system prune -af
+          # free up a lot of stuff from /usr/local
+          sudo rm -rf /usr/local
+          df -h
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: industrial_ci
+        uses: ros-industrial/industrial_ci@master

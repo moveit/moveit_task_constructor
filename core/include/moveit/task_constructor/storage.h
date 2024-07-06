@@ -42,6 +42,7 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <moveit/task_constructor/utils.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -52,21 +53,21 @@
 #include <functional>
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
 namespace moveit {
 namespace task_constructor {
 
 class SolutionBase;
-MOVEIT_CLASS_FORWARD(InterfaceState)
-MOVEIT_CLASS_FORWARD(Interface)
-MOVEIT_CLASS_FORWARD(Stage)
-MOVEIT_CLASS_FORWARD(Introspection)
+MOVEIT_CLASS_FORWARD(InterfaceState);
+MOVEIT_CLASS_FORWARD(Interface);
+MOVEIT_CLASS_FORWARD(Stage);
+MOVEIT_CLASS_FORWARD(Introspection);
 
 /** InterfaceState describes a potential start or goal state for a planning stage.
  *
@@ -76,23 +77,44 @@ class InterfaceState
 {
 	friend class SolutionBase;  // addIncoming() / addOutgoing() should be called only by SolutionBase
 	friend class Interface;  // allow Interface to set owner_ and priority_
+	friend class ContainerBasePrivate;  // allow setting priority_ for pruning
+
 public:
+	enum Status
+	{
+		ENABLED,  // state is actively considered during planning
+		ARMED,  // disabled state in a Connecting interface that will become re-enabled with a new opposite state
+		PRUNED,  // disabled state on a pruned solution branch
+	};
+	static const char* colorForStatus(unsigned int s) { return STATUS_COLOR_[s]; }
+
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
-	struct Priority : public std::pair<unsigned int, double>
+	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost) : std::pair<unsigned int, double>(depth, cost) {}
+		Priority(unsigned int depth, double cost, Status status)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {}
+		Priority(unsigned int depth, double cost) : Priority(depth, cost, std::isfinite(cost) ? ENABLED : PRUNED) {}
+		// Constructor copying depth and cost, but modifying its status
+		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 
-		inline unsigned int depth() const { return this->first; }
-		inline double cost() const { return this->second; }
+		inline Status status() const { return std::get<0>(*this); }
+		inline bool enabled() const { return std::get<0>(*this) == ENABLED; }
+
+		inline unsigned int depth() const { return std::get<1>(*this); }
+		inline double cost() const { return std::get<2>(*this); }
 
 		// add priorities
 		Priority operator+(const Priority& other) const {
-			return Priority(this->depth() + other.depth(), this->cost() + other.cost());
+			return Priority(depth() + other.depth(), cost() + other.cost(), std::min(status(), other.status()));
 		}
-		bool operator<(const Priority& other) const;
+		// comparison operators
+		bool operator<(const Priority& rhs) const;
+		inline bool operator>(const Priority& rhs) const { return rhs < *this; }
+		inline bool operator<=(const Priority& rhs) const { return !(rhs < *this); }
+		inline bool operator>=(const Priority& rhs) const { return !(*this < rhs); }
 	};
 	using Solutions = std::deque<SolutionBase*>;
 
@@ -106,6 +128,7 @@ public:
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);
 	InterfaceState(InterfaceState&& other) = default;
+	InterfaceState& operator=(const InterfaceState& other) = default;
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
@@ -116,18 +139,29 @@ public:
 
 	/// states are ordered by priority
 	inline bool operator<(const InterfaceState& other) const { return this->priority_ < other.priority_; }
+
 	inline const Priority& priority() const { return priority_; }
+	/// Update priority and call owner's notify() if possible
+	void updatePriority(const InterfaceState::Priority& priority);
+	/// Update status, but keep current priority
+	void updateStatus(Status status);
+
 	Interface* owner() const { return owner_; }
 
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
 	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
+	// Set new priority without updating the owning interface (USE WITH CARE)
+	inline void setPriority(const Priority& prio) { priority_ = prio; }
 
 private:
+	static const char* STATUS_COLOR_[];
 	planning_scene::PlanningSceneConstPtr scene_;
 	PropertyMap properties_;
+	/// trajectories which are *timewise before* this state
 	Solutions incoming_trajectories_;
+	/// trajectories which are *timewise after* this state
 	Solutions outgoing_trajectories_;
 
 	// members needed for priority scheduling in Interface list
@@ -145,19 +179,21 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
-		using base_type::iterator::iterator;  // inherit base constructors
+		iterator() = default;
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }
+
 		InterfaceState* operator->() const noexcept { return base_type::iterator::operator*(); }
 	};
 	class const_iterator : public base_type::const_iterator
 	{
 	public:
-		using base_type::const_iterator::const_iterator;  // inherit base constructors
 		const_iterator(base_type::const_iterator other) : base_type::const_iterator(other) {}
+		const_iterator(base_type::iterator other) : base_type::const_iterator(other) {}
 
 		const InterfaceState& operator*() const noexcept { return *base_type::const_iterator::operator*(); }
+
 		const InterfaceState* operator->() const noexcept { return base_type::const_iterator::operator*(); }
 	};
 
@@ -165,10 +201,27 @@ public:
 	{
 		FORWARD,
 		BACKWARD,
-		START = FORWARD,
-		END = BACKWARD
 	};
-	using NotifyFunction = std::function<void(iterator, bool)>;
+	enum Update
+	{
+		STATUS = 1 << 0,
+		PRIORITY = 1 << 1,
+		ALL = STATUS | PRIORITY,
+	};
+	using UpdateFlags = utils::Flags<Update>;
+	using NotifyFunction = std::function<void(iterator, UpdateFlags)>;
+
+	class DisableNotify
+	{
+		Interface& if_;
+		Interface::NotifyFunction old_;
+
+	public:
+		DisableNotify(Interface& i) : if_(i) { old_.swap(if_.notify_); }
+		~DisableNotify() { old_.swap(if_.notify_); }
+	};
+	friend class DisableNotify;
+
 	Interface(const NotifyFunction& notify = NotifyFunction());
 
 	/// add a new InterfaceState
@@ -179,9 +232,10 @@ public:
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
+	inline bool notifyEnabled() const { return static_cast<bool>(notify_); }
 
 private:
-	const NotifyFunction notify_;
+	NotifyFunction notify_;
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
@@ -192,15 +246,29 @@ private:
 	using base_type::remove_if;
 };
 
+std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
+std::ostream& operator<<(std::ostream& os, const Interface& interface);
+std::ostream& operator<<(std::ostream& os, Interface::Direction dir);
+
+/// Find index of the iterator in the container. Counting starts at 1. Zero corresponds to not found.
+template <typename T>
+size_t getIndex(const T& container, typename T::const_iterator search) {
+	size_t index = 1;
+	for (typename T::const_iterator it = container.begin(), end = container.end(); it != end; ++it, ++index)
+		if (it == search)
+			return index;
+	return 0;
+}
+
 class CostTerm;
 class StagePrivate;
 class ContainerBasePrivate;
-struct TmpInterfaceStateProvider;
+struct TmpSolutionContext;
 /// abstract base class for solutions (primitive and sequences)
 class SolutionBase
 {
 	friend ContainerBasePrivate;
-	friend TmpInterfaceStateProvider;
+	friend TmpSolutionContext;
 
 public:
 	virtual ~SolutionBase() = default;
@@ -233,7 +301,7 @@ public:
 
 	inline double cost() const { return cost_; }
 	void setCost(double cost);
-	void markAsFailure() { setCost(std::numeric_limits<double>::infinity()); }
+	void markAsFailure(const std::string& msg = std::string());
 	inline bool isFailure() const { return !std::isfinite(cost_); }
 
 	const std::string& comment() const { return comment_; }
@@ -242,9 +310,11 @@ public:
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
 
+	/// convert solution to message
+	void toMsg(moveit_task_constructor_msgs::Solution& solution, Introspection* introspection = nullptr) const;
 	/// append this solution to Solution msg
-	virtual void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                         Introspection* introspection = nullptr) const = 0;
+	virtual void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	                      Introspection* introspection = nullptr) const = 0;
 	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
 	/// required to dispatch to type-specific CostTerm methods via vtable
@@ -271,7 +341,7 @@ private:
 	const InterfaceState* start_ = nullptr;
 	const InterfaceState* end_ = nullptr;
 };
-MOVEIT_CLASS_FORWARD(SolutionBase)
+MOVEIT_CLASS_FORWARD(SolutionBase);
 
 /// SubTrajectory connects interface states of ComputeStages
 class SubTrajectory : public SolutionBase
@@ -285,15 +355,21 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
+
+	static SubTrajectory failure(const std::string& msg) {
+		SubTrajectory s;
+		s.markAsFailure(msg);
+		return s;
+	}
 
 private:
 	// actual trajectory, might be empty
 	robot_trajectory::RobotTrajectoryConstPtr trajectory_;
 };
-MOVEIT_CLASS_FORWARD(SubTrajectory)
+MOVEIT_CLASS_FORWARD(SubTrajectory);
 
 /** Sequence of individual sub solutions
  *
@@ -312,7 +388,7 @@ public:
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -325,7 +401,7 @@ private:
 	/// series of sub solutions
 	container_type subsolutions_;
 };
-MOVEIT_CLASS_FORWARD(SolutionSequence)
+MOVEIT_CLASS_FORWARD(SolutionSequence);
 
 /** Wrap an existing solution
  *
@@ -343,8 +419,8 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
-	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                 Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	              Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -368,14 +444,26 @@ inline const InterfaceState* state<Interface::BACKWARD>(const SolutionBase& solu
 
 /// Trait to retrieve outgoing (FORWARD) or incoming (BACKWARD) solution segments of a given state
 template <Interface::Direction dir>
-const InterfaceState::Solutions& trajectories(const InterfaceState* state);
+const InterfaceState::Solutions& trajectories(const InterfaceState& state);
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState* state) {
-	return state->outgoingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::FORWARD>(const InterfaceState& state) {
+	return state.outgoingTrajectories();
 }
 template <>
-inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState* state) {
-	return state->incomingTrajectories();
+inline const InterfaceState::Solutions& trajectories<Interface::BACKWARD>(const InterfaceState& state) {
+	return state.incomingTrajectories();
+}
+
+/// Trait to retrieve opposite direction (FORWARD <-> BACKWARD)
+template <Interface::Direction dir>
+constexpr Interface::Direction opposite();
+template <>
+inline constexpr Interface::Direction opposite<Interface::FORWARD>() {
+	return Interface::BACKWARD;
+}
+template <>
+inline constexpr Interface::Direction opposite<Interface::BACKWARD>() {
+	return Interface::FORWARD;
 }
 }  // namespace task_constructor
 }  // namespace moveit

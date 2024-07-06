@@ -65,22 +65,22 @@ class PanelDockWidget;
 
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotModel)
+MOVEIT_CLASS_FORWARD(RobotModel);
 }
 }  // namespace moveit
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 namespace robot_trajectory {
-MOVEIT_CLASS_FORWARD(RobotTrajectory)
+MOVEIT_CLASS_FORWARD(RobotTrajectory);
 }
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(RobotStateVisualization)
-MOVEIT_CLASS_FORWARD(TaskSolutionVisualization)
-MOVEIT_CLASS_FORWARD(PlanningSceneRender)
-MOVEIT_CLASS_FORWARD(DisplaySolution)
+MOVEIT_CLASS_FORWARD(RobotStateVisualization);
+MOVEIT_CLASS_FORWARD(TaskSolutionVisualization);
+MOVEIT_CLASS_FORWARD(PlanningSceneRender);
+MOVEIT_CLASS_FORWARD(DisplaySolution);
 
 class TaskSolutionPanel;
 class MarkerVisualizationProperty;

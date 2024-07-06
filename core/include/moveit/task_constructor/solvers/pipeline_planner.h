@@ -39,23 +39,40 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
-MOVEIT_CLASS_FORWARD(PlanningPipeline)
+MOVEIT_CLASS_FORWARD(PlanningPipeline);
 }
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(PipelinePlanner)
+MOVEIT_CLASS_FORWARD(PipelinePlanner);
 
 /** Use MoveIt's PlanningPipeline to plan a trajectory between to scenes */
 class PipelinePlanner : public PlannerInterface
 {
 public:
-	PipelinePlanner();
+	struct Specification
+	{
+		moveit::core::RobotModelConstPtr model;
+		std::string ns{ "move_group" };
+		std::string pipeline{ "ompl" };
+		std::string adapter_param{ "request_adapters" };
+	};
+
+	static planning_pipeline::PlanningPipelinePtr create(const moveit::core::RobotModelConstPtr& model) {
+		Specification spec;
+		spec.model = model;
+		return create(spec);
+	}
+
+	static planning_pipeline::PlanningPipelinePtr create(const Specification& spec);
+
+	PipelinePlanner(const std::string& pipeline = "ompl");
 
 	PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& planning_pipeline);
 
@@ -63,16 +80,20 @@ public:
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	          const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	            const core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	          const Eigen::Isometry3d& target, const core::JointModelGroup* jmg, double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
 protected:
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit_msgs::MotionPlanRequest& req,
+	            robot_trajectory::RobotTrajectoryPtr& result);
+
+	std::string pipeline_name_;
 	planning_pipeline::PlanningPipelinePtr planner_;
 };
 }  // namespace solvers

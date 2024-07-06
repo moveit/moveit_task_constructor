@@ -36,7 +36,6 @@
 /* Authors: Luca Lach, Robert Haschke */
 
 #include <moveit/task_constructor/merge.h>
-#include <moveit/trajectory_processing/iterative_time_parameterization.h>
 
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/algorithm/string/join.hpp>
@@ -91,6 +90,7 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 	if (joints.size() != sum_joints) {  // overlapping joint groups: analyse in more detail
 		auto duplicates = findDuplicates(groups, joints);
 		if (!duplicates.empty()) {
+			// NOLINTNEXTLINE(readability-identifier-naming): getJointName is a function (variable)
 			auto getJointName = boost::adaptors::transformed([](auto&& jm) { return jm->getName(); });
 			std::string message("overlapping joints: " + boost::algorithm::join(duplicates | getJointName, ", "));
 			throw std::runtime_error(message);
@@ -105,7 +105,8 @@ moveit::core::JointModelGroup* merge(const std::vector<const moveit::core::Joint
 
 robot_trajectory::RobotTrajectoryPtr
 merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajectories,
-      const robot_state::RobotState& base_state, moveit::core::JointModelGroup*& merged_group) {
+      const moveit::core::RobotState& base_state, moveit::core::JointModelGroup*& merged_group,
+      const trajectory_processing::TimeParameterization& time_parameterization) {
 	if (sub_trajectories.size() <= 1)
 		throw std::runtime_error("Expected multiple sub solutions");
 
@@ -140,7 +141,7 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 	std::vector<double> values;
 	values.reserve(max_num_vars);
 
-	auto merged_state = std::make_shared<robot_state::RobotState>(base_state);
+	auto merged_state = std::make_shared<moveit::core::RobotState>(base_state);
 	while (true) {
 		bool finished = true;
 		size_t index = merged_traj->getWayPointCount();
@@ -150,7 +151,7 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 				continue;  // no more waypoints in this sub solution
 
 			finished = false;  // there was a waypoint, continue while loop
-			const robot_state::RobotState& sub_state = sub->getWayPoint(index);
+			const moveit::core::RobotState& sub_state = sub->getWayPoint(index);
 			sub_state.copyJointGroupPositions(sub->getGroup(), values);
 			merged_state->setJointGroupPositions(sub->getGroup(), values);
 		}
@@ -161,12 +162,11 @@ merge(const std::vector<robot_trajectory::RobotTrajectoryConstPtr>& sub_trajecto
 		// add waypoint without timing
 		merged_traj->addSuffixWayPoint(merged_state, 0.0);
 		// create new RobotState for next waypoint
-		merged_state = std::make_shared<robot_state::RobotState>(*merged_state);
+		merged_state = std::make_shared<moveit::core::RobotState>(*merged_state);
 	}
 
 	// add timing
-	trajectory_processing::IterativeParabolicTimeParameterization timing;
-	timing.computeTimeStamps(*merged_traj, 1.0, 1.0);
+	time_parameterization.computeTimeStamps(*merged_traj, 1.0, 1.0);
 	return merged_traj;
 }
 }  // namespace task_constructor

@@ -60,8 +60,8 @@ class DisplayContext;
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(DisplaySolution)
-MOVEIT_CLASS_FORWARD(RemoteTaskModel)
+MOVEIT_CLASS_FORWARD(DisplaySolution);
+MOVEIT_CLASS_FORWARD(RemoteTaskModel);
 using StageFactory = PluginlibFactory<moveit::task_constructor::Stage>;
 using StageFactoryPtr = std::shared_ptr<StageFactory>;
 
@@ -89,11 +89,11 @@ public:
 	              QObject* parent = nullptr)
 	  : QAbstractItemModel(parent), scene_(scene), display_context_(display_context) {}
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
+	int columnCount(const QModelIndex& /*parent*/ = QModelIndex()) const override { return 4; }
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;
 
-	virtual void setStageFactory(const StageFactoryPtr& factory) {}
+	virtual void setStageFactory(const StageFactoryPtr& /*factory*/) {}
 	unsigned int taskFlags() const { return flags_; }
 	static QVariant flowIcon(moveit::task_constructor::InterfaceFlags f);
 
@@ -149,7 +149,7 @@ public:
 	void setDisplayContext(rviz::DisplayContext* display_context);
 	void setActiveTaskModel(BaseTaskModel* model) { active_task_model_ = model; }
 
-	int columnCount(const QModelIndex& parent = QModelIndex()) const override { return 4; }
+	int columnCount(const QModelIndex& /*parent*/ = QModelIndex()) const override { return 4; }
 	static QVariant horizontalHeader(int column, int role);
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 	QVariant data(const QModelIndex& index, int role) const override;

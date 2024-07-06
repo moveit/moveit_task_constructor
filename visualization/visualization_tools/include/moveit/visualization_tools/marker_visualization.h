@@ -17,17 +17,17 @@ class MarkerBase;
 }  // namespace rviz
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotState)
+MOVEIT_CLASS_FORWARD(RobotState);
 }
 }  // namespace moveit
 
 namespace moveit_rviz_plugin {
 
-MOVEIT_CLASS_FORWARD(MarkerVisualization)
+MOVEIT_CLASS_FORWARD(MarkerVisualization);
 
 /** Container for all markers created from a vector of Marker messages
  *

@@ -40,83 +40,25 @@
 // MTC pick/place demo implementation
 #include <moveit_task_constructor_demo/pick_place_task.h>
 
-#include <geometry_msgs/Pose.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <rosparam_shortcuts/rosparam_shortcuts.h>
-#include <tf2_ros/transform_broadcaster.h>
-
 constexpr char LOGNAME[] = "moveit_task_constructor_demo";
 
-void spawnObject(moveit::planning_interface::PlanningSceneInterface& psi, const moveit_msgs::CollisionObject& object) {
-	if (!psi.applyCollisionObject(object))
-		throw std::runtime_error("Failed to spawn object: " + object.id);
-}
-
-moveit_msgs::CollisionObject createTable() {
-	ros::NodeHandle pnh("~");
-	std::string table_name, table_reference_frame;
-	std::vector<double> table_dimensions;
-	geometry_msgs::Pose pose;
-	std::size_t errors = 0;
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_name", table_name);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_reference_frame", table_reference_frame);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_dimensions", table_dimensions);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh, "table_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
-
-	moveit_msgs::CollisionObject object;
-	object.id = table_name;
-	object.header.frame_id = table_reference_frame;
-	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::BOX;
-	object.primitives[0].dimensions = table_dimensions;
-	pose.position.z -= 0.5 * table_dimensions[2];  // align surface with world
-	object.primitive_poses.push_back(pose);
-	return object;
-}
-
-moveit_msgs::CollisionObject createObject() {
-	ros::NodeHandle pnh("~");
-	std::string object_name, object_reference_frame;
-	std::vector<double> object_dimensions;
-	geometry_msgs::Pose pose;
-	std::size_t error = 0;
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_name", object_name);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_reference_frame", object_reference_frame);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_dimensions", object_dimensions);
-	error += !rosparam_shortcuts::get(LOGNAME, pnh, "object_pose", pose);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, error);
-
-	moveit_msgs::CollisionObject object;
-	object.id = object_name;
-	object.header.frame_id = object_reference_frame;
-	object.primitives.resize(1);
-	object.primitives[0].type = shape_msgs::SolidPrimitive::CYLINDER;
-	object.primitives[0].dimensions = object_dimensions;
-	pose.position.z += 0.5 * object_dimensions[0];
-	object.primitive_poses.push_back(pose);
-	return object;
-}
-
 int main(int argc, char** argv) {
-	ROS_INFO_NAMED(LOGNAME, "Init moveit_task_constructor_demo");
-	ros::init(argc, argv, "moveit_task_constructor_demo");
-	ros::NodeHandle nh;
+	ros::init(argc, argv, "mtc_tutorial");
+	ros::NodeHandle nh, pnh("~");
+
+	// Handle Task introspection requests from RViz & feedback during execution
 	ros::AsyncSpinner spinner(1);
 	spinner.start();
 
-	// Add table and object to planning scene
-	ros::Duration(1.0).sleep();  // Wait for ApplyPlanningScene service
-	moveit::planning_interface::PlanningSceneInterface psi;
-	ros::NodeHandle pnh("~");
-	if (pnh.param("spawn_table", true))
-		spawnObject(psi, createTable());
-	spawnObject(psi, createObject());
+	moveit_task_constructor_demo::setupDemoScene(pnh);
 
 	// Construct and run pick/place task
-	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", nh);
-	pick_place_task.loadParameters();
-	pick_place_task.init();
+	moveit_task_constructor_demo::PickPlaceTask pick_place_task("pick_place_task", pnh);
+	if (!pick_place_task.init()) {
+		ROS_INFO_NAMED(LOGNAME, "Initialization failed");
+		return 1;
+	}
+
 	if (pick_place_task.plan()) {
 		ROS_INFO_NAMED(LOGNAME, "Planning succeded");
 		if (pnh.param("execute", false)) {

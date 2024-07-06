@@ -44,7 +44,7 @@ namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-MOVEIT_CLASS_FORWARD(CartesianPath)
+MOVEIT_CLASS_FORWARD(CartesianPath);
 
 /** Use MoveIt's computeCartesianPath() to generate a straigh-line path between to scenes */
 class CartesianPath : public PlannerInterface
@@ -52,23 +52,29 @@ class CartesianPath : public PlannerInterface
 public:
 	CartesianPath();
 
+	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
+	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
+	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
+
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
 
-	void setMaxVelocityScaling(double factor) { setProperty("max_velocity_scaling_factor", factor); }
-	void setMaxAccelerationScaling(double factor) { setProperty("max_acceleration_scaling_factor", factor); }
+	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
+	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
+	[[deprecated("Replace with setMaxAccelerationScalingFactor")]]  // clang-format off
+	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
-	          const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 
-	bool plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	          const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg, double timeout,
-	          robot_trajectory::RobotTrajectoryPtr& result,
-	          const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
+	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
+	            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const moveit_msgs::Constraints& path_constraints = moveit_msgs::Constraints()) override;
 };
 }  // namespace solvers
 }  // namespace task_constructor

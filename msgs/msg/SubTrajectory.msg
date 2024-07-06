@@ -1,6 +1,9 @@
 # generic solution information
 SolutionInfo info
 
+# trajectory execution information, like controller configuration
+TrajectoryExecutionInfo execution_info
+
 # trajectory
 moveit_msgs/RobotTrajectory trajectory
 

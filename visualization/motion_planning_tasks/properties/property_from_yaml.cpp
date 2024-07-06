@@ -151,9 +151,8 @@ rviz::Property* Parser::process(const yaml_event_t& event, const QString& name, 
 		case YAML_SCALAR_EVENT:
 			return createScalar(name, description, byteArray(event), old);
 		default:
-			break;
+			throw std::runtime_error("Unhandled YAML event");
 	}
-	assert(false);  // should not be reached
 }
 
 // Try to set numeric or arbitrary scalar value from YAML node. Needs to match old's type.
@@ -306,7 +305,7 @@ rviz::Property* Parser::processSequence(const QString& name, const QString& desc
 
 namespace moveit_rviz_plugin {
 
-rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& type,
+rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
                                                const std::string& description, const std::string& value,
                                                rviz::Property* old) {
 	QString qname = QString::fromStdString(name);

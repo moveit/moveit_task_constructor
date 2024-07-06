@@ -1,6 +1,6 @@
 #include <rviz_marker_tools/marker_creation.h>
 #include <urdf_model/link.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <ros/console.h>
 
 namespace vm = visualization_msgs;
@@ -139,21 +139,17 @@ std_msgs::ColorRGBA getColor(Color color, double alpha) {
 }
 
 geometry_msgs::Pose composePoses(const geometry_msgs::Pose& first, const Eigen::Isometry3d& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(first, result_eigen);
+	tf2::fromMsg(first, result_eigen);
 	result_eigen = result_eigen * second;
-	tf::poseEigenToMsg(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 geometry_msgs::Pose composePoses(const Eigen::Isometry3d& first, const geometry_msgs::Pose& second) {
-	geometry_msgs::Pose result;
 	Eigen::Isometry3d result_eigen;
-	tf::poseMsgToEigen(second, result_eigen);
+	tf2::fromMsg(second, result_eigen);
 	result_eigen = first * result_eigen;
-	tf::poseEigenToMsg(result_eigen, result);
-	return result;
+	return tf2::toMsg(result_eigen);
 }
 
 void prepareMarker(vm::Marker& m, int marker_type) {
@@ -162,12 +158,6 @@ void prepareMarker(vm::Marker& m, int marker_type) {
 	m.points.clear();
 	m.colors.clear();
 
-	// ensure valid scale
-	if (m.scale.x == 0 && m.scale.y == 0 && m.scale.z == 0) {
-		m.scale.x = 1.0;
-		m.scale.y = 1.0;
-		m.scale.z = 1.0;
-	}
 	// ensure non-null orientation
 	if (m.pose.orientation.w == 0 && m.pose.orientation.x == 0 && m.pose.orientation.y == 0 && m.pose.orientation.z == 0)
 		m.pose.orientation.w = 1.0;
@@ -192,6 +182,7 @@ vm::Marker& makeXYPlane(vm::Marker& m) {
 	p[3].y = -1.0;
 	p[3].z = 0.0;
 
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::Marker::TRIANGLE_LIST);
 	m.points.push_back(p[0]);
 	m.points.push_back(p[1]);
@@ -221,6 +212,7 @@ vm::Marker& makeYZPlane(vm::Marker& m) {
 
 /// create a cone of given angle along the x-axis
 vm::Marker makeCone(double angle, vm::Marker& m) {
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::Marker::TRIANGLE_LIST);
 	geometry_msgs::Point p[3];
 	p[0].x = p[0].y = p[0].z = 0.0;
@@ -276,6 +268,20 @@ vm::Marker& makeMesh(vm::Marker& m, const std::string& filename, double sx, doub
 	return m;
 }
 
+vm::Marker& makeArrow(vm::Marker& m, const Eigen::Vector3d& start_point, const Eigen::Vector3d& end_point,
+                      double diameter, double head_length) {
+	// scale.y is set according to default proportions in rviz/default_plugin/markers/arrow_marker.cpp#L61
+	// for the default head_length=0, the head length will keep the default proportion defined in arrow_marker.cpp#L106
+	m.scale.x = diameter;
+	m.scale.y = 2 * diameter;
+	m.scale.z = head_length;
+	prepareMarker(m, vm::Marker::ARROW);
+	m.points.resize(2);
+	m.points[0] = tf2::toMsg(start_point);
+	m.points[1] = tf2::toMsg(end_point);
+	return m;
+}
+
 vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
 	m.scale.y = m.scale.z = 0.1 * scale;
 	m.scale.x = scale;
@@ -286,6 +292,7 @@ vm::Marker& makeArrow(vm::Marker& m, double scale, bool tip_at_origin) {
 }
 
 vm::Marker& makeText(vm::Marker& m, const std::string& text) {
+	m.scale.x = m.scale.y = m.scale.z = 1.0;
 	prepareMarker(m, vm::Marker::TEXT_VIEW_FACING);
 	m.text = text;
 	return m;

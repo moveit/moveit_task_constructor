@@ -74,30 +74,16 @@ namespace task_constructor {
 TaskPrivate::TaskPrivate(Task* me, const std::string& ns)
   : WrapperBasePrivate(me, std::string()), ns_(rosNormalizeName(ns)), preempt_requested_(false) {}
 
-void swap(StagePrivate*& lhs, StagePrivate*& rhs) {
-	// It only makes sense to swap pimpl instances of a Task!
-	// However, due to member protection rules, we can only implement it here
-	assert(typeid(lhs) == typeid(rhs));
-
-	// swap instances
-	::std::swap(lhs, rhs);
-	// as well as their me_ pointers
-	::std::swap(lhs->me_, rhs->me_);
-
-	// and redirect the parent pointers of children to new parents
-	auto& lhs_children = static_cast<ContainerBasePrivate*>(lhs)->children_;
-	for (auto it = lhs_children.begin(), end = lhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(lhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
-
-	auto& rhs_children = static_cast<ContainerBasePrivate*>(rhs)->children_;
-	for (auto it = rhs_children.begin(), end = rhs_children.end(); it != end; ++it) {
-		(*it)->pimpl()->unparent();
-		(*it)->pimpl()->setParent(static_cast<ContainerBase*>(rhs->me_));
-		(*it)->pimpl()->setParentPosition(it);
-	}
+TaskPrivate& TaskPrivate::operator=(TaskPrivate&& other) {
+	this->WrapperBasePrivate::operator=(std::move(other));
+	ns_ = std::move(other.ns_);
+	robot_model_ = std::move(other.robot_model_);
+	robot_model_loader_ = std::move(other.robot_model_loader_);
+	task_cbs_ = std::move(other.task_cbs_);
+	// Ensure same introspection status, but keep the existing introspection instance,
+	// which stores this task pointer and includes it in its task_id_
+	static_cast<Task*>(me_)->enableIntrospection(static_cast<bool>(other.introspection_));
+	return *this;
 }
 
 const ContainerBase* TaskPrivate::stages() const {
@@ -106,6 +92,7 @@ const ContainerBase* TaskPrivate::stages() const {
 
 Task::Task(const std::string& ns, bool introspection, ContainerBase::pointer&& container)
   : WrapperBase(new TaskPrivate(this, ns), std::move(container)) {
+	setPruning(false);
 	setTimeout(std::numeric_limits<double>::max());
 
 	// monitor state on commandline
@@ -122,53 +109,8 @@ Task::Task(Task&& other)  // NOLINT(performance-noexcept-move-constructor)
 
 Task& Task::operator=(Task&& other) {  // NOLINT(performance-noexcept-move-constructor)
 	clear();  // remove all stages of current task
-	swap(this->pimpl_, other.pimpl_);
+	*static_cast<TaskPrivate*>(pimpl_) = std::move(*static_cast<TaskPrivate*>(other.pimpl_));
 	return *this;
-}
-
-struct PlannerCache
-{
-	using PlannerID = std::tuple<std::string, std::string, std::string>;
-	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
-	using ModelList = std::list<std::pair<std::weak_ptr<const robot_model::RobotModel>, PlannerMap> >;
-	ModelList cache_;
-
-	PlannerMap::mapped_type& retrieve(const robot_model::RobotModelConstPtr& model, const PlannerID& id) {
-		// find model in cache_ and remove expired entries while doing so
-		ModelList::iterator model_it = cache_.begin();
-		while (model_it != cache_.end()) {
-			if (model_it->first.expired()) {
-				model_it = cache_.erase(model_it);
-				continue;
-			}
-			if (model_it->first.lock() == model)
-				break;
-			++model_it;
-		}
-		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
-			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
-
-		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
-	}
-};
-
-planning_pipeline::PlanningPipelinePtr Task::createPlanner(const robot_model::RobotModelConstPtr& model,
-                                                           const std::string& ns,
-                                                           const std::string& planning_plugin_param_name,
-                                                           const std::string& adapter_plugins_param_name) {
-	static PlannerCache cache;
-	PlannerCache::PlannerID id(ns, planning_plugin_param_name, adapter_plugins_param_name);
-
-	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(model, id);
-	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
-	if (!planner) {
-		// create new entry
-		planner = std::make_shared<planning_pipeline::PlanningPipeline>(
-		    model, ros::NodeHandle(ns), planning_plugin_param_name, adapter_plugins_param_name);
-		// store in cache
-		entry = planner;
-	}
-	return planner;
 }
 
 Task::~Task() {
@@ -270,17 +212,17 @@ void Task::init() {
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
 	// provide introspection instance to all stages
-	impl->setIntrospection(impl->introspection_.get());
+	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
-	    [impl](Stage& stage, int /*depth*/) {
-		    stage.pimpl()->setIntrospection(impl->introspection_.get());
+	    [introspection](Stage& stage, int /*depth*/) {
+		    stage.pimpl()->setIntrospection(introspection);
 		    return true;
 	    },
 	    1, UINT_MAX);
 
 	// first time publish task
-	if (impl->introspection_)
-		impl->introspection_->publishTaskDescription();
+	if (introspection)
+		introspection->publishTaskDescription();
 }
 
 bool Task::canCompute() const {
@@ -291,36 +233,48 @@ void Task::compute() {
 	stages()->pimpl()->runCompute();
 }
 
-bool Task::plan(size_t max_solutions) {
+moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	auto impl = pimpl();
 	init();
 
+	// Print state and return success if there are solutions otherwise the input error_code
+	const auto success_or = [this](const int32_t error_code) -> int32_t {
+		if (numSolutions() > 0)
+			return moveit::core::MoveItErrorCode::SUCCESS;
+		printState();
+		explainFailure();
+		return error_code;
+	};
 	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
-	while (!impl->preempt_requested_ && canCompute() && (max_solutions == 0 || numSolutions() < max_solutions) &&
-	       std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() < available_time) {
+	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
+		if (impl->preempt_requested_)
+			return success_or(moveit::core::MoveItErrorCode::PREEMPTED);
+		if (std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count() >= available_time)
+			return success_or(moveit::core::MoveItErrorCode::TIMED_OUT);
 		compute();
 		for (const auto& cb : impl->task_cbs_)
 			cb(*this);
 		if (impl->introspection_)
 			impl->introspection_->publishTaskState();
-	}
-	printState();
-	return numSolutions() > 0;
+	};
+	return success_or(moveit::core::MoveItErrorCode::PLANNING_FAILED);
 }
 
 void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
 }
 
-moveit_msgs::MoveItErrorCodes Task::execute(const SolutionBase& s) {
+moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	actionlib::SimpleActionClient<moveit_task_constructor_msgs::ExecuteTaskSolutionAction> ac("execute_task_solution");
-	ac.waitForServer();
+	if (!ac.waitForServer(ros::Duration(0.5))) {
+		ROS_ERROR("Failed to connect to the 'execute_task_solution' action server");
+		return moveit::core::MoveItErrorCode::FAILURE;
+	}
 
 	moveit_task_constructor_msgs::ExecuteTaskSolutionGoal goal;
-	s.fillMessage(goal.solution, pimpl()->introspection_.get());
-	s.start()->scene()->getPlanningSceneMsg(goal.solution.start_scene);
+	s.toMsg(goal.solution, pimpl()->introspection_.get());
 
 	ac.sendGoal(goal);
 	ac.waitForResult();
@@ -364,6 +318,11 @@ const core::RobotModelConstPtr& Task::getRobotModel() const {
 
 void Task::printState(std::ostream& os) const {
 	os << *stages();
+}
+
+void Task::explainFailure(std::ostream& os) const {
+	os << "Failing stage(s):\n";
+	stages()->explainFailure(os);
 }
 }  // namespace task_constructor
 }  // namespace moveit

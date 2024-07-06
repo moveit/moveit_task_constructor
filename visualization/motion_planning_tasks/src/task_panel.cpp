@@ -87,8 +87,13 @@ TaskPanel::TaskPanel(QWidget* parent) : rviz::Panel(parent), d_ptr(new TaskPanel
 	Q_D(TaskPanel);
 
 	// sync checked tool button with displayed widget
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+	connect(d->tool_buttons_group, &QButtonGroup::idClicked, d->stackedWidget,
+	        [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#else
 	connect(d->tool_buttons_group, static_cast<void (QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked),
 	        d->stackedWidget, [d](int index) { d->stackedWidget->setCurrentIndex(index); });
+#endif
 	connect(d->stackedWidget, &QStackedWidget::currentChanged, d->tool_buttons_group,
 	        [d](int index) { d->tool_buttons_group->button(index)->setChecked(true); });
 
@@ -155,9 +160,9 @@ void TaskPanel::request(rviz::WindowManagerInterface* window_manager) {
 	if (SINGLETON || !vis_frame)
 		return;  // already defined, nothing to do
 
-	QDockWidget* dock =
-	    vis_frame->addPanelByName("Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks",
-	                              Qt::LeftDockWidgetArea, true /* floating */);
+	QDockWidget* dock = vis_frame->addPanelByName(
+	    "Motion Planning Tasks", "moveit_task_constructor/Motion Planning Tasks", Qt::LeftDockWidgetArea);
+	Q_UNUSED(dock);
 	assert(dock->widget() == SINGLETON);
 }
 
@@ -172,7 +177,7 @@ TaskPanelPrivate::TaskPanelPrivate(TaskPanel* panel) : q_ptr(panel) {
 	tool_buttons_group = new QButtonGroup(panel);
 	tool_buttons_group->setExclusive(true);
 	button_show_stage_dock_widget->setEnabled(bool(getStageFactory()));
-	button_show_stage_dock_widget->setToolTip(QStringLiteral("Show available stages"));
+	button_show_stage_dock_widget->setVisible(false);  // hide for now
 	property_root = new rviz::Property("Global Settings");
 }
 
@@ -225,7 +230,7 @@ TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view), exec_action_clie
 		meta_model->setMimeTypes({ factory->mimeType() });
 	tasks_view->setModel(meta_model);
 	QObject::connect(meta_model, SIGNAL(rowsInserted(QModelIndex, int, int)), q_ptr,
-	                 SLOT(_q_configureInsertedModels(QModelIndex, int, int)));
+	                 SLOT(configureInsertedModels(QModelIndex, int, int)));
 
 	tasks_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	tasks_view->setAcceptDrops(true);
@@ -261,7 +266,7 @@ void TaskViewPrivate::configureExistingModels() {
 		configureTaskListModel(meta_model->getTaskListModel(meta_model->index(row, 0)).first);
 }
 
-void TaskViewPrivate::_q_configureInsertedModels(const QModelIndex& parent, int first, int last) {
+void TaskViewPrivate::configureInsertedModels(const QModelIndex& parent, int first, int last) {
 	if (parent.isValid() && !parent.parent().isValid()) {  // top-level task items inserted
 		int expand = q_ptr->initial_task_expand->getOptionInt();
 		for (int row = first; row <= last; ++row) {
@@ -430,7 +435,7 @@ void TaskView::removeSelectedStages() {
 		m->removeRows(range.top(), range.bottom() - range.top() + 1, range.parent());
 }
 
-void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelIndex& previous) {
+void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelIndex& /*previous*/) {
 	// adding task is allowed on top-level items and sub-top-level items
 	d_ptr->actionAddLocalTask->setEnabled(current.isValid() &&
 	                                      (!current.parent().isValid() || !current.parent().parent().isValid()));
@@ -472,7 +477,7 @@ void TaskView::onCurrentStageChanged(const QModelIndex& current, const QModelInd
 	}
 }
 
-void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& previous) {
+void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModelIndex& /*previous*/) {
 	TaskDisplay* display = d_ptr->getTaskListModel(d_ptr->tasks_view->currentIndex()).second;
 	d_ptr->lock(display);
 
@@ -483,13 +488,19 @@ void TaskView::onCurrentSolutionChanged(const QModelIndex& current, const QModel
 	Q_ASSERT(task);
 
 	TaskSolutionVisualization* vis = display->visualization();
-	const DisplaySolutionPtr& solution = task->getSolution(current);
-	display->setSolutionStatus(bool(solution));
+	DisplaySolutionPtr solution;
+	try {
+		solution = task->getSolution(current);
+		display->setSolutionStatus(bool(solution));
+	} catch (const std::invalid_argument& e) {
+		ROS_ERROR_STREAM(e.what());
+		display->setSolutionStatus(false, e.what());
+	}
 	vis->interruptCurrentDisplay();
 	vis->showTrajectory(solution, true);
 }
 
-void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const QItemSelection& deselected) {
+void TaskView::onSolutionSelectionChanged(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/) {
 	QItemSelectionModel* sm = d_ptr->solutions_view->selectionModel();
 	const QModelIndexList& selected_rows = sm->selectedRows();
 
@@ -500,8 +511,14 @@ void TaskView::onSolutionSelectionChanged(const QItemSelection& selected, const 
 
 	display->clearMarkers();
 	for (const auto& index : selected_rows) {
-		const DisplaySolutionPtr& solution = task->getSolution(index);
-		display->setSolutionStatus(bool(solution));
+		DisplaySolutionPtr solution;
+		try {
+			solution = task->getSolution(index);
+			display->setSolutionStatus(bool(solution));
+		} catch (const std::invalid_argument& e) {
+			ROS_ERROR_STREAM(e.what());
+			display->setSolutionStatus(false, e.what());
+		}
 		display->addMarkers(solution);
 	}
 }
@@ -517,7 +534,7 @@ void TaskView::onExecCurrentSolution() const {
 	const DisplaySolutionPtr& solution = task->getSolution(current);
 
 	if (!d_ptr->exec_action_client_.waitForServer(ros::Duration(0.1))) {
-		ROS_ERROR("Failed to connect to task execution action");
+		ROS_ERROR("Failed to connect to the 'execute_task_solution' action server");
 		return;
 	}
 

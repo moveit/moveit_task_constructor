@@ -55,7 +55,7 @@ static QPixmap maskToColorAndAlpha(const QPixmap& mask, const QColor& color) {
 
 using MaskAndColor = QPair<QPixmap, QColor>;
 using MasksAndColors = QList<MaskAndColor>;
-static MasksAndColors masksAndColors(const Icon& icon, int dpr) {
+static MasksAndColors masksAndColors(const Icon& icon, int /*dpr*/) {
 	MasksAndColors result;
 	for (const IconMaskAndColor& i : icon) {
 		const QString& file_name = i.first;
@@ -191,16 +191,6 @@ QPixmap Icon::pixmap() const {
 
 QString Icon::imageFileName() const {
 	return first().first;
-}
-
-QIcon Icon::sideBarIcon(const Icon& classic, const Icon& flat) {
-	return flat.icon();
-}
-
-QIcon Icon::modeIcon(const Icon& classic, const Icon& flat, const Icon& flatActive) {
-	QIcon result = sideBarIcon(classic, flat);
-	result.addPixmap(flatActive.pixmap(), QIcon::Active);
-	return result;
 }
 
 QIcon Icon::combinedIcon(const QList<QIcon>& icons) {

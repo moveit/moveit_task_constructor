@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <include file="$(find moveit_resources_panda_moveit_config)/launch/demo.launch" pass_all_args="true">
+        <arg name="use_rviz" value="false" />
+        <arg name="execution_type" value="last point" /> <!-- arg name in 0.8 -->
+        <arg name="fake_execution_type" value="last point" /> <!-- arg name in 0.8.1 -->
+        <env name="LD_PRELOAD" value="$(optenv PRELOAD)" />
+    </include>
+
+    <!-- use MTC execution capability -->
+    <param name="move_group/capabilities" value="move_group/ExecuteTaskSolutionCapability" />
+
+    <test pkg="moveit_task_constructor_demo" type="pick_place_test" test-name="pick_place_test">
+        <rosparam command="load" file="$(find moveit_task_constructor_demo)/config/panda_config.yaml" />
+    </test>
+</launch>

@@ -7,12 +7,8 @@
 #include <rviz/frame_manager.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
-#ifndef RVIZ_TF1
-#include <tf/tf.h>
-#endif
 #include <tf2_msgs/TF2Error.h>
 #include <ros/console.h>
-#include <eigen_conversions/eigen_msg.h>
 
 namespace moveit_rviz_plugin {
 
@@ -69,18 +65,9 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext* context, Ogre::Sce
 	// fetch transform from planning_frame_ to rviz' fixed frame
 	const std::string& fixed_frame = context->getFrameManager()->getFixedFrame();
 	Ogre::Quaternion quat;
-	Ogre::Vector3 pos;
+	Ogre::Vector3 pos = Ogre::Vector3::ZERO;
 
 	try {
-#ifdef RVIZ_TF1
-		tf::TransformListener* tf = context->getFrameManager()->getTFClient();
-		tf::StampedTransform tm;
-		tf->lookupTransform(planning_frame_, fixed_frame, ros::Time(), tm);
-		auto q = tm.getRotation();
-		auto p = tm.getOrigin();
-		quat = Ogre::Quaternion(q.w(), -q.x(), -q.y(), -q.z());
-		pos = Ogre::Vector3(p.x(), p.y(), p.z());
-#else
 		std::shared_ptr<tf2_ros::Buffer> tf = context->getFrameManager()->getTF2BufferPtr();
 		geometry_msgs::TransformStamped tm;
 		tm = tf->lookupTransform(planning_frame_, fixed_frame, ros::Time());
@@ -88,7 +75,6 @@ bool MarkerVisualization::createMarkers(rviz::DisplayContext* context, Ogre::Sce
 		auto p = tm.transform.translation;
 		quat = Ogre::Quaternion(q.w, -q.x, -q.y, -q.z);
 		pos = Ogre::Vector3(p.x, p.y, p.z);
-#endif
 	} catch (const tf2::TransformException& e) {
 		ROS_WARN_STREAM_NAMED("MarkerVisualization", e.what());
 		return false;
@@ -157,7 +143,7 @@ void MarkerVisualization::update(MarkerData& data, const planning_scene::Plannin
 	auto frame_it = ns_it->second.frames_.find(marker.header.frame_id);
 	Q_ASSERT(frame_it != ns_it->second.frames_.end());  // we have created all of them
 
-	const Eigen::Quaterniond q = (Eigen::Quaterniond)pose.linear();
+	const Eigen::Quaterniond q{ pose.linear() };
 	const Eigen::Vector3d& p = pose.translation();
 	frame_it->second->setOrientation(Ogre::Quaternion(q.w(), q.x(), q.y(), q.z()));
 	frame_it->second->setPosition(Ogre::Vector3(p.x(), p.y(), p.z()));

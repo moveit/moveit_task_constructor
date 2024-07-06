@@ -60,18 +60,14 @@ public:
 	       const solvers::PlannerInterfacePtr& planner = solvers::PlannerInterfacePtr());
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
-	void computeForward(const InterfaceState& from) override;
-	void computeBackward(const InterfaceState& to) override;
 
 	void setGroup(const std::string& group) { setProperty("group", group); }
 	/// setters for IK frame
 	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
-	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Isometry3d pose;
-		pose = p;
-		setIKFrame(pose, link);
+	void setIKFrame(const T& pose, const std::string& link) {
+		setIKFrame(Eigen::Isometry3d(pose), link);
 	}
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
@@ -97,14 +93,12 @@ public:
 protected:
 	// return false if trajectory shouldn't be stored
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& trajectory,
-	             Direction dir);
+	             Interface::Direction dir) override;
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
-	bool getPoseGoal(const boost::any& goal, const geometry_msgs::PoseStamped& ik_pose_msg,
-	                 const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                 decltype(std::declval<SolutionBase>().markers())& markers);
-	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
-	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen,
-	                  decltype(std::declval<SolutionBase>().markers())& /*unused*/);
+	bool getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
+	                 Eigen::Isometry3d& target_eigen);
+	bool getPointGoal(const boost::any& goal, const Eigen::Isometry3d& ik_pose,
+	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen);
 
 protected:
 	solvers::PlannerInterfacePtr planner_;

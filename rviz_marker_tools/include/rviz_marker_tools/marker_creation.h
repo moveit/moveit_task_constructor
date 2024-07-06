@@ -65,6 +65,10 @@ inline visualization_msgs::Marker& makeMesh(visualization_msgs::Marker& m, const
 	return makeMesh(m, filename, scale, scale, scale);
 }
 
+/// create an arrow with a start and end point
+visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, const Eigen::Vector3d& start_point,
+                                      const Eigen::Vector3d& end_point, double diameter, double head_length = 0.0);
+
 /// create an arrow along x-axis
 visualization_msgs::Marker& makeArrow(visualization_msgs::Marker& m, double scale = 1.0, bool tip_at_origin = false);
 

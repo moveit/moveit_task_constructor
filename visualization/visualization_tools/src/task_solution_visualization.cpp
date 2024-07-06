@@ -209,7 +209,7 @@ void TaskSolutionVisualization::setName(const QString& name) {
 		slider_dock_panel_->setWindowTitle(name + " - Slider");
 }
 
-void TaskSolutionVisualization::onRobotModelLoaded(const robot_model::RobotModelConstPtr& robot_model) {
+void TaskSolutionVisualization::onRobotModelLoaded(const moveit::core::RobotModelConstPtr& robot_model) {
 	// Error check
 	if (!robot_model) {
 		ROS_ERROR_STREAM_NAMED("task_solution_visualization", "No robot model found");
@@ -246,7 +246,7 @@ void TaskSolutionVisualization::clearTrail() {
 void TaskSolutionVisualization::changedLoopDisplay() {
 	// restart animation if current_state_ is at end and looping got activated
 	if (displaying_solution_ && loop_display_property_->getBool() && slider_panel_ && slider_panel_->isVisible() &&
-	    current_state_ + 1 >= (int)displaying_solution_->getWayPointCount()) {
+	    current_state_ + 1 >= static_cast<int>(displaying_solution_->getWayPointCount())) {
 		current_state_ = -1;
 		slider_panel_->pauseButton(false);
 	}
@@ -354,7 +354,7 @@ float TaskSolutionVisualization::getStateDisplayTime() {
 	}
 }
 
-void TaskSolutionVisualization::update(float wall_dt, float ros_dt) {
+void TaskSolutionVisualization::update(float wall_dt, float /*ros_dt*/) {
 	if (drop_displaying_solution_) {
 		current_state_ = -1;
 		displaying_solution_.reset();
@@ -456,7 +456,6 @@ void TaskSolutionVisualization::renderCurrentWayPoint() {
 }
 
 void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index) {
-	assert(index >= 0);
 	size_t waypoint_count = displaying_solution_->getWayPointCount();
 	moveit::core::RobotStateConstPtr robot_state;
 	planning_scene::PlanningSceneConstPtr scene;
@@ -472,7 +471,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 		auto idx_pair = displaying_solution_->indexPair(index);
 		scene = displaying_solution_->scene(idx_pair);
 
-		if (previous_index < 0 || previous_index >= (int)waypoint_count ||
+		if (previous_index < 0 || previous_index >= static_cast<int>(waypoint_count) ||
 		    displaying_solution_->indexPair(previous_index).first != idx_pair.first) {
 			// switch to new stage: show new planning scene
 			renderPlanningScene(scene);
@@ -498,7 +497,7 @@ void TaskSolutionVisualization::renderWayPoint(size_t index, int previous_index)
 	robot_render_->update(robot_state, color, color_map);
 	marker_visual_->update(*scene, *robot_state);
 
-	if (slider_panel_ && index >= 0)
+	if (slider_panel_)
 		slider_panel_->setSliderPosition(index);
 }
 

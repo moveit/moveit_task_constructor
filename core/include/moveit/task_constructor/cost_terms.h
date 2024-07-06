@@ -40,6 +40,7 @@
 
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/utils.h>
+#include <moveit_msgs/RobotState.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -56,6 +57,7 @@ class CostTerm
 public:
 	CostTerm() = default;
 	CostTerm(std::nullptr_t) : CostTerm{} {}
+	virtual ~CostTerm() = default;
 
 	virtual double operator()(const SubTrajectory& s, std::string& comment) const;
 	virtual double operator()(const SolutionSequence& s, std::string& comment) const;
@@ -68,6 +70,14 @@ public:
 class TrajectoryCostTerm : public CostTerm
 {
 public:
+	enum class Mode
+	{
+		AUTO /* TRAJECTORY, or START_INTERFACE if no trajectory is given */,
+		START_INTERFACE,
+		END_INTERFACE,
+		TRAJECTORY
+	};
+
 	double operator()(const SolutionSequence& s, std::string& comment) const override;
 	double operator()(const WrappedSolution& s, std::string& comment) const override;
 };
@@ -82,8 +92,8 @@ public:
 	template <typename Term, typename Signature = decltype(signatureMatcher(std::declval<Term>()))>
 	LambdaCostTerm(const Term& t) : LambdaCostTerm{ Signature{ t } } {}
 
-	LambdaCostTerm(const SubTrajectorySignature&);
-	LambdaCostTerm(const SubTrajectoryShortSignature&);
+	LambdaCostTerm(const SubTrajectorySignature& term);
+	LambdaCostTerm(const SubTrajectoryShortSignature& term);
 
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
@@ -105,26 +115,48 @@ class Constant : public CostTerm
 public:
 	Constant(double c) : cost{ c } {};
 
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 	double operator()(const SolutionSequence& s, std::string& comment) const override;
 	double operator()(const WrappedSolution& s, std::string& comment) const override;
 
 	double cost;
 };
 
-/// trajectory length (interpolated between waypoints)
+/// trajectory length with optional weighting for different joints
 class PathLength : public TrajectoryCostTerm
 {
-	// TODO(v4hn): allow to consider specific joints only
 public:
-	double operator()(const SubTrajectory&, std::string&) const override;
+	/// By default, all joints are considered with same weight of 1.0
+	PathLength() = default;
+	/// Limit measurements to given joint names
+	PathLength(std::vector<std::string> joints);
+	/// Limit measurements to given joints and use given weighting
+	PathLength(std::map<std::string, double> j) : joints(std::move(j)) {}
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
+
+	std::map<std::string, double> joints;  //< joint weights
+};
+
+/// (weighted) joint-space distance to reference pose
+class DistanceToReference : public TrajectoryCostTerm
+{
+public:
+	DistanceToReference(const moveit_msgs::RobotState& ref, Mode m = Mode::AUTO,
+	                    std::map<std::string, double> w = std::map<std::string, double>());
+	DistanceToReference(const std::map<std::string, double>& ref, Mode m = Mode::AUTO,
+	                    std::map<std::string, double> w = std::map<std::string, double>());
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
+
+	moveit_msgs::RobotState reference;
+	std::map<std::string, double> weights;
+	Mode mode;
 };
 
 /// execution duration of the whole trajectory
 class TrajectoryDuration : public TrajectoryCostTerm
 {
 public:
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 /** length of Cartesian trajection of a link */
@@ -135,7 +167,7 @@ public:
 
 	std::string link_name;
 
-	double operator()(const SubTrajectory&, std::string&) const override;
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
 /** inverse distance to collision
@@ -149,14 +181,6 @@ public:
 class Clearance : public TrajectoryCostTerm
 {
 public:
-	enum class Mode
-	{
-		AUTO /* TRAJECTORY, or START_INTERFACE if no trajectory is given */,
-		START_INTERFACE,
-		END_INTERFACE,
-		TRAJECTORY
-	};
-
 	Clearance(bool with_world = true, bool cumulative = false, std::string group_property = "group",
 	          Mode mode = Mode::AUTO);
 	bool with_world;

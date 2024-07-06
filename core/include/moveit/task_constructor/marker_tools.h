@@ -6,12 +6,12 @@
 #include <functional>
 
 namespace planning_scene {
-MOVEIT_CLASS_FORWARD(PlanningScene)
+MOVEIT_CLASS_FORWARD(PlanningScene);
 }
 namespace moveit {
 namespace core {
-MOVEIT_CLASS_FORWARD(RobotState)
-MOVEIT_CLASS_FORWARD(LinkModel)
+MOVEIT_CLASS_FORWARD(RobotState);
+MOVEIT_CLASS_FORWARD(LinkModel);
 }  // namespace core
 }  // namespace moveit
 

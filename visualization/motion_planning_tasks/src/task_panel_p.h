@@ -83,7 +83,7 @@ public:
 	/// configure all TaskListModels that were already created when TaskView gets instantiated
 	void configureExistingModels();
 	/// configure newly inserted models
-	void _q_configureInsertedModels(const QModelIndex& parent, int first, int last);
+	void configureInsertedModels(const QModelIndex& parent, int first, int last);
 
 	/// unlock locked_display_ if given display is different
 	void lock(TaskDisplay* display);

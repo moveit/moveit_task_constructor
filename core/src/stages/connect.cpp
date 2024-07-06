@@ -38,9 +38,14 @@
 
 #include <moveit/task_constructor/stages/connect.h>
 #include <moveit/task_constructor/merge.h>
-#include <moveit/planning_scene/planning_scene.h>
-
 #include <moveit/task_constructor/cost_terms.h>
+
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
+using namespace trajectory_processing;
 
 namespace moveit {
 namespace task_constructor {
@@ -52,8 +57,12 @@ Connect::Connect(const std::string& name, const GroupPlannerVector& planners) : 
 
 	auto& p = properties();
 	p.declare<MergeMode>("merge_mode", WAYPOINTS, "merge mode");
+	p.declare<double>("max_distance", 1e-4,
+	                  "maximally accepted joint configuration distance between trajectory endpoint and goal state");
 	p.declare<moveit_msgs::Constraints>("path_constraints", moveit_msgs::Constraints(),
 	                                    "constraints to maintain during trajectory");
+	properties().declare<TimeParameterizationPtr>("merge_time_parameterization",
+	                                              std::make_shared<TimeOptimalTrajectoryGeneration>());
 }
 
 void Connect::reset() {
@@ -70,7 +79,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 	if (planner_.empty())
 		errors.push_back(*this, "empty set of groups");
 
-	size_t num_joints = 0;
 	std::vector<const moveit::core::JointModelGroup*> groups;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		if (!robot_model->hasJointModelGroup(pair.first))
@@ -82,7 +90,6 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 
 			auto jmg = robot_model->getJointModelGroup(pair.first);
 			groups.push_back(jmg);
-			num_joints += jmg->getJointModels().size();
 		}
 	}
 
@@ -90,7 +97,7 @@ void Connect::init(const core::RobotModelConstPtr& robot_model) {
 		try {
 			merged_jmg_.reset(task_constructor::merge(groups));
 		} catch (const std::runtime_error& e) {
-			ROS_INFO_STREAM_NAMED("Connect", this->name() << ": " << e.what() << ". Disabling merging.");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("{}: {}. Disabling merging.", this->name(), e.what()));
 		}
 	}
 
@@ -121,8 +128,8 @@ bool Connect::compatible(const InterfaceState& from_state, const InterfaceState&
 		Eigen::Map<const Eigen::VectorXd> positions_from(from.getJointPositions(jm), num);
 		Eigen::Map<const Eigen::VectorXd> positions_to(to.getJointPositions(jm), num);
 		if (!(positions_from - positions_to).isZero(1e-4)) {
-			ROS_INFO_STREAM_NAMED("Connect", "Deviation in joint " << jm->getName() << ": [" << positions_from.transpose()
-			                                                       << "] != [" << positions_to.transpose() << "]");
+			ROS_INFO_STREAM_NAMED("Connect", fmt::format("Deviation in joint {}: [{}] != [{}]", jm->getName(),
+			                                             positions_from.transpose(), positions_to.transpose()));
 			return false;
 		}
 	}
@@ -133,6 +140,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	const auto& props = properties();
 	double timeout = this->timeout();
 	MergeMode mode = props.get<MergeMode>("merge_mode");
+	double max_distance = props.get<double>("max_distance");
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	const moveit::core::RobotState& final_goal_state = to.scene()->getCurrentState();
@@ -143,23 +151,33 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
+	std::string comment = "No planners specified";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
 		planning_scene::PlanningScenePtr end = start->diff();
 		const moveit::core::JointModelGroup* jmg = final_goal_state.getJointModelGroup(pair.first);
 		final_goal_state.copyJointGroupPositions(jmg, positions);
-		robot_state::RobotState& goal_state = end->getCurrentStateNonConst();
+		moveit::core::RobotState& goal_state = end->getCurrentStateNonConst();
 		goal_state.setJointGroupPositions(jmg, positions);
 		goal_state.update();
 		intermediate_scenes.push_back(end);
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
-		success = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+		success = bool(result);
 		sub_trajectories.push_back(trajectory);  // include failed trajectory
 
-		if (!success)
+		if (!success) {
+			comment = result.message;
 			break;
+		}
+
+		if (trajectory->getLastWayPoint().distance(goal_state, jmg) > max_distance) {
+			success = false;
+			comment = "Trajectory end-point deviates too much from goal state";
+			break;
+		}
 
 		// continue from reached state
 		start = end;
@@ -171,7 +189,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (!solution)  // success == false or merging failed: store sequentially
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
 	if (!success)  // error during sequential planning
-		solution->markAsFailure();
+		solution->markAsFailure(comment);
 	connect(from, to, solution);
 }
 
@@ -221,7 +239,8 @@ SubTrajectoryPtr Connect::merge(const std::vector<robot_trajectory::RobotTraject
 
 	auto jmg = merged_jmg_.get();
 	assert(jmg);
-	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg);
+	auto timing = properties().get<TimeParameterizationPtr>("merge_time_parameterization");
+	robot_trajectory::RobotTrajectoryPtr trajectory = task_constructor::merge(sub_trajectories, state, jmg, *timing);
 	if (!trajectory)
 		return SubTrajectoryPtr();
 

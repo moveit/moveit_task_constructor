@@ -1,0 +1,5 @@
+[submodule "core/python/pybind11"]
+	path = core/python/pybind11
+	url = https://github.com/pybind/pybind11
+	branch = smart_holder
+	shallow = true

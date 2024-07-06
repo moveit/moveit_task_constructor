@@ -42,13 +42,66 @@
 #include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit/kinematic_constraints/utils.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
 namespace solvers {
 
-PipelinePlanner::PipelinePlanner() {
+struct PlannerCache
+{
+	using PlannerID = std::tuple<std::string, std::string>;
+	using PlannerMap = std::map<PlannerID, std::weak_ptr<planning_pipeline::PlanningPipeline> >;
+	using ModelList = std::list<std::pair<std::weak_ptr<const moveit::core::RobotModel>, PlannerMap> >;
+	ModelList cache_;
+
+	PlannerMap::mapped_type& retrieve(const moveit::core::RobotModelConstPtr& model, const PlannerID& id) {
+		// find model in cache_ and remove expired entries while doing so
+		ModelList::iterator model_it = cache_.begin();
+		while (model_it != cache_.end()) {
+			if (model_it->first.expired()) {
+				model_it = cache_.erase(model_it);
+				continue;
+			}
+			if (model_it->first.lock() == model)
+				break;
+			++model_it;
+		}
+		if (model_it == cache_.end())  // if not found, create a new PlannerMap for this model
+			model_it = cache_.insert(cache_.begin(), std::make_pair(model, PlannerMap()));
+
+		return model_it->second.insert(std::make_pair(id, PlannerMap::mapped_type())).first->second;
+	}
+};
+
+planning_pipeline::PlanningPipelinePtr PipelinePlanner::create(const PipelinePlanner::Specification& spec) {
+	static PlannerCache cache;
+
+	static constexpr char const* PLUGIN_PARAMETER_NAME = "planning_plugin";
+
+	std::string pipeline_ns = spec.ns + "/planning_pipelines/" + spec.pipeline;
+	// fallback to old structure for pipeline parameters in MoveIt
+	if (!ros::NodeHandle(pipeline_ns).hasParam(PLUGIN_PARAMETER_NAME)) {
+		ROS_WARN("Failed to find '%s/%s'. %s", pipeline_ns.c_str(), PLUGIN_PARAMETER_NAME,
+		         "Attempting to load pipeline from old parameter structure. Please update your MoveIt config.");
+		pipeline_ns = spec.ns;
+	}
+
+	PlannerCache::PlannerID id(pipeline_ns, spec.adapter_param);
+
+	std::weak_ptr<planning_pipeline::PlanningPipeline>& entry = cache.retrieve(spec.model, id);
+	planning_pipeline::PlanningPipelinePtr planner = entry.lock();
+	if (!planner) {
+		// create new entry
+		planner = std::make_shared<planning_pipeline::PlanningPipeline>(spec.model, ros::NodeHandle(pipeline_ns),
+		                                                                PLUGIN_PARAMETER_NAME, spec.adapter_param);
+		// store in cache
+		entry = planner;
+	}
+	return planner;
+}
+
+PipelinePlanner::PipelinePlanner(const std::string& pipeline_name) : pipeline_name_{ pipeline_name } {
 	auto& p = properties();
 	p.declare<std::string>("planner", "", "planner id");
 
@@ -73,7 +126,10 @@ PipelinePlanner::PipelinePlanner(const planning_pipeline::PlanningPipelinePtr& p
 
 void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 	if (!planner_) {
-		planner_ = Task::createPlanner(robot_model);
+		Specification spec;
+		spec.model = robot_model;
+		spec.pipeline = pipeline_name_;
+		planner_ = create(spec);
 	} else if (robot_model != planner_->getRobotModel()) {
 		throw std::runtime_error(
 		    "The robot model of the planning pipeline isn't the same as the task's robot model -- "
@@ -87,7 +143,7 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
                            const moveit::core::JointModelGroup* jmg, double timeout) {
 	req.group_name = jmg->getName();
 	req.planner_id = p.get<std::string>("planner");
-	req.allowed_planning_time = timeout;
+	req.allowed_planning_time = std::min(timeout, p.get<double>("timeout"));
 	req.start_state.is_diff = true;  // we don't specify an extra start state
 
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
@@ -96,10 +152,11 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
-                           const planning_scene::PlanningSceneConstPtr& to, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const planning_scene::PlanningSceneConstPtr& to,
+                                               const moveit::core::JointModelGroup* jmg, double timeout,
+                                               robot_trajectory::RobotTrajectoryPtr& result,
+                                               const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
@@ -109,23 +166,22 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
 	                                                                          props.get<double>("goal_joint_tolerance"));
 	req.path_constraints = path_constraints;
 
-	::planning_interface::MotionPlanResponse res;
-	bool success = planner_->generatePlan(from, req, res);
-	result = res.trajectory_;
-	return success;
+	return plan(from, req, result);
 }
 
-bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-                           const Eigen::Isometry3d& target_eigen, const moveit::core::JointModelGroup* jmg,
-                           double timeout, robot_trajectory::RobotTrajectoryPtr& result,
-                           const moveit_msgs::Constraints& path_constraints) {
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const moveit::core::LinkModel& link, const Eigen::Isometry3d& offset,
+                                               const Eigen::Isometry3d& target_eigen,
+                                               const moveit::core::JointModelGroup* jmg, double timeout,
+                                               robot_trajectory::RobotTrajectoryPtr& result,
+                                               const moveit_msgs::Constraints& path_constraints) {
 	const auto& props = properties();
 	moveit_msgs::MotionPlanRequest req;
 	initMotionPlanRequest(req, props, jmg, timeout);
 
 	geometry_msgs::PoseStamped target;
 	target.header.frame_id = from->getPlanningFrame();
-	tf::poseEigenToMsg(target_eigen, target.pose);
+	target.pose = tf2::toMsg(target_eigen * offset.inverse());
 
 	req.goal_constraints.resize(1);
 	req.goal_constraints[0] = kinematic_constraints::constructGoalConstraints(
@@ -133,11 +189,18 @@ bool PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from, co
 	    props.get<double>("goal_orientation_tolerance"));
 	req.path_constraints = path_constraints;
 
+	return plan(from, req, result);
+}
+
+PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSceneConstPtr& from,
+                                               const moveit_msgs::MotionPlanRequest& req,
+                                               robot_trajectory::RobotTrajectoryPtr& result) {
 	::planning_interface::MotionPlanResponse res;
 	bool success = planner_->generatePlan(from, req, res);
 	result = res.trajectory_;
-	return success;
+	return { success, success ? std::string() : static_cast<std::string>(res.error_code_) };
 }
+
 }  // namespace solvers
 }  // namespace task_constructor
 }  // namespace moveit

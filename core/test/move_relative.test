@@ -1,0 +1,7 @@
+<launch>
+  <include file="$(find moveit_resources_panda_moveit_config)/launch/move_group.launch">
+    <arg name="load_robot_description" value="true"/>
+  </include>
+
+  <test pkg="moveit_task_constructor_core" type="moveit_task_constructor_core-test-move-relative" test-name="move_relative"/>
+</launch>

@@ -41,7 +41,7 @@
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -70,7 +70,7 @@ MoveRelative::MoveRelative(const std::string& name, const solvers::PlannerInterf
 void MoveRelative::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
 	geometry_msgs::PoseStamped pose_msg;
 	pose_msg.header.frame_id = link;
-	tf::poseEigenToMsg(pose, pose_msg.pose);
+	pose_msg.pose = tf2::toMsg(pose);
 	setIKFrame(pose_msg);
 }
 
@@ -79,11 +79,12 @@ void MoveRelative::init(const moveit::core::RobotModelConstPtr& robot_model) {
 	planner_->init(robot_model);
 }
 
-static bool getJointStateFromOffset(const boost::any& direction, const moveit::core::JointModelGroup* jmg,
-                                    moveit::core::RobotState& robot_state) {
+static bool getJointStateFromOffset(const boost::any& direction, const Interface::Direction dir,
+                                    const moveit::core::JointModelGroup* jmg, moveit::core::RobotState& robot_state) {
 	try {
 		const auto& accepted = jmg->getActiveJointModels();
 		const auto& joints = boost::any_cast<std::map<std::string, double>>(direction);
+		double sign = dir == Interface::Direction::FORWARD ? +1.0 : -1.0;
 		for (const auto& j : joints) {
 			auto jm = robot_state.getRobotModel()->getJointModel(j.first);
 			if (!jm || std::find(accepted.begin(), accepted.end(), jm) == accepted.end())
@@ -92,7 +93,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 			if (jm->getVariableCount() != 1)
 				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
 			auto index = jm->getFirstVariableIndex();
-			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + j.second);
+			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + sign * j.second);
 			robot_state.enforceBounds(jm);
 		}
 		robot_state.update();
@@ -104,10 +105,68 @@ static bool getJointStateFromOffset(const boost::any& direction, const moveit::c
 	return false;
 }
 
+// Create an arrow marker from start_pose to reached_pose, split into a red and green part based on achieved distance
+static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Interface::Direction dir, bool success,
+                          const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& start_pose,
+                          const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance) {
+	double linear_norm = linear.norm();
+
+	// rotation of the target direction and for the cylinder marker
+	auto quat_target = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), linear);
+	auto quat_cylinder = quat_target * Eigen::AngleAxisd(0.5 * M_PI, Eigen::Vector3d::UnitY());
+
+	// link position before planning; reached link position after planning; target link position
+	Eigen::Vector3d pos_start = start_pose.translation();
+	Eigen::Vector3d pos_reached = reached_pose.translation();
+	Eigen::Vector3d pos_target = pos_reached + quat_target * Eigen::Vector3d(linear_norm - distance, 0, 0);
+
+	visualization_msgs::Marker m;
+	m.ns = ns;
+	m.header.frame_id = frame_id;
+	if (dir == Interface::FORWARD) {
+		if (success) {
+			// valid part: green arrow
+			rviz_marker_tools::makeArrow(m, pos_start, pos_reached, 0.1 * linear_norm);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+			markers.push_back(m);
+		} else {
+			// invalid part: red arrow
+			// set head length to keep default shaft:head proportion of 1:0.3 as defined in
+			// rviz/default_plugin/markers/arrow_marker.cpp#L105
+			rviz_marker_tools::makeArrow(m, pos_reached, pos_target, 0.1 * linear_norm, 0.23 * linear_norm);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+			markers.push_back(m);
+
+			// valid part: green cylinder
+			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, distance);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+			// position half-way between pos_link and pos_reached
+			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_start + pos_reached) });
+			m.pose.orientation = tf2::toMsg(quat_cylinder);
+			markers.push_back(m);
+		}
+	} else {
+		// valid part: green arrow
+		// head length according to above comment
+		rviz_marker_tools::makeArrow(m, pos_reached, pos_start, 0.1 * linear_norm, 0.23 * linear_norm);
+		rviz_marker_tools::setColor(m.color, rviz_marker_tools::LIME_GREEN);
+		markers.push_back(m);
+		if (!success) {
+			// invalid part: red cylinder
+			rviz_marker_tools::makeCylinder(m, 0.1 * linear_norm, linear_norm - distance);
+			rviz_marker_tools::setColor(m.color, rviz_marker_tools::RED);
+			// position half-way between pos_reached and pos_target
+			m.pose.position = tf2::toMsg(Eigen::Vector3d{ 0.5 * (pos_reached + pos_target) });
+			m.pose.orientation = tf2::toMsg(quat_cylinder);
+			markers.push_back(m);
+		}
+	}
+}
+
 bool MoveRelative::compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene,
-                           SubTrajectory& solution, Direction dir) {
+                           SubTrajectory& solution, Interface::Direction dir) {
 	scene = state.scene()->diff();
-	const robot_model::RobotModelConstPtr& robot_model = scene->getRobotModel();
+	const moveit::core::RobotModelConstPtr& robot_model = scene->getRobotModel();
 	assert(robot_model);
 
 	const auto& props = properties();
@@ -115,12 +174,12 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	const std::string& group = props.get<std::string>("group");
 	const moveit::core::JointModelGroup* jmg = robot_model->getJointModelGroup(group);
 	if (!jmg) {
-		ROS_WARN_STREAM_NAMED("MoveRelative", "Invalid joint model group: " << group);
+		solution.markAsFailure("invalid joint model group: " + group);
 		return false;
 	}
 	boost::any direction = props.get("direction");
 	if (direction.empty()) {
-		ROS_WARN_NAMED("MoveRelative", "direction undefined");
+		solution.markAsFailure("undefined direction");
 		return false;
 	}
 
@@ -130,45 +189,36 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	std::string comment = "";
 
-	if (getJointStateFromOffset(direction, jmg, scene->getCurrentStateNonConst())) {
+	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
-		success = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 	} else {
 		// Cartesian targets require an IK reference frame
-		geometry_msgs::PoseStamped ik_pose_msg;
 		const moveit::core::LinkModel* link;
-		const boost::any& value = props.get("ik_frame");
-		if (value.empty()) {  // property undefined
-			//  determine IK link from group
-			if (!(link = jmg->getOnlyOneEndEffectorTip())) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Failed to derive IK target link");
-				return false;
-			}
-			ik_pose_msg.header.frame_id = link->getName();
-			ik_pose_msg.pose.orientation.w = 1.0;
-		} else {
-			ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(value);
-			if (!(link = robot_model->getLinkModel(ik_pose_msg.header.frame_id))) {
-				ROS_WARN_STREAM_NAMED("MoveRelative", "Unknown link: " << ik_pose_msg.header.frame_id);
-				return false;
-			}
+		std::string error_msg;
+		Eigen::Isometry3d ik_pose_world;
+
+		if (!utils::getRobotTipForFrame(props.property("ik_frame"), *scene, jmg, error_msg, link, ik_pose_world)) {
+			solution.markAsFailure(error_msg);
+			return false;
 		}
 
 		bool use_rotation_distance = false;  // measure achieved distance as rotation?
 		Eigen::Vector3d linear;  // linear translation
 		Eigen::Vector3d angular;  // angular rotation
 		double linear_norm = 0.0, angular_norm = 0.0;
-
 		Eigen::Isometry3d target_eigen;
-		Eigen::Isometry3d link_pose =
-		    scene->getCurrentState().getGlobalLinkTransform(link);  // take a copy here, pose will change on success
 
 		try {  // try to extract Twist
 			const geometry_msgs::TwistStamped& target = boost::any_cast<geometry_msgs::TwistStamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
-			tf::vectorMsgToEigen(target.twist.linear, linear);
-			tf::vectorMsgToEigen(target.twist.angular, angular);
+			tf2::fromMsg(target.twist.linear, linear);
+			tf2::fromMsg(target.twist.angular, angular);
 
 			linear_norm = linear.norm();
 			angular_norm = angular.norm();
@@ -191,18 +241,18 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			}
 
 			// invert direction?
-			if (dir == BACKWARD) {
+			if (dir == Interface::BACKWARD) {
 				linear *= -1.0;
 				angular *= -1.0;
 			}
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying motion transform of twist
+			// linear+angular are expressed w.r.t. model frame and thus we need left-multiplication
 			linear = frame_pose.linear() * linear;
 			angular = frame_pose.linear() * angular;
-			target_eigen = link_pose;
-			target_eigen.linear() =
-			    target_eigen.linear() * Eigen::AngleAxisd(angular_norm, link_pose.linear().transpose() * angular);
-			target_eigen.translation() += linear;
+			auto R = Eigen::AngleAxisd(angular_norm, angular);  // NOLINT(readability-identifier-naming)
+			auto p = ik_pose_world.translation();
+			target_eigen = Eigen::Translation3d(linear + p - R * p) * (R * ik_pose_world);
 			goto COMPUTE;
 		} catch (const boost::bad_any_cast&) { /* continue with Vector */
 		}
@@ -210,7 +260,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		try {  // try to extract Vector
 			const geometry_msgs::Vector3Stamped& target = boost::any_cast<geometry_msgs::Vector3Stamped>(direction);
 			const Eigen::Isometry3d& frame_pose = scene->getFrameTransform(target.header.frame_id);
-			tf::vectorMsgToEigen(target.vector, linear);
+			tf2::fromMsg(target.vector, linear);
 
 			// use max distance?
 			if (max_distance > 0.0) {
@@ -220,70 +270,57 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			linear_norm = linear.norm();
 
 			// invert direction?
-			if (dir == BACKWARD)
+			if (dir == Interface::BACKWARD)
 				linear *= -1.0;
 
-			// compute absolute transform for link
+			// compute target transform for ik_frame applying delta transform of twist
 			linear = frame_pose.linear() * linear;
-			target_eigen = link_pose;
-			target_eigen.translation() += linear;
+			target_eigen = Eigen::Translation3d(linear) * ik_pose_world;
 		} catch (const boost::bad_any_cast&) {
-			ROS_ERROR_STREAM_NAMED("MoveRelative", "Invalid type for direction: " << direction.type().name());
+			solution.markAsFailure(std::string("invalid direction type: ") + direction.type().name());
 			return false;
 		}
 
 	COMPUTE:
-		// transform target pose such that ik frame will reach there if link does
-		Eigen::Isometry3d ik_pose;
-		tf::poseMsgToEigen(ik_pose_msg.pose, ik_pose);
-		target_eigen = target_eigen * ik_pose.inverse();
+		// offset from link to ik_frame
+		const Eigen::Isometry3d& offset = scene->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
-		success = planner_->plan(state.scene(), *link, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		auto result =
+		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
+		success = bool(result);
+		if (!success)
+			comment = result.message;
 
-		// min_distance reached?
-		if (min_distance > 0.0) {
+		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
+			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
+			reached_state->updateLinkTransforms();
+			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
+
 			double distance = 0.0;
-			if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
-				robot_state::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
-				reached_state->updateLinkTransforms();
-				const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link);
-				if (use_rotation_distance) {
-					Eigen::AngleAxisd rotation(reached_pose.linear() * link_pose.linear().transpose());
-					distance = rotation.angle();
-				} else
-					distance = (reached_pose.translation() - link_pose.translation()).norm();
-			}
-			success = distance >= min_distance;
-			if (!success) {
-				char msg[100];
-				snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
-				solution.setComment(msg);
-			}
-		} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
-			success = true;
-		} else if (!success)
-			solution.setComment("failed to move full distance");
+			if (use_rotation_distance) {
+				Eigen::AngleAxisd rotation(reached_pose.linear() * ik_pose_world.linear().transpose());
+				distance = rotation.angle();
+			} else
+				distance = (reached_pose.translation() - ik_pose_world.translation()).norm();
 
-		// add an arrow marker
-		visualization_msgs::Marker m;
-		m.ns = props.get<std::string>("marker_ns");
-		if (!m.ns.empty()) {
-			m.header.frame_id = scene->getPlanningFrame();
-			if (linear_norm > 1e-3) {
-				// +1 TODO: arrow could be split into "valid" and "invalid" part (as red cylinder)
-				rviz_marker_tools::setColor(m.color, success ? rviz_marker_tools::LIME_GREEN : rviz_marker_tools::RED);
-				rviz_marker_tools::makeArrow(m, linear_norm);
-				auto quat = Eigen::Quaterniond::FromTwoVectors(Eigen::Vector3d::UnitX(), linear);
-				Eigen::Vector3d pos(link_pose.translation());
-				if (dir == BACKWARD) {
-					// flip arrow direction
-					quat = quat * Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY());
-					// arrow tip at goal pose
-					pos += quat * Eigen::Vector3d(-linear_norm, 0, 0);
+			// min_distance reached?
+			if (min_distance > 0.0) {
+				success = distance >= min_distance;
+				if (!success) {
+					char msg[100];
+					snprintf(msg, sizeof(msg), "min_distance not reached (%.3g < %.3g)", distance, min_distance);
+					solution.setComment(msg);
 				}
-				tf::pointEigenToMsg(pos, m.pose.position);
-				tf::quaternionEigenToMsg(quat, m.pose.orientation);
-				solution.markers().push_back(m);
+			} else if (min_distance == 0.0) {  // if min_distance is zero, we succeed in any case
+				success = true;
+			} else if (!success)
+				solution.setComment("failed to move full distance");
+
+			// visualize plan
+			auto ns = props.get<std::string>("marker_ns");
+			if (!ns.empty() && linear_norm > 0) {  // ensures that 'distance' is the norm of the reached distance
+				visualizePlan(solution.markers(), dir, success, ns, scene->getPlanningFrame(), ik_pose_world, reached_pose,
+				              linear, distance);
 			}
 		}
 	}
@@ -291,36 +328,17 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	// store result
 	if (robot_trajectory) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
-		if (dir == BACKWARD)
+		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
 		if (!success)
-			solution.markAsFailure();
+			solution.markAsFailure(comment);
 		return true;
 	}
 	return false;
 }
 
-void MoveRelative::computeForward(const InterfaceState& from) {
-	planning_scene::PlanningScenePtr to;
-	SubTrajectory trajectory;
-
-	if (compute(from, to, trajectory, FORWARD))
-		sendForward(from, InterfaceState(to), std::move(trajectory));
-	else
-		silentFailure();
-}
-
-void MoveRelative::computeBackward(const InterfaceState& to) {
-	planning_scene::PlanningScenePtr from;
-	SubTrajectory trajectory;
-
-	if (compute(to, from, trajectory, BACKWARD))
-		sendBackward(InterfaceState(from), to, std::move(trajectory));
-	else
-		silentFailure();
-}
 }  // namespace stages
 }  // namespace task_constructor
 }  // namespace moveit

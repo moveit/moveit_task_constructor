@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find moveit_resources_fanuc_moveit_config)/launch/test_environment.launch" />
+  <test pkg="moveit_task_constructor_core" type="rostest_mtc.py" test-name="rostest_mtc" time-limit="60" args="" />
+  <test pkg="moveit_task_constructor_core" type="rostest_mps.py" test-name="rostest_mps" time-limit="60" args="" />
+  <test pkg="moveit_task_constructor_core" type="rostest_trampoline.py" test-name="rostest_trampoline" time-limit="60" args="" />
+</launch>
