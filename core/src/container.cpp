@@ -232,7 +232,9 @@ inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Prio
 }
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-#ifdef ENABLE_PRUNING
+	if (!static_cast<ContainerBase*>(me_)->pruning())
+		return;
+
 	ROS_DEBUG_STREAM_NAMED("Pruning", fmt::format("'{}' generated a failure", child.name()));
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
@@ -252,11 +254,6 @@ void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState
 			setStatus<Interface::FORWARD>(&child, from, to, InterfaceState::Status::ARMED);
 			break;
 	}
-#else
-	(void)child;
-	(void)from;
-	(void)to;
-#endif
 	// printChildrenInterfaces(*this, false, child);
 }
 
@@ -328,7 +325,10 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	newSolution(solution);
 }
 
-ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {}
+ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {
+	auto& p = properties();
+	p.declare<bool>("pruning", std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
+}
 
 size_t ContainerBase::numChildren() const {
 	return pimpl()->children().size();

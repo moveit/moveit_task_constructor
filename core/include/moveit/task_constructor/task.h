@@ -117,6 +117,9 @@ public:
 	using WrapperBase::setTimeout;
 	using WrapperBase::timeout;
 
+	using WrapperBase::pruning;
+	using WrapperBase::setPruning;
+
 	/// reset all stages
 	void reset() final;
 	/// initialize all stages with given scene
