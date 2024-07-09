@@ -19,6 +19,10 @@ def generate_test_description():
         .to_moveit_configs()
     )
 
+    # increase the timeout for the kinematics solver to fix flaky IK for asan
+    k = moveit_config.robot_description_kinematics["robot_description_kinematics"]
+    k["panda_arm"]["kinematics_solver_timeout"] = 5.0
+
     test_exec = Node(
         executable=[
             LaunchConfiguration("test_binary"),
