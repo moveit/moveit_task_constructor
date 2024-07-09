@@ -79,8 +79,9 @@ class IntrospectionExecutor
 {
 public:
 	void add_node(const rclcpp::Node::SharedPtr& node) {
-		std::call_once(once_flag_, [this] { executor_ = rclcpp::executors::SingleThreadedExecutor::make_unique(); });
 		std::lock_guard<std::mutex> lock(mutex_);
+		if (!executor_)
+			executor_ = rclcpp::executors::SingleThreadedExecutor::make_unique();
 		executor_->add_node(node);
 		if (nodes_count_++ == 0)
 			executor_thread_ = std::thread([this] { executor_->spin(); });
@@ -93,6 +94,7 @@ public:
 			executor_->cancel();
 			if (executor_thread_.joinable())
 				executor_thread_.join();
+			executor_.reset();
 		}
 	}
 
@@ -101,7 +103,6 @@ private:
 	std::thread executor_thread_;
 	size_t nodes_count_ = 0;
 	std::mutex mutex_;
-	std::once_flag once_flag_;
 };
 
 class IntrospectionPrivate
@@ -157,7 +158,7 @@ public:
 	/// services to provide an individual Solution
 	rclcpp::Service<moveit_task_constructor_msgs::srv::GetSolution>::SharedPtr get_solution_service_;
 	rclcpp::Node::SharedPtr node_;
-	inline static IntrospectionExecutor executor_;
+	IntrospectionExecutor executor_;
 
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;

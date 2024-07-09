@@ -133,6 +133,5 @@ int main(int argc, char** argv) {
 	testing::InitGoogleTest(&argc, argv);
 	rclcpp::init(argc, argv);
 
-	// Using quick_exit to avoid calling cleanup functions, which cause a segfault in rmw
-	quick_exit(RUN_ALL_TESTS());
+	return RUN_ALL_TESTS();
 }

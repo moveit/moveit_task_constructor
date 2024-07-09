@@ -239,6 +239,5 @@ int main(int argc, char** argv) {
 		auto test_result = RUN_ALL_TESTS();
 		app.exit(test_result);
 	});
-	// Using quick_exit to avoid calling cleanup functions, which cause a segfault in rmw
-	quick_exit(app.exec());
+	return app.exec();
 }
