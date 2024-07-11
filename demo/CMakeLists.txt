@@ -64,6 +64,23 @@ demo(pick_place_demo)
 target_link_libraries(${PROJECT_NAME}_pick_place_task pick_place_demo_parameters)
 target_link_libraries(${PROJECT_NAME}_pick_place_demo ${PROJECT_NAME}_pick_place_task)
 
+install(PROGRAMS
+        scripts/alternatives.py
+        scripts/cartesian.py
+        scripts/compute_ik.py
+        scripts/constrained.py
+        scripts/current_state.py
+        scripts/fallbacks.py
+        scripts/fix_collision_objects.py
+        scripts/fixed_state.py
+        scripts/generate_pose.py
+        scripts/merger.py
+        scripts/modify_planning_scene.py
+        scripts/multi_planner.py
+        scripts/pickplace.py
+        scripts/properties.py
+        DESTINATION lib/${PROJECT_NAME})
+
 install(DIRECTORY launch config
         DESTINATION share/${PROJECT_NAME}
 )
