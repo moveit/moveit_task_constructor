@@ -157,6 +157,7 @@ TEST(CostTerm, SolutionConnected) {
 		VerifySolutionCostTerm(Standalone<SerialContainer>& container, Stage* creator)
 		  : container_{ container }, creator_{ creator } {}
 
+		using TrajectoryCostTerm::operator();
 		double operator()(const SubTrajectory& s, std::string& /*comment*/) const override {
 			EXPECT_EQ(&*container_.state_start,
 			          const_cast<const SerialContainerPrivate*>(container_.pimpl())->internalToExternalMap().at(s.start()))

@@ -95,6 +95,7 @@ public:
 	LambdaCostTerm(const SubTrajectorySignature& term);
 	LambdaCostTerm(const SubTrajectoryShortSignature& term);
 
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
 protected:
@@ -132,6 +133,8 @@ public:
 	PathLength(std::vector<std::string> joints);
 	/// Limit measurements to given joints and use given weighting
 	PathLength(std::map<std::string, double> j) : joints(std::move(j)) {}
+
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
 	std::map<std::string, double> joints;  //< joint weights
@@ -145,6 +148,8 @@ public:
 	                    std::map<std::string, double> w = std::map<std::string, double>());
 	DistanceToReference(const std::map<std::string, double>& ref, Mode m = Mode::AUTO,
 	                    std::map<std::string, double> w = std::map<std::string, double>());
+
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 
 	moveit_msgs::RobotState reference;
@@ -156,6 +161,7 @@ public:
 class TrajectoryDuration : public TrajectoryCostTerm
 {
 public:
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
@@ -167,6 +173,7 @@ public:
 
 	std::string link_name;
 
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
@@ -191,6 +198,7 @@ public:
 
 	std::function<double(double)> distance_to_cost;
 
+	using TrajectoryCostTerm::operator();
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
