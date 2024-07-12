@@ -8,15 +8,17 @@ from shape_msgs.msg import SolidPrimitive
 from moveit.task_constructor import core, stages
 import time
 
-from py_binding_tools import roscpp_init
+import rclcpp
 
-roscpp_init("mtc_tutorial")
+rclcpp.init()
+node = rclcpp.Node("mtc_tutorial")
 
 group = "panda_arm"
-planner = core.PipelinePlanner()
+planner = core.PipelinePlanner(node)
 
 task = core.Task()
 task.name = "constrained"
+task.loadRobotModel(node)
 
 task.add(stages.CurrentState("current state"))
 
@@ -43,13 +45,14 @@ task.add(mps)
 move = stages.MoveRelative("y +0.4", planner)
 move.group = group
 header = Header(frame_id="world")
-move.setDirection(Vector3Stamped(header=header, vector=Vector3(0, 0.4, 0)))
+move.setDirection(Vector3Stamped(header=header, vector=Vector3(x=0.0, y=0.4, z=0.0)))
 
 constraints = Constraints()
 oc = OrientationConstraint()
 oc.header.frame_id = "world"
 oc.link_name = "panda_hand"
 oc.orientation.x = 1.0
+oc.orientation.w = 0.0
 oc.absolute_x_axis_tolerance = 0.01
 oc.absolute_y_axis_tolerance = 0.01
 oc.absolute_z_axis_tolerance = 0.01

@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
-from py_binding_tools import roscpp_init
+import rclcpp
 import time
 
-roscpp_init("mtc_tutorial")
+rclcpp.init()
+node = rclcpp.Node("mtc_tutorial")
 
 # use the joint interpolation planner
 planner = core.JointInterpolationPlanner()
@@ -13,6 +14,7 @@ planner = core.JointInterpolationPlanner()
 # the task will contain our stages
 task = core.Task()
 task.name = "merger"
+task.loadRobotModel(node)
 
 # start from current robot state
 currentState = stages.CurrentState("current state")

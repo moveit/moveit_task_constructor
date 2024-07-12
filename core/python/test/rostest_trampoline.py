@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-import rostest
-from py_binding_tools import roscpp_init
+import rclcpp
 from moveit.task_constructor import core, stages
 from moveit.core.planning_scene import PlanningScene
 from geometry_msgs.msg import Vector3Stamped, Vector3, PoseStamped
@@ -13,7 +12,7 @@ PLANNING_GROUP = "manipulator"
 
 
 def setUpModule():
-    roscpp_init("test_mtc")
+    rclcpp.init()
 
 
 def pybind11_versions():
@@ -100,9 +99,11 @@ class TestTrampolines(unittest.TestCase):
     def setUp(self):
         self.cartesian = core.CartesianPath()
         self.jointspace = core.JointInterpolationPlanner()
+        self.node = rclcpp.Node("test_mtc")
 
     def create(self, *stages):
         task = core.Task()
+        task.loadRobotModel(self.node)
         task.enableIntrospection()
         for stage in stages:
             task.add(stage)
@@ -140,4 +141,4 @@ class TestTrampolines(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    rostest.rosrun("mtc", "trampoline", TestTrampolines)
+    unittest.main()

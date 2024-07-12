@@ -3,13 +3,19 @@
 
 import sys
 import unittest
+import rclcpp
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
 from moveit_msgs.msg import RobotState, Constraints, MotionPlanRequest
 from moveit.task_constructor import core, stages
 
 
+def setUpModule():
+    rclcpp.init()
+
+
 class TestPropertyMap(unittest.TestCase):
     def setUp(self):
+        self.node = rclcpp.Node("test_mtc_props")
         self.props = core.PropertyMap()
 
     def _check(self, name, value):
@@ -28,7 +34,7 @@ class TestPropertyMap(unittest.TestCase):
         self.assertRaises(TypeError, self._check, "request", MotionPlanRequest())
 
     def test_assign_in_reference(self):
-        planner = core.PipelinePlanner()
+        planner = core.PipelinePlanner(self.node)
         props = planner.properties
 
         props["goal_joint_tolerance"] = 3.14
@@ -40,21 +46,15 @@ class TestPropertyMap(unittest.TestCase):
 
         props["planner"] = "planner"
         self.assertEqual(props["planner"], "planner")
-        self.assertEqual(planner.planner, "planner")
 
         props["double"] = 3.14
         a = props
         props["double"] = 2.71
         self.assertEqual(a["double"], 2.71)
 
-        planner.planner = "other"
-        self.assertEqual(props["planner"], "other")
-        self.assertEqual(planner.planner, "other")
-
         del planner
         # We can still access props, because actual destruction of planner is delayed
         self.assertEqual(props["goal_joint_tolerance"], 2.71)
-        self.assertEqual(props["planner"], "other")
 
     def test_iter(self):
         # assign values so we can iterate over them
@@ -116,7 +116,8 @@ class TestModifyPlanningScene(unittest.TestCase):
 
 class TestStages(unittest.TestCase):
     def setUp(self):
-        self.planner = core.PipelinePlanner()
+        self.node = rclcpp.Node("test_mtc_stages")
+        self.planner = core.PipelinePlanner(self.node)
 
     def _check(self, stage, name, value):
         self._check_assign(stage, name, value)
@@ -198,8 +199,7 @@ class TestStages(unittest.TestCase):
         stage.setDirection({"joint": 0.1})
 
     def test_Connect(self):
-        planner = core.PipelinePlanner()
-        stage = stages.Connect("connect", [("group1", planner), ("group2", planner)])
+        stage = stages.Connect("connect", [("group1", self.planner), ("group2", self.planner)])
 
     def test_FixCollisionObjects(self):
         stage = stages.FixCollisionObjects("collision")

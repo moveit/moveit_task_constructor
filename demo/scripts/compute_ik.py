@@ -6,9 +6,10 @@ from geometry_msgs.msg import PoseStamped, Pose, Point
 from std_msgs.msg import Header
 import time
 
-from py_binding_tools import roscpp_init
+import rclcpp
 
-roscpp_init("mtc_tutorial")
+rclcpp.init()
+node = rclcpp.Node("mtc_tutorial")
 
 # Specify the planning group
 group = "panda_arm"
@@ -16,12 +17,13 @@ group = "panda_arm"
 # Create a task
 task = core.Task()
 task.name = "compute IK"
+task.loadRobotModel(node)
 
 # Add a stage to retrieve the current state
 task.add(stages.CurrentState("current state"))
 
 # Add a planning stage connecting the generator stages
-planner = core.PipelinePlanner()  # create default planning pipeline
+planner = core.PipelinePlanner(node)  # create default planning pipeline
 task.add(stages.Connect("connect", [(group, planner)]))  # operate on group
 del planner  # Delete PipelinePlanner when not explicitly needed anymore
 
