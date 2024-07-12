@@ -16,6 +16,8 @@ group = "panda_arm"
 planner = core.PipelinePlanner()
 
 task = core.Task()
+task.name = "constrained"
+
 task.add(stages.CurrentState("current state"))
 
 co = CollisionObject()

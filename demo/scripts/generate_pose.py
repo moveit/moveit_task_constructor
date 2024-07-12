@@ -6,13 +6,14 @@ from geometry_msgs.msg import PoseStamped
 from py_binding_tools import roscpp_init
 import time
 
-roscpp_init("mtc_tutorial_compute_ik")
+roscpp_init("mtc_tutorial")
 
 # Specify the planning group
 group = "panda_arm"
 
 # Create a task
 task = core.Task()
+task.name = "generate pose"
 
 # Get the current robot state
 currentState = stages.CurrentState("current state")

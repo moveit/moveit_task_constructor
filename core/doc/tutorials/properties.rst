@@ -97,11 +97,6 @@ You can obtain a reference to the the PropertyMap of a stage like so
     :start-after: [propertyTut10]
     :end-before: [propertyTut10]
 
-.. literalinclude:: ../../../demo/scripts/properties.py
-    :language: python
-    :start-after: [propertyTut11]
-    :end-before: [propertyTut11]
-
 
 As mentioned, each stage contains a PropertyMap.
 Stages communicate to each other via their interfaces.

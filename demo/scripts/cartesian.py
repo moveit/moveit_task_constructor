@@ -23,6 +23,7 @@ jointspace = core.JointInterpolationPlanner()
 
 # [cartesianTut3]
 task = core.Task()
+task.name = "cartesian"
 
 # start from current robot state
 task.add(stages.CurrentState("current state"))
