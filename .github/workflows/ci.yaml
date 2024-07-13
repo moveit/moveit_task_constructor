@@ -19,22 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          # - IMAGE: rolling-source
-          #   NAME: ccov
-          #   TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: rolling-source
-          - IMAGE: rolling-source
-            CLANG_TIDY: pedantic
-          - IMAGE: jazzy-source
-            NAME: asan
-            # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
-            # see https://github.com/google/sanitizers/wiki/AddressSanitizer
-            # Disable alloc/dealloc mismatch warnings: https://github.com/ros2/rclcpp/pull/1324
-            DOCKER_RUN_OPTS: >-
-              -e PRELOAD=libasan.so.8
-              -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions,fast_unwind_on_malloc=0"
-              -e ASAN_OPTIONS="new_delete_type_mismatch=0,alloc_dealloc_mismatch=0"
-            TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+          - IMAGE: humble-release
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
