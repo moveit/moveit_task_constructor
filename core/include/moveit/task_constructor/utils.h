@@ -60,7 +60,6 @@ MOVEIT_CLASS_FORWARD(RobotState);
 
 namespace task_constructor {
 MOVEIT_CLASS_FORWARD(Property);
-MOVEIT_CLASS_FORWARD(SolutionBase);
 
 namespace utils {
 
@@ -141,7 +140,7 @@ private:
 };
 
 bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
-                         const moveit::core::JointModelGroup* jmg, SolutionBase& solution,
+                         const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame);
 }  // namespace utils
 }  // namespace task_constructor

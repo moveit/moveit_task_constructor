@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from moveit.core import planning_scene
@@ -7,11 +7,12 @@ from py_binding_tools import roscpp_init
 from moveit.core.planning_scene import PlanningScene
 import time
 
-roscpp_init("mtc_tutorial_current_state")
+roscpp_init("mtc_tutorial")
 
 
 # Create a task
 task = core.Task()
+task.name = "fixed state"
 
 # [initAndConfigFixedState]
 # Initialize a PlanningScene for use in a FixedState stage

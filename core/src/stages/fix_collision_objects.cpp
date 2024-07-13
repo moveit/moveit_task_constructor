@@ -50,6 +50,7 @@
 #endif
 #include <Eigen/Geometry>
 #include <rclcpp/logging.hpp>
+#include <fmt/core.h>
 
 namespace vm = visualization_msgs;
 namespace cd = collision_detection;
@@ -84,7 +85,8 @@ bool computeCorrection(const std::vector<cd::Contact>& contacts, Eigen::Vector3d
 	correction.setZero();
 	for (const cd::Contact& c : contacts) {
 		if ((c.body_type_1 != cd::BodyTypes::WORLD_OBJECT && c.body_type_2 != cd::BodyTypes::WORLD_OBJECT)) {
-			RCLCPP_WARN_STREAM(LOGGER, "Cannot fix collision between " << c.body_name_1 << " and " << c.body_name_2);
+			RCLCPP_WARN_STREAM(LOGGER,
+			                   fmt::format("Cannot fix collision between {} and {}", c.body_name_1, c.body_name_2));
 			return false;
 		}
 		if (c.body_type_1 == cd::BodyTypes::WORLD_OBJECT)

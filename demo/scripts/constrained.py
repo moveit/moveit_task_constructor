@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from std_msgs.msg import Header
@@ -16,6 +16,8 @@ group = "panda_arm"
 planner = core.PipelinePlanner()
 
 task = core.Task()
+task.name = "constrained"
+
 task.add(stages.CurrentState("current state"))
 
 co = CollisionObject()

@@ -43,9 +43,7 @@
 #include <moveit/move_group/capability_names.h>
 #include <moveit/robot_state/conversions.h>
 #include <moveit/utils/message_checks.h>
-#include <moveit/moveit_cpp/moveit_cpp.h>
-
-#include <boost/algorithm/string/join.hpp>
+#include <fmt/format.h>
 
 namespace {
 
@@ -164,8 +162,8 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!joint_names.empty()) {
 				group = findJointModelGroup(*model, joint_names);
 				if (!group) {
-					RCLCPP_ERROR_STREAM(LOGGER, "Could not find JointModelGroup that actuates {"
-					                                << boost::algorithm::join(joint_names, ", ") << "}");
+					RCLCPP_ERROR_STREAM(LOGGER, fmt::format("Could not find JointModelGroup that actuates {{{}}}",
+					                                        fmt::join(joint_names, ", ")));
 					return false;
 				}
 				RCLCPP_DEBUG(LOGGER, "Using JointModelGroup '%s' for execution", group->getName().c_str());

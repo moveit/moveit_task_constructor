@@ -43,8 +43,7 @@
 
 #include <rclcpp/logging.hpp>
 
-#include <boost/format.hpp>
-
+#include <fmt/core.h>
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -149,12 +148,11 @@ void StagePrivate::validateConnectivity() const {
 	// check that the required interface is provided
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
-	if ((required & actual) != required) {
-		boost::format desc("actual interface %1% %2% does not match required interface %3% %4%");
-		desc % flowSymbol<START_IF_MASK>(actual) % flowSymbol<END_IF_MASK>(actual);
-		desc % flowSymbol<START_IF_MASK>(required) % flowSymbol<END_IF_MASK>(required);
-		throw InitStageException(*me(), desc.str());
-	}
+	if ((required & actual) != required)
+		throw InitStageException(*me(),
+		                         fmt::format("actual interface {} {} does not match required interface {} {}",
+		                                     flowSymbol<START_IF_MASK>(actual), flowSymbol<END_IF_MASK>(actual),
+		                                     flowSymbol<START_IF_MASK>(required), flowSymbol<END_IF_MASK>(required)));
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const InterfaceState* from,
@@ -358,7 +356,7 @@ void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
-			RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Properties"), "init '" << name() << "'");
+			RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Properties"), fmt::format("init '{}'", name()));
 			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 		} catch (const Property::error& e) {
 			std::ostringstream oss;
@@ -548,17 +546,16 @@ void PropagatingEitherWayPrivate::resolveInterface(InterfaceFlags expected) {
 		dir = PropagatingEitherWay::FORWARD;
 	else if ((expected & START_IF_MASK) == WRITES_PREV_END || (expected & END_IF_MASK) == READS_END)
 		dir = PropagatingEitherWay::BACKWARD;
-	else {
-		boost::format desc("propagator cannot satisfy expected interface %1% %2%");
-		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
-		throw InitStageException(*me(), desc.str());
-	}
-	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_) {
-		boost::format desc("configured interface (%1% %2%) does not match expected one (%3% %4%)");
-		desc % flowSymbol<START_IF_MASK>(required_interface_) % flowSymbol<END_IF_MASK>(required_interface_);
-		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
-		throw InitStageException(*me(), desc.str());
-	}
+	else
+		throw InitStageException(*me(),
+		                         fmt::format("propagator cannot satisfy expected interface {} {}",
+		                                     flowSymbol<START_IF_MASK>(expected), flowSymbol<END_IF_MASK>(expected)));
+	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_)
+		throw InitStageException(*me(),
+		                         fmt::format("configured interface ({} {}) does not match expected one ({} {})",
+		                                     flowSymbol<START_IF_MASK>(required_interface_),
+		                                     flowSymbol<END_IF_MASK>(required_interface_),
+		                                     flowSymbol<START_IF_MASK>(expected), flowSymbol<END_IF_MASK>(expected)));
 	initInterface(dir);
 }
 
@@ -812,7 +809,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 				continue;
 
 			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
-			// https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+			// https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
 			if (oit->priority().status() == InterfaceState::Status::ARMED) {
 				oit_to_enable.push_back(oit);
 				have_enabled_opposites = true;
@@ -902,7 +899,6 @@ std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& p) {
 		os << "---";
 	return os;
 }
-static const rclcpp::Logger LOGGER = rclcpp::get_logger("Connecting");
 
 Connecting::Connecting(const std::string& name) : ComputeBase(new ConnectingPrivate(this, name)) {}
 
@@ -916,38 +912,33 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& from = from_state.scene();
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
-	if (from->getWorld()->size() != to->getWorld()->size()) {
-		RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different number of collision objects");
+	auto false_with_debug = [](auto... args) {
+		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Connecting"), fmt::format(args...));
 		return false;
-	}
+	};
+
+	if (from->getWorld()->size() != to->getWorld()->size())
+		return false_with_debug("{}: different number of collision objects", name());
 
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
 		const std::string& from_object_name = from_object_pair.first;
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
 		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_name);
-		if (!to_object) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": object missing: " << from_object_name);
-			return false;
-		}
+		if (!to_object)
+			return false_with_debug("{}: object missing: {}", name(), from_object_name);
 
-		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4)) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object pose: " << from_object_name);
-			return false;  // transforms do not match
-		}
+		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4))
+			return false_with_debug("{}: different object pose: {}", name(), from_object_name);
 
-		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object shapes: " << from_object_name);
-			return false;  // shapes not matching
-		}
+		if (from_object->shape_poses_.size() != to_object->shape_poses_.size())
+			return false_with_debug("{}: different object shapes: {}", name(), from_object_name);
 
 		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
 		          to_it = to_object->shape_poses_.cbegin();
 		     from_it != from_end; ++from_it, ++to_it)
-			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different shape pose: " << from_object_name);
-				return false;  // transforms do not match
-			}
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
+				return false_with_debug("{}: different shape pose: {}", name(), from_object_name);
 	}
 
 	// Also test for attached objects which have a different storage
@@ -955,41 +946,32 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	std::vector<const moveit::core::AttachedBody*> to_attached;
 	from->getCurrentState().getAttachedBodies(from_attached);
 	to->getCurrentState().getAttachedBodies(to_attached);
-	if (from_attached.size() != to_attached.size()) {
-		RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different number of objects");
-		return false;
-	}
+	if (from_attached.size() != to_attached.size())
+		return false_with_debug("{}: different number of objects", name());
 
 	for (const moveit::core::AttachedBody* from_object : from_attached) {
 		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
 		                       [from_object](const moveit::core::AttachedBody* object) {
 			                       return object->getName() == from_object->getName();
 		                       });
-		if (it == to_attached.cend()) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": object missing: " << from_object->getName());
-			return false;
-		}
+		if (it == to_attached.cend())
+			return false_with_debug("{}: object missing: {}", name(), from_object->getName());
+
 		const moveit::core::AttachedBody* to_object = *it;
-		if (from_object->getAttachedLink() != to_object->getAttachedLink()) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different attach links: " << from_object->getName() << " attached to "
-			                                   << from_object->getAttachedLinkName() << " / "
-			                                   << to_object->getAttachedLinkName());
-			return false;  // links not matching
-		}
-		if (from_object->getShapes().size() != to_object->getShapes().size()) {
-			RCLCPP_DEBUG_STREAM(LOGGER, name() << ": different object shapes: " << from_object->getName());
-			return false;  // shapes not matching
-		}
+		if (from_object->getAttachedLink() != to_object->getAttachedLink())
+			return false_with_debug("{}: different attach links: {} attached to {} vs. {}",  //
+			                        name(), from_object->getName(),  //
+			                        from_object->getAttachedLink()->getName(), to_object->getAttachedLink()->getName());
+
+		if (from_object->getShapes().size() != to_object->getShapes().size())
+			return false_with_debug("{}: different object shapes: {}", name(), from_object->getName());
 
 		auto from_it = from_object->getShapePosesInLinkFrame().cbegin();
 		auto from_end = from_object->getShapePosesInLinkFrame().cend();
 		auto to_it = to_object->getShapePosesInLinkFrame().cbegin();
 		for (; from_it != from_end; ++from_it, ++to_it)
-			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, name()
-				                                << ": different pose of attached object shape: " << from_object->getName());
-				return false;  // transforms do not match
-			}
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
+				return false_with_debug("{}: different pose of attached object shape: {}", name(), from_object->getName());
 	}
 	return true;
 }

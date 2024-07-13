@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
@@ -8,10 +8,11 @@ from geometry_msgs.msg import PoseStamped
 from py_binding_tools import roscpp_init
 import time
 
-roscpp_init("mtc_tutorial_modify_planning_scene")
+roscpp_init("mtc_tutorial")
 
 # Create a task
 task = core.Task()
+task.name = "modify planning scene"
 
 # Add the current state to the task hierarchy
 task.add(stages.CurrentState("current state"))

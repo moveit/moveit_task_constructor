@@ -44,7 +44,7 @@
 
 #include <Eigen/Geometry>
 
-#include <boost/format.hpp>
+#include <fmt/core.h>
 #include <utility>
 
 namespace moveit {
@@ -207,9 +207,7 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) cons
 		return 0.0;
 
 	if (!traj->getWayPoint(0).knowsFrameTransform(link_name)) {
-		boost::format desc("LinkMotionCost: frame '%1%' unknown in trajectory");
-		desc % link_name;
-		comment = desc.str();
+		comment = fmt::format("LinkMotionCost: frame '{}' unknown in trajectory", link_name);
 		return std::numeric_limits<double>::infinity();
 	}
 
@@ -275,11 +273,10 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		return result.minimum_distance;
 	} };
 
-	auto collision_comment{ [=](const auto& distance) {
-		boost::format desc{ PREFIX + "allegedly valid solution collides between '%1%' and '%2%'" };
-		desc % distance.link_names[0] % distance.link_names[1];
-		return desc.str();
-	} };
+	auto collision_comment = [=](const auto& distance) {
+		return fmt::format(PREFIX + "allegedly valid solution collides between '{}' and '{}'", distance.link_names[0],
+		                   distance.link_names[1]);
+	};
 
 	double distance{ 0.0 };
 
@@ -291,13 +288,11 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			return std::numeric_limits<double>::infinity();
 		}
 		distance = distance_data.distance;
-		if (!cumulative) {
-			boost::format desc{ PREFIX + "distance %1% between '%2%' and '%3%'" };
-			desc % distance % distance_data.link_names[0] % distance_data.link_names[1];
-			comment = desc.str();
-		} else {
-			comment = PREFIX + "cumulative distance " + std::to_string(distance);
-		}
+		if (!cumulative)
+			comment = fmt::format(PREFIX + "distance {} between '{}' and '{}'", distance, distance_data.link_names[0],
+			                      distance_data.link_names[1]);
+		else
+			comment = fmt::format(PREFIX + "cumulative distance {}", distance);
 	} else {  // check trajectory
 		for (size_t i = 0; i < s.trajectory()->getWayPointCount(); ++i) {
 			auto distance_data = check_distance(state, s.trajectory()->getWayPoint(i));
@@ -308,10 +303,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			distance += distance_data.distance;
 		}
 		distance /= s.trajectory()->getWayPointCount();
-
-		boost::format desc(PREFIX + "average%1% distance: %2%");
-		desc % (cumulative ? " cumulative" : "") % distance;
-		comment = desc.str();
+		comment = fmt::format(PREFIX + "average{} distance: {}", (cumulative ? " cumulative" : ""), distance);
 	}
 
 	return distance_to_cost(distance);

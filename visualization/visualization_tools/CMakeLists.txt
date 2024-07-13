@@ -21,6 +21,7 @@ set_target_properties(${MOVEIT_LIB_NAME} PROPERTIES VERSION "${${PROJECT_NAME}_V
 target_link_libraries(${MOVEIT_LIB_NAME}
 	${QT_LIBRARIES}
 	rviz_ogre_vendor::OgreMain
+	fmt::fmt
 )
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC include

@@ -1,16 +1,15 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-import unittest, sys
+import sys
+import unittest
 from geometry_msgs.msg import Pose, PoseStamped, PointStamped, TwistStamped, Vector3Stamped
 from moveit_msgs.msg import RobotState, Constraints, MotionPlanRequest
 from moveit.task_constructor import core, stages
 
 
 class TestPropertyMap(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestPropertyMap, self).__init__(*args, **kwargs)
+    def setUp(self):
         self.props = core.PropertyMap()
 
     def _check(self, name, value):
@@ -85,8 +84,7 @@ class TestPropertyMap(unittest.TestCase):
 
 
 class TestModifyPlanningScene(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestModifyPlanningScene, self).__init__(*args, **kwargs)
+    def setUp(self):
         self.mps = stages.ModifyPlanningScene("mps")
 
     def test_attach_objects_invalid_args(self):
@@ -117,8 +115,7 @@ class TestModifyPlanningScene(unittest.TestCase):
 
 
 class TestStages(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestStages, self).__init__(*args, **kwargs)
+    def setUp(self):
         self.planner = core.PipelinePlanner()
 
     def _check(self, stage, name, value):

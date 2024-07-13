@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from std_msgs.msg import Header
@@ -23,6 +23,7 @@ jointspace = core.JointInterpolationPlanner()
 
 # [cartesianTut3]
 task = core.Task()
+task.name = "cartesian"
 
 # start from current robot state
 task.add(stages.CurrentState("current state"))

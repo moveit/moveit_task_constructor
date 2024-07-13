@@ -37,10 +37,16 @@
 */
 
 #include <moveit/task_constructor/solvers/cartesian_path.h>
+#include <moveit/task_constructor/utils.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_parameterization.h>
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/robot_state/cartesian_interpolator.h>
+#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
+#include <tf2_eigen/tf2_eigen.hpp>
+#else
+#include <tf2_eigen/tf2_eigen.h>
+#endif
 
 using namespace trajectory_processing;
 
@@ -52,6 +58,7 @@ static const rclcpp::Logger LOGGER = rclcpp::get_logger("CartesianPath");
 
 CartesianPath::CartesianPath() {
 	auto& p = properties();
+	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to move linearly (use for joint-space target)");
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
 	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
@@ -63,18 +70,31 @@ CartesianPath::CartesianPath() {
 
 void CartesianPath::init(const core::RobotModelConstPtr& /*robot_model*/) {}
 
+void CartesianPath::setIKFrame(const Eigen::Isometry3d& pose, const std::string& link) {
+	geometry_msgs::msg::PoseStamped pose_msg;
+	pose_msg.header.frame_id = link;
+	pose_msg.pose = tf2::toMsg(pose);
+	setIKFrame(pose_msg);
+}
+
 PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
                                              const planning_scene::PlanningSceneConstPtr& to,
                                              const moveit::core::JointModelGroup* jmg, double timeout,
                                              robot_trajectory::RobotTrajectoryPtr& result,
                                              const moveit_msgs::msg::Constraints& path_constraints) {
-	const moveit::core::LinkModel* link = jmg->getOnlyOneEndEffectorTip();
-	if (!link)
-		return { false, "no unique tip for joint model group: " + jmg->getName() };
+	const auto& props = properties();
+	const moveit::core::LinkModel* link;
+	std::string error_msg;
+	Eigen::Isometry3d ik_pose_world;
+
+	if (!utils::getRobotTipForFrame(props.property("ik_frame"), *from, jmg, error_msg, link, ik_pose_world))
+		return { false, error_msg };
+
+	Eigen::Isometry3d offset = from->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
 	// reach pose of forward kinematics
-	return plan(from, *link, Eigen::Isometry3d::Identity(), to->getCurrentState().getGlobalLinkTransform(link), jmg,
-	            std::min(timeout, properties().get<double>("timeout")), result, path_constraints);
+	return plan(from, *link, offset, to->getCurrentState().getGlobalLinkTransform(link), jmg,
+	            std::min(timeout, props.get<double>("timeout")), result, path_constraints);
 }
 
 PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningSceneConstPtr& from,
@@ -110,8 +130,9 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 		result->addSuffixWayPoint(waypoint, 0.0);
 
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
-	timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
-	                          props.get<double>("max_acceleration_scaling_factor"));
+	if (timing)
+		timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
+		                          props.get<double>("max_acceleration_scaling_factor"));
 
 	if (achieved_fraction < props.get<double>("min_fraction")) {
 		return { false, "min_fraction not met. Achieved: " + std::to_string(achieved_fraction) };

@@ -47,7 +47,7 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
-#include <boost/format.hpp>
+#include <fmt/core.h>
 #include <functional>
 
 using namespace std::placeholders;
@@ -212,7 +212,7 @@ void ContainerBasePrivate::setStatus(const Stage* creator, const InterfaceState*
 	// we mark the first state with ARMED and all other states down the tree with PRUNED.
 	// This allows us to re-enable the ARMED state, but not the PRUNED states,
 	// when new states arrive in a Connecting stage.
-	// For details, https://github.com/ros-planning/moveit_task_constructor/pull/309#issuecomment-974636202
+	// For details, https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
 	if (status == InterfaceState::Status::ARMED)
 		status = InterfaceState::Status::PRUNED;  // only the first state is marked as ARMED
 
@@ -233,7 +233,10 @@ inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Prio
 }
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
-	RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Pruning"), "'" << child.name() << "' generated a failure");
+	if (!static_cast<ContainerBase*>(me_)->pruning())
+		return;
+
+	RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Pruning"), fmt::format("'{}' generated a failure", child.name()));
 	switch (child.pimpl()->interfaceFlags()) {
 		case GENERATE:
 			// just ignore: the pair of (new) states isn't known to us anyway
@@ -323,7 +326,10 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 	newSolution(solution);
 }
 
-ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {}
+ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {
+	auto& p = properties();
+	p.declare<bool>("pruning", std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
+}
 
 size_t ContainerBase::numChildren() const {
 	return pimpl()->children().size();
@@ -504,9 +510,8 @@ struct SolutionCollector
 };
 
 void SerialContainer::onNewSolution(const SolutionBase& current) {
-	RCLCPP_DEBUG_STREAM(rclcpp::get_logger("SerialContainer"), "'" << this->name()
-	                                                               << "' received solution of child stage '"
-	                                                               << current.creator()->name() << "'");
+	RCLCPP_DEBUG_STREAM(rclcpp::get_logger("SerialContainer"), fmt::format("'{}' received solution of child stage '{}'",
+	                                                                       this->name(), current.creator()->name()));
 
 	// failures should never trigger this callback
 	assert(!current.isFailure());
@@ -575,10 +580,10 @@ void SerialContainerPrivate::connect(StagePrivate& stage1, StagePrivate& stage2)
 	else if ((flags1 & READS_END) && (flags2 & WRITES_PREV_END))
 		stage2.setPrevEnds(stage1.ends());
 	else {
-		boost::format desc("cannot connect end interface of '%1%' (%2%) to start interface of '%3%' (%4%)");
-		desc % stage1.name() % flowSymbol<END_IF_MASK>(flags1);
-		desc % stage2.name() % flowSymbol<START_IF_MASK>(flags2);
-		throw InitStageException(*me(), desc.str());
+		throw InitStageException(
+		    *me(), fmt::format("cannot connect end interface of '{}' ({}) to start interface of '{}' ({})",  //
+		                       stage1.name(), flowSymbol<END_IF_MASK>(flags1),  //
+		                       stage2.name(), flowSymbol<START_IF_MASK>(flags2)));
 	}
 }
 
@@ -588,12 +593,10 @@ void SerialContainerPrivate::validateInterface(const StagePrivate& child, Interf
 	if (required == UNKNOWN)
 		return;  // cannot yet validate
 	InterfaceFlags child_interface = child.interfaceFlags() & mask;
-	if (required != child_interface) {
-		boost::format desc("%1% interface (%3%) of '%2%' does not match mine (%4%)");
-		desc % (mask == START_IF_MASK ? "start" : "end") % child.name();
-		desc % flowSymbol<mask>(child_interface) % flowSymbol<mask>(required);
-		throw InitStageException(*me_, desc.str());
-	}
+	if (required != child_interface)
+		throw InitStageException(*me_, fmt::format("{0} interface ({2}) of '{1}' does not match mine ({3})",
+		                                           (mask == START_IF_MASK ? "start" : "end"), child.name(),
+		                                           flowSymbol<mask>(child_interface), flowSymbol<mask>(required)));
 }
 
 // called by parent asking for pruning of this' interface
@@ -651,8 +654,8 @@ void SerialContainerPrivate::resolveInterface(InterfaceFlags expected) {
 		exceptions.append(e);
 	}
 
-	required_interface_ = (first.pimpl()->interfaceFlags() & START_IF_MASK) |  // clang-format off
-	                      (last.pimpl()->interfaceFlags() & END_IF_MASK);  // clang-format off
+	required_interface_ = (first.pimpl()->interfaceFlags() & START_IF_MASK) |  //
+	                      (last.pimpl()->interfaceFlags() & END_IF_MASK);
 
 	if (exceptions)
 		throw exceptions;
@@ -707,7 +710,6 @@ void SerialContainer::compute() {
 	}
 }
 
-
 ParallelContainerBasePrivate::ParallelContainerBasePrivate(ParallelContainerBase* me, const std::string& name)
   : ContainerBasePrivate(me, name) {}
 
@@ -746,11 +748,11 @@ void ParallelContainerBasePrivate::initializeExternalInterfaces() {
 	// States received by the container need to be copied to all children's pull interfaces.
 	if (requiredInterface() & READS_START)
 		starts() = std::make_shared<Interface>([this](Interface::iterator external, Interface::UpdateFlags updated) {
-		   this->propagateStateToAllChildren<Interface::FORWARD>(external, updated);
+			this->propagateStateToAllChildren<Interface::FORWARD>(external, updated);
 		});
 	if (requiredInterface() & READS_END)
 		ends() = std::make_shared<Interface>([this](Interface::iterator external, Interface::UpdateFlags updated) {
-		   this->propagateStateToAllChildren<Interface::BACKWARD>(external, updated);
+			this->propagateStateToAllChildren<Interface::BACKWARD>(external, updated);
 		});
 }
 
@@ -765,14 +767,12 @@ void ParallelContainerBasePrivate::validateInterfaces(const StagePrivate& child,
 		valid = valid & ((external & mask) == (child_interface & mask));
 	}
 
-	if (!valid) {
-		boost::format desc("interface of '%1%' (%3% %4%) does not match %2% (%5% %6%).");
-		desc % child.name();
-		desc % (first ? "external one" : "other children's");
-		desc % flowSymbol<START_IF_MASK>(child_interface) % flowSymbol<END_IF_MASK>(child_interface);
-		desc % flowSymbol<START_IF_MASK>(external) % flowSymbol<END_IF_MASK>(external);
-		throw InitStageException(*me_, desc.str());
-	}
+	if (!valid)
+		throw InitStageException(
+		    *me_, fmt::format("interface of '{0}' ({2} {3}) does not match {1} ({4} {5}).", child.name(),
+		                      (first ? "external one" : "other children's"),  //
+		                      flowSymbol<START_IF_MASK>(child_interface), flowSymbol<END_IF_MASK>(child_interface),
+		                      flowSymbol<START_IF_MASK>(external), flowSymbol<END_IF_MASK>(external)));
 }
 
 void ParallelContainerBasePrivate::validateConnectivity() const {
@@ -786,7 +786,8 @@ void ParallelContainerBasePrivate::validateConnectivity() const {
 }
 
 template <Interface::Direction dir>
-void ParallelContainerBasePrivate::propagateStateToAllChildren(Interface::iterator external, Interface::UpdateFlags updated) {
+void ParallelContainerBasePrivate::propagateStateToAllChildren(Interface::iterator external,
+                                                               Interface::UpdateFlags updated) {
 	for (const Stage::pointer& stage : children())
 		copyState<dir>(external, stage->pimpl()->pullInterface<dir>(), updated);
 }
@@ -796,8 +797,8 @@ ParallelContainerBase::ParallelContainerBase(const std::string& name)
   : ParallelContainerBase(new ParallelContainerBasePrivate(this, name)) {}
 
 void ParallelContainerBase::liftSolution(const SolutionBase& solution, double cost, std::string comment) {
-	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)),
-	                      solution.start(), solution.end());
+	pimpl()->liftSolution(std::make_shared<WrappedSolution>(this, &solution, cost, std::move(comment)), solution.start(),
+	                      solution.end());
 }
 
 void ParallelContainerBase::spawn(InterfaceState&& state, SubTrajectory&& t) {
@@ -878,7 +879,7 @@ void Fallbacks::onNewSolution(const SolutionBase& s) {
 }
 
 inline void Fallbacks::replaceImpl() {
-	FallbacksPrivate *impl = pimpl();
+	FallbacksPrivate* impl = pimpl();
 	if (pimpl()->interfaceFlags() == pimpl()->requiredInterface())
 		return;
 	switch (pimpl()->requiredInterface()) {
@@ -901,11 +902,10 @@ inline void Fallbacks::replaceImpl() {
 	pimpl_ = impl;
 }
 
-FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name)
-	: ParallelContainerBasePrivate(me, name) {}
+FallbacksPrivate::FallbacksPrivate(Fallbacks* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
 FallbacksPrivate::FallbacksPrivate(FallbacksPrivate&& other)
-: ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
+  : ParallelContainerBasePrivate(static_cast<Fallbacks*>(other.me()), "") {
 	// move contents of other
 	this->ParallelContainerBasePrivate::operator=(std::move(other));
 }
@@ -935,8 +935,8 @@ void FallbacksPrivateCommon::reset() {
 }
 
 bool FallbacksPrivateCommon::canCompute() const {
-	while(current_ != children().end() &&  // not completely exhausted
-	      !(*current_)->pimpl()->canCompute())  // but current child cannot compute
+	while (current_ != children().end() &&  // not completely exhausted
+	       !(*current_)->pimpl()->canCompute())  // but current child cannot compute
 		return const_cast<FallbacksPrivateCommon*>(this)->nextJob();  // advance to next job
 
 	// return value: current child is well defined and thus can compute?
@@ -949,12 +949,14 @@ void FallbacksPrivateCommon::compute() {
 
 inline void FallbacksPrivateCommon::nextChild() {
 	if (std::next(current_) != children().end())
-		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Fallbacks"), "Child '" << (*current_)->name() << "' failed, trying next one.");
+		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Fallbacks"),
+		                    fmt::format("Child '{}' failed, trying next one.", (*current_)->name()));
 	++current_;  // advance to next child
 }
 
-FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old)
-	: FallbacksPrivateCommon(std::move(old)) { FallbacksPrivateCommon::reset(); }
+FallbacksPrivateGenerator::FallbacksPrivateGenerator(FallbacksPrivate&& old) : FallbacksPrivateCommon(std::move(old)) {
+	FallbacksPrivateCommon::reset();
+}
 
 bool FallbacksPrivateGenerator::nextJob() {
 	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
@@ -965,27 +967,27 @@ bool FallbacksPrivateGenerator::nextJob() {
 		return false;
 	}
 
-	do { nextChild(); }
-	while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
+	do {
+		nextChild();
+	} while (current_ != children().end() && !(*current_)->pimpl()->canCompute());
 
 	// return value shall indicate current_->canCompute()
 	return current_ != children().end();
 }
 
-
 FallbacksPrivatePropagator::FallbacksPrivatePropagator(FallbacksPrivate&& old)
-   : FallbacksPrivateCommon(std::move(old)) {
+  : FallbacksPrivateCommon(std::move(old)) {
 	switch (requiredInterface()) {
-	case PROPAGATE_FORWARDS:
-		dir_ = Interface::FORWARD;
-		starts() = std::make_shared<Interface>();
-		break;
-	case PROPAGATE_BACKWARDS:
-		dir_ = Interface::BACKWARD;
-		ends() = std::make_shared<Interface>();
-		break;
-	default:
-		assert(false);
+		case PROPAGATE_FORWARDS:
+			dir_ = Interface::FORWARD;
+			starts() = std::make_shared<Interface>();
+			break;
+		case PROPAGATE_BACKWARDS:
+			dir_ = Interface::BACKWARD;
+			ends() = std::make_shared<Interface>();
+			break;
+		default:
+			assert(false);
 	}
 	FallbacksPrivatePropagator::reset();
 }
@@ -1005,8 +1007,8 @@ bool FallbacksPrivatePropagator::nextJob() {
 	assert(current_ != children().end() && !(*current_)->pimpl()->canCompute());
 	const auto jobs = pullInterface(dir_);
 
-	if (job_ != jobs->end()) { // current job exists, but is exhausted on current child
-		if (!job_has_solutions_) // job didn't produce solutions -> feed to next child
+	if (job_ != jobs->end()) {  // current job exists, but is exhausted on current child
+		if (!job_has_solutions_)  // job didn't produce solutions -> feed to next child
 			nextChild();
 		else
 			current_ = children().end();  // indicate that this job is exhausted on all children
@@ -1024,9 +1026,9 @@ bool FallbacksPrivatePropagator::nextJob() {
 	// pick next job if needed and possible
 	if (job_ == jobs->end()) {  // need to pick next job
 		if (!jobs->empty() && jobs->front()->priority().enabled())
- 			job_ = jobs->begin();
+			job_ = jobs->begin();
 		else
-			return false; // no more jobs available
+			return false;  // no more jobs available
 	}
 
 	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
@@ -1034,13 +1036,11 @@ bool FallbacksPrivatePropagator::nextJob() {
 	return true;
 }
 
-
-FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old)
-	: FallbacksPrivate(std::move(old)) {
-	starts_ = std::make_shared<Interface>(
-		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
-	ends_ = std::make_shared<Interface>(
-		std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::BACKWARD>, this, std::placeholders::_1, std::placeholders::_2));
+FallbacksPrivateConnect::FallbacksPrivateConnect(FallbacksPrivate&& old) : FallbacksPrivate(std::move(old)) {
+	starts_ = std::make_shared<Interface>(std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::FORWARD>,
+	                                                this, std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(std::bind(&FallbacksPrivateConnect::propagateStateUpdate<Interface::BACKWARD>,
+	                                              this, std::placeholders::_1, std::placeholders::_2));
 
 	FallbacksPrivateConnect::reset();
 }
@@ -1057,7 +1057,7 @@ void FallbacksPrivateConnect::propagateStateUpdate(Interface::iterator external,
 }
 
 bool FallbacksPrivateConnect::canCompute() const {
-	for (auto it=children().begin(), end=children().end(); it!=end; ++it)
+	for (auto it = children().begin(), end = children().end(); it != end; ++it)
 		if ((*it)->pimpl()->canCompute()) {
 			active_ = it;
 			return true;
@@ -1074,7 +1074,8 @@ void FallbacksPrivateConnect::compute() {
 
 void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
 	// expect failure to be reported from active child
-	assert(active_ != children().end() && active_->get() == &child); (void)child;
+	assert(active_ != children().end() && active_->get() == &child);
+	(void)child;
 	// ... thus we can use std::next(active_) to find the next child
 	auto next = std::next(active_);
 
@@ -1094,7 +1095,6 @@ void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceSt
 	} else  // or report failure to parent
 		parent()->pimpl()->onNewFailure(*me(), from, to);
 }
-
 
 MergerPrivate::MergerPrivate(Merger* me, const std::string& name) : ParallelContainerBasePrivate(me, name) {}
 
@@ -1117,7 +1117,7 @@ void MergerPrivate::resolveInterface(InterfaceFlags expected) {
 
 Merger::Merger(const std::string& name) : Merger(new MergerPrivate(this, name)) {
 	properties().declare<TimeParameterizationPtr>("time_parameterization",
-	                                                 std::make_shared<TimeOptimalTrajectoryGeneration>());
+	                                              std::make_shared<TimeOptimalTrajectoryGeneration>());
 }
 
 void Merger::reset() {
@@ -1167,7 +1167,7 @@ void Merger::onNewSolution(const SolutionBase& s) {
 void MergerPrivate::onNewPropagateSolution(const SolutionBase& s) {
 	const SubTrajectory* trajectory = dynamic_cast<const SubTrajectory*>(&s);
 	if (!trajectory || !trajectory->trajectory()) {
-      RCLCPP_ERROR(rclcpp::get_logger("Merger"), "Only simple, valid trajectories are supported");
+		RCLCPP_ERROR(rclcpp::get_logger("Merger"), "Only simple, valid trajectories are supported");
 		return;
 	}
 
@@ -1294,8 +1294,9 @@ void MergerPrivate::merge(const ChildSolutionList& sub_solutions,
 		oss << "Invalid waypoint(s): ";
 		if (invalid_index.size() == merged->getWayPointCount())
 			oss << "all";
-		else for (size_t i : invalid_index)
-			oss << i << ", ";
+		else
+			for (size_t i : invalid_index)
+				oss << i << ", ";
 		t.setComment(oss.str());
 	} else {
 		// accumulate costs and markers

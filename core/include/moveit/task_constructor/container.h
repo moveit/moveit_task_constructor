@@ -51,6 +51,10 @@ public:
 	PRIVATE_CLASS(ContainerBase)
 	using pointer = std::unique_ptr<ContainerBase>;
 
+	/// Explicitly enable/disable pruning
+	void setPruning(bool pruning) { setProperty("pruning", pruning); }
+	bool pruning() const { return properties().get<bool>("pruning"); }
+
 	size_t numChildren() const;
 	Stage* findChild(const std::string& name) const;
 	Stage* operator[](int index) const;

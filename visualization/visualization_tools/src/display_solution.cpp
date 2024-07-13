@@ -38,8 +38,8 @@
 #include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
-#include <boost/format.hpp>
 #include <rclcpp/logging.hpp>
+#include <fmt/core.h>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.display_solution");
 
@@ -90,11 +90,10 @@ const MarkerVisualizationPtr DisplaySolution::markers(const DisplaySolution::Ind
 
 void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& start_scene,
                                      const moveit_task_constructor_msgs::msg::Solution& msg) {
-	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName()) {
-		static boost::format fmt("Solution for model '%s' but model '%s' was expected");
-		fmt % msg.start_scene.robot_model_name.c_str() % start_scene->getRobotModel()->getName().c_str();
-		throw std::invalid_argument(fmt.str());
-	}
+	if (msg.start_scene.robot_model_name != start_scene->getRobotModel()->getName())
+		throw std::invalid_argument(fmt::format("Solution for model '{}' but model '{}' was expected",
+		                                        msg.start_scene.robot_model_name,
+		                                        start_scene->getRobotModel()->getName()));
 
 	// initialize parent scene from solution's start scene
 	start_scene->setPlanningSceneMsg(msg.start_scene);

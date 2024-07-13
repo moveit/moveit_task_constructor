@@ -8,7 +8,10 @@
 
 using namespace moveit::task_constructor;
 
-using Pruning = TaskTestBase;
+struct Pruning : TaskTestBase
+{
+	Pruning() : TaskTestBase() { t.setPruning(true); }
+};
 
 TEST_F(Pruning, PropagatorFailure) {
 	auto back = add(t, new BackwardMockup());
@@ -19,6 +22,18 @@ TEST_F(Pruning, PropagatorFailure) {
 	ASSERT_EQ(t.solutions().size(), 0u);
 	// ForwardMockup fails, so the backward stage should never compute
 	EXPECT_EQ(back->runs_, 0u);
+}
+
+// Same as the previous test, except pruning is disabled for the whole task
+TEST_F(Pruning, DisabledPruningPropagatorFailure) {
+	t.setPruning(false);
+	auto back = add(t, new BackwardMockup());
+	add(t, new GeneratorMockup({ 0 }));
+	add(t, new ForwardMockup({ INF }));
+	EXPECT_FALSE(t.plan());
+	ASSERT_EQ(t.solutions().size(), 0u);
+	// ForwardMockup fails, since we have pruning disabled backward should run
+	EXPECT_EQ(back->runs_, 1u);
 }
 
 TEST_F(Pruning, PruningMultiForward) {
@@ -65,23 +80,20 @@ TEST_F(Pruning, ConnectReactivatesPrunedPaths) {
 // same as before, but wrapping Connect into a container
 template <typename T>
 struct PruningContainerTests : public Pruning
-{
-	void test() {
-		add(t, new BackwardMockup);
-		add(t, new GeneratorMockup({ 0 }));
-		auto c = new T();
-		add(*c, new ConnectMockup());
-		add(t, c);
-		add(t, new GeneratorMockup({ 0 }));
+{};
 
-		EXPECT_TRUE(t.plan());
-		EXPECT_EQ(t.solutions().size(), 1u);
-	}
-};
-using ContainerTypes = ::testing::Types<SerialContainer>;  // TODO: fails for Fallbacks!
+using ContainerTypes = ::testing::Types<SerialContainer, Fallbacks>;
 TYPED_TEST_SUITE(PruningContainerTests, ContainerTypes);
 TYPED_TEST(PruningContainerTests, ConnectReactivatesPrunedPaths) {
-	this->test();
+	this->add(this->t, new BackwardMockup);
+	this->add(this->t, new GeneratorMockup({ 0 }));
+	auto c = new TypeParam();
+	this->add(*c, new ConnectMockup());
+	this->add(this->t, c);
+	this->add(this->t, new GeneratorMockup({ 0 }));
+
+	EXPECT_TRUE(this->t.plan());
+	EXPECT_EQ(this->t.solutions().size(), 1u);
 }
 
 TEST_F(Pruning, ConnectConnectForward) {
@@ -128,6 +140,19 @@ TEST_F(Pruning, PropagateIntoContainer) {
 	// the failure in the backward stage (outside the container)
 	// should prune the expected computation of con inside the container
 	EXPECT_EQ(con->runs_, 0u);
+}
+
+TEST_F(Pruning, DISABLED_PropagateIntoContainerAndReactivate) {
+	add(t, new GeneratorMockup({ 0 }));
+
+	auto serial = add(t, new SerialContainer());
+	auto con = add(*serial, new ConnectMockup({ 10, 20 }));
+	add(*serial, new GeneratorMockup({ 0, 1 }));
+
+	add(t, new ForwardMockup({ INF, 0 }));
+
+	EXPECT_TRUE(t.plan());
+	EXPECT_EQ(con->runs_, 1u);
 }
 
 TEST_F(Pruning, PropagateFromContainerPull) {

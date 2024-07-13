@@ -1,20 +1,21 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
-from geometry_msgs.msg import PoseStamped, Pose, Vector3
+from geometry_msgs.msg import PoseStamped, Pose, Point
 from std_msgs.msg import Header
 import time
 
 from py_binding_tools import roscpp_init
 
-roscpp_init("mtc_tutorial_compute_ik")
+roscpp_init("mtc_tutorial")
 
 # Specify the planning group
 group = "panda_arm"
 
 # Create a task
 task = core.Task()
+task.name = "compute IK"
 
 # Add a stage to retrieve the current state
 task.add(stages.CurrentState("current state"))
@@ -32,7 +33,7 @@ generator = stages.GeneratePose("cartesian pose")
 generator.setMonitoredStage(task["current state"])
 # Configure target pose
 # [propertyTut13]
-pose = Pose(position=Vector3(z=0.2))
+pose = Pose(position=Point(z=0.2))
 generator.pose = PoseStamped(header=Header(frame_id="panda_link8"), pose=pose)
 # [propertyTut13]
 

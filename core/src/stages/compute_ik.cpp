@@ -52,6 +52,7 @@
 #include <functional>
 #include <iterator>
 #include <rclcpp/logging.hpp>
+#include <fmt/core.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -68,6 +69,8 @@ ComputeIK::ComputeIK(const std::string& name, Stage::pointer&& child) : WrapperB
 	p.declare<bool>("ignore_collisions", false);
 	p.declare<double>("min_solution_distance", 0.1,
 	                  "minimum distance between seperate IK solutions for the same target");
+	p.declare<moveit_msgs::msg::Constraints>("constraints", moveit_msgs::msg::Constraints(),
+	                                         "additional constraints to obey");
 
 	// ik_frame and target_pose are read from the interface
 	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to be moved towards goal pose");
@@ -93,8 +96,9 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 struct IKSolution
 {
 	std::vector<double> joint_positions;
-	bool feasible;
 	collision_detection::Contact contact;
+	bool collision_free;
+	bool satisfies_constraints;
 };
 
 using IKSolutions = std::vector<IKSolution>;
@@ -303,7 +307,7 @@ void ComputeIK::compute() {
 		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 
 		if (!scene->getCurrentState().knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			RCLCPP_WARN_STREAM(LOGGER, "ik frame unknown in robot: '" << ik_pose_msg.header.frame_id << "'");
+			RCLCPP_WARN_STREAM(LOGGER, fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
 			return;
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;
@@ -362,8 +366,11 @@ void ComputeIK::compute() {
 
 	double min_solution_distance = props.get<double>("min_solution_distance");
 
+	kinematic_constraints::KinematicConstraintSet constraint_set(robot_model);
+	constraint_set.add(props.get<moveit_msgs::msg::Constraints>("constraints"), scene->getTransforms());
+
 	IKSolutions ik_solutions;
-	auto is_valid = [scene, ignore_collisions, min_solution_distance,
+	auto is_valid = [scene, ignore_collisions, min_solution_distance, &constraint_set = std::as_const(constraint_set),
 	                 &ik_solutions](moveit::core::RobotState* state, const moveit::core::JointModelGroup* jmg,
 	                                const double* joint_positions) {
 		for (const auto& sol : ik_solutions) {
@@ -371,20 +378,28 @@ void ComputeIK::compute() {
 				return false;  // too close to already found solution
 		}
 		state->setJointGroupPositions(jmg, joint_positions);
+		state->update();
+
 		ik_solutions.emplace_back();
 		auto& solution{ ik_solutions.back() };
 		state->copyJointGroupPositions(jmg, solution.joint_positions);
+
+		// validate constraints
+		solution.satisfies_constraints = constraint_set.decide(*state).satisfied;
+
+		// check for collisions
 		collision_detection::CollisionRequest req;
 		collision_detection::CollisionResult res;
 		req.contacts = true;
 		req.max_contacts = 1;
 		req.group_name = jmg->getName();
 		scene->checkCollision(req, res, *state);
-		solution.feasible = ignore_collisions || !res.collision;
+		solution.collision_free = ignore_collisions || !res.collision;
 		if (!res.contacts.empty()) {
 			solution.contact = res.contacts.begin()->second.front();
 		}
-		return solution.feasible;
+
+		return solution.satisfies_constraints && solution.collision_free;
 	};
 
 	uint32_t max_ik_solutions = props.get<uint32_t>("max_ik_solutions");
@@ -414,14 +429,16 @@ void ComputeIK::compute() {
 			solution.setComment(s.comment());
 			std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
 
-			if (ik_solutions[i].feasible)
+			if (ik_solutions[i].collision_free && ik_solutions[i].satisfies_constraints)
 				// compute cost as distance to compare_pose
 				solution.setCost(s.cost() + jmg->distance(ik_solutions[i].joint_positions.data(), compare_pose.data()));
-			else {  // found an IK solution, but this was not valid
+			else if (!ik_solutions[i].collision_free) {  // solution was in collision
 				std::stringstream ss;
 				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '"
 				   << ik_solutions[i].contact.body_name_2 << "'";
 				solution.markAsFailure(ss.str());
+			} else if (!ik_solutions[i].satisfies_constraints) {  // solution was violating constraints
+				solution.markAsFailure("Constraints violated");
 			}
 			// set scene's robot state
 			moveit::core::RobotState& solution_state = solution_scene->getCurrentStateNonConst();

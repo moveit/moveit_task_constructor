@@ -1,12 +1,15 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
-from __future__ import print_function
 import unittest
 import rostest
 from py_binding_tools import roscpp_init
 from moveit_commander import PlanningSceneInterface
 from moveit.task_constructor import core, stages
 from geometry_msgs.msg import PoseStamped
+
+
+def setUpModule():
+    roscpp_init("test_mtc")
 
 
 def make_pose(x, y, z):
@@ -113,5 +116,4 @@ class TestModifyPlanningScene(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    roscpp_init("test_mtc")
     rostest.rosrun("mtc", "mps", TestModifyPlanningScene)

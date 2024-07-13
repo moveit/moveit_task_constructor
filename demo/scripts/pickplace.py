@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from py_binding_tools import roscpp_init
@@ -7,7 +7,7 @@ from moveit_commander import PlanningSceneInterface
 from geometry_msgs.msg import PoseStamped, TwistStamped
 import time
 
-roscpp_init("pickplace")
+roscpp_init("mtc_tutorial")
 
 # [pickAndPlaceTut1]
 # Specify robot parameters
@@ -40,8 +40,8 @@ psi.add_box(object_name, objectPose, size=[0.1, 0.05, 0.03])
 
 # [pickAndPlaceTut3]
 # Create a task
-task = core.Task("PandaPickPipelineExample")
-task.enableIntrospection()
+task = core.Task()
+task.name = "pick + place"
 # [pickAndPlaceTut3]
 
 # [pickAndPlaceTut4]

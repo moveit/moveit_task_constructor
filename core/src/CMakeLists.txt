@@ -38,6 +38,7 @@ add_library(${PROJECT_NAME} SHARED
 	solvers/multi_planner.cpp
 )
 ament_target_dependencies(${PROJECT_NAME}
+	fmt
 	moveit_core
 	geometry_msgs
 	moveit_ros_planning

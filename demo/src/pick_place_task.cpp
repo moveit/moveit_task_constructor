@@ -108,10 +108,13 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	task_.reset();
 	task_.reset(new moveit::task_constructor::Task());
 
+	// Individual movement stages are collected within the Task object
 	Task& t = *task_;
 	t.stages()->setName(task_name_);
 	t.loadRobotModel(node);
 
+	/* Create planners used in various stages. Various options are available,
+	   namely Cartesian, MoveIt pipeline, and joint interpolation. */
 	// Sampling planner
 	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>(node);
 	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
@@ -156,7 +159,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *                                                  *
 	 ***************************************************/
 	Stage* initial_state_ptr = nullptr;
-	{  // Open Hand
+	{
 		auto stage = std::make_unique<stages::MoveTo>("open hand", sampling_planner);
 		stage->setGroup(params.hand_group_name);
 		stage->setGoal(params.hand_open_pose);
@@ -169,7 +172,8 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *               Move to Pick                       *
 	 *                                                  *
 	 ***************************************************/
-	{  // Move-to pre-grasp
+	// Connect initial open-hand state with pre-grasp pose defined in the following
+	{
 		auto stage = std::make_unique<stages::Connect>(
 		    "move to pick", stages::Connect::GroupPlannerVector{ { params.arm_group_name, sampling_planner } });
 		stage->setTimeout(5.0);
@@ -184,6 +188,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 ***************************************************/
 	Stage* pick_stage_ptr = nullptr;
 	{
+		// A SerialContainer combines several sub-stages, here for picking the object
 		auto grasp = std::make_unique<SerialContainer>("pick object");
 		t.properties().exposeTo(grasp->properties(), { "eef", "hand", "group", "ik_frame" });
 		grasp->properties().configureInitFrom(Stage::PARENT, { "eef", "hand", "group", "ik_frame" });
@@ -192,10 +197,11 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
   ---- *               Approach Object                    *
 		 ***************************************************/
 		{
+			// Move the eef link forward along its z-axis by an amount within the given min-max range
 			auto stage = std::make_unique<stages::MoveRelative>("approach object", cartesian_planner);
 			stage->properties().set("marker_ns", "approach_object");
-			stage->properties().set("link", params.hand_frame);
-			stage->properties().configureInitFrom(Stage::PARENT, { "group" });
+			stage->properties().set("link", params.hand_frame);  // link to perform IK for
+			stage->properties().configureInitFrom(Stage::PARENT, { "group" });  // inherit group from parent stage
 			stage->setMinMaxDistance(params.approach_object_min_dist, params.approach_object_max_dist);
 
 			// Set hand forward direction
@@ -210,22 +216,24 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
   ---- *               Generate Grasp Pose                *
 		 ***************************************************/
 		{
-			// Sample grasp pose
+			// Sample grasp pose candidates in angle increments around the z-axis of the object
 			auto stage = std::make_unique<stages::GenerateGraspPose>("generate grasp pose");
 			stage->properties().configureInitFrom(Stage::PARENT);
 			stage->properties().set("marker_ns", "grasp_pose");
 			stage->setPreGraspPose(params.hand_open_pose);
-			stage->setObject(params.object_name);
+			stage->setObject(params.object_name);  // object to sample grasps for
 			stage->setAngleDelta(M_PI / 12);
 			stage->setMonitoredStage(initial_state_ptr);  // hook into successful initial-phase solutions
 
-			// Compute IK
+			// Compute IK for sampled grasp poses
 			auto wrapper = std::make_unique<stages::ComputeIK>("grasp pose IK", std::move(stage));
-			wrapper->setMaxIKSolutions(8);
+			wrapper->setMaxIKSolutions(8);  // limit number of solutions
 			wrapper->setMinSolutionDistance(1.0);
+			// define virtual frame to reach the target_pose
 			wrapper->setIKFrame(vectorToEigen(params.grasp_frame_transform), params.hand_frame);
-			wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group" });
-			wrapper->properties().configureInitFrom(Stage::INTERFACE, { "target_pose" });
+			wrapper->properties().configureInitFrom(Stage::PARENT, { "eef", "group" });  // inherit properties from parent
+			wrapper->properties().configureInitFrom(Stage::INTERFACE,
+			                                        { "target_pose" });  // inherit property from child solution
 			grasp->insert(std::move(wrapper));
 		}
 
@@ -233,6 +241,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
   ---- *               Allow Collision (hand object)   *
 		 ***************************************************/
 		{
+			// Modify planning scene (w/o altering the robot's pose) to allow touching the object for picking
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("allow collision (hand,object)");
 			stage->allowCollisions(
 			    params.object_name,
@@ -256,7 +265,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 		 ***************************************************/
 		{
 			auto stage = std::make_unique<stages::ModifyPlanningScene>("attach object");
-			stage->attachObject(params.object_name, params.hand_frame);
+			stage->attachObject(params.object_name, params.hand_frame);  // attach object to hand_frame_
 			grasp->insert(std::move(stage));
 		}
 
@@ -308,6 +317,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *                                                    *
 	 *****************************************************/
 	{
+		// Connect the grasped state to the pre-place state, i.e. realize the object transport
 		auto stage = std::make_unique<stages::Connect>(
 		    "move to place", stages::Connect::GroupPlannerVector{ { params.arm_group_name, sampling_planner } });
 		stage->setTimeout(5.0);
@@ -320,6 +330,7 @@ bool PickPlaceTask::init(const rclcpp::Node::SharedPtr& node, const pick_place_t
 	 *          Place Object                              *
 	 *                                                    *
 	 *****************************************************/
+	// All placing sub-stages are collected within a serial container again
 	{
 		auto place = std::make_unique<SerialContainer>("place object");
 		t.properties().exposeTo(place->properties(), { "eef", "hand", "group" });
@@ -454,13 +465,6 @@ bool PickPlaceTask::execute() {
 	moveit_msgs::msg::MoveItErrorCodes execute_result;
 
 	execute_result = task_->execute(*task_->solutions().front());
-	// // If you want to inspect the goal message, use this instead:
-	// actionlib::SimpleActionClient<moveit_task_constructor_msgs::msg::ExecuteTaskSolutionAction>
-	// execute("execute_task_solution", true); execute.waitForServer();
-	// moveit_task_constructor_msgs::msg::ExecuteTaskSolution::Goal execute_goal;
-	// task_->solutions().front()->toMsg(execute_goal.solution);
-	// execute.sendGoalAndWait(execute_goal);
-	// execute_result = execute.getResult()->error_code;
 
 	if (execute_result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
 		RCLCPP_ERROR_STREAM(LOGGER, "Task execution failed and returned: " << execute_result.val);

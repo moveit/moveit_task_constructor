@@ -3,6 +3,7 @@ project(moveit_task_constructor_capabilities)
 
 find_package(ament_cmake REQUIRED)
 
+find_package(fmt REQUIRED)
 find_package(Boost REQUIRED)
 find_package(moveit_common REQUIRED)
 moveit_package()
@@ -20,6 +21,7 @@ add_library(${PROJECT_NAME} SHARED
 )
 ament_target_dependencies(${PROJECT_NAME}
                           Boost
+                          fmt
                           rclcpp_action
                           moveit_core
                           moveit_ros_move_group

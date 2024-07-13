@@ -4,6 +4,7 @@ project(moveit_task_constructor_core)
 find_package(ament_cmake REQUIRED)
 
 find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(moveit_common REQUIRED)
 moveit_package()
