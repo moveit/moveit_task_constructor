@@ -24,8 +24,7 @@ add_subdirectory(pybind11)
 # C++ wrapper code
 add_subdirectory(bindings)
 
-
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT DEFINED ENV{PRELOAD})
 	find_package(ament_cmake_pytest REQUIRED)
 	find_package(launch_testing_ament_cmake)
 	set(_pytest_tests test/test_mtc.py)
