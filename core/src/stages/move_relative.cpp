@@ -291,7 +291,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		if (!success)
 			comment = result.message;
 
-		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
+		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {  // the following requires a robot_trajectory
+			                                                                  // returned from planning
 			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 			reached_state->updateLinkTransforms();
 			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
