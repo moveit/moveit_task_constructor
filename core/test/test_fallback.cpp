@@ -168,7 +168,7 @@ TEST_F(FallbacksFixturePropagate, filterPropagatesFailures) {
 	auto add_filtered_fwd = [&fallbacks](double cost, bool accept) {
 		auto fwd = std::make_unique<ForwardMockup>(PredefinedCosts::constant(cost));
 		auto filter = std::make_unique<stages::PredicateFilter>("filter", std::move(fwd));
-		filter->setPredicate([accept](const SolutionBase&, std::string&) { return accept; });
+		filter->setPredicate([accept](const SolutionBase& /*solution*/, std::string& /*comment*/) { return accept; });
 		fallbacks->add(std::move(filter));
 	};
 	add_filtered_fwd(INF, false);  // Propagate fails, filter rejects
