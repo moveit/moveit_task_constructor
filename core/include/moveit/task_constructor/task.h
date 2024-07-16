@@ -130,6 +130,7 @@ public:
 	/// interrupt current planning
 	void preempt();
 	void resetPreemptRequest();
+	bool isPreempted();
 	/// execute solution, return the result
 	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
 
