@@ -46,6 +46,8 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
+#include <scope_guard/scope_guard.hpp>
+
 #include <functional>
 
 namespace {
@@ -234,6 +236,9 @@ void Task::compute() {
 }
 
 moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
+	// ensure the preempt request is resetted once this method exits
+	auto guard = sg::make_scope_guard([this]() noexcept { this->resetPreemptRequest(); });
+
 	auto impl = pimpl();
 	init();
 

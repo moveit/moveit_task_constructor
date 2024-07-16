@@ -698,4 +698,5 @@ TEST(Task, preempt) {
 
 	EXPECT_EQ(ec, moveit::core::MoveItErrorCode::PREEMPTED);
 	EXPECT_EQ(t.solutions().size(), 0u);
+	EXPECT_TRUE(t.plan(1));  // make sure the preempt request has been resetted on the previous call to plan()
 }
