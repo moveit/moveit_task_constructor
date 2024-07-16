@@ -327,7 +327,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	}
 
 	// store result
-	if (robot_trajectory) {
+	if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();
