@@ -102,7 +102,8 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , cost_term_{ std::make_unique<CostTerm>() }
   , total_compute_time_{}
   , parent_{ nullptr }
-  , introspection_{ nullptr } {}
+  , introspection_{ nullptr }
+  , preempt_requested_{ nullptr } {}
 
 StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
 	assert(typeid(*this) == typeid(other));
@@ -303,6 +304,17 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 	} else if (!comment.empty()) {
 		solution.setComment(comment);
 	}
+}
+
+void StagePrivate::setPreemptedCheck(const std::atomic<bool>* preempt_requested) {
+	preempt_requested_ = preempt_requested;
+}
+
+bool StagePrivate::preempted() const {
+	if (preempt_requested_)
+		return *preempt_requested_;
+
+	return false;
 }
 
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
