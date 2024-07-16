@@ -185,6 +185,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	double max_distance = props.get<double>("max_distance");
 	double min_distance = props.get<double>("min_distance");
+
+	// if min_distance == max_distance, resort to moving full distance (negative min_distance)
+	if (max_distance > 0.0 && std::fabs(max_distance - min_distance) < std::numeric_limits<double>::epsilon())
+		min_distance = -1.0;
+
 	const auto& path_constraints = props.get<moveit_msgs::Constraints>("path_constraints");
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
