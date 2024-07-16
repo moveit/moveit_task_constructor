@@ -63,7 +63,7 @@ private:
 	std::string ns_;
 	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
-	bool preempt_requested_;
+	std::atomic<bool> preempt_requested_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

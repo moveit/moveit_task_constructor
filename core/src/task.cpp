@@ -245,7 +245,6 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 		explainFailure();
 		return error_code;
 	};
-	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
 	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
@@ -264,6 +263,10 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 
 void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
+}
+
+void Task::resetPreemptRequest() {
+	pimpl()->preempt_requested_ = false;
 }
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {

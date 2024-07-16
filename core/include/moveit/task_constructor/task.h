@@ -129,6 +129,7 @@ public:
 	moveit::core::MoveItErrorCode plan(size_t max_solutions = 0);
 	/// interrupt current planning
 	void preempt();
+	void resetPreemptRequest();
 	/// execute solution, return the result
 	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
 
