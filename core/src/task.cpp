@@ -218,7 +218,7 @@ void Task::init() {
 	impl->traverseStages(
 	    [introspection, impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(introspection);
-		    stage.pimpl()->setPreemptedCheck(&impl->preempt_requested_);
+		    stage.pimpl()->setPreemptRequestedMember(&impl->preempt_requested_);
 		    return true;
 	    },
 	    1, UINT_MAX);
@@ -277,10 +277,6 @@ void Task::preempt() {
 
 void Task::resetPreemptRequest() {
 	pimpl()->preempt_requested_ = false;
-}
-
-bool Task::isPreempted() {
-	return pimpl()->preempt_requested_;
 }
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {

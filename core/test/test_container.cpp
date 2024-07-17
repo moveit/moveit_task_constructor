@@ -702,17 +702,10 @@ TEST_F(TaskTestBase, preempt) {
 	EXPECT_EQ(fwd2->runs_, 0u);
 	EXPECT_TRUE(t.plan(1));  // make sure the preempt request has been resetted on the previous call to plan()
 
-	// prempt in between stage computation
-	// Failing stage(s):
-	// 0  - ←   0 →   -  0 / task pipeline
-	//    1  - ←   1 →   -  0 / GEN1
-	//    -  0 →   1 →   -  1 / FWD1
-	//    -  1 →   0 →   -  0 / FWD2
 	t.reset();
-	resetMockupIds();
 	{
 		std::thread thread{ [&ec, this] { ec = t.plan(1); } };
-		std::this_thread::sleep_for(timeout);
+		std::this_thread::sleep_for(timeout / 2.0);
 		t.preempt();
 		thread.join();
 	}
