@@ -672,3 +672,31 @@ TEST(Task, timeout) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_EQ(t.solutions().size(), 2u);
 }
+
+// https://github.com/moveit/moveit_task_constructor/pull/597
+// start planning in another thread, then preempt it in this thread
+TEST(Task, preempt) {
+	moveit::core::MoveItErrorCode ec;
+	resetMockupIds();
+
+	Task t;
+	t.setRobotModel(getModel());
+
+	auto timeout = std::chrono::milliseconds(10);
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts::constant(0.0)));
+	t.add(std::make_unique<TimedForwardMockup>(timeout));
+
+	// preempt before preempt_request_ is reset in plan()
+	{
+		std::thread thread{ [&ec, &t, timeout] {
+			std::this_thread::sleep_for(timeout);
+			ec = t.plan(1);
+		} };
+		t.preempt();
+		thread.join();
+	}
+
+	EXPECT_EQ(ec, moveit::core::MoveItErrorCode::PREEMPTED);
+	EXPECT_EQ(t.solutions().size(), 0u);
+	EXPECT_TRUE(t.plan(1));  // make sure the preempt request has been resetted on the previous call to plan()
+}
