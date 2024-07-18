@@ -306,10 +306,6 @@ void StagePrivate::computeCost(const InterfaceState& from, const InterfaceState&
 	}
 }
 
-void StagePrivate::setPreemptRequestedMember(const std::atomic<bool>* preempt_requested) {
-	preempt_requested_ = preempt_requested;
-}
-
 Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	assert(impl);
 	auto& p = properties();

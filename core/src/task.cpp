@@ -213,7 +213,7 @@ void Task::init() {
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
-	// provide introspection instance and prempted requested to all stages
+	// provide introspection instance and preempt_requested to all stages
 	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
 	    [introspection, impl](Stage& stage, int /*depth*/) {

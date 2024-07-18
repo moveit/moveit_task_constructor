@@ -62,7 +62,6 @@ class PreemptStageException : public std::exception
 {
 public:
 	explicit PreemptStageException() {}
-	const char* what() const noexcept override { return ""; }
 };
 
 class ContainerBase;
@@ -171,7 +170,9 @@ public:
 	/** compute cost for solution through configured CostTerm */
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
-	void setPreemptRequestedMember(const std::atomic<bool>* preempt_requested);
+	void setPreemptRequestedMember(const std::atomic<bool>* preempt_requested) {
+		preempt_requested_ = preempt_requested;
+	}
 	bool preempted() const { return preempt_requested_ != nullptr && *preempt_requested_; }
 
 protected:
