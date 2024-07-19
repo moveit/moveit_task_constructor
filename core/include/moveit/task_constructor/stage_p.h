@@ -57,6 +57,13 @@
 namespace moveit {
 namespace task_constructor {
 
+/// exception thrown by StagePrivate::runCompute()
+class PreemptStageException : public std::exception
+{
+public:
+	explicit PreemptStageException() {}
+};
+
 class ContainerBase;
 class StagePrivate
 {
@@ -146,6 +153,10 @@ public:
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
 		ROS_DEBUG_STREAM_NAMED("Stage", fmt::format("Computing stage '{}'", name()));
+
+		if (preempted())
+			throw PreemptStageException();
+
 		auto compute_start_time = std::chrono::steady_clock::now();
 		try {
 			compute();
@@ -158,6 +169,11 @@ public:
 
 	/** compute cost for solution through configured CostTerm */
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
+
+	void setPreemptRequestedMember(const std::atomic<bool>* preempt_requested) {
+		preempt_requested_ = preempt_requested;
+	}
+	bool preempted() const { return preempt_requested_ != nullptr && *preempt_requested_; }
 
 protected:
 	StagePrivate& operator=(StagePrivate&& other);
@@ -197,6 +213,8 @@ private:
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 
 	Introspection* introspection_;  // task's introspection instance
+
+	const std::atomic<bool>* preempt_requested_;
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);

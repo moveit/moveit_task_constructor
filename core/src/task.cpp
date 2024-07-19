@@ -213,11 +213,12 @@ void Task::init() {
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
-	// provide introspection instance to all stages
+	// provide introspection instance and preempt_requested to all stages
 	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
-	    [introspection](Stage& stage, int /*depth*/) {
+	    [introspection, impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(introspection);
+		    stage.pimpl()->setPreemptRequestedMember(&impl->preempt_requested_);
 		    return true;
 	    },
 	    1, UINT_MAX);
@@ -232,7 +233,11 @@ bool Task::canCompute() const {
 }
 
 void Task::compute() {
-	stages()->pimpl()->runCompute();
+	try {
+		stages()->pimpl()->runCompute();
+	} catch (const PreemptStageException& e) {
+		// do nothing, needed for early stop
+	}
 }
 
 moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
