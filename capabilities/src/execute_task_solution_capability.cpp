@@ -73,6 +73,7 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 				return jmg;
 		}
 	}
+
 	return nullptr;
 }
 }  // namespace
