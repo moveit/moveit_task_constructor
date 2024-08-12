@@ -314,6 +314,11 @@ void ComputeIK::compute() {
 
 		link = scene->getCurrentState().getRigidlyConnectedParentLinkModel(ik_pose_msg.header.frame_id);
 
+		if (!link) {
+			RCLCPP_WARN_STREAM(
+			    LOGGER, fmt::format("ik frame '{}' is not rigidly connected to any link", ik_pose_msg.header.frame_id));
+			return;
+		}
 		// transform target pose such that ik frame will reach there if link does
 		target_pose = target_pose * ik_pose.inverse() * scene->getCurrentState().getFrameTransform(link->getName());
 	}
@@ -336,23 +341,25 @@ void ComputeIK::compute() {
 		marker.color.a *= 0.5;
 		eef_markers.push_back(marker);
 	};
-	const auto& links_to_visualize = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link)
-	                                     ->getParentJointModel()
-	                                     ->getDescendantLinkModels();
-	if (colliding) {
-		SubTrajectory solution;
-		std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
-		generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
-		std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
-		solution.markAsFailure();
-		// TODO: visualize collisions
-		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
-		auto colliding_scene{ scene->diff() };
-		colliding_scene->setCurrentState(sandbox_state);
-		spawn(InterfaceState(colliding_scene), std::move(solution));
-		return;
-	} else
-		generateVisualMarkers(sandbox_state, appender, links_to_visualize);
+	auto const& connected_parent_link_model = moveit::core::RobotModel::getRigidlyConnectedParentLinkModel(link);
+	if (connected_parent_link_model && connected_parent_link_model->getParentJointModel()) {
+		const auto& links_to_visualize = connected_parent_link_model->getParentJointModel()->getDescendantLinkModels();
+		if (colliding) {
+			SubTrajectory solution;
+			std::copy(frame_markers.begin(), frame_markers.end(), std::back_inserter(solution.markers()));
+			generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
+			std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
+			solution.markAsFailure();
+			// TODO: visualize collisions
+			solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
+			auto colliding_scene{ scene->diff() };
+			colliding_scene->setCurrentState(sandbox_state);
+			spawn(InterfaceState(colliding_scene), std::move(solution));
+			return;
+		} else {
+			generateVisualMarkers(sandbox_state, appender, links_to_visualize);
+		}
+	}
 
 	// determine joint values of robot pose to compare IK solution with for costs
 	std::vector<double> compare_pose;
