@@ -345,7 +345,7 @@ Stage* ContainerBase::findChild(const std::string& name) const {
 			else if (auto* parent = dynamic_cast<const ContainerBase*>(child.get()))
 				return parent->findChild(name.substr(pos + 1));
 		}
-	RCLCPP_WARN_STREAM(rclcpp::get_logger("ContainerBase"), fmt::format("Child '{}' not found", name));
+	RCLCPP_DEBUG_STREAM(rclcpp::get_logger("ContainerBase"), fmt::format("Child '{}' not found", name));
 	return nullptr;
 }
 
