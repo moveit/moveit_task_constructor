@@ -46,7 +46,6 @@
 #include <fmt/format.h>
 
 namespace {
-const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.execute_task_solution");
 // TODO: move to moveit::core::RobotModel
 const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::RobotModel& model,
                                                          const std::vector<std::string>& joints) {
@@ -77,6 +76,7 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 	return nullptr;
 }
 }  // namespace
+static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.execute_task_solution");
 
 namespace move_group {
 
