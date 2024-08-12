@@ -73,7 +73,7 @@ const moveit::core::JointModelGroup* findJointModelGroup(const moveit::core::Rob
 				return jmg;
 		}
 	}
-	RCLCPP_WARN(LOGGER, "Could not find JointModelGroup that actuates {}", fmt::join(joints, ", "));
+	RCLCPP_WARN(LOGGER, fmt::format("Could not find JointModelGroup that actuates {}", fmt::join(joints, ", ")));
 	return nullptr;
 }
 }  // namespace
