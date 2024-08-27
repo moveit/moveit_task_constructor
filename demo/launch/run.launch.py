@@ -21,7 +21,7 @@ def generate_launch_description():
                 get_package_share_directory("moveit_task_constructor_demo"),
                 "config",
                 "panda_config.yaml",
-                ),
+            ),
             moveit_config.robot_description,
             moveit_config.robot_description_semantic,
             moveit_config.robot_description_kinematics,
