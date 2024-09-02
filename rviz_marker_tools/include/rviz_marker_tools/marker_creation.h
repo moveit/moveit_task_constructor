@@ -1,8 +1,9 @@
 #pragma once
 
-#include <visualization_msgs/Marker.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Geometry>
+#include <geometry_msgs/PoseStamped.h>
+#include <std_msgs/ColorRGBA.h>
+#include <visualization_msgs/Marker.h>
 
 namespace urdf {
 class Geometry;
