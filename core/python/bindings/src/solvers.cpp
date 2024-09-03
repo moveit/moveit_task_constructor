@@ -100,11 +100,14 @@ void export_solvers(py::module& m) {
 	    .property<double>("max_step", "float: Limit any (single) joint change between two waypoints to this amount")
 	    .def(py::init<>());
 
+	const moveit::core::CartesianPrecision default_precision;
 	py::class_<moveit::core::CartesianPrecision>(m, "CartesianPrecision", "precision for Cartesian interpolation")
 	    .def(py::init([](double translational, double rotational, double max_resolution) {
 		         return new moveit::core::CartesianPrecision{ translational, rotational, max_resolution };
 	         }),
-	         py::arg("translational") = 0.001, py::arg("rotational") = 0.01, py::arg("max_resolution") = 1e-5)
+	         py::arg("translational") = default_precision.translational,
+	         py::arg("rotational") = default_precision.rotational,
+	         py::arg("max_resolution") = default_precision.max_resolution)
 	    .def_readwrite("translational", &moveit::core::CartesianPrecision::translational)
 	    .def_readwrite("rotational", &moveit::core::CartesianPrecision::rotational)
 	    .def_readwrite("max_resolution", &moveit::core::CartesianPrecision::max_resolution)

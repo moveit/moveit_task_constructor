@@ -54,7 +54,8 @@ CartesianPath::CartesianPath() {
 	auto& p = properties();
 	p.declare<geometry_msgs::PoseStamped>("ik_frame", "frame to move linearly (use for joint-space target)");
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
-	p.declare<moveit::core::CartesianPrecision>("precision", { 1e-3, 1e-2, 1e-4 }, "precision of linear path");
+	p.declare<moveit::core::CartesianPrecision>("precision", moveit::core::CartesianPrecision(),
+	                                            "precision of linear path");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
 	p.declare<kinematics::KinematicsQueryOptions>("kinematics_options", kinematics::KinematicsQueryOptions(),
 	                                              "KinematicsQueryOptions to pass to CartesianInterpolator");
