@@ -185,8 +185,10 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.effect_on_success = [this,
 		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
 		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			// Never modify joint state directly (only via robot trajectories)
 			scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
 			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
+			scene_diff.robot_state.is_diff = true;  // silent empty JointState msg error
 
 			if (!moveit::core::isEmpty(scene_diff)) {
 				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);

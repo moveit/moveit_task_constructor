@@ -46,6 +46,8 @@
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_pipeline/planning_pipeline.h>
 
+#include <scope_guard/scope_guard.hpp>
+
 #include <functional>
 
 using namespace std::chrono_literals;
@@ -214,11 +216,12 @@ void Task::init() {
 	// task expects its wrapped child to push to both ends, this triggers interface resolution
 	stages()->pimpl()->resolveInterface(InterfaceFlags({ GENERATE }));
 
-	// provide introspection instance to all stages
+	// provide introspection instance and preempt_requested to all stages
 	auto* introspection = impl->introspection_.get();
 	impl->traverseStages(
-	    [introspection](Stage& stage, int /*depth*/) {
+	    [introspection, impl](Stage& stage, int /*depth*/) {
 		    stage.pimpl()->setIntrospection(introspection);
+		    stage.pimpl()->setPreemptRequestedMember(&impl->preempt_requested_);
 		    return true;
 	    },
 	    1, UINT_MAX);
@@ -233,10 +236,17 @@ bool Task::canCompute() const {
 }
 
 void Task::compute() {
-	stages()->pimpl()->runCompute();
+	try {
+		stages()->pimpl()->runCompute();
+	} catch (const PreemptStageException& e) {
+		// do nothing, needed for early stop
+	}
 }
 
 moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
+	// ensure the preempt request is resetted once this method exits
+	auto guard = sg::make_scope_guard([this]() noexcept { this->resetPreemptRequest(); });
+
 	auto impl = pimpl();
 	init();
 
@@ -248,7 +258,6 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 		explainFailure();
 		return error_code;
 	};
-	impl->preempt_requested_ = false;
 	const double available_time = timeout();
 	const auto start_time = std::chrono::steady_clock::now();
 	while (canCompute() && (max_solutions == 0 || numSolutions() < max_solutions)) {
@@ -267,6 +276,10 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 
 void Task::preempt() {
 	pimpl()->preempt_requested_ = true;
+}
+
+void Task::resetPreemptRequest() {
+	pimpl()->preempt_requested_ = false;
 }
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {

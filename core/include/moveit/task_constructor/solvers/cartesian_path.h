@@ -39,6 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/robot_state/cartesian_interpolator.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -57,13 +58,17 @@ public:
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
-	void setJumpThreshold(double jump_threshold) { setProperty("jump_threshold", jump_threshold); }
+	void setPrecision(const moveit::core::CartesianPrecision& precision) { setProperty("precision", precision); }
+	template <typename T = float>
+	void setJumpThreshold(double) {
+		static_assert(std::is_integral<T>::value, "setJumpThreshold() is deprecated. Replace with setPrecision.");
+	}
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }
 
 	[[deprecated("Replace with setMaxVelocityScalingFactor")]]  // clang-format off
-	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }
+	void setMaxVelocityScaling(double factor) { setMaxVelocityScalingFactor(factor); }  // clang-format on
 	[[deprecated("Replace with setMaxAccelerationScalingFactor")]]  // clang-format off
-	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }
+	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }  // clang-format on
 
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
@@ -72,8 +77,8 @@ public:
 	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 	Result plan(const planning_scene::PlanningSceneConstPtr& from, const moveit::core::LinkModel& link,
-	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target, const moveit::core::JointModelGroup* jmg,
-	            double timeout, robot_trajectory::RobotTrajectoryPtr& result,
+	            const Eigen::Isometry3d& offset, const Eigen::Isometry3d& target,
+	            const moveit::core::JointModelGroup* jmg, double timeout, robot_trajectory::RobotTrajectoryPtr& result,
 	            const moveit_msgs::msg::Constraints& path_constraints = moveit_msgs::msg::Constraints()) override;
 
 	std::string getPlannerId() const override { return "CartesianPath"; }

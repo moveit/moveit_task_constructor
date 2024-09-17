@@ -191,6 +191,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	double max_distance = props.get<double>("max_distance");
 	double min_distance = props.get<double>("min_distance");
+
+	// if min_distance == max_distance, resort to moving full distance (negative min_distance)
+	if (max_distance > 0.0 && std::fabs(max_distance - min_distance) < std::numeric_limits<double>::epsilon())
+		min_distance = -1.0;
+
 	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
@@ -300,7 +305,8 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			comment = result.message;
 		solution.setPlannerId(planner_->getPlannerId());
 
-		if (robot_trajectory) {  // the following requires a robot_trajectory returned from planning
+		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {  // the following requires a robot_trajectory
+			                                                                  // returned from planning
 			moveit::core::RobotStatePtr& reached_state = robot_trajectory->getLastWayPointPtr();
 			reached_state->updateLinkTransforms();
 			const Eigen::Isometry3d& reached_pose = reached_state->getGlobalLinkTransform(link) * offset;
@@ -335,7 +341,7 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 	}
 
 	// store result
-	if (robot_trajectory) {
+	if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {
 		scene->setCurrentState(robot_trajectory->getLastWayPoint());
 		if (dir == Interface::BACKWARD)
 			robot_trajectory->reverse();

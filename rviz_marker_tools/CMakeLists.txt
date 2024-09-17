@@ -11,7 +11,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
 	geometry_msgs
 	rclcpp
 	tf2_eigen
-	urdfdom
+	urdfdom_headers
+	std_msgs
 	visualization_msgs
 )
 

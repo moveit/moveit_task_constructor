@@ -14,10 +14,14 @@ def setUpModule():
     rclcpp.init()
 
 
+def tearDownModule():
+    rclcpp.shutdown()
+
+
 # When py_binding_tools and MTC are compiled with different pybind11 versions,
 # the corresponding classes are not interoperable.
 def check_pybind11_incompatibility():
-    rclcpp.init([])
+    rclcpp.init()
     node = rclcpp.Node("dummy")
     try:
         core.PipelinePlanner(node)
@@ -33,8 +37,8 @@ incompatible_pybind11_msg = "MoveIt and MTC use incompatible pybind11 versions"
 
 
 class TestPropertyMap(unittest.TestCase):
+
     def setUp(self):
-        self.node = rclcpp.Node("test_mtc_props")
         self.props = core.PropertyMap()
 
     def _check(self, name, value):
@@ -54,7 +58,8 @@ class TestPropertyMap(unittest.TestCase):
 
     @unittest.skipIf(incompatible_pybind11, incompatible_pybind11_msg)
     def test_assign_in_reference(self):
-        planner = core.PipelinePlanner(self.node)
+        node = rclcpp.Node("test_mtc_props")
+        planner = core.PipelinePlanner(node)
         props = planner.properties
 
         props["goal_joint_tolerance"] = 3.14

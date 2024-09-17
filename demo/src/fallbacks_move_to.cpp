@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
 
 	// setup solvers
 	auto cartesian = std::make_shared<solvers::CartesianPath>();
-	cartesian->setJumpThreshold(2.0);
 
 	const auto ptp = [&node]() {
 		auto pp{ std::make_shared<solvers::PipelinePlanner>(node, "pilz_industrial_motion_planner", "PTP") };

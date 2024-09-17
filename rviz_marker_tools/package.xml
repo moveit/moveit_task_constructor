@@ -11,12 +11,15 @@
 	<buildtool_depend>eigen3_cmake_module</buildtool_depend>
 	<buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
 	<build_depend>eigen</build_depend>
+	<build_export_depend>eigen</build_export_depend>
+
+	<build_depend>liburdfdom-headers-dev</build_depend>
 
 	<depend>geometry_msgs</depend>
 	<depend>moveit_common</depend>
 	<depend>rclcpp</depend>
 	<depend>tf2_eigen</depend>
-	<depend>urdfdom</depend>
+	<depend>std_msgs</depend>
 	<depend>visualization_msgs</depend>
 
 	<export>

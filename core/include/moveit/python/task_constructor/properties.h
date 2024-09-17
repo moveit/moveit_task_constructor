@@ -64,9 +64,9 @@ public:
 	template <typename PropertyType, typename... Extra>
 	class_& property(const char* name, const Extra&... extra) {
 		PropertyConverter<PropertyType>();  // register corresponding property converter
-		auto getter = [name](const type_& self) {
-			const moveit::task_constructor::PropertyMap& props = self.properties();
-			return props.get<PropertyType>(name);
+		auto getter = [name](type_& self) -> PropertyType& {
+			moveit::task_constructor::PropertyMap& props = self.properties();
+			return const_cast<PropertyType&>(props.get<PropertyType>(name));
 		};
 		auto setter = [name](type_& self, const PropertyType& value) {
 			moveit::task_constructor::PropertyMap& props = self.properties();

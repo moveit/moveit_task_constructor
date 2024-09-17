@@ -102,7 +102,8 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , cost_term_{ std::make_unique<CostTerm>() }
   , total_compute_time_{}
   , parent_{ nullptr }
-  , introspection_{ nullptr } {}
+  , introspection_{ nullptr }
+  , preempt_requested_{ nullptr } {}
 
 StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
 	assert(typeid(*this) == typeid(other));
