@@ -38,7 +38,6 @@
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit/task_constructor/solvers/multi_planner.h>
 #include <moveit_msgs/msg/workspace_parameters.hpp>
-#include <fmt/core.h>
 #include "utils.h"
 
 namespace py = pybind11;
@@ -99,22 +98,6 @@ void export_solvers(py::module& m) {
 	    .property<double>("max_step", "float: Limit any (single) joint change between two waypoints to this amount")
 	    .def(py::init<>());
 
-	const moveit::core::CartesianPrecision default_precision;
-	py::class_<moveit::core::CartesianPrecision>(m, "CartesianPrecision", "precision for Cartesian interpolation")
-	    .def(py::init([](double translational, double rotational, double max_resolution) {
-		         return new moveit::core::CartesianPrecision{ translational, rotational, max_resolution };
-	         }),
-	         py::arg("translational") = default_precision.translational,
-	         py::arg("rotational") = default_precision.rotational,
-	         py::arg("max_resolution") = default_precision.max_resolution)
-	    .def_readwrite("translational", &moveit::core::CartesianPrecision::translational)
-	    .def_readwrite("rotational", &moveit::core::CartesianPrecision::rotational)
-	    .def_readwrite("max_resolution", &moveit::core::CartesianPrecision::max_resolution)
-	    .def("__str__", [](const moveit::core::CartesianPrecision& self) {
-		    return fmt::format("CartesianPrecision(translational={}, rotational={}, max_resolution={}",
-		                       self.translational, self.rotational, self.max_resolution);
-	    });
-
 	properties::class_<CartesianPath, PlannerInterface>(m, "CartesianPath", R"(
 			Perform linear interpolation between Cartesian poses.
 		 	Fails on collision along the interpolation path. There is no obstacle avoidance. ::
@@ -124,12 +107,15 @@ void export_solvers(py::module& m) {
 				# Instantiate Cartesian-space interpolation planner
 				cartesianPlanner = core.CartesianPath()
 				cartesianPlanner.step_size = 0.01
-				cartesianPlanner.precision.translational = 0.001
+				cartesianPlanner.jump_threshold = 0.0  # effectively disable jump threshold.
 		)")
 	    .property<double>("step_size", "float: Limit the Cartesian displacement between consecutive waypoints "
 	                                   "In contrast to joint-space interpolation, the Cartesian planner can also "
 	                                   "succeed when only a fraction of the linear path was feasible.")
-	    .property<moveit::core::CartesianPrecision>("precision", "Cartesian interpolation precision")
+	    .property<double>(
+	        "jump_threshold",
+	        "float: Limit joint displacement between consecutive waypoints, thus preventing jumps in joint space. "
+	        "This values specifies the fraction of mean acceptable joint motion per step.")
 	    .property<double>("min_fraction", "float: Fraction of overall distance required to succeed.")
 	    .def(py::init<>());
 
