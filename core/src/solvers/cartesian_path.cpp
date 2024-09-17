@@ -60,8 +60,7 @@ CartesianPath::CartesianPath() {
 	auto& p = properties();
 	p.declare<geometry_msgs::msg::PoseStamped>("ik_frame", "frame to move linearly (use for joint-space target)");
 	p.declare<double>("step_size", 0.01, "step size between consecutive waypoints");
-	p.declare<moveit::core::CartesianPrecision>("precision", moveit::core::CartesianPrecision(),
-	                                            "precision of linear path");
+	p.declare<double>("jump_threshold", 1.5, "acceptable fraction of mean joint motion per step");
 	p.declare<double>("min_fraction", 1.0, "fraction of motion required for success");
 	p.declare<kinematics::KinematicsQueryOptions>("kinematics_options", kinematics::KinematicsQueryOptions(),
 	                                              "KinematicsQueryOptions to pass to CartesianInterpolator");
@@ -121,7 +120,7 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	double achieved_fraction = moveit::core::CartesianInterpolator::computeCartesianPath(
 	    &(sandbox_scene->getCurrentStateNonConst()), jmg, trajectory, &link, target, true,
 	    moveit::core::MaxEEFStep(props.get<double>("step_size")),
-	    props.get<moveit::core::CartesianPrecision>("precision"), is_valid,
+	    moveit::core::JumpThreshold(props.get<double>("jump_threshold")), is_valid,
 	    props.get<kinematics::KinematicsQueryOptions>("kinematics_options"),
 	    props.get<kinematics::KinematicsBase::IKCostFn>("kinematics_cost_fn"), offset);
 
