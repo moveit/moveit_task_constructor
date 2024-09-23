@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Eigen3 REQUIRED)
 
+# lint ignore is needed to support ROS distributions which also define urdfdom_headers in rosdep (e.g., Debian ROS packages)
+#catkin_lint: ignore missing_depend[pkg=urdfdom_headers]
 find_package(urdfdom_headers REQUIRED)
 
 catkin_package(
