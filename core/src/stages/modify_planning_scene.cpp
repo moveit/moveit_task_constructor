@@ -39,9 +39,9 @@
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_terms.h>
+#include <moveit/task_constructor/fmt_p.h>
 
 #include <moveit/planning_scene/planning_scene.h>
-#include <fmt/core.h>
 
 namespace moveit {
 namespace task_constructor {

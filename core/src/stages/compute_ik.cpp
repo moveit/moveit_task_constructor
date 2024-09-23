@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
+#include <moveit/task_constructor/fmt_p.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_state/conversions.h>
@@ -48,7 +49,6 @@
 #include <functional>
 #include <iterator>
 #include <ros/console.h>
-#include <fmt/core.h>
 
 namespace moveit {
 namespace task_constructor {

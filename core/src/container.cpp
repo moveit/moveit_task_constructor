@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/merge.h>
+#include <moveit/task_constructor/fmt_p.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
@@ -46,7 +47,6 @@
 #include <iostream>
 #include <algorithm>
 #include <boost/range/adaptor/reversed.hpp>
-#include <fmt/core.h>
 #include <functional>
 
 using namespace std::placeholders;
