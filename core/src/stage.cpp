@@ -38,11 +38,11 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit/task_constructor/fmt_p.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <ros/console.h>
-#include <fmt/core.h>
 
 #include <iostream>
 #include <iomanip>

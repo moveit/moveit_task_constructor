@@ -37,8 +37,7 @@
 */
 
 #include <moveit/task_constructor/properties.h>
-#include <fmt/core.h>
-#include <fmt/ostream.h>
+#include <moveit/task_constructor/fmt_p.h>
 #include <functional>
 #include <ros/console.h>
 

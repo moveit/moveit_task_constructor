@@ -37,8 +37,8 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit/task_constructor/solvers/multi_planner.h>
+#include <moveit/task_constructor/fmt_p.h>
 #include <moveit_msgs/WorkspaceParameters.h>
-#include <fmt/core.h>
 #include "utils.h"
 
 namespace py = pybind11;

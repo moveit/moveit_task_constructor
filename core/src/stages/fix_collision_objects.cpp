@@ -38,6 +38,7 @@
 
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
 #include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/fmt_p.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/task_constructor/cost_terms.h>
@@ -46,7 +47,6 @@
 #include <Eigen/Geometry>
 #include <tf2_eigen/tf2_eigen.h>
 #include <ros/console.h>
-#include <fmt/core.h>
 
 namespace vm = visualization_msgs;
 namespace cd = collision_detection;
