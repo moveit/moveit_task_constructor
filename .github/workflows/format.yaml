@@ -16,9 +16,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install clang-format-12
-        run: sudo apt-get install clang-format-12
-      - uses: pre-commit/action@v3.0.1
+      - name: Install clang-format-14
+        run: sudo apt-get install clang-format-14
+      - uses: rhaschke/pre-commit-action@main
         id: precommit
       - name: Upload pre-commit changes
         if: failure() && steps.precommit.outcome == 'failure'

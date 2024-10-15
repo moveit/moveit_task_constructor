@@ -121,7 +121,7 @@ void attachObject(PlanningScene& scene, const std::string& object, const std::st
 	moveit_msgs::msg::AttachedCollisionObject obj;
 	obj.link_name = link;
 	obj.object.operation = attach ? static_cast<int8_t>(moveit_msgs::msg::CollisionObject::ADD) :
-                                   static_cast<int8_t>(moveit_msgs::msg::CollisionObject::REMOVE);
+	                                static_cast<int8_t>(moveit_msgs::msg::CollisionObject::REMOVE);
 	obj.object.id = object;
 	scene.processAttachedCollisionObjectMsg(obj);
 }
