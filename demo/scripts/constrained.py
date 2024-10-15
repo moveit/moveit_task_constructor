@@ -38,21 +38,35 @@ co.operation = co.ADD
 
 mps = stages.ModifyPlanningScene("modify planning scene")
 mps.addObject(co)
+
+co.id = "object"
+co.primitives[0].type = SolidPrimitive.BOX
+co.primitives[0].dimensions = [0.1, 0.05, 0.03]
+pose = co.primitive_poses[0]
+pose.position.x = 0.30702
+pose.position.y = 0.0
+pose.position.z = 0.485
+pose.orientation.x = pose.orientation.w = 0.70711  # 90° about x
+mps.addObject(co)
+mps.attachObjects(["object"], "panda_hand")
+
 task.add(mps)
 
 move = stages.MoveRelative("y +0.4", planner)
+move.timeout = 5
 move.group = group
 header = Header(frame_id="world")
 move.setDirection(Vector3Stamped(header=header, vector=Vector3(0, 0.4, 0)))
 
 constraints = Constraints()
 oc = OrientationConstraint()
+oc.parameterization = oc.ROTATION_VECTOR
 oc.header.frame_id = "world"
-oc.link_name = "panda_hand"
-oc.orientation.x = 1.0
-oc.absolute_x_axis_tolerance = 0.01
-oc.absolute_y_axis_tolerance = 0.01
-oc.absolute_z_axis_tolerance = 0.01
+oc.link_name = "object"
+oc.orientation.x = oc.orientation.w = 0.70711  # 90° about x
+oc.absolute_x_axis_tolerance = 0.1
+oc.absolute_y_axis_tolerance = 0.1
+oc.absolute_z_axis_tolerance = 3.14
 oc.weight = 1.0
 constraints.orientation_constraints.append(oc)
 move.path_constraints = constraints
