@@ -5,7 +5,8 @@ import rclcpp
 from moveit.task_constructor import core, stages
 from moveit_commander import PlanningSceneInterface
 from geometry_msgs.msg import PoseStamped, TwistStamped
-import time
+from moveit_msgs.msg import Constraints, OrientationConstraint
+import math, time
 
 rclcpp.init()
 node = rclcpp.Node("mtc_tutorial")
@@ -18,7 +19,7 @@ eef = "hand"
 
 # [pickAndPlaceTut2]
 # Specify object parameters
-object_name = "grasp_object"
+object_name = "object"
 object_radius = 0.02
 
 # Start with a clear planning scene
@@ -29,7 +30,7 @@ psi.remove_world_object()
 # Grasp object properties
 objectPose = PoseStamped()
 objectPose.header.frame_id = "world"
-objectPose.pose.orientation.x = 1.0
+objectPose.pose.orientation.w = 1.0
 objectPose.pose.position.x = 0.30702
 objectPose.pose.position.y = 0.0
 objectPose.pose.position.z = 0.285
@@ -56,7 +57,7 @@ pipeline = core.PipelinePlanner(node, "ompl", "RRTConnectkConfigDefault")
 planners = [(arm, pipeline)]
 
 # Connect the two stages
-task.add(stages.Connect("connect1", planners))
+task.add(stages.Connect("connect", planners))
 # [initAndConfigConnect]
 # [pickAndPlaceTut4]
 
@@ -64,7 +65,7 @@ task.add(stages.Connect("connect1", planners))
 # [initAndConfigGenerateGraspPose]
 # The grasp generator spawns a set of possible grasp poses around the object
 grasp_generator = stages.GenerateGraspPose("Generate Grasp Pose")
-grasp_generator.angle_delta = 0.2
+grasp_generator.angle_delta = math.pi / 2
 grasp_generator.pregrasp = "open"
 grasp_generator.grasp = "close"
 grasp_generator.setMonitoredStage(task["current"])  # Generate solutions for all initial states
@@ -78,7 +79,8 @@ simpleGrasp = stages.SimpleGrasp(grasp_generator, "Grasp")
 # Set frame for IK calculation in the center between the fingers
 ik_frame = PoseStamped()
 ik_frame.header.frame_id = "panda_hand"
-ik_frame.pose.position.z = 0.1034
+ik_frame.pose.position.z = 0.1034  # tcp between fingers
+ik_frame.pose.orientation.x = 1.0  # grasp from top
 simpleGrasp.setIKFrame(ik_frame)
 # [initAndConfigSimpleGrasp]
 # [pickAndPlaceTut6]
@@ -109,16 +111,35 @@ task.add(pick)
 # [initAndConfigPick]
 # [pickAndPlaceTut8]
 
+# Define orientation constraint to keep the object upright
+oc = OrientationConstraint()
+oc.parameterization = oc.ROTATION_VECTOR
+oc.header.frame_id = "world"
+oc.link_name = "object"
+oc.orientation.w = 1
+oc.absolute_x_axis_tolerance = 0.1
+oc.absolute_y_axis_tolerance = 0.1
+oc.absolute_z_axis_tolerance = math.pi
+oc.weight = 1.0
+
+constraints = Constraints()
+constraints.name = "object:upright"
+constraints.orientation_constraints.append(oc)
+
 # [pickAndPlaceTut9]
 # Connect the Pick stage with the following Place stage
-task.add(stages.Connect("connect2", planners))
+con = stages.Connect("connect", planners)
+con.path_constraints = constraints
+task.add(con)
 # [pickAndPlaceTut9]
 
 # [pickAndPlaceTut10]
 # [initAndConfigGeneratePlacePose]
 # Define the pose that the object should have after placing
 placePose = objectPose
-placePose.pose.position.y += 0.2  # shift object by 20cm along y axis
+placePose.pose.position.x = -0.2
+placePose.pose.position.y = -0.6
+placePose.pose.position.z = 0.0
 
 # Generate Cartesian place poses for the object
 place_generator = stages.GeneratePlacePose("Generate Place Pose")

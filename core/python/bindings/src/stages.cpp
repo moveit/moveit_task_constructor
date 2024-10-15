@@ -328,6 +328,11 @@ void export_stages(pybind11::module& m) {
 		)")
 	    .property<stages::Connect::MergeMode>("merge_mode", "Defines the merge strategy to use")
 	    .property<double>("max_distance", "maximally accepted distance between end and goal sate")
+	    .property<moveit_msgs::msg::Constraints>("path_constraints", R"(
+			Constraints_: These are the path constraints.
+
+			.. _Constraints: https://docs.ros.org/en/api/moveit_msgs/html/msg/Constraints.html
+		)")
 	    .def(py::init<const std::string&, const Connect::GroupPlannerVector&>(),
 	         "name"_a = std::string("connect"), "planners"_a);
 

@@ -59,14 +59,15 @@ jobs:
           submodules: recursive
 
       - name: Cache ccache
-        uses: actions/cache@v4
+        uses: rhaschke/cache@main
         with:
-          save-always: true
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}-${{ github.run_id }}
           restore-keys: |
             ccache-${{ env.CACHE_PREFIX }}-${{ github.sha }}
             ccache-${{ env.CACHE_PREFIX }}
+        env:
+          GHA_CACHE_SAVE: always
 
       - id: ici
         name: Run industrial_ci
