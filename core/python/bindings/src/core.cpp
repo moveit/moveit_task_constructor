@@ -412,6 +412,7 @@ void export_core(pybind11::module& m) {
 	    .def_property_readonly("failures", &Task::failures, "Solutions: Failed Solutions of the stage (read-only)")
 	    .def_property("name", &Task::name, &Task::setName, "str: name of the task displayed e.g. in rviz")
 
+	    .def("setRobotModel", &Task::setRobotModel, "robot_model"_a, "Set the robot model for the task")
 	    .def("loadRobotModel", &Task::loadRobotModel, "node"_a, "robot_description"_a = "robot_description",
 	         "Load robot model from given ROS parameter")
 	    .def("getRobotModel", &Task::getRobotModel)
