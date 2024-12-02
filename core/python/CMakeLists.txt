@@ -1,7 +1,7 @@
 # We rely on pybind11's smart_holder branch imported pybind11 via git submodule
 
 # pybind11 must use the ROS python version
-set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION_STRING})
+set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION})
 
 # Use minimum-size optimization for pybind11 bindings
 add_compile_options("-Os")

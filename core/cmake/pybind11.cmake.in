@@ -1,5 +1,5 @@
 # pybind11 must use the ROS python version
-set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION_STRING})
+set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION})
 
 if(@INSTALLSPACE@)
 	include(${CMAKE_CURRENT_LIST_DIR}/pybind11Config.cmake)
