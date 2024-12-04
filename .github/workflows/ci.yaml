@@ -19,6 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         env:
+          - IMAGE: jammy-ci
           - IMAGE: noetic-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
@@ -38,7 +39,7 @@ jobs:
       CATKIN_LINT: true
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
       DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
-      UNDERLAY: /root/ws_moveit/install
+      UNDERLAY: ${{ matrix.env.IMAGE != 'jammy-ci' && '/root/ws_moveit/install' || '' }}
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: ${{ github.workspace }}/.work
