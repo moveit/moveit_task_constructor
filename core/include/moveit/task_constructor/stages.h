@@ -51,3 +51,4 @@
 #include "stages/move_relative.h"
 #include "stages/move_to.h"
 #include "stages/predicate_filter.h"
+#include "stages/generate_random_pose.h"

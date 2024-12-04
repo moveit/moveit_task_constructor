@@ -57,6 +57,7 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(Connect)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(FixCollisionObjects)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(GenerateGraspPose)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(GeneratePlacePose)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(GenerateRandomPose)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(GeneratePose)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(Pick)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(Place)
@@ -404,6 +405,27 @@ void export_stages(pybind11::module& m) {
 			.. _PoseStamped: https://docs.ros.org/en/api/geometry_msgs/html/msg/PoseStamped.html
 		)")
 	    .def(py::init<const std::string&>(), "name"_a);
+
+	py::enum_<GenerateRandomPose::PoseDimension>(m, "PoseDimension", R"(
+      Define the dimensions of a pose that can be randomized.
+    )")
+      .value("X", GenerateRandomPose::PoseDimension::X, "X dimension")
+      .value("Y", GenerateRandomPose::PoseDimension::Y, "Y dimension")
+      .value("Z", GenerateRandomPose::PoseDimension::Z, "Z dimension")
+      .value("ROLL", GenerateRandomPose::PoseDimension::ROLL, "Roll dimension")
+      .value("PITCH", GenerateRandomPose::PoseDimension::PITCH, "Pitch dimension")
+      .value("YAW", GenerateRandomPose::PoseDimension::YAW, "Yaw dimension");
+
+	properties::class_<GenerateRandomPose, GeneratePose>(m, "GenerateRandomPose", R"(
+			Monitoring generator stage which can be used to generate random poses, based on solutions provided
+			by the monitored stage and the specified pose dimension samplers.
+		)")
+	    .def(py::init<const std::string&>(), "name"_a)
+	    .def("set_max_solutions", &GenerateRandomPose::setMaxSolutions, "max_solutions"_a)
+	    .def("sample_dimension", [](GenerateRandomPose& self, const GenerateRandomPose::PoseDimension pose_dimension,
+                                 const double width) {
+        self.sampleDimension<std::uniform_real_distribution>(pose_dimension, width);
+      }, "pose_dimension"_a, "width"_a);
 
 	properties::class_<Pick, SerialContainer>(m, "Pick", R"(
 			The Pick stage is a specialization of the PickPlaceBase class, which
