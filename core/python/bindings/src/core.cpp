@@ -414,6 +414,7 @@ void export_core(pybind11::module& m) {
 
 	    .def("loadRobotModel", &Task::loadRobotModel, "node"_a, "robot_description"_a = "robot_description",
 	         "Load robot model from given ROS parameter")
+	    .def("setRobotModel", &Task::setRobotModel, "robot_model"_a, "Set the robot model for the task")
 	    .def("getRobotModel", &Task::getRobotModel)
 	    .def("enableIntrospection", &Task::enableIntrospection, "enabled"_a = true,
 	         "Enable publishing intermediate results for inspection in ``rviz``")

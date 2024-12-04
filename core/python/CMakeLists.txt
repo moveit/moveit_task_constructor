@@ -2,6 +2,8 @@
 
 find_package(ament_cmake_python REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development)
+# pybind11 must use the ROS python version
+set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION})
 
 # Use minimum-size optimization for pybind11 bindings
 add_compile_options("-Os")
