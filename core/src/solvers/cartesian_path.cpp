@@ -81,7 +81,7 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	Eigen::Isometry3d ik_pose_world;
 
 	if (!utils::getRobotTipForFrame(props.property("ik_frame"), *from, jmg, error_msg, link, ik_pose_world))
-		return { false, error_msg };
+		return { false, "CartesianPath: " + error_msg };
 
 	Eigen::Isometry3d offset = from->getCurrentState().getGlobalLinkTransform(link).inverse() * ik_pose_world;
 
@@ -127,7 +127,7 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 		                          props.get<double>("max_acceleration_scaling_factor"));
 
 	if (achieved_fraction < props.get<double>("min_fraction")) {
-		return { false, "min_fraction not met. Achieved: " + std::to_string(achieved_fraction) };
+		return { false, "CartesianPath: min_fraction not met. Achieved: " + std::to_string(achieved_fraction) };
 	}
 	return { true, "achieved fraction: " + std::to_string(achieved_fraction) };
 }
