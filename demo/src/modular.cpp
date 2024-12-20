@@ -43,7 +43,7 @@
 #include <moveit/task_constructor/container.h>
 
 #include <rclcpp/rclcpp.hpp>
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene/planning_scene.hpp>
 
 using namespace moveit::task_constructor;
 

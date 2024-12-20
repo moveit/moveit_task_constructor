@@ -44,7 +44,7 @@
 
 #include <Eigen/Geometry>
 
-#include <moveit/macros/class_forward.h>
+#include <moveit/macros/class_forward.hpp>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
