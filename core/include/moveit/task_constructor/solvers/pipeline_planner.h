@@ -43,7 +43,7 @@
 #include <moveit/planning_pipeline_interfaces/solution_selection_functions.hpp>
 #include <moveit/planning_pipeline_interfaces/stopping_criterion_functions.hpp>
 #include <rclcpp/node.hpp>
-#include <moveit/macros/class_forward.h>
+#include <moveit/macros/class_forward.hpp>
 
 namespace planning_pipeline {
 MOVEIT_CLASS_FORWARD(PlanningPipeline);

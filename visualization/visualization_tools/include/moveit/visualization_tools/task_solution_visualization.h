@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <moveit/macros/class_forward.h>
+#include <moveit/macros/class_forward.hpp>
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
 #include <QObject>
 #include <boost/thread/mutex.hpp>

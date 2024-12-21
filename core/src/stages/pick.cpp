@@ -5,7 +5,7 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/stages/move_relative.h>
 
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene/planning_scene.hpp>
 
 namespace moveit {
 namespace task_constructor {

@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/fmt_p.h>
 
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_scene/planning_scene.hpp>
 
 namespace moveit {
 namespace task_constructor {

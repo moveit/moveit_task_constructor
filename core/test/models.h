@@ -1,6 +1,6 @@
 #pragma once
 
-#include <moveit/macros/class_forward.h>
+#include <moveit/macros/class_forward.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 namespace moveit {

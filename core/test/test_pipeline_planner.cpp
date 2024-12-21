@@ -1,7 +1,7 @@
 #include "models.h"
 
 #include <gtest/gtest.h>
-#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_model/robot_model.hpp>
 
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 

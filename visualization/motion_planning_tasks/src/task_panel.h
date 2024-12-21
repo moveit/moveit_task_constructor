@@ -39,7 +39,7 @@
 #pragma once
 
 #include <rviz_common/panel.hpp>
-#include <moveit/macros/class_forward.h>
+#include <moveit/macros/class_forward.hpp>
 #include <QModelIndex>
 class QItemSelection;
 class QIcon;
