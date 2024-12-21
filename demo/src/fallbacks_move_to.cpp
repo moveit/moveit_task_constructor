@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
 	try {
 		t.plan();
 	} catch (const InitStageException& e) {
-		std::cout << e << std::endl;
+		std::cout << e << '\n';
 	}
 
 	ros::waitForShutdown();

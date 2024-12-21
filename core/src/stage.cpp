@@ -90,9 +90,9 @@ const char* InitStageException::what() const noexcept {
 }
 
 std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
-	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":" << std::endl;
+	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":\n ";
 	for (const auto& pair : e.errors_)
-		os << pair.first->name() << ": " << pair.second << std::endl;
+		os << pair.first->name() << ": " << pair.second << '\n';
 	return os;
 }
 
@@ -840,10 +840,10 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 			os << (updated ? " !" : " +");
 		else
 			os << "  ";
-		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << std::endl;
+		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << '\n';
 	}
 	os << std::setw(15) << " ";
-	os << pendingPairsPrinter() << std::endl;
+	os << pendingPairsPrinter() << '\n';
 #endif
 }
 
