@@ -28,7 +28,7 @@ constexpr double EPS{ 5e-5 };
 template <typename Planner>
 std::shared_ptr<Planner> create(const rclcpp::Node::SharedPtr&);
 template <>
-solvers::CartesianPathPtr create<solvers::CartesianPath>(const rclcpp::Node::SharedPtr&) {
+solvers::CartesianPathPtr create<solvers::CartesianPath>(const rclcpp::Node::SharedPtr& /*unused*/) {
 	return std::make_shared<solvers::CartesianPath>();
 }
 template <>

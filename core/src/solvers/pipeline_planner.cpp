@@ -86,7 +86,7 @@ bool PipelinePlanner::setPlannerId(const std::string& pipeline_name, const std::
 		return false;
 	}
 	it->second = planner_id;
-	properties().set("pipeline_id_planner_id_map", std::move(map));
+	properties().set("pipeline_id_planner_id_map", map);
 	return true;
 }
 
@@ -111,11 +111,12 @@ void PipelinePlanner::init(const core::RobotModelConstPtr& robot_model) {
 		}
 
 		std::vector<std::string> pipeline_names;
+		pipeline_names.reserve(map.size());
 		for (const auto& pipeline_name_planner_id_pair : map) {
 			pipeline_names.push_back(pipeline_name_planner_id_pair.first);
 		}
-		planning_pipelines_ = moveit::planning_pipeline_interfaces::createPlanningPipelineMap(std::move(pipeline_names),
-		                                                                                      robot_model, node_);
+		planning_pipelines_ =
+		    moveit::planning_pipeline_interfaces::createPlanningPipelineMap(pipeline_names, robot_model, node_);
 		// Check if it is still empty
 		if (planning_pipelines_.empty()) {
 			throw std::runtime_error("Failed to initialize PipelinePlanner: Could not create any valid pipeline");
