@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
 		if (task.plan())
 			task.introspection().publishSolution(*task.solutions().front());
 	} catch (const InitStageException& ex) {
-		std::cerr << "planning failed with exception" << std::endl << ex << task;
+		std::cerr << "planning failed with exception\n" << ex << task;
 	}
 
 	// keep alive for interactive inspection in rviz

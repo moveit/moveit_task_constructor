@@ -206,7 +206,7 @@ void Introspection::publishAllSolutions(bool wait) {
 		publishSolution(*solution);
 
 		if (wait) {
-			std::cout << "Press <Enter> to continue ..." << std::endl;
+			std::cout << "Press <Enter> to continue ...\n";
 			int ch = getchar();
 			if (ch == 'q' || ch == 'Q')
 				break;

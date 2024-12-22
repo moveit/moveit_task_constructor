@@ -11,7 +11,7 @@ class Geometry;
 
 namespace rviz_marker_tools {
 
-enum Color
+enum Color : uint8_t
 {
 	BLACK = 0,
 	BROWN = 1,

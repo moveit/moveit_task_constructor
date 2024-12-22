@@ -67,7 +67,7 @@ protected:
 	bool compatible(const InterfaceState& from_state, const InterfaceState& to_state) const override;
 
 public:
-	enum MergeMode
+	enum MergeMode : uint8_t
 	{
 		SEQUENTIAL = 0,
 		WAYPOINTS = 1

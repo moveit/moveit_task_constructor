@@ -70,7 +70,7 @@ public:
 class TrajectoryCostTerm : public CostTerm
 {
 public:
-	enum class Mode
+	enum class Mode : uint8_t
 	{
 		AUTO /* TRAJECTORY, or START_INTERFACE if no trajectory is given */,
 		START_INTERFACE,

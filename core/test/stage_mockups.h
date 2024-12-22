@@ -65,7 +65,7 @@ struct GeneratorMockup : public Generator
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 	bool canCompute() const override;
 	void compute() override;
-	virtual void reset() override { runs_ = 0; };
+	void reset() override { runs_ = 0; };
 };
 
 struct MonitoringGeneratorMockup : public MonitoringGenerator
@@ -82,7 +82,7 @@ struct MonitoringGeneratorMockup : public MonitoringGenerator
 	bool canCompute() const override { return false; }
 	void compute() override {}
 	void onNewSolution(const SolutionBase& s) override;
-	virtual void reset() override { runs_ = 0; };
+	void reset() override { runs_ = 0; };
 };
 
 struct ConnectMockup : public Connecting
@@ -99,7 +99,7 @@ struct ConnectMockup : public Connecting
 	using Connecting::compatible;  // make this accessible for testing
 
 	void compute(const InterfaceState& from, const InterfaceState& to) override;
-	virtual void reset() override { runs_ = 0; };
+	void reset() override { runs_ = 0; };
 };
 
 struct PropagatorMockup : public PropagatingEitherWay
@@ -116,7 +116,7 @@ struct PropagatorMockup : public PropagatingEitherWay
 
 	void computeForward(const InterfaceState& from) override;
 	void computeBackward(const InterfaceState& to) override;
-	virtual void reset() override { runs_ = 0; };
+	void reset() override { runs_ = 0; };
 };
 
 struct ForwardMockup : public PropagatorMockup

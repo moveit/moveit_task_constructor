@@ -60,7 +60,7 @@ public:
 	void setStepSize(double step_size) { setProperty("step_size", step_size); }
 	void setPrecision(const moveit::core::CartesianPrecision& precision) { setProperty("precision", precision); }
 	template <typename T = float>
-	void setJumpThreshold(double) {
+	void setJumpThreshold(double /*unused*/) {
 		static_assert(std::is_integral<T>::value, "setJumpThreshold() is deprecated. Replace with setPrecision.");
 	}
 	void setMinFraction(double min_fraction) { setProperty("min_fraction", min_fraction); }

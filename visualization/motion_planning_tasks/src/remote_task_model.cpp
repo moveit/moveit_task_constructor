@@ -55,7 +55,7 @@ using namespace moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-enum NodeFlag
+enum NodeFlag : uint8_t
 {
 	WAS_VISITED = 0x01,  // indicate that model should emit change notifications
 	NAME_CHANGED = 0x02,  // indicate that name was manually changed
