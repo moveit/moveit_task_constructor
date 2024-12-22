@@ -57,7 +57,7 @@ public:
 	/** Function signature for pose dimension samplers.
 	 * The input parameter is the seed, the returned value is the sampling result. */
 	using PoseDimensionSampler = std::function<double(double)>;
-	enum PoseDimension
+	enum PoseDimension : uint8_t
 	{
 		X,
 		Y,

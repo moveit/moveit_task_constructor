@@ -72,7 +72,7 @@ MOVEIT_CLASS_FORWARD(RobotTrajectory);
 namespace moveit {
 namespace task_constructor {
 
-enum InterfaceFlag
+enum InterfaceFlag : uint8_t
 {
 	READS_START = 0x01,
 	READS_END = 0x02,
@@ -155,7 +155,7 @@ public:
 	 *
 	 * INTERFACE takes precedence over PARENT.
 	 */
-	enum PropertyInitializerSource
+	enum PropertyInitializerSource : uint8_t
 	{  // TODO: move to property.cpp
 		DEFAULT = 0,
 		MANUAL = 1,
@@ -293,7 +293,7 @@ public:
 	PRIVATE_CLASS(PropagatingEitherWay)
 	PropagatingEitherWay(const std::string& name = "propagating either way");
 
-	enum Direction
+	enum Direction : uint8_t
 	{
 		AUTO = 0x00,  // auto-derive direction from context
 		FORWARD = 0x01,  // propagate forward only

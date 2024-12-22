@@ -15,7 +15,7 @@
 
 using namespace moveit::task_constructor;
 
-enum StageType
+enum StageType : uint8_t
 {
 	GEN,
 	FW,
