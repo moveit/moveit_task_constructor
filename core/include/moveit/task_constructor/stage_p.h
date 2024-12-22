@@ -50,9 +50,13 @@
 #include <chrono>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
-#define PIMPL_FUNCTIONS(Class)                                                                       \
-	const Class##Private* Class::pimpl() const { return static_cast<const Class##Private*>(pimpl_); } \
-	Class##Private* Class::pimpl() { return static_cast<Class##Private*>(pimpl_); }
+#define PIMPL_FUNCTIONS(Class)                           \
+	const Class##Private* Class::pimpl() const {          \
+		return static_cast<const Class##Private*>(pimpl_); \
+	}                                                     \
+	Class##Private* Class::pimpl() {                      \
+		return static_cast<Class##Private*>(pimpl_);       \
+	}
 
 namespace moveit {
 namespace task_constructor {
