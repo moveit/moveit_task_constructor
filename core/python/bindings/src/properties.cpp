@@ -59,7 +59,7 @@ class PropertyConverterRegistry
 		PropertyConverterBase::from_python_converter_function from_;
 	};
 	// map from type_index to corresponding converter functions
-	typedef std::map<std::type_index, Entry> RegistryMap;
+	using RegistryMap = std::map<std::type_index, Entry>;
 	RegistryMap types_;
 	// map from ros-msg-names to entry in types_
 	using RosMsgTypeNameMap = std::map<std::string, RegistryMap::iterator>;
