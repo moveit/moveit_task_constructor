@@ -39,7 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/robot_state/cartesian_interpolator.h>
+#include <moveit/robot_state/cartesian_interpolator.hpp>
 
 namespace moveit {
 namespace task_constructor {
