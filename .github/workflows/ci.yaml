@@ -19,15 +19,15 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: jammy-ci
-          - IMAGE: noetic-source
+          - IMAGE: noble-ci
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: noetic-source
+          - IMAGE: noble-ci
             CLANG_TIDY: true
             TARGET_CMAKE_ARGS: >-
               -DCMAKE_BUILD_TYPE=Release
               -DCMAKE_CXX_FLAGS="-Werror -Wall -Wextra -Wwrite-strings -Wunreachable-code -Wpointer-arith -Wredundant-decls -Wold-style-cast"
+          - IMAGE: jammy-ci
           - IMAGE: noetic-source
             NAME: asan
             DOCKER_RUN_OPTS: >-
@@ -39,7 +39,7 @@ jobs:
       CATKIN_LINT: true
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
       DOCKER_IMAGE: moveit/moveit:${{ matrix.env.IMAGE }}
-      UNDERLAY: ${{ matrix.env.IMAGE != 'jammy-ci' && '/root/ws_moveit/install' || '' }}
+      UNDERLAY: ${{ endsWith(matrix.env.IMAGE, '-source') && '/root/ws_moveit/install' || '' }}
       DOWNSTREAM_WORKSPACE: "github:ubi-agni/mtc_demos#master"
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: ${{ github.workspace }}/.work
@@ -47,7 +47,7 @@ jobs:
       # perform full clang-tidy check only on manual trigger (workflow_dispatch), PRs do check changed files, otherwise nothing
       CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
       CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
-      CXX: ${{ matrix.env.CLANG_TIDY && 'clang++' }}
+      CXX: ${{ matrix.env.CLANG_TIDY && 'clang++ -std=c++17' }}
 
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CATKIN_LINT && ' • catkin_lint' || ''}}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
