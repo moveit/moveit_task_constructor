@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload ici's target_ws/install folder
         uses: rhaschke/upload-ici-workspace@main
-        if: success() && matrix.env.CLANG_TIDY
+        if: success() && matrix.env.IMAGE == 'jammy-ci'
         with:
           subdir: target_ws/install
 
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: ici
     container:
-      image: moveit/moveit:noetic-source
+      image: moveit/moveit:jammy-ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update -q
-          apt-get install -y doxygen graphviz python3-pip ros-noetic-py-binding-tools
+          apt-get install -y doxygen graphviz python3-pip ros-one-moveit-ros ros-one-py-binding-tools libfmt8
           pip install -r core/doc/requirements.txt
 
       - name: Download ICI workspace
