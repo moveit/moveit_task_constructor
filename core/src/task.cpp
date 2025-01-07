@@ -248,6 +248,7 @@ moveit::core::MoveItErrorCode Task::plan(size_t max_solutions) {
 	auto guard = sg::make_scope_guard([this]() noexcept { this->resetPreemptRequest(); });
 
 	auto impl = pimpl();
+	reset();
 	init();
 
 	// Print state and return success if there are solutions otherwise the input error_code
