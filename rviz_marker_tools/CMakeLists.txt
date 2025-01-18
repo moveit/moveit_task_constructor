@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.11)
 project(rviz_marker_tools)
 
 find_package(ament_cmake REQUIRED)

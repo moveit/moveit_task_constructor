@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.11)
 project(moveit_task_constructor_capabilities)
 
 find_package(ament_cmake REQUIRED)
