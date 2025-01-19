@@ -2,7 +2,7 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/stages/fixed_state.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include "stage_mockups.h"
 #include "models.h"

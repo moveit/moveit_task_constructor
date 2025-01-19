@@ -5,7 +5,7 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/stages/passthrough.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 

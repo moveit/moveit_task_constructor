@@ -38,7 +38,7 @@
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/cost_queue.h>
 #include <moveit/task_constructor/cost_terms.h>
-#include <moveit/utils/moveit_error_code.hpp>
+#include <moveit/utils/moveit_error_code.h>
 #include <pybind11/smart_holder.h>
 
 /** Trampoline classes to allow inheritance in Python (overriding virtual functions) */

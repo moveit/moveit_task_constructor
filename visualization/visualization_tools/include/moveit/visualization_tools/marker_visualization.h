@@ -1,7 +1,7 @@
 #pragma once
 
 #include <rviz_common/properties/bool_property.hpp>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <visualization_msgs/msg/marker.hpp>
 #include <deque>
 #include <list>

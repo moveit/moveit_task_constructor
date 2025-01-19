@@ -1,6 +1,6 @@
 #include <moveit/task_constructor/marker_tools.h>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_state/robot_state.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/robot_state.h>
 
 namespace vm = visualization_msgs;
 
