@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/solvers/planner_interface.h>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
 #include <rclcpp/node.hpp>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 
 namespace planning_pipeline {
 MOVEIT_CLASS_FORWARD(PlanningPipeline);

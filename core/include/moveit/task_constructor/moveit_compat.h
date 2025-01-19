@@ -38,8 +38,8 @@
 
 #pragma once
 
-#include <moveit/version.hpp>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/version.h>
+#include <moveit/macros/class_forward.h>
 
 #define MOVEIT_VERSION_GE(major, minor, patch)                                                \
 	(MOVEIT_VERSION_MAJOR * 1'000'000 + MOVEIT_VERSION_MINOR * 1'000 + MOVEIT_VERSION_PATCH >= \

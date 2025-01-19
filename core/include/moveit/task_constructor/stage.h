@@ -41,7 +41,7 @@
 
 #include "trajectory_execution_info.h"
 #include "utils.h"
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/storage.h>
 #include <vector>
 #include <list>

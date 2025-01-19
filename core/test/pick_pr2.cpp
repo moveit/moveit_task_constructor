@@ -8,7 +8,7 @@
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 
 #include <rclcpp/rclcpp.hpp>
-#include <moveit/planning_scene_interface/planning_scene_interface.hpp>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;

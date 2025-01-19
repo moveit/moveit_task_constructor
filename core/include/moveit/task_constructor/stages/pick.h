@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/container.h>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 

@@ -42,8 +42,8 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit_msgs/srv/get_planning_scene.hpp>
 #include <moveit_msgs/msg/planning_scene_components.hpp>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_model_loader/robot_model_loader.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
 #include <rclcpp/rclcpp.hpp>
 
 namespace moveit {

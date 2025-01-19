@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
-#include <moveit/robot_model/robot_model.hpp>
+#include <moveit/robot_model/robot_model.h>
 
 #include <gtest/gtest.h>
 

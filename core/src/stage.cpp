@@ -40,7 +40,7 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit/task_constructor/fmt_p.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <rclcpp/logging.hpp>
 
