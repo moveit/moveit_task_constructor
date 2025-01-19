@@ -37,8 +37,8 @@
 */
 
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/trajectory_processing/time_parameterization.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/trajectory_processing/time_parameterization.h>
 
 #include <chrono>
 

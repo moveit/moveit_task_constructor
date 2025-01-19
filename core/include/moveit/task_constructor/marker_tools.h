@@ -2,7 +2,7 @@
 
 #include <rviz_marker_tools/marker_creation.h>
 #include <visualization_msgs/msg/marker.hpp>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <functional>
 
 namespace planning_scene {

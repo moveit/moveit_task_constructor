@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/stage.h>
 #include <utils/flat_merge_proxy_model.h>
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <rclcpp/node.hpp>
 #include <moveit_task_constructor_msgs/msg/task_description.hpp>
 #include <moveit_task_constructor_msgs/msg/task_statistics.hpp>

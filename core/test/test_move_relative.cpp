@@ -6,8 +6,8 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>

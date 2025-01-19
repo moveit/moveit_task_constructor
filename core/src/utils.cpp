@@ -41,8 +41,8 @@
 #include <tf2_eigen/tf2_eigen.h>
 #endif
 
-#include <moveit/robot_state/robot_state.hpp>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/robot_state/robot_state.h>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/storage.h>

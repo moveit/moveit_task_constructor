@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/stages/compute_ik.h>
 #include <moveit/task_constructor/stages/modify_planning_scene.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include "stage_mockups.h"

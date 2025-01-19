@@ -36,8 +36,8 @@
    Desc:    Move to joint-state or Cartesian goal pose
 */
 
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_state/conversions.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/cost_terms.h>
@@ -49,7 +49,7 @@
 #else
 #include <tf2_eigen/tf2_eigen.h>
 #endif
-#include <moveit/robot_state/conversions.hpp>
+#include <moveit/robot_state/conversions.h>
 
 namespace moveit {
 namespace task_constructor {

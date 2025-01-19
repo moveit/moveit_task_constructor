@@ -39,8 +39,8 @@
 #include <moveit/task_constructor/marker_tools.h>
 #include <rviz_marker_tools/marker_creation.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_state/conversions.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)

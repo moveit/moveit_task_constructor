@@ -44,10 +44,10 @@
 #include <moveit/task_constructor/introspection.h>
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 
 #include <moveit_msgs/msg/move_it_error_codes.hpp>
-#include <moveit/utils/moveit_error_code.hpp>
+#include <moveit/utils/moveit_error_code.h>
 
 #include <rclcpp/node.hpp>
 

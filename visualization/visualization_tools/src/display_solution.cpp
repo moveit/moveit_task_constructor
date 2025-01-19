@@ -36,8 +36,8 @@
 
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit/visualization_tools/marker_visualization.h>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 #include <rclcpp/logging.hpp>
 #include <fmt/core.h>
 

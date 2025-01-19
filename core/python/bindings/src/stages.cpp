@@ -37,7 +37,7 @@
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <pybind11/stl.h>
 #include <py_binding_tools/ros_msg_typecasters.h>

@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/stages/move_to.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <Eigen/Geometry>
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)

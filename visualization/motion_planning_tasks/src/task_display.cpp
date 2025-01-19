@@ -46,8 +46,8 @@
 #include <moveit/visualization_tools/display_solution.h>
 #include <moveit_task_constructor_msgs/srv/get_solution.hpp>
 
-#include <moveit/rdf_loader/rdf_loader.hpp>
-#include <moveit/robot_model/robot_model.hpp>
+#include <moveit/rdf_loader/rdf_loader.h>
+#include <moveit/robot_model/robot_model.h>
 
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/properties/string_property.hpp>

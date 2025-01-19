@@ -43,8 +43,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 
-#include <moveit/robot_model_loader/robot_model_loader.hpp>
-#include <moveit/planning_pipeline/planning_pipeline.hpp>
+#include <moveit/robot_model_loader/robot_model_loader.h>
+#include <moveit/planning_pipeline/planning_pipeline.h>
 
 #include <scope_guard/scope_guard.hpp>
 

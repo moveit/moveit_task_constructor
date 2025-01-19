@@ -39,7 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include "stage_p.h"
 
 #include <boost/bimap.hpp>

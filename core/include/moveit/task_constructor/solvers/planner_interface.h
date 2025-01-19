@@ -38,7 +38,7 @@
 
 #pragma once
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <moveit_msgs/msg/constraints.hpp>
 #include <moveit/task_constructor/properties.h>
 #include <Eigen/Geometry>

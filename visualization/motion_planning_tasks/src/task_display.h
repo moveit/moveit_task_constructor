@@ -45,7 +45,7 @@
 #ifndef Q_MOC_RUN
 #include "job_queue.h"
 #include "local_task_model.h"
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <rclcpp/subscription.hpp>
 #include <moveit_task_constructor_msgs/msg/task_description.hpp>
 #include <moveit_task_constructor_msgs/msg/task_statistics.hpp>

@@ -17,6 +17,7 @@ Checks:          'performance-*,
                   readability-identifier-naming,
                   '
 HeaderFilterRegex: '.*/moveit/task_constructor/.*\.h'
+AnalyzeTemporaryDtors: false
 CheckOptions:
   - key:             llvm-namespace-comment.ShortNamespaceLines
     value:           '10'

@@ -41,7 +41,7 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/stage.h>
 #include <geometry_msgs/msg/vector3.hpp>
-#include <moveit/collision_detection/collision_common.hpp>
+#include <moveit/collision_detection/collision_common.h>
 
 namespace moveit {
 namespace task_constructor {

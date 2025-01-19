@@ -37,7 +37,7 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <Eigen/Geometry>
 

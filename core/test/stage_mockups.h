@@ -3,7 +3,7 @@
 #include <moveit/task_constructor/task.h>
 #include <moveit/task_constructor/cost_terms.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include "models.h"
 

@@ -37,7 +37,7 @@
 #pragma once
 
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 
 namespace moveit {
 namespace core {

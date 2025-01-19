@@ -1,5 +1,5 @@
 #include <moveit/task_constructor/stage_p.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include "stage_mockups.h"
 

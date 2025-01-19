@@ -41,8 +41,8 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/fmt_p.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/trajectory_processing/time_optimal_trajectory_generation.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
 
 #if FMT_VERSION >= 90000
 template <>

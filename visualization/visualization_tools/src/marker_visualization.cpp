@@ -1,5 +1,5 @@
 #include <moveit/visualization_tools/marker_visualization.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include <rviz_default_plugins/displays/marker/markers/marker_base.hpp>
 #include <rviz_default_plugins/displays/marker/markers/marker_factory.hpp>

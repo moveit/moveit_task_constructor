@@ -38,10 +38,10 @@
 
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit/task_constructor/task.h>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/planning_pipeline/planning_pipeline.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/planning_pipeline/planning_pipeline.h>
 #include <moveit_msgs/msg/motion_plan_request.hpp>
-#include <moveit/kinematic_constraints/utils.hpp>
+#include <moveit/kinematic_constraints/utils.h>
 
 #if __has_include(<tf2_eigen/tf2_eigen.hpp>)
 #include <tf2_eigen/tf2_eigen.hpp>

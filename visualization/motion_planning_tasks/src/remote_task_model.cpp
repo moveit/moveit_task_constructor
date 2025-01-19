@@ -40,7 +40,7 @@
 #include "properties/property_factory.h"
 #include <moveit/task_constructor/container.h>
 #include <moveit/task_constructor/properties.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 #include <rviz_common/properties/property_tree_model.hpp>
 #include <rviz_common/properties/string_property.hpp>
 #include <rclcpp/logging.hpp>

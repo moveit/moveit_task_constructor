@@ -38,10 +38,10 @@
 #include <moveit/task_constructor/stage.h>
 #include <moveit/task_constructor/fmt_p.h>
 
-#include <moveit/collision_detection/collision_common.hpp>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_state/conversions.hpp>
+#include <moveit/collision_detection/collision_common.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 

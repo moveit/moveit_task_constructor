@@ -38,7 +38,7 @@
 
 #pragma once
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <moveit_task_constructor_msgs/msg/task_description.hpp>
 #include <moveit_task_constructor_msgs/msg/task_statistics.hpp>
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
