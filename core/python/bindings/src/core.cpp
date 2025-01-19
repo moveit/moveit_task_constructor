@@ -95,6 +95,8 @@ void export_core(pybind11::module& m) {
 		}
 	});
 
+	py::classh<Introspection>(m, "Introspection", "Introspection class");
+
 	py::classh<SolutionBase>(m, "Solution", "Abstract base class for solutions of a stage")
 	    .def_property("cost", &SolutionBase::cost, &SolutionBase::setCost, "float: Cost associated with the solution")
 	    .def_property("comment", &SolutionBase::comment, &SolutionBase::setComment,
@@ -109,12 +111,12 @@ void export_core(pybind11::module& m) {
 	        ":visualization_msgs:`Marker`: Markers to visualize important aspects of the trajectory (read-only)")
 	    .def(
 	        "toMsg",
-	        [](const SolutionBase& self) {
+	        [](const SolutionBase& self, moveit::task_constructor::Introspection* introspection) {
 		        moveit_task_constructor_msgs::msg::Solution msg;
-		        self.toMsg(msg);
+		        self.toMsg(msg, introspection);
 		        return msg;
 	        },
-	        "Convert to the ROS message ``Solution``");
+	        "Convert to the ROS message ``Solution``", py::arg("introspection") = nullptr);
 
 	py::classh<SubTrajectory, SolutionBase>(m, "SubTrajectory",
 	                                        "Solution trajectory connecting two InterfaceStates of a stage")
@@ -462,6 +464,8 @@ void export_core(pybind11::module& m) {
 	    .def(
 	        "setCostTerm", [](Task& self, const LambdaCostTerm::SubTrajectoryShortSignature& f) { self.setCostTerm(f); },
 	        "Specify a function to calculate trajectory costs")
+	    .def("introspection", &Task::introspection, py::return_value_policy::reference_internal,
+	         "Access introspection object")
 	    .def("reset", &Task::reset, "Reset task (and all its stages)")
 	    .def("init", py::overload_cast<>(&Task::init), "Initialize the task (and all its stages)")
 	    .def("plan", &Task::plan, "max_solutions"_a = 0, R"(
