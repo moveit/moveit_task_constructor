@@ -36,7 +36,7 @@
 #pragma once
 
 #include <moveit/task_constructor/stage.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 namespace moveit {
 namespace task_constructor {

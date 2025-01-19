@@ -37,7 +37,7 @@
 #pragma once
 
 #include <utils/tree_merge_proxy_model.h>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <QVector>
 
 namespace moveit_rviz_plugin {

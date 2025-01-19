@@ -36,13 +36,13 @@
 
 #include "execute_task_solution_capability.h"
 
-#include <moveit/moveit_cpp/moveit_cpp.hpp>
-#include <moveit/plan_execution/plan_execution.hpp>
-#include <moveit/trajectory_processing/trajectory_tools.hpp>
-#include <moveit/kinematic_constraints/utils.hpp>
-#include <moveit/move_group/capability_names.hpp>
-#include <moveit/robot_state/conversions.hpp>
-#include <moveit/utils/message_checks.hpp>
+#include <moveit/moveit_cpp/moveit_cpp.h>
+#include <moveit/plan_execution/plan_execution.h>
+#include <moveit/trajectory_processing/trajectory_tools.h>
+#include <moveit/kinematic_constraints/utils.h>
+#include <moveit/move_group/capability_names.h>
+#include <moveit/robot_state/conversions.h>
+#include <moveit/utils/message_checks.h>
 #include <fmt/format.h>
 
 namespace {

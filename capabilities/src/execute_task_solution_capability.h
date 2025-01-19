@@ -41,7 +41,7 @@
 
 #pragma once
 
-#include <moveit/move_group/move_group_capability.hpp>
+#include <moveit/move_group/move_group_capability.h>
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>

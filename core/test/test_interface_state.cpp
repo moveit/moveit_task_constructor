@@ -1,6 +1,6 @@
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/stage_p.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
 #include "models.h"
 #include <memory>

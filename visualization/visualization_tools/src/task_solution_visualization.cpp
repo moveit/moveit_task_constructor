@@ -39,13 +39,13 @@
 #include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/visualization_tools/task_solution_panel.h>
 
-#include <moveit/rviz_plugin_render_tools/planning_scene_render.hpp>
-#include <moveit/rviz_plugin_render_tools/robot_state_visualization.hpp>
-#include <moveit/rviz_plugin_render_tools/planning_link_updater.hpp>
+#include <moveit/rviz_plugin_render_tools/planning_scene_render.h>
+#include <moveit/rviz_plugin_render_tools/robot_state_visualization.h>
+#include <moveit/rviz_plugin_render_tools/planning_link_updater.h>
 
-#include <moveit/robot_model/robot_model.hpp>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
-#include <moveit/trajectory_processing/trajectory_tools.hpp>
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/trajectory_processing/trajectory_tools.h>
 
 #include <rviz_default_plugins/robot/robot.hpp>
 #include <rviz_default_plugins/robot/robot_link.hpp>
