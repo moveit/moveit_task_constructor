@@ -39,7 +39,7 @@
 
 #pragma once
 
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/cost_queue.h>
 #include <moveit_task_constructor_msgs/msg/solution.hpp>

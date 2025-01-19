@@ -37,7 +37,7 @@
 */
 
 #include <moveit/task_constructor/solvers/multi_planner.h>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
+#include <moveit/robot_trajectory/robot_trajectory.h>
 #include <chrono>
 
 namespace moveit {

@@ -37,9 +37,9 @@
 #pragma once
 
 #include <moveit/task_constructor/storage.h>
-#include <moveit/robot_model/robot_model.hpp>
-#include <moveit/robot_trajectory/robot_trajectory.hpp>
-#include <moveit/trajectory_processing/time_parameterization.hpp>
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/trajectory_processing/time_parameterization.h>
 
 namespace moveit {
 namespace task_constructor {

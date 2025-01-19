@@ -1,6 +1,6 @@
 #include "models.h"
-#include <moveit/utils/robot_model_test_utils.hpp>
-#include <moveit/robot_model_loader/robot_model_loader.hpp>
+#include <moveit/utils/robot_model_test_utils.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
 
 using namespace moveit::core;
 

@@ -39,7 +39,7 @@
 #pragma once
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
-#include <moveit/macros/class_forward.hpp>
+#include <moveit/macros/class_forward.h>
 
 namespace moveit {
 namespace task_constructor {

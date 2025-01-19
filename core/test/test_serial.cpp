@@ -2,8 +2,8 @@
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/solvers/joint_interpolation.h>
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/utils/robot_model_test_utils.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/utils/robot_model_test_utils.h>
 
 #include "stage_mockups.h"
 #include "models.h"

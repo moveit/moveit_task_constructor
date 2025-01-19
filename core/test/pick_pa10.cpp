@@ -14,7 +14,7 @@
 #include <moveit/task_constructor/stages/fix_collision_objects.h>
 
 #include <rclcpp/rclcpp.hpp>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 #include <gtest/gtest.h>
 
 using namespace moveit::task_constructor;

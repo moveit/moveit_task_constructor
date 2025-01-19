@@ -38,9 +38,9 @@
 #include <rclcpp/node.hpp>
 
 // MoveIt
-#include <moveit/planning_scene/planning_scene.hpp>
-#include <moveit/robot_model/robot_model.hpp>
-#include <moveit/planning_scene_interface/planning_scene_interface.hpp>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_model/robot_model.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
 
 // MTC
 #include <moveit/task_constructor/task.h>

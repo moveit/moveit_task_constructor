@@ -37,7 +37,7 @@
 #include <moveit/task_constructor/stages/generate_random_pose.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/marker_tools.h>
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 #include <rviz_marker_tools/marker_creation.h>
 
 #include <Eigen/Geometry>

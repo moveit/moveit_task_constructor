@@ -37,10 +37,10 @@
 
 #include <moveit/task_constructor/storage.h>
 
-#include <moveit/planning_scene/planning_scene.hpp>
+#include <moveit/planning_scene/planning_scene.h>
 
-#include <moveit/robot_state/conversions.hpp>
-#include <moveit/robot_state/robot_state.hpp>
+#include <moveit/robot_state/conversions.h>
+#include <moveit/robot_state/robot_state.h>
 
 #include <functional>
 
