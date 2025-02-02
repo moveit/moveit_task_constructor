@@ -137,7 +137,7 @@ public:
 	void printState(std::ostream& os = std::cout) const;
 
 	/// print an explanation for a planning failure to os
-	void explainFailure(std::ostream& os = std::cout) const override;
+	bool explainFailure(std::ostream& os = std::cout) const override;
 
 	size_t numSolutions() const { return solutions().size(); }
 	const ordered<SolutionBaseConstPtr>& solutions() const { return stages()->solutions(); }
