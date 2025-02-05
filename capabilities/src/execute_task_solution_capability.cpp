@@ -102,6 +102,7 @@ void ExecuteTaskSolutionCapability::initialize() {
 void ExecuteTaskSolutionCapability::execCallback(
     const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
 	auto result = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Result>();
+	auto feedback = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Feedback>();
 
 	const auto& goal = goal_handle->get_goal();
 	if (!context_->plan_execution_) {
@@ -111,19 +112,39 @@ void ExecuteTaskSolutionCapability::execCallback(
 	}
 
 	plan_execution::ExecutableMotionPlan plan;
-	if (!constructMotionPlan(goal->solution, plan))
+	if (!constructMotionPlan(goal->solution, plan)) {
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
-	else {
-		RCLCPP_INFO(LOGGER, "Executing TaskSolution");
-		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
+		goal_handle->abort(result);
+		return;
 	}
 
-	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
-		goal_handle->succeed(result);
-	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling())
-		goal_handle->canceled(result);
-	else
-		goal_handle->abort(result);
+	RCLCPP_INFO(LOGGER, "Executing TaskSolution");
+
+	// iterate over the subtrajectories and execute them one by one
+	for (size_t i = 0; i < plan.plan_components.size(); ++i) {
+		plan_execution::ExecutableMotionPlan sub_plan;
+		sub_plan.plan_components = {plan.plan_components[i]};
+
+		const auto exec_result = context_->plan_execution_->executeAndMonitor(sub_plan);
+		if (exec_result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()) {
+			result->error_code.val = exec_result.val;
+			goal_handle->canceled(result);
+			return;
+		} else if (exec_result.val != moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
+			result->error_code.val = exec_result.val;
+			goal_handle->abort(result);
+			return;
+		}
+
+		// publish feedback after the subtrajectory has been executed correctly
+		feedback->sub_id = static_cast<uint32_t>(i + 1);
+		feedback->sub_no = static_cast<uint32_t>(plan.plan_components.size());
+		goal_handle->publish_feedback(feedback);
+	}
+
+	result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::SUCCESS;
+	goal_handle->succeed(result);
+	return;
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
@@ -181,7 +202,7 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		}
 		exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
-		/* TODO add action feedback and markers */
+		/* TODO add markers */
 		exec_traj.effect_on_success = [this,
 		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
 		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
