@@ -123,7 +123,7 @@ void ExecuteTaskSolutionCapability::execCallback(
 	// iterate over the subtrajectories and execute them one by one
 	for (size_t i = 0; i < plan.plan_components.size(); ++i) {
 		plan_execution::ExecutableMotionPlan sub_plan;
-		sub_plan.plan_components = {plan.plan_components[i]};
+		sub_plan.plan_components = { plan.plan_components[i] };
 
 		const auto exec_result = context_->plan_execution_->executeAndMonitor(sub_plan);
 		if (exec_result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()) {
