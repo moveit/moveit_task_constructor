@@ -452,18 +452,21 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 		throw errors;
 }
 
-void ContainerBase::explainFailure(std::ostream& os) const {
+bool ContainerBase::explainFailure(std::ostream& os) const {
 	for (const auto& stage : pimpl()->children()) {
 		if (!stage->solutions().empty())
 			continue;  // skip deeper traversal, this stage produced solutions
 		if (stage->numFailures()) {
 			os << stage->name() << " (0/" << stage->numFailures() << ")";
-			stage->explainFailure(os);
+			if (!stage->failures().empty())
+				os << ": " << stage->failures().front()->comment();
 			os << '\n';
-			break;
+			return true;
 		}
-		stage->explainFailure(os);  // recursively process children
+		if (stage->explainFailure(os))  // recursively process children
+			return true;
 	}
+	return false;
 }
 
 std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {

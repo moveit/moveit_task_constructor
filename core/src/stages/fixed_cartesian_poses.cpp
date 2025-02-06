@@ -34,6 +34,8 @@
 
 /* Authors: Robert Haschke */
 
+#include <fmt/format.h>
+
 #include <moveit/task_constructor/stages/fixed_cartesian_poses.h>
 #include <moveit/task_constructor/storage.h>
 #include <moveit/task_constructor/cost_terms.h>
@@ -86,7 +88,12 @@ void FixedCartesianPoses::compute() {
 		if (pose.header.frame_id.empty())
 			pose.header.frame_id = scene->getPlanningFrame();
 		else if (!scene->knowsFrameTransform(pose.header.frame_id)) {
-			ROS_WARN_NAMED("FixedCartesianPoses", "Unknown frame: '%s'", pose.header.frame_id.c_str());
+			if (storeFailures()) {
+				SubTrajectory trajectory;
+				trajectory.markAsFailure(fmt::format("Unknown frame: '{}'", pose.header.frame_id));
+				spawn(InterfaceState(scene), std::move(trajectory));
+			} else
+				ROS_WARN_NAMED("FixedCartesianPoses", "Unknown frame: '%s'", pose.header.frame_id.c_str());
 			continue;
 		}
 
