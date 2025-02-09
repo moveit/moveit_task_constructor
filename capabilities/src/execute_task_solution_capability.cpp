@@ -166,21 +166,26 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.trajectory_->setRobotTrajectoryMsg(state, sub_traj.trajectory);
 		exec_traj.controller_names_ = sub_traj.execution_info.controller_names;
 
-		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success_ = [this,
-		                                &scene_diff = const_cast<::moveit_msgs::PlanningScene&>(sub_traj.scene_diff),
-		                                description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			// Never modify joint state directly (only via robot trajectories)
-			scene_diff.robot_state.joint_state = sensor_msgs::JointState();
-			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::MultiDOFJointState();
-			scene_diff.robot_state.is_diff = true;  // silent empty JointState msg error
+		exec_traj.effect_on_success_ =
+		    [this, &scene_diff = const_cast<::moveit_msgs::PlanningScene&>(sub_traj.scene_diff), description, i,
+		     no = solution.sub_trajectory.size()](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			    // publish feedback
+			    moveit_task_constructor_msgs::ExecuteTaskSolutionFeedback feedback;
+			    feedback.sub_id = i;
+			    feedback.sub_no = no;
+			    as_->publishFeedback(feedback);
 
-			if (!moveit::core::isEmpty(scene_diff)) {
-				ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
-			}
-			return true;
-		};
+			    // Never modify joint state directly (only via robot trajectories)
+			    scene_diff.robot_state.joint_state = sensor_msgs::JointState();
+			    scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::MultiDOFJointState();
+			    scene_diff.robot_state.is_diff = true;  // silent empty JointState msg error
+
+			    if (!moveit::core::isEmpty(scene_diff)) {
+				    ROS_DEBUG_STREAM_NAMED("ExecuteTaskSolution", "apply effect of " << description);
+				    return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
+			    }
+			    return true;
+		    };
 
 		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {
