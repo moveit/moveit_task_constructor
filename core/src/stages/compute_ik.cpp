@@ -267,7 +267,7 @@ void ComputeIK::compute() {
 		return;
 	}
 	if (!eef_jmg && !jmg) {
-		report_failure(msg);
+		report_failure("Neither eef nor group are well defined");
 		return;
 	}
 	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
