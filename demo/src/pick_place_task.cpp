@@ -38,7 +38,6 @@
 #include <moveit_task_constructor_demo/pick_place_task.h>
 #include <geometry_msgs/msg/pose.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
-#include "pick_place_demo_parameters.hpp"
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_demo");
 
