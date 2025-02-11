@@ -437,11 +437,6 @@ bool Stage::storeFailures() const {
 	return pimpl()->storeFailures();
 }
 
-void Stage::explainFailure(std::ostream& os) const {
-	if (!failures().empty())
-		os << ": " << failures().front()->comment();
-}
-
 PropertyMap& Stage::properties() {
 	return pimpl()->properties_;
 }

@@ -111,7 +111,7 @@ void ExecuteTaskSolutionCapability::execCallback(
 	}
 
 	plan_execution::ExecutableMotionPlan plan;
-	if (!constructMotionPlan(goal->solution, plan))
+	if (!constructMotionPlan(goal->solution, plan, goal_handle))
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
 	else {
 		RCLCPP_INFO(LOGGER, "Executing TaskSolution");
@@ -133,8 +133,9 @@ rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
 	return rclcpp_action::CancelResponse::ACCEPT;
 }
 
-bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constructor_msgs::msg::Solution& solution,
-                                                        plan_execution::ExecutableMotionPlan& plan) {
+bool ExecuteTaskSolutionCapability::constructMotionPlan(
+    const moveit_task_constructor_msgs::msg::Solution& solution, plan_execution::ExecutableMotionPlan& plan,
+    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle) {
 	moveit::core::RobotModelConstPtr model = context_->planning_scene_monitor_->getRobotModel();
 
 	moveit::core::RobotState state(model);
@@ -182,20 +183,26 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 		exec_traj.controller_name = sub_traj.execution_info.controller_names;
 
 		/* TODO add action feedback and markers */
-		exec_traj.effect_on_success = [this,
-		                               &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff),
-		                               description](const plan_execution::ExecutableMotionPlan* /*plan*/) {
-			// Never modify joint state directly (only via robot trajectories)
-			scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
-			scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
-			scene_diff.robot_state.is_diff = true;  // silent empty JointState msg error
+		exec_traj.effect_on_success =
+		    [this, &scene_diff = const_cast<::moveit_msgs::msg::PlanningScene&>(sub_traj.scene_diff), description,
+		     goal_handle, i, no = solution.sub_trajectory.size()](const plan_execution::ExecutableMotionPlan* /*plan*/) {
+			    // publish feedback
+			    auto feedback = std::make_shared<moveit_task_constructor_msgs::action::ExecuteTaskSolution::Feedback>();
+			    feedback->sub_id = i;
+			    feedback->sub_no = no;
+			    goal_handle->publish_feedback(feedback);
 
-			if (!moveit::core::isEmpty(scene_diff)) {
-				RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
-				return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
-			}
-			return true;
-		};
+			    // Never modify joint state directly (only via robot trajectories)
+			    scene_diff.robot_state.joint_state = sensor_msgs::msg::JointState();
+			    scene_diff.robot_state.multi_dof_joint_state = sensor_msgs::msg::MultiDOFJointState();
+			    scene_diff.robot_state.is_diff = true;  // silent empty JointState msg error
+
+			    if (!moveit::core::isEmpty(scene_diff)) {
+				    RCLCPP_DEBUG_STREAM(LOGGER, "apply effect of " << description);
+				    return context_->planning_scene_monitor_->newPlanningSceneMessage(scene_diff);
+			    }
+			    return true;
+		    };
 
 		if (!moveit::core::isEmpty(sub_traj.scene_diff.robot_state) &&
 		    !moveit::core::robotStateMsgToRobotState(sub_traj.scene_diff.robot_state, state, true)) {

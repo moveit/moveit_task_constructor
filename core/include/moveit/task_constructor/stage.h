@@ -242,7 +242,7 @@ public:
 	/// Should we generate failure solutions? Note: Always report a failure!
 	bool storeFailures() const;
 
-	virtual void explainFailure(std::ostream& os) const;
+	virtual bool explainFailure(std::ostream& /*os*/) const { return false; };
 
 	/// Get the stage's property map
 	PropertyMap& properties();

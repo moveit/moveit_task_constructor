@@ -36,6 +36,7 @@
 /* Authors: Michael Goerner, Luca Lach, Robert Haschke */
 
 #include <chrono>
+#include <fmt/format.h>
 
 #include <moveit/task_constructor/stages/current_state.h>
 #include <moveit/task_constructor/storage.h>
@@ -101,7 +102,13 @@ void CurrentState::compute() {
 			return;
 		}
 	}
-	RCLCPP_WARN(LOGGER, "failed to acquire current PlanningScene");
+	if (storeFailures()) {
+		SubTrajectory solution;
+		solution.markAsFailure(
+		    fmt::format("Failed to acquire current PlanningScene within timeout of {}s", timeout.count()));
+		spawn(InterfaceState(scene_), std::move(solution));
+	} else
+		RCLCPP_WARN(LOGGER, "failed to acquire current PlanningScene");
 }
 }  // namespace stages
 }  // namespace task_constructor

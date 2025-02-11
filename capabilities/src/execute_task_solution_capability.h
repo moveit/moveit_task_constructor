@@ -60,8 +60,10 @@ public:
 private:
 	using ExecuteTaskSolutionAction = moveit_task_constructor_msgs::action::ExecuteTaskSolution;
 	using ActionServerType = rclcpp_action::Server<ExecuteTaskSolutionAction>;
-	bool constructMotionPlan(const moveit_task_constructor_msgs::msg::Solution& solution,
-	                         plan_execution::ExecutableMotionPlan& plan);
+	bool
+	constructMotionPlan(const moveit_task_constructor_msgs::msg::Solution& solution,
+	                    plan_execution::ExecutableMotionPlan& plan,
+	                    const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle);
 
 	void execCallback(const std::shared_ptr<rclcpp_action::ServerGoalHandle<ExecuteTaskSolutionAction>>& goal_handle);
 

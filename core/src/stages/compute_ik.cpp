@@ -258,16 +258,23 @@ void ComputeIK::compute() {
 	const moveit::core::JointModelGroup* jmg = nullptr;
 	std::string msg;
 
+	auto report_failure = [&s, this](const std::string& msg) {
+		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+		SubTrajectory solution;
+		solution.markAsFailure(msg);
+		spawn(InterfaceState(scene), std::move(solution));
+	};
+
 	if (!validateEEF(props, robot_model, eef_jmg, &msg)) {
-		RCLCPP_WARN_STREAM(LOGGER, msg);
+		report_failure(msg);
 		return;
 	}
 	if (!validateGroup(props, robot_model, eef_jmg, jmg, &msg)) {
-		RCLCPP_WARN_STREAM(LOGGER, msg);
+		report_failure(msg);
 		return;
 	}
 	if (!eef_jmg && !jmg) {
-		RCLCPP_WARN_STREAM(LOGGER, "Neither eef nor group are well defined");
+		report_failure("Neither eef nor group are well defined");
 		return;
 	}
 	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
@@ -281,7 +288,7 @@ void ComputeIK::compute() {
 	tf2::fromMsg(target_pose_msg.pose, target_pose);
 	if (target_pose_msg.header.frame_id != scene->getPlanningFrame()) {
 		if (!scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
-			RCLCPP_WARN_STREAM(LOGGER, "Unknown reference frame for target pose: " << target_pose_msg.header.frame_id);
+			report_failure(fmt::format("Unknown reference frame for target pose: '{}'", target_pose_msg.header.frame_id));
 			return;
 		}
 		// transform target_pose w.r.t. planning frame
@@ -296,7 +303,7 @@ void ComputeIK::compute() {
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
 		                       jmg->getOnlyOneEndEffectorTip())) {
-			RCLCPP_WARN_STREAM(LOGGER, "Failed to derive IK target link");
+			report_failure("Failed to derive IK target link");
 			return;
 		}
 		ik_pose_msg.header.frame_id = link->getName();
@@ -307,7 +314,7 @@ void ComputeIK::compute() {
 		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 
 		if (!scene->getCurrentState().knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			RCLCPP_WARN_STREAM(LOGGER, fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
+			report_failure(fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
 			return;
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;

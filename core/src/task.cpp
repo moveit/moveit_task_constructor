@@ -364,9 +364,9 @@ void Task::printState(std::ostream& os) const {
 	os << *stages();
 }
 
-void Task::explainFailure(std::ostream& os) const {
+bool Task::explainFailure(std::ostream& os) const {
 	os << "Failing stage(s):\n";
-	stages()->explainFailure(os);
+	return stages()->explainFailure(os);
 }
 }  // namespace task_constructor
 }  // namespace moveit
