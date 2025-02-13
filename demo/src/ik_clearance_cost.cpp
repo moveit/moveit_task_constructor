@@ -8,7 +8,7 @@
 #include <moveit/task_constructor/stages/compute_ik.h>
 
 #include <moveit/task_constructor/cost_terms.h>
-#include <moveit_task_constructor_demo/ik_clearance_cost_parameters.hpp>
+#include "ik_clearance_cost_parameters.hpp"
 
 using namespace moveit::task_constructor;
 

@@ -57,7 +57,7 @@
 #include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/task_constructor/solvers/pipeline_planner.h>
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
-#include <moveit_task_constructor_demo/pick_place_demo_parameters.hpp>
+#include "pick_place_demo_parameters.hpp"
 
 #pragma once
 
