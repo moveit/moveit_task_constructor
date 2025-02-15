@@ -228,6 +228,7 @@ class TestStages(unittest.TestCase):
         self._check(stage, "eef_frame", "eef_frame")
         self._check(stage, "eef_group", "eef_group")
         self._check(stage, "eef_parent_group", "eef_parent_group")
+        self._check(stage.cartesian_solver, "max_velocity_scaling_factor", 0.1)
 
     def test_Place(self):
         generator_stage = stages.GeneratePose("generator")

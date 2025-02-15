@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
+#include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit_msgs/PlanningScene.h>
 #include <pybind11/stl.h>
@@ -434,6 +435,7 @@ void export_stages(pybind11::module& m) {
 	    .property<std::string>("eef_parent_group", "str: Joint model group of the eef's parent")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), "grasp_generator"_a,
 	         "name"_a = std::string("pick"))
+	    .def_property_readonly("cartesian_solver", &Pick::cartesianSolver)
 	    .def("setApproachMotion", &Pick::setApproachMotion, R"(
 			The approaching motion towards the grasping state is represented
 			by a twist message.
