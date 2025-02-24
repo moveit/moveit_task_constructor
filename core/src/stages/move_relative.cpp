@@ -94,7 +94,6 @@ static bool getJointStateFromOffset(const boost::any& direction, const Interface
 				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
 			auto index = jm->getFirstVariableIndex();
 			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + sign * j.second);
-			robot_state.enforceBounds(jm);
 		}
 		robot_state.update();
 		return true;
