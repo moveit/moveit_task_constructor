@@ -19,13 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          # - IMAGE: rolling-source
-          #   NAME: ccov
-          #   TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: rolling-source
+            NAME: ccov
+            TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: rolling-source
             CLANG_TIDY: pedantic
-          - IMAGE: jazzy-source
+          - IMAGE: rolling-source
             NAME: asan
             # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
             # see https://github.com/google/sanitizers/wiki/AddressSanitizer
@@ -104,6 +103,7 @@ jobs:
         with:
           docker: $DOCKER_IMAGE
           workdir: ${{ env.BASEDIR }}/target_ws
+          lcov_capture_args: --ignore-errors=source,gcov,mismatch,negative
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
         uses: codecov/codecov-action@v3
