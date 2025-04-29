@@ -220,8 +220,9 @@ bool PickPlaceTask::init() {
 	 ***************************************************/
 	// Connect initial open-hand state with pre-grasp pose defined in the following
 	{
-		auto stage = std::make_unique<stages::Connect>(
-		    "move to pick", stages::Connect::GroupPlannerVector{ { arm_group_name_, sampling_planner } });
+		stages::Connect::GroupPlannerVector planners = { { arm_group_name_, sampling_planner },
+			                                              { hand_group_name_, sampling_planner } };
+		auto stage = std::make_unique<stages::Connect>("move to pick", planners);
 		stage->setTimeout(5.0);
 		stage->properties().configureInitFrom(Stage::PARENT);
 		t.add(std::move(stage));
