@@ -38,10 +38,8 @@
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/task_p.h>
 #include <moveit/task_constructor/introspection.h>
-#include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
 
 #include <rclcpp/rclcpp.hpp>
-#include <rclcpp_action/rclcpp_action.hpp>
 
 #include <moveit/robot_model_loader/robot_model_loader.hpp>
 #include <moveit/planning_pipeline/planning_pipeline.hpp>
@@ -286,10 +284,10 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	// If this is the first call to execute create a persistent node that can be used to call the action server
 	if (!execute_solution_node_) {
 		execute_solution_node_ = rclcpp::Node::make_shared("moveit_task_constructor_executor");
+		execute_ac_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
+		    execute_solution_node_, "execute_task_solution");
 	}
-	auto ac = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
-	    execute_solution_node_, "execute_task_solution");
-	if (!ac->wait_for_action_server(0.5s)) {
+	if (!execute_ac_->wait_for_action_server(0.5s)) {
 		RCLCPP_ERROR(execute_solution_node_->get_logger(),
 		             "Failed to connect to the 'execute_task_solution' action server");
 		return moveit::core::MoveItErrorCode::FAILURE;
@@ -300,7 +298,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 
 	moveit_msgs::msg::MoveItErrorCodes error_code;
 	error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
-	auto goal_handle_future = ac->async_send_goal(goal);
+	auto goal_handle_future = execute_ac_->async_send_goal(goal);
 	if (rclcpp::spin_until_future_complete(execute_solution_node_, goal_handle_future) !=
 	    rclcpp::FutureReturnCode::SUCCESS) {
 		RCLCPP_ERROR(execute_solution_node_->get_logger(), "Send goal call failed");
@@ -313,11 +311,11 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 		return error_code;
 	}
 
-	auto result_future = ac->async_get_result(goal_handle);
+	auto result_future = execute_ac_->async_get_result(goal_handle);
 	rclcpp::WallRate r(100);
 	while (result_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
 		if (pimpl()->preempt_requested_) {
-			auto cancel_future = ac->async_cancel_goal(goal_handle);
+			auto cancel_future = execute_ac_->async_cancel_goal(goal_handle);
 			if (rclcpp::spin_until_future_complete(execute_solution_node_, cancel_future) !=
 			    rclcpp::FutureReturnCode::SUCCESS) {
 				RCLCPP_ERROR(execute_solution_node_->get_logger(), "Could not preempt execution");
