@@ -167,6 +167,8 @@ protected:
 
 private:
 	using WrapperBase::init;
+	// persistent node to call the ExecuteTaskSolution action and is only created if execute() is called
+	rclcpp::Node::SharedPtr execute_solution_node_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Task& task) {

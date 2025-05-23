@@ -283,13 +283,15 @@ void Task::resetPreemptRequest() {
 }
 
 moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
-	// Add random ID to prevent warnings about multiple publishers within the same node
-	auto node = rclcpp::Node::make_shared("moveit_task_constructor_executor_" +
-	                                      std::to_string(reinterpret_cast<std::size_t>(this)));
+	// If this is the first call to execute create a persistent node that can be used to call the action server
+	if (!execute_solution_node_) {
+		execute_solution_node_ = rclcpp::Node::make_shared("moveit_task_constructor_executor");
+	}
 	auto ac = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
-	    node, "execute_task_solution");
+	    execute_solution_node_, "execute_task_solution");
 	if (!ac->wait_for_action_server(0.5s)) {
-		RCLCPP_ERROR(node->get_logger(), "Failed to connect to the 'execute_task_solution' action server");
+		RCLCPP_ERROR(execute_solution_node_->get_logger(),
+		             "Failed to connect to the 'execute_task_solution' action server");
 		return moveit::core::MoveItErrorCode::FAILURE;
 	}
 
@@ -299,26 +301,39 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	moveit_msgs::msg::MoveItErrorCodes error_code;
 	error_code.val = moveit_msgs::msg::MoveItErrorCodes::FAILURE;
 	auto goal_handle_future = ac->async_send_goal(goal);
-	if (rclcpp::spin_until_future_complete(node, goal_handle_future) != rclcpp::FutureReturnCode::SUCCESS) {
-		RCLCPP_ERROR(node->get_logger(), "Send goal call failed");
+	if (rclcpp::spin_until_future_complete(execute_solution_node_, goal_handle_future) !=
+	    rclcpp::FutureReturnCode::SUCCESS) {
+		RCLCPP_ERROR(execute_solution_node_->get_logger(), "Send goal call failed");
 		return error_code;
 	}
 
 	const auto& goal_handle = goal_handle_future.get();
 	if (!goal_handle) {
-		RCLCPP_ERROR(node->get_logger(), "Goal was rejected by server");
+		RCLCPP_ERROR(execute_solution_node_->get_logger(), "Goal was rejected by server");
 		return error_code;
 	}
 
 	auto result_future = ac->async_get_result(goal_handle);
-	if (rclcpp::spin_until_future_complete(node, result_future) != rclcpp::FutureReturnCode::SUCCESS) {
-		RCLCPP_ERROR(node->get_logger(), "Get result call failed");
-		return error_code;
+	rclcpp::WallRate r(100);
+	while (result_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+		if (pimpl()->preempt_requested_) {
+			auto cancel_future = ac->async_cancel_goal(goal_handle);
+			if (rclcpp::spin_until_future_complete(execute_solution_node_, cancel_future) !=
+			    rclcpp::FutureReturnCode::SUCCESS) {
+				RCLCPP_ERROR(execute_solution_node_->get_logger(), "Could not preempt execution");
+				return error_code;
+			} else {
+				error_code.val = moveit_msgs::msg::MoveItErrorCodes::PREEMPTED;
+				return error_code;
+			}
+		}
+		rclcpp::spin_some(execute_solution_node_);
+		r.sleep();
 	}
 
 	auto result = result_future.get();
 	if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
-		RCLCPP_ERROR(node->get_logger(), "Goal was aborted or canceled");
+		RCLCPP_ERROR(execute_solution_node_->get_logger(), "Goal was aborted or canceled");
 		return error_code;
 	}
 
