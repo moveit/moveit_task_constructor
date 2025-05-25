@@ -36,29 +36,28 @@ struct PandaMoveTo : public testing::Test
 TEST_F(PandaMoveTo, successExecution) {
 	move_to->setGoal("extended");
 	EXPECT_TRUE(t.plan());
-	auto execute_result = t.execute(*t.solutions().front());
-	EXPECT_TRUE(execute_result.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+	auto result = t.execute(*t.solutions().front());
+	EXPECT_TRUE(result.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 }
 
-// After the arm successfully moves to "extended" try to move back to "ready" and make sure preempt() woks as expected
+// After the arm successfully moved to "extended", move back to "ready" and make sure preempt() works as expected
 TEST_F(PandaMoveTo, preemptExecution) {
 	move_to->setGoal("ready");
 	EXPECT_TRUE(t.plan());
 	// extract the expected execution time (for this task its in the last sub_trajectory)
 	moveit_task_constructor_msgs::msg::Solution s;
 	t.solutions().front()->toMsg(s, nullptr);
-	auto exec_duration = s.sub_trajectory.back().trajectory.joint_trajectory.points.back().time_from_start;
+	rclcpp::Duration exec_duration{ s.sub_trajectory.back().trajectory.joint_trajectory.points.back().time_from_start };
 
-	moveit::core::MoveItErrorCode execute_result;
-	execute_result.val = execute_result.UNDEFINED;
-	std::thread execute_thread{ [this, &execute_result]() { execute_result = t.execute(*t.solutions().front()); } };
+	moveit::core::MoveItErrorCode result;
+	std::thread execute_thread{ [this, &result]() { result = t.execute(*t.solutions().front()); } };
+
 	// cancel the trajectory half way through the expected execution time
-	rclcpp::sleep_for(std::chrono::duration_cast<std::chrono::nanoseconds>(
-	    (std::chrono::seconds(exec_duration.sec) + std::chrono::nanoseconds(exec_duration.nanosec)) / 2));
+	rclcpp::sleep_for(exec_duration.to_chrono<std::chrono::milliseconds>() / 2);
 	t.preempt();
 	execute_thread.join();
 
-	EXPECT_TRUE(execute_result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
+	EXPECT_TRUE(result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
 }
 
 int main(int argc, char** argv) {
