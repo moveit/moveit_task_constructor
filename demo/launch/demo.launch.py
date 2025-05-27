@@ -2,18 +2,12 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, DeclareLaunchArgument
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def generate_launch_description():
-    declared_arguments = []
-    declared_arguments.append(
-        DeclareLaunchArgument("rviz", default_value="true", description="Launch RViz?")
-    )
     moveit_config = (
         MoveItConfigsBuilder("moveit_resources_panda")
         .planning_pipelines(pipelines=["ompl"])
@@ -37,7 +31,6 @@ def generate_launch_description():
     )
 
     # RViz
-    launch_rviz = LaunchConfiguration("rviz")
     rviz_config_file = (
         get_package_share_directory("moveit_task_constructor_demo") + "/config/mtc.rviz"
     )
@@ -52,7 +45,6 @@ def generate_launch_description():
             moveit_config.robot_description_kinematics,
             moveit_config.planning_pipelines,
         ],
-        condition=IfCondition(launch_rviz),
     )
 
     # Static TF
@@ -102,8 +94,7 @@ def generate_launch_description():
         ]
 
     return LaunchDescription(
-        declared_arguments
-        + [
+        [
             rviz_node,
             static_tf,
             robot_state_publisher,
