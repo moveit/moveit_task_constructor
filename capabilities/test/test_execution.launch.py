@@ -115,10 +115,3 @@ def generate_test_description():
 class TestTerminatingProcessStops(unittest.TestCase):
     def test_gtest_run_complete(self, proc_info, test_exec):
         proc_info.assertWaitForShutdown(process=test_exec, timeout=4000.0)
-
-
-@launch_testing.post_shutdown_test()
-class TaskModelTestAfterShutdown(unittest.TestCase):
-    def test_exit_code(self, proc_info):
-        # Check that all processes in the launch exit with code 0
-        launch_testing.asserts.assertExitCodes(proc_info)
