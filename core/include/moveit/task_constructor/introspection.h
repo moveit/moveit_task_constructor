@@ -105,6 +105,17 @@ public:
 	/// retrieve or set id of given solution
 	uint32_t solutionId(const moveit::task_constructor::SolutionBase& s);
 
+	/// add markers to a solution
+	void addMarkers(const uint id, const std::vector<visualization_msgs::msg::Marker>& markers);
+
+	void addMarkers(const moveit::task_constructor::SolutionBase& s,
+	                const std::vector<visualization_msgs::msg::Marker>& markers);
+
+	/// reset markers
+	void resetMarkers(const uint id);
+
+	void resetAllMarkers();
+
 private:
 	void fillStageStatistics(const Stage& stage, moveit_task_constructor_msgs::msg::StageStatistics& s);
 	void fillSolution(moveit_task_constructor_msgs::msg::Solution& msg, const SolutionBase& s);
