@@ -55,7 +55,9 @@ TEST_F(PandaMoveTo, preemptExecution) {
 	// cancel the trajectory half way through the expected execution time
 	rclcpp::sleep_for(exec_duration.to_chrono<std::chrono::milliseconds>() / 2);
 	t.preempt();
-	execute_thread.join();
+	if(execute_thread.joinable()){
+		execute_thread.join();
+	}
 
 	EXPECT_TRUE(result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
 }
@@ -65,7 +67,7 @@ int main(int argc, char** argv) {
 	rclcpp::init(argc, argv);
 
 	// wait some time for move_group to come up
-	rclcpp::sleep_for(std::chrono::seconds(2));
+	rclcpp::sleep_for(std::chrono::seconds(5));
 
 	return RUN_ALL_TESTS();
 }
