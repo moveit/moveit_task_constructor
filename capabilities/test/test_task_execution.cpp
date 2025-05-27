@@ -17,7 +17,7 @@ struct PandaMoveTo : public testing::Test
 	rclcpp::Node::SharedPtr node;
 
 	PandaMoveTo() {
-		node = rclcpp::Node::make_shared("panda_move_to");
+		node = rclcpp::Node::make_shared("test_task_execution");
 		t.loadRobotModel(node);
 
 		auto group = t.getRobotModel()->getJointModelGroup("panda_arm");
