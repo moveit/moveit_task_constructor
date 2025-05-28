@@ -23,7 +23,6 @@ struct PandaMoveTo : public testing::Test
 		auto group = t.getRobotModel()->getJointModelGroup("panda_arm");
 
 		auto initial = std::make_unique<stages::CurrentState>("current state");
-		initial->setTimeout(10.0);
 		t.add(std::move(initial));
 
 		auto move = std::make_unique<stages::MoveTo>("move", std::make_shared<solvers::JointInterpolationPlanner>());
