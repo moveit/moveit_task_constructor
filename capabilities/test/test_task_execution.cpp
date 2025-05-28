@@ -37,7 +37,7 @@ TEST_F(PandaMoveTo, successExecution) {
 	move_to->setGoal("extended");
 	EXPECT_TRUE(t.plan());
 	auto result = t.execute(*t.solutions().front());
-	EXPECT_TRUE(result.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
+	EXPECT_EQ(result.val, moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 }
 
 // After the arm successfully moved to "extended", move back to "ready" and make sure preempt() works as expected
@@ -55,11 +55,11 @@ TEST_F(PandaMoveTo, preemptExecution) {
 	// cancel the trajectory half way through the expected execution time
 	rclcpp::sleep_for(exec_duration.to_chrono<std::chrono::milliseconds>() / 2);
 	t.preempt();
-	if(execute_thread.joinable()){
+	if (execute_thread.joinable()) {
 		execute_thread.join();
 	}
 
-	EXPECT_TRUE(result.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
+	EXPECT_EQ(result.val, moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
 }
 
 int main(int argc, char** argv) {
