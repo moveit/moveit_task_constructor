@@ -55,7 +55,7 @@ TEST_F(PandaMoveTo, preemptExecution) {
 	// cancel the trajectory half way through the expected execution time
 	rclcpp::sleep_for(exec_duration.to_chrono<std::chrono::milliseconds>() / 2);
 	t.preempt();
-	if (execute_thread.joinable()) {
+	if(execute_thread.joinable()){
 		execute_thread.join();
 	}
 
