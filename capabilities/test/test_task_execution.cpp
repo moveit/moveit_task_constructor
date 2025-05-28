@@ -35,7 +35,7 @@ struct PandaMoveTo : public testing::Test
 // The arm starts in the "ready" pose so make sure we can move to a different known location
 TEST_F(PandaMoveTo, successExecution) {
 	move_to->setGoal("extended");
-	EXPECT_TRUE(t.plan());
+	ASSERT_TRUE(t.plan());
 	auto result = t.execute(*t.solutions().front());
 	EXPECT_EQ(result.val, moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 }
@@ -43,7 +43,7 @@ TEST_F(PandaMoveTo, successExecution) {
 // After the arm successfully moved to "extended", move back to "ready" and make sure preempt() works as expected
 TEST_F(PandaMoveTo, preemptExecution) {
 	move_to->setGoal("ready");
-	EXPECT_TRUE(t.plan());
+	ASSERT_TRUE(t.plan());
 	// extract the expected execution time (for this task its in the last sub_trajectory)
 	moveit_task_constructor_msgs::msg::Solution s;
 	t.solutions().front()->toMsg(s, nullptr);
