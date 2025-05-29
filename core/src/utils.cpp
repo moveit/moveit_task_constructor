@@ -43,6 +43,8 @@
 
 #include <moveit/robot_state/robot_state.h>
 #include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/collision_detection/collision_tools.h>
 
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/storage.h>
@@ -99,6 +101,38 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 	}
 
 	return true;
+}
+
+void checkPathCollisions(const robot_trajectory::RobotTrajectory& trajectory,
+                         const planning_scene::PlanningSceneConstPtr& planning_scene,
+                         const moveit_msgs::msg::Constraints& path_constraints, const std::string& group_name,
+                         visualization_msgs::msg::MarkerArray& markers_out) {
+	std::vector<std::size_t> index;
+	if (!planning_scene->isPathValid(trajectory, path_constraints, group_name, true, &index)) {
+		for (std::size_t it : index) {
+			const moveit::core::RobotState& robot_state = trajectory.getWayPoint(it);
+
+			// Verbose validity check
+			planning_scene->isStateValid(robot_state, path_constraints, group_name, true);
+
+			// Collision contact check
+			collision_detection::CollisionRequest c_req;
+			collision_detection::CollisionResult c_res;
+			c_req.contacts = true;
+			c_req.max_contacts = 10;
+			c_req.max_contacts_per_pair = 3;
+			c_req.verbose = true;
+
+			planning_scene->checkCollision(c_req, c_res, robot_state);
+
+			if (c_res.contact_count > 0) {
+				visualization_msgs::msg::MarkerArray arr_i;
+				collision_detection::getCollisionMarkersFromContacts(arr_i, planning_scene->getPlanningFrame(),
+				                                                     c_res.contacts);
+				markers_out.markers.insert(markers_out.markers.end(), arr_i.markers.begin(), arr_i.markers.end());
+			}
+		}
+	}
 }
 
 }  // namespace utils

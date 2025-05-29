@@ -40,6 +40,9 @@
 #include <moveit/task_constructor/merge.h>
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/fmt_p.h>
+#include <iterator>
+#include <moveit/planning_interface/planning_interface.h>
+#include <moveit/utils/moveit_error_code.h>
 
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
@@ -160,6 +163,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	bool success = false;
 	std::string comment = "No planners specified";
 	std::vector<double> positions;
+	visualization_msgs::msg::MarkerArray arr;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
 		// set intermediate goal state
 		planning_scene::PlanningScenePtr end = start->diff();
@@ -172,6 +176,12 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		robot_trajectory::RobotTrajectoryPtr trajectory;
 		auto result = pair.second->plan(start, end, jmg, timeout, trajectory, path_constraints);
+
+		if (trajectory && result.message == moveit::core::error_code_to_string(
+		                                        moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN)) {
+			moveit::task_constructor::utils::checkPathCollisions(*trajectory, end, path_constraints, jmg->getName(), arr);
+		}
+
 		success = bool(result);
 		sub_trajectories.push_back({ pair.second->getPlannerId(), trajectory });
 
@@ -194,7 +204,17 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	if (success && mode != SEQUENTIAL)  // try to merge
 		solution = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
 	if (!solution)  // success == false or merging failed: store sequentially
+	{
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
+		// copy markers into each subtrajectory
+		auto seq_solution = std::dynamic_pointer_cast<SolutionSequence>(solution);
+		if (seq_solution) {
+			for (const auto* sub_const_ptr : seq_solution->solutions()) {
+				auto* sub_ptr = const_cast<SolutionBase*>(sub_const_ptr);
+				sub_ptr->appendMarkers(arr.markers);
+			}
+		}
+	}
 	if (!success)  // error during sequential planning
 		solution->markAsFailure(comment);
 	connect(from, to, solution);

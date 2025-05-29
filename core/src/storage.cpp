@@ -230,6 +230,10 @@ void SolutionBase::fillInfo(moveit_task_constructor_msgs::msg::SolutionInfo& inf
 	std::copy(markers.begin(), markers.end(), info.markers.begin());
 }
 
+void SolutionBase::appendMarkers(const std::vector<visualization_msgs::msg::Marker>& new_markers) {
+	std::copy(new_markers.begin(), new_markers.end(), std::back_inserter(markers_));
+}
+
 void SubTrajectory::appendTo(moveit_task_constructor_msgs::msg::Solution& msg, Introspection* introspection) const {
 	msg.sub_trajectory.emplace_back();
 	moveit_task_constructor_msgs::msg::SubTrajectory& t = msg.sub_trajectory.back();

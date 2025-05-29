@@ -327,6 +327,8 @@ public:
 	/// order solutions by their cost
 	bool operator<(const SolutionBase& other) const { return this->cost_ < other.cost_; }
 
+	void appendMarkers(const std::vector<visualization_msgs::msg::Marker>& new_markers);
+
 protected:
 	SolutionBase(Stage* creator = nullptr, double cost = 0.0, std::string comment = "", std::string planner_id = "")
 	  : creator_(creator), cost_(cost), comment_(std::move(comment)), planner_id_(std::move(planner_id)) {}
