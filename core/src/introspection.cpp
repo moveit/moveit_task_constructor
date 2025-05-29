@@ -163,9 +163,6 @@ public:
 	/// mapping from stages to their id
 	std::map<const StagePrivate*, moveit_task_constructor_msgs::msg::StageStatistics::_id_type> stage_to_id_map_;
 	boost::bimap<uint32_t, const SolutionBase*> id_solution_bimap_;
-
-	/// mapping from solution id to added visualization markers
-	std::map<uint, std::vector<visualization_msgs::msg::Marker>> solution_id_to_markers_map_;
 };
 
 Introspection::Introspection(const TaskPrivate* task) : impl(new IntrospectionPrivate(task, this)) {}
@@ -263,23 +260,6 @@ void Introspection::fillStageStatistics(const Stage& stage, moveit_task_construc
 
 	s.total_compute_time = stage.getTotalComputeTime();
 	s.num_failed = stage.numFailures();
-}
-
-void Introspection::addMarkers(const uint id, const std::vector<visualization_msgs::msg::Marker>& markers) {
-	impl->solution_id_to_markers_map_[id] = markers;
-}
-
-void Introspection::addMarkers(const moveit::task_constructor::SolutionBase& s,
-                               const std::vector<visualization_msgs::msg::Marker>& markers) {
-	addMarkers(solutionId(s), markers);
-}
-
-void Introspection::resetMarkers(const uint id) {
-	impl->solution_id_to_markers_map_[id].clear();
-}
-
-void Introspection::resetAllMarkers() {
-	impl->solution_id_to_markers_map_.clear();
 }
 
 moveit_task_constructor_msgs::msg::TaskDescription&
