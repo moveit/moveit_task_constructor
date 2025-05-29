@@ -3,7 +3,7 @@
 #############
 
 ## Add gtest based cpp test target
-if (BUILD_TESTING)
+if (BUILD_TESTING AND NOT (CMAKE_CXX_FLAGS MATCHES "-fsanitize"))
 	find_package(ament_cmake_gtest REQUIRED)
 	find_package(launch_testing_ament_cmake REQUIRED)
 	find_package(moveit_task_constructor_core REQUIRED)
