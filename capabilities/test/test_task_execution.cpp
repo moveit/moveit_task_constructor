@@ -60,6 +60,12 @@ TEST_F(PandaMoveTo, preemptExecution) {
 	}
 
 	EXPECT_EQ(result.val, moveit_msgs::msg::MoveItErrorCodes::PREEMPTED);
+
+	// After preempting motion reset the task and make sure we can successfully plan and execute motion again
+	t.reset();
+	ASSERT_TRUE(t.plan());
+	result = t.execute(*t.solutions().front());
+	EXPECT_EQ(result.val, moveit_msgs::msg::MoveItErrorCodes::SUCCESS);
 }
 
 int main(int argc, char** argv) {
