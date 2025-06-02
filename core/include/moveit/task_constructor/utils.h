@@ -145,10 +145,10 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
                          const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame);
 
-void checkPathCollisions(const robot_trajectory::RobotTrajectory& trajectory,
-                         const planning_scene::PlanningSceneConstPtr& planning_scene,
-                         const moveit_msgs::msg::Constraints& path_constraints, const std::string& group_name,
-                         visualization_msgs::msg::MarkerArray& markers_out);
+void markPathCollisions(const robot_trajectory::RobotTrajectory& trajectory,
+                        const planning_scene::PlanningSceneConstPtr& planning_scene,
+                        const moveit_msgs::msg::Constraints& path_constraints, const std::string& group_name,
+                        visualization_msgs::msg::MarkerArray& markers_out);
 
 }  // namespace utils
 }  // namespace task_constructor

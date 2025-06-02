@@ -179,7 +179,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		if (trajectory && result.message == moveit::core::error_code_to_string(
 		                                        moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN)) {
-			moveit::task_constructor::utils::checkPathCollisions(*trajectory, end, path_constraints, jmg->getName(), arr);
+			moveit::task_constructor::utils::markPathCollisions(*trajectory, end, path_constraints, jmg->getName(), arr);
 		}
 
 		success = bool(result);
