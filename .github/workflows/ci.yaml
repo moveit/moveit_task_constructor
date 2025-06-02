@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: humble-release
+          - IMAGE: humble-source
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
@@ -89,6 +89,7 @@ jobs:
         with:
           docker: $DOCKER_IMAGE
           workdir: ${{ env.BASEDIR }}/target_ws
+          lcov_capture_args: --ignore-errors=source,gcov,mismatch,negative
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
         uses: codecov/codecov-action@v3

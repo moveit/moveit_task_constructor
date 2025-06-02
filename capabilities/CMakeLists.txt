@@ -34,6 +34,8 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
 )
 
+add_subdirectory(test)
+
 pluginlib_export_plugin_description_file(moveit_ros_move_group capabilities_plugin_description.xml)
 ament_export_dependencies(moveit_core)
 ament_export_dependencies(moveit_ros_move_group)
