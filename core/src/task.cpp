@@ -316,6 +316,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	while (result_future.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
 		if (pimpl()->preempt_requested_) {
 			auto cancel_future = execute_ac_->async_cancel_goal(goal_handle);
+			this->resetPreemptRequest();
 			if (rclcpp::spin_until_future_complete(execute_solution_node_, cancel_future) !=
 			    rclcpp::FutureReturnCode::SUCCESS) {
 				RCLCPP_ERROR(execute_solution_node_->get_logger(), "Could not preempt execution");
