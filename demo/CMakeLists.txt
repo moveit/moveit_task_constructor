@@ -8,6 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(ament_cmake REQUIRED)
 
 find_package(generate_parameter_library REQUIRED)
+find_package(launch_param_builder REQUIRED)
+find_package(xacro REQUIRED)
 find_package(moveit_common REQUIRED)
 moveit_package()
 find_package(moveit_core REQUIRED)
