@@ -311,7 +311,7 @@ Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	assert(impl);
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
-	p.declare<std::string>("marker_ns", name(), "marker namespace");
+	p.declare<std::string_view>("marker_ns", name(), "marker namespace");
 	p.declare<TrajectoryExecutionInfo>("trajectory_execution_info", TrajectoryExecutionInfo(),
 	                                   "settings used when executing the trajectory");
 
@@ -909,13 +909,14 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& from = from_state.scene();
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
-	auto false_with_debug = [](auto... args) {
-		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Connecting"), fmt::format(args...));
+	auto false_with_debug = [](auto args...) {
+		RCLCPP_DEBUG_STREAM(rclcpp::get_logger("Connecting"), args);
 		return false;
 	};
 
-	if (from->getWorld()->size() != to->getWorld()->size())
-		return false_with_debug("{}: different number of collision objects", name());
+	if (from->getWorld()->size() != to->getWorld()->size()) {
+			return false_with_debug("{}: different number of collision objects", name().c_str());
+	}
 
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
@@ -923,19 +924,19 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
 		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_name);
 		if (!to_object)
-			return false_with_debug("{}: object missing: {}", name(), from_object_name);
+			return false_with_debug("{}: object missing: {}", name().c_str(), from_object_name.c_str());
 
 		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4))
-			return false_with_debug("{}: different object pose: {}", name(), from_object_name);
+			return false_with_debug("{}: different object pose: {}", name().c_str(), from_object_name.c_str());
 
 		if (from_object->shape_poses_.size() != to_object->shape_poses_.size())
-			return false_with_debug("{}: different object shapes: {}", name(), from_object_name);
+			return false_with_debug("{}: different object shapes: {}", name().c_str(), from_object_name.c_str());
 
 		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
 		          to_it = to_object->shape_poses_.cbegin();
 		     from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
-				return false_with_debug("{}: different shape pose: {}", name(), from_object_name);
+				return false_with_debug("{}: different shape pose: {}", name().c_str(), from_object_name.c_str());
 	}
 
 	// Also test for attached objects which have a different storage
@@ -944,7 +945,7 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	from->getCurrentState().getAttachedBodies(from_attached);
 	to->getCurrentState().getAttachedBodies(to_attached);
 	if (from_attached.size() != to_attached.size())
-		return false_with_debug("{}: different number of objects", name());
+		return false_with_debug("{}: different number of objects", name().c_str());
 
 	for (const moveit::core::AttachedBody* from_object : from_attached) {
 		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
@@ -952,23 +953,25 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 			                       return object->getName() == from_object->getName();
 		                       });
 		if (it == to_attached.cend())
-			return false_with_debug("{}: object missing: {}", name(), from_object->getName());
+			return false_with_debug("{}: object missing: {}", name().c_str(), from_object->getName().c_str());
 
 		const moveit::core::AttachedBody* to_object = *it;
 		if (from_object->getAttachedLink() != to_object->getAttachedLink())
 			return false_with_debug("{}: different attach links: {} attached to {} vs. {}",  //
-			                        name(), from_object->getName(),  //
-			                        from_object->getAttachedLink()->getName(), to_object->getAttachedLink()->getName());
+			                        name().c_str(), from_object->getName().c_str(),  //
+			                        from_object->getAttachedLink()->getName().c_str(),
+									to_object->getAttachedLink()->getName().c_str());
 
 		if (from_object->getShapes().size() != to_object->getShapes().size())
-			return false_with_debug("{}: different object shapes: {}", name(), from_object->getName());
+			return false_with_debug("{}: different object shapes: {}", name().c_str(), from_object->getName().c_str());
 
 		auto from_it = from_object->getShapePosesInLinkFrame().cbegin();
 		auto from_end = from_object->getShapePosesInLinkFrame().cend();
 		auto to_it = to_object->getShapePosesInLinkFrame().cbegin();
 		for (; from_it != from_end; ++from_it, ++to_it)
 			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
-				return false_with_debug("{}: different pose of attached object shape: {}", name(), from_object->getName());
+				return false_with_debug("{}: different pose of attached object shape: {}", name().c_str(),
+										from_object->getName().c_str());
 	}
 	return true;
 }

@@ -10,7 +10,7 @@ on:
         type: string
         required: true
         description: 'ROS distribution codename:'
-        default: noetic
+        default: humble
 
 permissions:
   contents: read # to fetch code (actions/checkout)

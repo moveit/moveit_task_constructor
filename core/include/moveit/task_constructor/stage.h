@@ -43,6 +43,7 @@
 #include "utils.h"
 #include <moveit/macros/class_forward.hpp>
 #include <moveit/task_constructor/storage.h>
+#include <string_view>
 #include <vector>
 #include <list>
 

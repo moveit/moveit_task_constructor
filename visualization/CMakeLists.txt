@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_visualization)
+# Qt Stuff
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 find_package(ament_cmake REQUIRED)
 find_package(fmt REQUIRED)
@@ -18,12 +21,13 @@ find_package(rviz_ogre_vendor REQUIRED)
 # definition needed for boost/math/constants/constants.hpp included by Ogre to compile
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
 
-# Qt Stuff
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
-set(QT_LIBRARIES Qt5::Widgets)
-macro(qt_wrap_ui)
-	qt5_wrap_ui(${ARGN})
-endmacro()
+
+
+  function(qt_wrap_cpp out)
+    qt_wrap_cpp(_sources ${ARGN})
+    set("${out}" ${_sources} PARENT_SCOPE)
+  endfunction()
+
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
@@ -41,12 +45,13 @@ install(DIRECTORY icons DESTINATION share)
 pluginlib_export_plugin_description_file(rviz_common motion_planning_tasks_rviz_plugin_description.xml)
 
 ament_export_include_directories(include)
-ament_export_libraries(motion_planning_tasks_utils
-	motion_planning_tasks_properties
-	motion_planning_tasks_rviz_plugin
-	moveit_task_visualization_tools
-)
-ament_export_dependencies(ament_cmake)
+
+
+
+
+
+ament_export_dependencies(Core5Compat)
+#ament_export_dependencies(ament_cmake)
 ament_export_dependencies(Boost)
 ament_export_dependencies(moveit_core)
 ament_export_dependencies(moveit_ros_visualization)

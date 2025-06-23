@@ -526,7 +526,7 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 					return item.creation_rank;
 				case 1:
 					if (std::isinf(item.cost))
-						return tr(u8"∞");
+						return tr("∞");
 					if (std::isnan(item.cost))
 						return QVariant();
 					return QLocale().toString(item.cost, 'f', 4);
