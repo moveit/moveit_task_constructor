@@ -5,16 +5,11 @@ find_package(ament_cmake REQUIRED)
 find_package(moveit_common REQUIRED)
 moveit_package()
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-	eigen3_cmake_module
-	Eigen3
-	geometry_msgs
-	rclcpp
-	tf2_eigen
-	urdfdom_headers
-	std_msgs
-	visualization_msgs
-)
+find_package(urdfdom_headers REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 foreach(dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 	find_package(${dependency} REQUIRED)
@@ -28,7 +23,8 @@ add_library(${PROJECT_NAME} SHARED
 	src/marker_creation.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_link_libraries(${PROJECT_NAME} 
+	Eigen3::Eigen  tf2_eigen::tf2_eigen tf2_geometry_msgs::tf2_geometry_msgs  urdfdom_headers::urdfdom_headers ${visualization_msgs_TARGETS})
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
