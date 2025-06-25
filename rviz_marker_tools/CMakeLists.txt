@@ -23,7 +23,7 @@ add_library(${PROJECT_NAME} SHARED
 	src/marker_creation.cpp
 )
 
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
 	Eigen3::Eigen  tf2_eigen::tf2_eigen tf2_geometry_msgs::tf2_geometry_msgs  urdfdom_headers::urdfdom_headers ${visualization_msgs_TARGETS})
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
