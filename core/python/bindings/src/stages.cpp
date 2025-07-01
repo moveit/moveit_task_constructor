@@ -171,10 +171,6 @@ void export_stages(pybind11::module& m) {
 			str: Default joint pose of the active group
 			(defines cost of the inverse kinematics).
 		)")
-	    .property<uint32_t>("max_ik_solutions", R"(
-			int: Set the maximum number of inverse
-			kinematic solutions thats should be generated.
-		)")
 	    .property<uint32_t>("max_ik_solutions", "uint: max number of solutions to return")
 	    .property<bool>("ignore_collisions", R"(
 			bool: Specify if collisions with other members of
@@ -548,6 +544,12 @@ void export_stages(pybind11::module& m) {
 		.property<std::string>("grasp", "str: Name of the grasp pose")
 		.def(py::init<Stage::pointer&&, const std::string&>(), "pose_generator"_a,
 		     "name"_a = std::string("ungrasp"));
+
+	properties::class_<PassThrough, Stage>(m, "PassThrough", R"(
+			Wrapper which simply forwards all solutions of a child stage,
+			allowing the wrapper to redefine costs, w/o loosing original costs.
+		)")
+	    .def(py::init<const std::string&, Stage::pointer&&>(), "name"_a, "stage"_a);
 }
 }  // namespace python
 }  // namespace moveit

@@ -51,4 +51,5 @@
 #include "stages/modify_planning_scene.h"
 #include "stages/move_relative.h"
 #include "stages/move_to.h"
+#include "stages/passthrough.h"
 #include "stages/predicate_filter.h"
