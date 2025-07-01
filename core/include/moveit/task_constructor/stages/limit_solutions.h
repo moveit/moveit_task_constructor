@@ -1,8 +1,6 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, Hamburg University
- *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -14,7 +12,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the copyright holder nor the names of its
+ *   * Neither the name of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -31,26 +29,36 @@
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-
-/* Author: Michael 'v4hn' Goerner
-   Desc:   collective include of primitive stages
-*/
+/* Authors: Joseph Moore */
 
 #pragma once
 
-#include "stages/compute_ik.h"
-#include "stages/connect.h"
-#include "stages/current_state.h"
-#include "stages/fix_collision_objects.h"
-#include "stages/fixed_cartesian_poses.h"
-#include "stages/fixed_state.h"
-#include "stages/generate_grasp_pose.h"
-#include "stages/generate_place_pose.h"
-#include "stages/generate_pose.h"
-#include "stages/generate_random_pose.h"
-#include "stages/limit_solutions.h"
-#include "stages/modify_planning_scene.h"
-#include "stages/move_relative.h"
-#include "stages/move_to.h"
-#include "stages/passthrough.h"
-#include "stages/predicate_filter.h"
+#include <moveit/task_constructor/container.h>
+
+namespace moveit {
+namespace task_constructor {
+namespace stages {
+
+/** A wrapper which lazily passes a limited number of solutions
+ *
+ * The best solution at each call to compute is passed on
+ *
+ */
+class LimitSolutions : public WrapperBase
+{
+public:
+	LimitSolutions(const std::string& name = "PassThrough", Stage::pointer&& child = Stage::pointer());
+    
+    bool canCompute() const override;
+	void compute() override;
+	void onNewSolution(const SolutionBase& s) override;
+    
+    void setMaxSolutions(uint32_t max_solutions) { setProperty("max_solutions", max_solutions); }
+
+private:
+    ordered<const SolutionBase*> upstream_solutions_;
+    uint32_t forwarded_solutions;
+};
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit
