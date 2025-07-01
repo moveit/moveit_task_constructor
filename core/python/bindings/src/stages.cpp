@@ -550,6 +550,17 @@ void export_stages(pybind11::module& m) {
 			allowing the wrapper to redefine costs, w/o loosing original costs.
 		)")
 	    .def(py::init<const std::string&, Stage::pointer&&>(), "name"_a, "stage"_a);
+
+	properties::class_<LimitSolutions, Stage>(m, "LimitSolutions", R"(
+			Wrapper for any stage to limit the total number of solutions returned.
+
+			The wrapper stores solutions of its child stage, and on each compute will
+			pass on the lowest cost solution available, until the maximum number of solutions
+			is reached.
+		)")
+	    .property<uint32_t>("max_solutions", "uint: maximum number of solutions that should be passed on")
+	    .def(py::init<const std::string&, Stage::pointer&&>(), "name"_a, "stage"_a);
+
 }
 }  // namespace python
 }  // namespace moveit
