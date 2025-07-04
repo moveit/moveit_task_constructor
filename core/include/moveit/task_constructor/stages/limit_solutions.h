@@ -47,7 +47,7 @@ namespace stages {
 class LimitSolutions : public WrapperBase
 {
 public:
-	LimitSolutions(const std::string& name = "PassThrough", Stage::pointer&& child = Stage::pointer());
+	LimitSolutions(const std::string& name = "LimitSolutions", Stage::pointer&& child = Stage::pointer());
     
     bool canCompute() const override;
 	void compute() override;
