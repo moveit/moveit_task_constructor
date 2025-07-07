@@ -13,6 +13,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	${PROJECT_INCLUDE}/stages/passthrough.h
 	${PROJECT_INCLUDE}/stages/noop.h
 	${PROJECT_INCLUDE}/stages/predicate_filter.h
+	${PROJECT_INCLUDE}/stages/limit_solutions.h
 
 	${PROJECT_INCLUDE}/stages/connect.h
 	${PROJECT_INCLUDE}/stages/move_to.h
@@ -34,6 +35,7 @@ add_library(${PROJECT_NAME}_stages SHARED
 	compute_ik.cpp
 	passthrough.cpp
 	predicate_filter.cpp
+	limit_solutions.cpp
 
 	connect.cpp
 	move_to.cpp
