@@ -153,9 +153,9 @@ bool ExecuteTaskSolutionCapability::constructMotionPlan(const moveit_task_constr
 			if (!joint_names.empty()) {
 				group = findJointModelGroup(*model, joint_names);
 				if (!group) {
-					ROS_ERROR_STREAM_NAMED(
-					    "ExecuteTaskSolution",
-					    fmt::format("Could not find JointModelGroup that actuates {{{}}}", fmt::join(joint_names, ", ")));
+					RCLCPP_ERROR_STREAM("ExecuteTaskSolution",
+					                    fmt::format("Could not find JointModelGroup that actuates {{{}}}",
+					                                rcpputils::join(joint_names, ", ")));
 					return false;
 				}
 				ROS_DEBUG_NAMED("ExecuteTaskSolution", "Using JointModelGroup '%s' for execution",
