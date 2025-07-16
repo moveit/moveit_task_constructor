@@ -13,6 +13,7 @@
 	<buildtool_depend>catkin</buildtool_depend>
 
 	<depend>fmt</depend>
+	<depend>rcpputils</depend>
 	<depend>moveit_core</depend>
 	<depend>moveit_ros_move_group</depend>
 	<depend>actionlib</depend>

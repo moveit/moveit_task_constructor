@@ -174,7 +174,7 @@ TEST_F(PandaMoveRelativeJoint, jointOutsideBound) {
 	// move joint inside limit
 	auto initial_jpos = scene->getCurrentState().getJointPositions("panda_joint7");
 	move->setDirection([initial_jpos] {
-			return std::map<std::string, double>{ { "panda_joint7", 2.0 - *initial_jpos } };
+		return std::map<std::string, double>{ { "panda_joint7", 2.0 - *initial_jpos } };
 	}());
 	EXPECT_TRUE(this->t.plan()) << "Plan should succeed, joint inside limit";
 
@@ -182,7 +182,7 @@ TEST_F(PandaMoveRelativeJoint, jointOutsideBound) {
 
 	// move joint outside limit: 2.8973
 	move->setDirection([initial_jpos] {
-			return std::map<std::string, double>{ { "panda_joint7", 3.0 - *initial_jpos } };
+		return std::map<std::string, double>{ { "panda_joint7", 3.0 - *initial_jpos } };
 	}());
 
 	EXPECT_FALSE(this->t.plan()) << "Plan should fail, joint outside limit";
