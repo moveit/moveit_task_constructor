@@ -19,8 +19,6 @@ jobs:
       - name: Install clang-format-14
         run: sudo apt-get install clang-format-14
       - uses: rhaschke/install-catkin_lint-action@main
-        with:
-          distro: noetic
       - uses: pre-commit/action@v3.0.1
         id: precommit
       - name: Upload pre-commit changes
