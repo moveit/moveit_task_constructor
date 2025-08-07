@@ -4,6 +4,8 @@ add_library(${PROJECT_NAME}_python_tools SHARED
 	src/properties.cpp
 )
 target_link_libraries(${PROJECT_NAME}_python_tools PUBLIC ${PROJECT_NAME} pybind11::pybind11)
+# Use minimum-size optimization for pybind11 bindings
+target_link_libraries(${PROJECT_NAME}_python_tools PUBLIC pybind11::opt_size)
 
 # catkin_lint cannot detect target declarations in functions, here in pybind11_add_module
 #catkin_lint: ignore undefined_target

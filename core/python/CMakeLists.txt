@@ -3,9 +3,6 @@
 # pybind11 must use the ROS python version
 set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION})
 
-# Use minimum-size optimization for pybind11 bindings
-add_compile_options("-Os")
-
 # create symlink to grant access to downstream packages in devel space
 add_custom_target(pybind11_devel_symlink ALL COMMAND ${CMAKE_COMMAND} -E create_symlink
 	${CMAKE_CURRENT_SOURCE_DIR}/pybind11

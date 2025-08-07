@@ -39,7 +39,7 @@ catkin_package(
 	CFG_EXTRAS pybind11.cmake
 )
 
-add_compile_options(-fvisibility-inlines-hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN TRUE)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/task_constructor)
 
