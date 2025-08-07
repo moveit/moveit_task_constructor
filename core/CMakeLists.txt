@@ -27,6 +27,7 @@ catkin_package(
 		${PROJECT_NAME}
 		${PROJECT_NAME}_stages
 		${PROJECT_NAME}_stage_plugins
+		${PROJECT_NAME}_python_tools
 	INCLUDE_DIRS
 		include
 	CATKIN_DEPENDS
