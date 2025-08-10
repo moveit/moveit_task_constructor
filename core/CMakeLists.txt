@@ -36,7 +36,6 @@ catkin_package(
 		moveit_task_constructor_msgs
 		rviz_marker_tools
 		visualization_msgs
-	CFG_EXTRAS pybind11.cmake
 )
 
 set(CMAKE_VISIBILITY_INLINES_HIDDEN TRUE)
