@@ -1,13 +1,9 @@
 #pragma once
 
-#include <pybind11/smart_holder.h>
 #include <py_binding_tools/ros_msg_typecasters.h>
 #include <moveit/task_constructor/properties.h>
 #include <boost/any.hpp>
 #include <typeindex>
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Property)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropertyMap)
 
 namespace moveit {
 namespace python {

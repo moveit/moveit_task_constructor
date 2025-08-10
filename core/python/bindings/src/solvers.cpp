@@ -46,12 +46,6 @@ using namespace py::literals;
 using namespace moveit::task_constructor;
 using namespace moveit::task_constructor::solvers;
 
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(PlannerInterface)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(PipelinePlanner)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(JointInterpolationPlanner)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(CartesianPath)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(MultiPlanner)
-
 namespace moveit {
 namespace python {
 
