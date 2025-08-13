@@ -335,7 +335,7 @@ private:
 	// comment for this solution, e.g. explanation of failure
 	std::string comment_;
 	// markers for this solution, e.g. target frame or collision indicators
-	std::deque<visualization_msgs::Marker> markers_;
+	std::vector<visualization_msgs::Marker> markers_;
 
 	// begin and end InterfaceState of this solution/trajectory
 	const InterfaceState* start_ = nullptr;
