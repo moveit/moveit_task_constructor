@@ -42,34 +42,36 @@ namespace task_constructor {
 namespace stages {
 
 LimitSolutions::LimitSolutions(const std::string& name, Stage::pointer&& child) : WrapperBase(name, std::move(child)) {
-    auto& p = properties();
+	auto& p = properties();
 	p.declare<uint32_t>("max_solutions", "maximum number of solutions returned by this wrapper");
-    forwarded_solutions = 0;
+	forwarded_solutions = 0;
 }
 
+void LimitSolutions::reset() {
+	upstream_solutions_.clear();
+	forwarded_solutions = 0;
+	WrapperBase::reset();
+}
 
 void LimitSolutions::onNewSolution(const SolutionBase& s) {
-	upstream_solutions_.push(&s);
+	uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+	if (forwarded_solutions + upstream_solutions_.size() < max_solutions)
+		upstream_solutions_.push(&s);
 }
 
 bool LimitSolutions::canCompute() const {
-    const auto& props = properties();
-	uint32_t max_solutions = props.get<uint32_t>("max_solutions");
-
-    return (!upstream_solutions_.empty() || WrapperBase::canCompute())
-        && forwarded_solutions < max_solutions;
+	return !upstream_solutions_.empty() || WrapperBase::canCompute();
 }
 
 void LimitSolutions::compute() {
-    if (WrapperBase::canCompute())
+	if (WrapperBase::canCompute())
 		WrapperBase::compute();
 
-    if (upstream_solutions_.empty())
+	if (upstream_solutions_.empty())
 		return;
-    
-	const SolutionBase& s = *upstream_solutions_.pop();
-    forwarded_solutions += 1;
-	liftSolution(s);
+
+	++forwarded_solutions;
+	liftSolution(*upstream_solutions_.pop());
 }
 }  // namespace stages
 }  // namespace task_constructor

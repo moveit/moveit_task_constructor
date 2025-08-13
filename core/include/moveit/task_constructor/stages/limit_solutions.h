@@ -48,16 +48,17 @@ class LimitSolutions : public WrapperBase
 {
 public:
 	LimitSolutions(const std::string& name = "LimitSolutions", Stage::pointer&& child = Stage::pointer());
-    
-    bool canCompute() const override;
+
+	void reset() override;
+	bool canCompute() const override;
 	void compute() override;
 	void onNewSolution(const SolutionBase& s) override;
-    
-    void setMaxSolutions(uint32_t max_solutions) { setProperty("max_solutions", max_solutions); }
+
+	void setMaxSolutions(uint32_t max_solutions) { setProperty("max_solutions", max_solutions); }
 
 private:
-    ordered<const SolutionBase*> upstream_solutions_;
-    uint32_t forwarded_solutions;
+	ordered<const SolutionBase*> upstream_solutions_;
+	uint32_t forwarded_solutions;
 };
 }  // namespace stages
 }  // namespace task_constructor
