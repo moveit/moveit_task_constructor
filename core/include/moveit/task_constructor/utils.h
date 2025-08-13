@@ -139,7 +139,8 @@ private:
 	Int i;
 };
 
-bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
+/** For a PoseStamped property, lookup the associated LinkModel* and yield the pose in global frame */
+bool getRobotTipForFrame(const Property& tip_pose, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame);
 }  // namespace utils

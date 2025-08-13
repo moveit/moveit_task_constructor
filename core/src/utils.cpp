@@ -47,7 +47,7 @@ namespace moveit {
 namespace task_constructor {
 namespace utils {
 
-bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
+bool getRobotTipForFrame(const Property& tip_pose, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame) {
 	auto get_tip = [&jmg]() -> const moveit::core::LinkModel* {
@@ -62,7 +62,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 
 	error_msg = "";
 
-	if (property.value().empty()) {  // property undefined
+	if (tip_pose.value().empty()) {  // property undefined
 		robot_link = get_tip();
 		if (!robot_link) {
 			error_msg = "missing ik_frame";
@@ -70,7 +70,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 		}
 		tip_in_global_frame = scene.getCurrentState().getGlobalLinkTransform(robot_link);
 	} else {
-		auto ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(property.value());
+		auto ik_pose_msg = boost::any_cast<geometry_msgs::PoseStamped>(tip_pose.value());
 		tf2::fromMsg(ik_pose_msg.pose, tip_in_global_frame);
 
 		robot_link = nullptr;
@@ -82,7 +82,7 @@ bool getRobotTipForFrame(const Property& property, const planning_scene::Plannin
 			error_msg = ss.str();
 			return false;
 		}
-		if (!robot_link)
+		if (!robot_link)  // if ik_pose_msg.header.frame_id was empty, use default tip frame
 			robot_link = get_tip();
 		if (!robot_link) {
 			error_msg = "ik_frame doesn't specify a link frame";
