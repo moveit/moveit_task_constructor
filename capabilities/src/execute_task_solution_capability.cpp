@@ -44,6 +44,7 @@
 #include <moveit/utils/message_checks.h>
 #include <moveit/utils/moveit_error_code.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace {
 
