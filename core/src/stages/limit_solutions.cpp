@@ -1,8 +1,6 @@
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2020, Hamburg University
- *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -14,7 +12,7 @@
  *     copyright notice, this list of conditions and the following
  *     disclaimer in the documentation and/or other materials provided
  *     with the distribution.
- *   * Neither the name of the copyright holder nor the names of its
+ *   * Neither the name of Bielefeld University nor the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -32,25 +30,49 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-/* Author: Michael 'v4hn' Goerner
-   Desc:   collective include of primitive stages
-*/
+/* Authors: Joseph Moore */
 
-#pragma once
+#include <moveit/task_constructor/stages/limit_solutions.h>
+#include <moveit/task_constructor/storage.h>
+#include <moveit/task_constructor/cost_terms.h>
+#include <fmt/format.h>
 
-#include "stages/compute_ik.h"
-#include "stages/connect.h"
-#include "stages/current_state.h"
-#include "stages/fix_collision_objects.h"
-#include "stages/fixed_cartesian_poses.h"
-#include "stages/fixed_state.h"
-#include "stages/generate_grasp_pose.h"
-#include "stages/generate_place_pose.h"
-#include "stages/generate_pose.h"
-#include "stages/generate_random_pose.h"
-#include "stages/limit_solutions.h"
-#include "stages/modify_planning_scene.h"
-#include "stages/move_relative.h"
-#include "stages/move_to.h"
-#include "stages/passthrough.h"
-#include "stages/predicate_filter.h"
+namespace moveit {
+namespace task_constructor {
+namespace stages {
+
+LimitSolutions::LimitSolutions(const std::string& name, Stage::pointer&& child) : WrapperBase(name, std::move(child)) {
+	auto& p = properties();
+	p.declare<uint32_t>("max_solutions", "maximum number of solutions returned by this wrapper");
+	forwarded_solutions = 0;
+}
+
+void LimitSolutions::reset() {
+	upstream_solutions_.clear();
+	forwarded_solutions = 0;
+	WrapperBase::reset();
+}
+
+void LimitSolutions::onNewSolution(const SolutionBase& s) {
+	uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+	if (forwarded_solutions + upstream_solutions_.size() < max_solutions)
+		upstream_solutions_.push(&s);
+}
+
+bool LimitSolutions::canCompute() const {
+	return !upstream_solutions_.empty() || WrapperBase::canCompute();
+}
+
+void LimitSolutions::compute() {
+	if (WrapperBase::canCompute())
+		WrapperBase::compute();
+
+	if (upstream_solutions_.empty())
+		return;
+
+	++forwarded_solutions;
+	liftSolution(*upstream_solutions_.pop());
+}
+}  // namespace stages
+}  // namespace task_constructor
+}  // namespace moveit
