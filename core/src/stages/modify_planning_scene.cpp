@@ -156,6 +156,7 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 		if (res.collision) {
 			const auto contact = res.contacts.begin()->second.front();
 			traj.markAsFailure(contact.body_name_1 + " colliding with " + contact.body_name_2);
+			utils::addCollisionMarkers(traj.markers(), scene->getPlanningFrame(), res.contacts);
 		}
 	} catch (const std::exception& e) {
 		traj.markAsFailure(e.what());

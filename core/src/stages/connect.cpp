@@ -158,6 +158,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 	intermediate_scenes.push_back(start);
 
 	bool success = false;
+	bool has_potential_collisions = false;
 	std::string comment = "No planners specified";
 	std::vector<double> positions;
 	for (const GroupPlannerVector::value_type& pair : planner_) {
@@ -177,6 +178,7 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 
 		if (!success) {
 			comment = result.message;
+			has_potential_collisions = trajectory && utils::hints_at_collisions(result);
 			break;
 		}
 
@@ -195,8 +197,15 @@ void Connect::compute(const InterfaceState& from, const InterfaceState& to) {
 		solution = merge(sub_trajectories, intermediate_scenes, from.scene()->getCurrentState());
 	if (!solution)  // success == false or merging failed: store sequentially
 		solution = makeSequential(sub_trajectories, intermediate_scenes, from, to);
-	if (!success)  // error during sequential planning
+	if (!success) {  // error already during sequential planning
 		solution->markAsFailure(comment);
+		if (has_potential_collisions) {
+			// add collision markers for last (failed) trajectory segment
+			auto sequence = std::dynamic_pointer_cast<SolutionSequence>(solution);
+			auto trajectory = dynamic_cast<const SubTrajectory*>(sequence->solutions().back())->trajectory();
+			utils::addCollisionMarkers(solution->markers(), *trajectory, start);
+		}
+	}
 	connect(from, to, solution);
 }
 
