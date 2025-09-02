@@ -205,14 +205,17 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 	const auto& path_constraints = props.get<moveit_msgs::msg::Constraints>("path_constraints");
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	bool has_potential_collisions = false;
 	std::string comment = "";
 
 	if (getJointStateGoal(goal, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 		success = bool(result);
-		if (!success)
+		if (!success) {
 			comment = result.message;
+			has_potential_collisions = robot_trajectory && utils::hints_at_collisions(result);
+		}
 		solution.setPlannerId(planner_->getPlannerId());
 	} else {  // Cartesian goal
 		// Where to go?
@@ -252,8 +255,10 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 		const auto result =
 		    planner_->plan(state.scene(), *link, offset, target, jmg, timeout, robot_trajectory, path_constraints);
 		success = bool(result);
-		if (!success)
+		if (!success) {
 			comment = result.message;
+			has_potential_collisions = robot_trajectory && utils::hints_at_collisions(result);
+		};
 		solution.setPlannerId(planner_->getPlannerId());
 	}
 
@@ -269,8 +274,11 @@ bool MoveTo::compute(const InterfaceState& state, planning_scene::PlanningSceneP
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
-		if (!success)
+		if (!success) {
 			solution.markAsFailure(comment);
+			if (has_potential_collisions)
+				utils::addCollisionMarkers(solution.markers(), *robot_trajectory, scene);
+		}
 
 		return true;
 	}
