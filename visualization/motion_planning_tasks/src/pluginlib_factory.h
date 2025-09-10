@@ -45,7 +45,7 @@
 #include <vector>
 
 #ifndef Q_MOC_RUN
-#include <pluginlib/class_loader.h>
+#include <pluginlib/class_loader.hpp>
 #include <rviz/load_resource.h>
 #include <functional>
 #endif
@@ -150,7 +150,7 @@ public:
 	}
 	template <class Derived>
 	void addBuiltInClass(const QString& name, const QString& description) {
-		addBuiltInClass("Built Ins", name, description, []() { return new Derived(); });
+		addBuiltInClass("Built Ins", name, description, [] { return new Derived(); });
 	}
 
 	/** @brief Instantiate and return a instance of a subclass of Type using our

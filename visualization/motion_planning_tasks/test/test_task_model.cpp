@@ -44,6 +44,7 @@
 #include <gtest/gtest.h>
 #include <initializer_list>
 #include <qcoreapplication.h>
+#include <qtimer.h>
 
 using namespace moveit::task_constructor;
 
@@ -226,12 +227,19 @@ TEST_F(TaskListModelTest, deletion) {
 	// process deleteLater() events
 	QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 	// as m is owned by model, m should be destroyed
-	// EXPECT_EQ(num_deletes, 1); // TODO: event is not processed, missing event loop?
+	EXPECT_EQ(num_deletes, 1);
 	EXPECT_EQ(model.rowCount(), 0);
 }
 
 int main(int argc, char** argv) {
-	testing::InitGoogleTest(&argc, argv);
 	ros::init(argc, argv, "test_task_model");
-	return RUN_ALL_TESTS();
+	QCoreApplication app(argc, argv);
+	// https://bugs.llvm.org/show_bug.cgi?id=40367
+	// NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+	QTimer::singleShot(0, [&]() {
+		::testing::InitGoogleTest(&argc, argv);
+		auto test_result = RUN_ALL_TESTS();
+		app.exit(test_result);
+	});
+	return app.exec();
 }

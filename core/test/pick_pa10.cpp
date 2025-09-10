@@ -179,7 +179,7 @@ TEST(PA10, pick) {
 	try {
 		t.plan();
 	} catch (const InitStageException& e) {
-		ADD_FAILURE() << "planning failed with exception" << std::endl << e << t;
+		ADD_FAILURE() << "planning failed with exception\n" << e << t;
 	}
 
 	auto solutions = t.solutions().size();

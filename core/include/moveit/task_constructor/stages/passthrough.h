@@ -36,9 +36,6 @@
 #pragma once
 
 #include <moveit/task_constructor/container.h>
-#include <moveit/task_constructor/cost_queue.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <Eigen/Geometry>
 
 namespace moveit {
 namespace task_constructor {

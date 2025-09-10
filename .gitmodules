@@ -1,0 +1,3 @@
+[submodule "core/src/scope_guard"]
+	path = core/src/scope_guard
+	url = https://github.com/ricab/scope_guard

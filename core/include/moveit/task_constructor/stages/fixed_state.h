@@ -48,8 +48,10 @@ namespace stages {
 class FixedState : public Generator
 {
 public:
-	FixedState(const std::string& name = "initial state");
+	FixedState(const std::string& name = "initial state", planning_scene::PlanningScenePtr scene = nullptr);
 	void setState(const planning_scene::PlanningScenePtr& scene);
+
+	void setIgnoreCollisions(bool ignore) { setProperty("ignore_collisions", ignore); }
 
 	void reset() override;
 	bool canCompute() const override;

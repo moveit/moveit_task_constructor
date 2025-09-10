@@ -65,7 +65,7 @@ QModelIndex LocalTaskModel::index(Node* n) const {
 	const ContainerBase* parent = n->parent();
 
 	// the internal pointer refers to n
-	int row = 0;
+	size_t row = 0;
 	auto find_row = [n, &row](const Stage& child, int /* depth */) -> bool {
 		if (&child == n)
 			return false;  // found, don't continue traversal
@@ -101,7 +101,7 @@ QModelIndex LocalTaskModel::index(int row, int column, const QModelIndex& parent
 
 	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)));
 	ContainerBase* p = static_cast<ContainerBase*>(node(parent));
-	if (!p || row < 0 || (size_t)row >= p->numChildren())
+	if (!p || row < 0 || static_cast<size_t>(row) >= p->numChildren())
 		return QModelIndex();
 
 	Node* child = nullptr;
@@ -151,7 +151,7 @@ QVariant LocalTaskModel::data(const QModelIndex& index, int role) const {
 				case 0:
 					return QString::fromStdString(n->name());
 				case 1:
-					return (uint)n->solutions().size();
+					return static_cast<uint>(n->solutions().size());
 				case 2:
 					return 0;
 			}
@@ -182,7 +182,7 @@ bool LocalTaskModel::removeRows(int row, int count, const QModelIndex& parent) {
 
 	Q_ASSERT(dynamic_cast<ContainerBase*>(node(parent)));
 	ContainerBase* c = static_cast<ContainerBase*>(node(parent));
-	if (row < 0 || (size_t)row + count > c->numChildren())
+	if (row < 0 || static_cast<size_t>(row + count) > c->numChildren())
 		return false;
 
 	beginRemoveRows(parent, row, row + count - 1);

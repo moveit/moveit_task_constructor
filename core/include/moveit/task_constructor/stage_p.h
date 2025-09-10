@@ -43,23 +43,36 @@
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/cost_queue.h>
 
+#include <ros/console.h>
+#include <fmt/core.h>
+
 #include <ostream>
 #include <chrono>
 
 // define pimpl() functions accessing correctly casted pimpl_ pointer
-#define PIMPL_FUNCTIONS(Class)                                                                       \
-	const Class##Private* Class::pimpl() const { return static_cast<const Class##Private*>(pimpl_); } \
-	Class##Private* Class::pimpl() { return static_cast<Class##Private*>(pimpl_); }
+#define PIMPL_FUNCTIONS(Class)                           \
+	const Class##Private* Class::pimpl() const {          \
+		return static_cast<const Class##Private*>(pimpl_); \
+	}                                                     \
+	Class##Private* Class::pimpl() {                      \
+		return static_cast<Class##Private*>(pimpl_);       \
+	}
 
 namespace moveit {
 namespace task_constructor {
+
+/// exception thrown by StagePrivate::runCompute()
+class PreemptStageException : public std::exception
+{
+public:
+	explicit PreemptStageException() {}
+};
 
 class ContainerBase;
 class StagePrivate
 {
 	friend class Stage;
 	friend std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
-	friend void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 public:
 	/// container type used to store children
@@ -98,17 +111,11 @@ public:
 	inline InterfaceConstPtr prevEnds() const { return prev_ends_.lock(); }
 	inline InterfaceConstPtr nextStarts() const { return next_starts_.lock(); }
 
-	/// direction-based access to pull/push interfaces
-	inline InterfacePtr& pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
-	inline InterfacePtr pushInterface(Interface::Direction dir) {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
-	inline InterfaceConstPtr pullInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? starts_ : ends_;
-	}
-	inline InterfaceConstPtr pushInterface(Interface::Direction dir) const {
-		return dir == Interface::FORWARD ? next_starts_.lock() : prev_ends_.lock();
-	}
+	/// direction-based access to pull interface
+	template <Interface::Direction dir>
+	inline InterfacePtr pullInterface();
+	// non-template version
+	inline InterfacePtr pullInterface(Interface::Direction dir) { return dir == Interface::FORWARD ? starts_ : ends_; }
 
 	/// set parent of stage
 	/// enforce only one parent exists
@@ -141,6 +148,7 @@ public:
 	void sendBackward(InterfaceState&& from, const InterfaceState& to, const SolutionBasePtr& solution);
 	template <Interface::Direction>
 	inline void send(const InterfaceState& start, InterfaceState&& end, const SolutionBasePtr& solution);
+	void spawn(InterfaceState&& from, InterfaceState&& to, const SolutionBasePtr& solution);
 	void spawn(InterfaceState&& state, const SolutionBasePtr& solution);
 	void connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution);
 
@@ -148,8 +156,17 @@ public:
 	void newSolution(const SolutionBasePtr& solution);
 	bool storeFailures() const { return introspection_ != nullptr; }
 	void runCompute() {
+		ROS_DEBUG_STREAM_NAMED("Stage", fmt::format("Computing stage '{}'", name()));
+
+		if (preempted())
+			throw PreemptStageException();
+
 		auto compute_start_time = std::chrono::steady_clock::now();
-		compute();
+		try {
+			compute();
+		} catch (const Property::error& e) {
+			me()->reportPropertyError(e);
+		}
 		auto compute_stop_time = std::chrono::steady_clock::now();
 		total_compute_time_ += compute_stop_time - compute_start_time;
 	}
@@ -157,7 +174,14 @@ public:
 	/** compute cost for solution through configured CostTerm */
 	void computeCost(const InterfaceState& from, const InterfaceState& to, SolutionBase& solution);
 
+	void setPreemptRequestedMember(const std::atomic<bool>* preempt_requested) {
+		preempt_requested_ = preempt_requested;
+	}
+	bool preempted() const { return preempt_requested_ != nullptr && *preempt_requested_; }
+
 protected:
+	StagePrivate& operator=(StagePrivate&& other);
+
 	// associated/owning Stage instance
 	Stage* me_;
 
@@ -193,9 +217,20 @@ private:
 	InterfaceWeakPtr next_starts_;  // interface to be used for sendForward()
 
 	Introspection* introspection_;  // task's introspection instance
+
+	const std::atomic<bool>* preempt_requested_;
 };
 PIMPL_FUNCTIONS(Stage)
 std::ostream& operator<<(std::ostream& os, const StagePrivate& stage);
+
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::FORWARD>() {
+	return starts_;
+}
+template <>
+inline InterfacePtr StagePrivate::pullInterface<Interface::BACKWARD>() {
+	return ends_;
+}
 
 template <>
 inline void StagePrivate::send<Interface::FORWARD>(const InterfaceState& start, InterfaceState&& end,
@@ -290,9 +325,20 @@ private:
 };
 PIMPL_FUNCTIONS(MonitoringGenerator)
 
+// Print pending pairs of a ConnectingPrivate instance
+class ConnectingPrivate;
+struct PendingPairsPrinter
+{
+	const ConnectingPrivate* const instance_;
+	PendingPairsPrinter(const ConnectingPrivate* c) : instance_(c) {}
+};
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
+
 class ConnectingPrivate : public ComputeBasePrivate
 {
 	friend class Connecting;
+	friend struct FallbacksPrivateConnect;
+	friend std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& printer);
 
 public:
 	struct StatePair : std::pair<Interface::const_iterator, Interface::const_iterator>
@@ -303,18 +349,15 @@ public:
 		}
 		static inline bool less(const InterfaceState::Priority& lhsA, const InterfaceState::Priority& lhsB,
 		                        const InterfaceState::Priority& rhsA, const InterfaceState::Priority& rhsB) {
-			unsigned char lhs = (lhsA.enabled() << 1) | lhsB.enabled();  // combine bits into two-digit binary number
-			unsigned char rhs = (rhsA.enabled() << 1) | rhsB.enabled();
+			bool lhs = lhsA.enabled() && lhsB.enabled();
+			bool rhs = rhsA.enabled() && rhsB.enabled();
+
 			if (lhs == rhs)  // if enabled status is identical
 				return lhsA + lhsB < rhsA + rhsB;  // compare the sums of both contributions
-			// one of the states in each pair should be enabled
-			assert(lhs != 0b00 && rhs != 0b00);
-			// both states valid (b11)
-			if (lhs == 0b11)
-				return true;
-			if (rhs == 0b11)
-				return false;
-			return lhs < rhs;  // disabled states in 1st component go before disabled states in 2nd component
+
+			// sort both-enabled pairs first
+			static_assert(true > false, "Comparing enabled states requires true > false");
+			return lhs > rhs;
 		}
 	};
 
@@ -326,22 +369,23 @@ public:
 
 	// Check whether there are pending feasible states that could connect to source
 	template <Interface::Direction dir>
-	bool hasPendingOpposites(const InterfaceState* source) const;
+	bool hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const;
 
-	std::ostream& printPendingPairs(std::ostream& os = std::cerr) const;
+	PendingPairsPrinter pendingPairsPrinter() const { return PendingPairsPrinter(this); }
 
 private:
 	// Create a pair of Interface states for pending list, such that the order (start, end) is maintained
 	template <Interface::Direction other>
 	inline StatePair make_pair(Interface::const_iterator first, Interface::const_iterator second);
 
-	// get informed when new start or end state becomes available
+	// notify callback to get informed about newly inserted (or updated) start or end states
 	template <Interface::Direction other>
-	void newState(Interface::iterator it, bool updated);
+	void newState(Interface::iterator it, Interface::UpdateFlags updated);
 
 	// ordered list of pending state pairs
 	ordered<StatePair> pending;
 };
 PIMPL_FUNCTIONS(Connecting)
+
 }  // namespace task_constructor
 }  // namespace moveit

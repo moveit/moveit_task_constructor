@@ -81,6 +81,8 @@ public:
 	void addObject(const moveit_msgs::CollisionObject& collision_object);
 	/// Remove an object from the planning scene
 	void removeObject(const std::string& object_name);
+	/// Move an object from the planning scene
+	void moveObject(const moveit_msgs::CollisionObject& collision_object);
 
 	/// conviency methods accepting a single object name
 	inline void attachObject(const std::string& object, const std::string& link);
@@ -149,8 +151,9 @@ protected:
 
 protected:
 	// apply stored modifications to scene
-	InterfaceState apply(const InterfaceState& from, bool invert);
-	void processCollisionObject(planning_scene::PlanningScene& scene, const moveit_msgs::CollisionObject& object);
+	std::pair<InterfaceState, SubTrajectory> apply(const InterfaceState& from, bool invert);
+	void processCollisionObject(planning_scene::PlanningScene& scene, const moveit_msgs::CollisionObject& object,
+	                            bool invert);
 	void attachObjects(planning_scene::PlanningScene& scene, const std::pair<std::string, std::pair<Names, bool>>& pair,
 	                   bool invert);
 	void allowCollisions(planning_scene::PlanningScene& scene, const CollisionMatrixPairs& pairs, bool invert);

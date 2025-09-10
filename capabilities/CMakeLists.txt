@@ -1,44 +1,39 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_capabilities)
 
-add_compile_options(-std=c++14)
-
+find_package(fmt REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   moveit_core
   moveit_ros_move_group
+  moveit_task_constructor_core
   moveit_task_constructor_msgs
   pluginlib
   std_msgs
 )
 
+moveit_build_options()
+
 catkin_package(
-  LIBRARIES $PROJECT_NAME}
+  LIBRARIES ${PROJECT_NAME}
   CATKIN_DEPENDS
     actionlib
     moveit_task_constructor_msgs
     std_msgs
 )
 
-# check for MOVEIT_MASTER
-include(CheckIncludeFileCXX)
-set(CMAKE_REQUIRED_INCLUDES ${moveit_core_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_FLAGS "-std=c++11")
-CHECK_INCLUDE_FILE_CXX(moveit/collision_detection/collision_env.h MOVEIT_MASTER)
-if(NOT MOVEIT_MASTER)
-  set(MOVEIT_MASTER 0)
-endif()
-add_definitions(-DMOVEIT_MASTER=${MOVEIT_MASTER})
-
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
+# Check for availability of moveit::core::MoveItErrorCode::toString
+set(CMAKE_REQUIRED_INCLUDES ${catkin_INCLUDE_DIRS})
+set(CMAKE_REQUIRED_LIBRARIES ${catkin_LIBRARIES})
+set(CMAKE_REQUIRED_FLAGS -Wno-error)
+include(CheckCXXSymbolExists)
 
 add_library(${PROJECT_NAME}
    src/execute_task_solution_capability.cpp
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} fmt::fmt)
 
 install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

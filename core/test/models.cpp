@@ -18,6 +18,6 @@ RobotModelPtr getModel() {
 }
 
 moveit::core::RobotModelPtr loadModel() {
-	robot_model_loader::RobotModelLoader loader;
+	static robot_model_loader::RobotModelLoader loader;
 	return loader.getModel();
 }

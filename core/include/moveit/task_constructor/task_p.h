@@ -51,20 +51,19 @@ namespace task_constructor {
 class TaskPrivate : public WrapperBasePrivate
 {
 	friend class Task;
+	TaskPrivate& operator=(TaskPrivate&& other);
 
 public:
 	TaskPrivate(Task* me, const std::string& ns);
+
 	const std::string& ns() const { return ns_; }
 	const ContainerBase* stages() const;
-
-protected:
-	static void swap(StagePrivate*& lhs, StagePrivate*& rhs);
 
 private:
 	std::string ns_;
 	robot_model_loader::RobotModelLoaderPtr robot_model_loader_;
 	moveit::core::RobotModelConstPtr robot_model_;
-	bool preempt_requested_;
+	std::atomic<bool> preempt_requested_;
 
 	// introspection and monitoring
 	std::unique_ptr<Introspection> introspection_;

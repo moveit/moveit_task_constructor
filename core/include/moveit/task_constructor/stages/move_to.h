@@ -66,10 +66,8 @@ public:
 	void setIKFrame(const geometry_msgs::PoseStamped& pose) { setProperty("ik_frame", pose); }
 	void setIKFrame(const Eigen::Isometry3d& pose, const std::string& link);
 	template <typename T>
-	void setIKFrame(const T& p, const std::string& link) {
-		Eigen::Isometry3d pose;
-		pose = p;
-		setIKFrame(pose, link);
+	void setIKFrame(const T& pose, const std::string& link) {
+		setIKFrame(Eigen::Isometry3d(pose), link);
 	}
 	void setIKFrame(const std::string& link) { setIKFrame(Eigen::Isometry3d::Identity(), link); }
 
@@ -99,7 +97,7 @@ protected:
 	bool getJointStateGoal(const boost::any& goal, const core::JointModelGroup* jmg, moveit::core::RobotState& state);
 	bool getPoseGoal(const boost::any& goal, const planning_scene::PlanningScenePtr& scene,
 	                 Eigen::Isometry3d& target_eigen);
-	bool getPointGoal(const boost::any& goal, const moveit::core::LinkModel* link,
+	bool getPointGoal(const boost::any& goal, const Eigen::Isometry3d& ik_pose,
 	                  const planning_scene::PlanningScenePtr& scene, Eigen::Isometry3d& target_eigen);
 
 protected:

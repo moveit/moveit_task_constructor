@@ -13,11 +13,16 @@ jobs:
     name: pre-commit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-      - name: Install clang-format-10
-        run: sudo apt-get install clang-format-10
-      - uses: rhaschke/install-catkin_lint-action@v1.0
+      - uses: actions/checkout@v4
         with:
-          distro: noetic
-      - uses: pre-commit/action@v2.0.0
+          submodules: recursive
+      - name: Install clang-format-14
+        run: sudo apt-get install clang-format-14
+      - uses: rhaschke/install-catkin_lint-action@main
+      - uses: pre-commit/action@v3.0.1
+        id: precommit
+      - name: Upload pre-commit changes
+        if: failure() && steps.precommit.outcome == 'failure'
+        uses: rhaschke/upload-git-patch-action@main
+        with:
+          name: pre-commit

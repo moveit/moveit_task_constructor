@@ -36,15 +36,15 @@
 
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/task_constructor/stage.h>
-
-#include <moveit/robot_trajectory/robot_trajectory.h>
-#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/task_constructor/fmt_p.h>
 
 #include <moveit/collision_detection/collision_common.h>
+#include <moveit/robot_trajectory/robot_trajectory.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
 
-#include <boost/format.hpp>
 #include <utility>
 
 namespace moveit {
@@ -107,17 +107,23 @@ double Constant::operator()(const WrappedSolution& /*s*/, std::string& /*comment
 	return cost;
 }
 
+PathLength::PathLength(std::vector<std::string> joints) {
+	for (auto& j : joints)
+		this->joints.emplace(std::move(j), 1.0);
+}
+
 double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
 	const auto& traj = s.trajectory();
 
 	if (traj == nullptr || traj->getWayPointCount() == 0)
 		return 0.0;
 
-	std::vector<const robot_model::JointModel*> joint_models;
-	joint_models.reserve(joints.size());
+	std::map<const moveit::core::JointModel*, double> weights;
 	const auto& first_waypoint = traj->getWayPoint(0);
-	for (auto& joint : joints) {
-		joint_models.push_back(first_waypoint.getJointModel(joint));
+	for (auto& joint_weight : joints) {
+		const moveit::core::JointModel* jm = first_waypoint.getJointModel(joint_weight.first);
+		if (jm)
+			weights.emplace(jm, joint_weight.second);
 	}
 
 	double path_length{ 0.0 };
@@ -127,12 +133,64 @@ double PathLength::operator()(const SubTrajectory& s, std::string& /*comment*/) 
 		if (joints.empty()) {
 			path_length += last.distance(curr);
 		} else {
-			for (const auto& model : joint_models) {
-				path_length += last.distance(curr, model);
+			for (const auto& item : weights) {
+				path_length += item.second * last.distance(curr, item.first);
 			}
 		}
 	}
 	return path_length;
+}
+
+DistanceToReference::DistanceToReference(const moveit_msgs::RobotState& ref, Mode m, std::map<std::string, double> w)
+  : reference(ref), weights(std::move(w)), mode(m) {}
+
+DistanceToReference::DistanceToReference(const std::map<std::string, double>& ref, Mode m,
+                                         std::map<std::string, double> w)
+  : weights(std::move(w)), mode(m) {
+	reference.joint_state.name.reserve(ref.size());
+	reference.joint_state.position.reserve(ref.size());
+
+	for (auto& item : ref) {
+		reference.joint_state.name.push_back(item.first);
+		reference.joint_state.position.push_back(item.second);
+	}
+	reference.is_diff = true;
+}
+
+double DistanceToReference::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
+	const auto& state = (mode == Mode::END_INTERFACE) ? s.end() : s.start();
+	const auto& traj = s.trajectory();
+
+	moveit::core::RobotState ref_state = state->scene()->getCurrentState();
+	moveit::core::robotStateMsgToRobotState(reference, ref_state, false);
+
+	std::map<const moveit::core::JointModel*, double> w;
+	for (auto& item : weights) {
+		const moveit::core::JointModel* jm = ref_state.getJointModel(item.first);
+		if (jm)
+			w.emplace(jm, item.second);
+	}
+
+	auto distance = [this, &ref_state, &w](const moveit::core::RobotState& state) {
+		if (weights.empty()) {
+			return ref_state.distance(state);
+		} else {
+			double accumulated = 0.0;
+			for (const auto& item : w)
+				accumulated += item.second * ref_state.distance(state, item.first);
+			return accumulated;
+		}
+	};
+
+	if (mode == Mode::START_INTERFACE || mode == Mode::END_INTERFACE || (mode == Mode::AUTO && (traj == nullptr))) {
+		return distance(state->scene()->getCurrentState());
+	} else {
+		double accumulated = 0.0;
+		for (size_t i = 0; i < traj->getWayPointCount(); ++i)
+			accumulated += distance(traj->getWayPoint(i));
+		accumulated /= traj->getWayPointCount();
+		return accumulated;
+	}
 }
 
 double TrajectoryDuration::operator()(const SubTrajectory& s, std::string& /*comment*/) const {
@@ -148,9 +206,7 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) cons
 		return 0.0;
 
 	if (!traj->getWayPoint(0).knowsFrameTransform(link_name)) {
-		boost::format desc("LinkMotionCost: frame '%1%' unknown in trajectory");
-		desc % link_name;
-		comment = desc.str();
+		comment = fmt::format("LinkMotionCost: frame '{}' unknown in trajectory", link_name);
 		return std::numeric_limits<double>::infinity();
 	}
 
@@ -196,18 +252,9 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	auto check_distance{ [=](const InterfaceState* state, const moveit::core::RobotState& robot) {
 		collision_detection::DistanceResult result;
 		if (with_world)
-#if MOVEIT_MASTER
 			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);
-#else
-			state->scene()->getCollisionWorld()->distanceRobot(request, result, *state->scene()->getCollisionRobot(),
-			                                                   robot);
-#endif
 		else
-#if MOVEIT_MASTER
 			state->scene()->getCollisionEnv()->distanceSelf(request, result, robot);
-#else
-			state->scene()->getCollisionRobot()->distanceSelf(request, result, robot);
-#endif
 
 		if (result.minimum_distance.distance <= 0) {
 			return result.minimum_distance;
@@ -225,11 +272,10 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		return result.minimum_distance;
 	} };
 
-	auto collision_comment{ [=](const auto& distance) {
-		boost::format desc{ PREFIX + "allegedly valid solution collides between '%1%' and '%2%'" };
-		desc % distance.link_names[0] % distance.link_names[1];
-		return desc.str();
-	} };
+	auto collision_comment = [=](const auto& distance) {
+		return fmt::format(PREFIX + "allegedly valid solution collides between '{}' and '{}'", distance.link_names[0],
+		                   distance.link_names[1]);
+	};
 
 	double distance{ 0.0 };
 
@@ -241,13 +287,11 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			return std::numeric_limits<double>::infinity();
 		}
 		distance = distance_data.distance;
-		if (!cumulative) {
-			boost::format desc{ PREFIX + "distance %1% between '%2%' and '%3%'" };
-			desc % distance % distance_data.link_names[0] % distance_data.link_names[1];
-			comment = desc.str();
-		} else {
-			comment = PREFIX + "cumulative distance " + std::to_string(distance);
-		}
+		if (!cumulative)
+			comment = fmt::format(PREFIX + "distance {} between '{}' and '{}'", distance, distance_data.link_names[0],
+			                      distance_data.link_names[1]);
+		else
+			comment = fmt::format(PREFIX + "cumulative distance {}", distance);
 	} else {  // check trajectory
 		for (size_t i = 0; i < s.trajectory()->getWayPointCount(); ++i) {
 			auto distance_data = check_distance(state, s.trajectory()->getWayPoint(i));
@@ -258,10 +302,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			distance += distance_data.distance;
 		}
 		distance /= s.trajectory()->getWayPointCount();
-
-		boost::format desc(PREFIX + "average%1% distance: %2%");
-		desc % (cumulative ? " cumulative" : "") % distance;
-		comment = desc.str();
+		comment = fmt::format(PREFIX + "average{} distance: {}", (cumulative ? " cumulative" : ""), distance);
 	}
 
 	return distance_to_cost(distance);

@@ -118,7 +118,7 @@ class TaskView : public SubPanel
 
 protected:
 	// configuration settings
-	enum TaskExpand
+	enum TaskExpand : uint8_t
 	{
 		EXPAND_TOP = 1,
 		EXPAND_ALL,
@@ -130,7 +130,7 @@ protected:
 	rviz::BoolProperty* show_time_column;
 
 public:
-	enum OldTaskHandling
+	enum OldTaskHandling : uint8_t
 	{
 		OLD_TASK_KEEP = 1,
 		OLD_TASK_REPLACE,
@@ -156,7 +156,7 @@ protected Q_SLOTS:
 	void onOldTaskHandlingChanged();
 
 private:
-	Q_PRIVATE_SLOT(d_ptr, void _q_configureInsertedModels(QModelIndex, int, int));
+	Q_PRIVATE_SLOT(d_ptr, void configureInsertedModels(QModelIndex, int, int));
 
 Q_SIGNALS:
 	void oldTaskHandlingChanged(int old_task_handling);

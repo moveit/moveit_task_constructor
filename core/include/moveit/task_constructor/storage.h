@@ -42,6 +42,7 @@
 #include <moveit/macros/class_forward.h>
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/cost_queue.h>
+#include <moveit/task_constructor/utils.h>
 #include <moveit_task_constructor_msgs/Solution.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -79,27 +80,29 @@ class InterfaceState
 	friend class ContainerBasePrivate;  // allow setting priority_ for pruning
 
 public:
-	enum Status
+	enum Status : uint8_t
 	{
 		ENABLED,  // state is actively considered during planning
-		DISABLED,  // state is disabled because a required connected state failed
-		DISABLED_FAILED,  // state that failed, causing the whole partial solution to be disabled
+		ARMED,  // disabled state in a Connecting interface that will become re-enabled with a new opposite state
+		PRUNED,  // disabled state on a pruned solution branch
 	};
+	static const char* colorForStatus(unsigned int s) { return STATUS_COLOR_[s]; }
+
 	/** InterfaceStates are ordered according to two values:
 	 *  Depth of interlinked trajectory parts and accumulated trajectory costs along that path.
 	 *  Preference ordering considers high-depth first and within same depth, minimal cost paths.
 	 */
 	struct Priority : std::tuple<Status, unsigned int, double>
 	{
-		Priority(unsigned int depth, double cost, Status status = ENABLED)
-		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {
-			assert(std::isfinite(cost));
-		}
+		Priority(unsigned int depth, double cost, Status status)
+		  : std::tuple<Status, unsigned int, double>(status, depth, cost) {}
+		Priority(unsigned int depth, double cost) : Priority(depth, cost, std::isfinite(cost) ? ENABLED : PRUNED) {}
 		// Constructor copying depth and cost, but modifying its status
 		Priority(const Priority& other, Status status) : Priority(other.depth(), other.cost(), status) {}
 
 		inline Status status() const { return std::get<0>(*this); }
 		inline bool enabled() const { return std::get<0>(*this) == ENABLED; }
+
 		inline unsigned int depth() const { return std::get<1>(*this); }
 		inline double cost() const { return std::get<2>(*this); }
 
@@ -125,6 +128,7 @@ public:
 	/// copy an existing InterfaceState, but not including incoming/outgoing trajectories
 	InterfaceState(const InterfaceState& other);
 	InterfaceState(InterfaceState&& other) = default;
+	InterfaceState& operator=(const InterfaceState& other) = default;
 
 	inline const planning_scene::PlanningSceneConstPtr& scene() const { return scene_; }
 	inline const Solutions& incomingTrajectories() const { return incoming_trajectories_; }
@@ -135,15 +139,24 @@ public:
 
 	/// states are ordered by priority
 	inline bool operator<(const InterfaceState& other) const { return this->priority_ < other.priority_; }
+
 	inline const Priority& priority() const { return priority_; }
+	/// Update priority and call owner's notify() if possible
+	void updatePriority(const InterfaceState::Priority& priority);
+	/// Update status, but keep current priority
+	void updateStatus(Status status);
+
 	Interface* owner() const { return owner_; }
 
 private:
 	// these methods should be only called by SolutionBase::set[Start|End]State()
 	inline void addIncoming(SolutionBase* t) { incoming_trajectories_.push_back(t); }
 	inline void addOutgoing(SolutionBase* t) { outgoing_trajectories_.push_back(t); }
+	// Set new priority without updating the owning interface (USE WITH CARE)
+	inline void setPriority(const Priority& prio) { priority_ = prio; }
 
 private:
+	static const char* STATUS_COLOR_[];
 	planning_scene::PlanningSceneConstPtr scene_;
 	PropertyMap properties_;
 	/// trajectories which are *timewise before* this state
@@ -166,6 +179,7 @@ public:
 	class iterator : public base_type::iterator
 	{
 	public:
+		iterator() = default;
 		iterator(base_type::iterator other) : base_type::iterator(other) {}
 
 		InterfaceState& operator*() const noexcept { return *base_type::iterator::operator*(); }
@@ -183,14 +197,31 @@ public:
 		const InterfaceState* operator->() const noexcept { return base_type::const_iterator::operator*(); }
 	};
 
-	enum Direction
+	enum Direction : uint8_t
 	{
 		FORWARD,
 		BACKWARD,
-		START = FORWARD,
-		END = BACKWARD
 	};
-	using NotifyFunction = std::function<void(iterator, bool)>;
+	enum Update : uint8_t
+	{
+		STATUS = 1 << 0,
+		PRIORITY = 1 << 1,
+		ALL = STATUS | PRIORITY,
+	};
+	using UpdateFlags = utils::Flags<Update>;
+	using NotifyFunction = std::function<void(iterator, UpdateFlags)>;
+
+	class DisableNotify
+	{
+		Interface& if_;
+		Interface::NotifyFunction old_;
+
+	public:
+		DisableNotify(Interface& i) : if_(i) { old_.swap(if_.notify_); }
+		~DisableNotify() { old_.swap(if_.notify_); }
+	};
+	friend class DisableNotify;
+
 	Interface(const NotifyFunction& notify = NotifyFunction());
 
 	/// add a new InterfaceState
@@ -201,9 +232,10 @@ public:
 
 	/// update state's priority (and call notify_ if it really has changed)
 	void updatePriority(InterfaceState* state, const InterfaceState::Priority& priority);
+	inline bool notifyEnabled() const { return static_cast<bool>(notify_); }
 
 private:
-	const NotifyFunction notify_;
+	NotifyFunction notify_;
 
 	// restrict access to some functions to ensure consistency
 	// (we need to set/unset InterfaceState::owner_)
@@ -216,6 +248,17 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const InterfaceState::Priority& prio);
 std::ostream& operator<<(std::ostream& os, const Interface& interface);
+std::ostream& operator<<(std::ostream& os, Interface::Direction dir);
+
+/// Find index of the iterator in the container. Counting starts at 1. Zero corresponds to not found.
+template <typename T>
+size_t getIndex(const T& container, typename T::const_iterator search) {
+	size_t index = 1;
+	for (typename T::const_iterator it = container.begin(), end = container.end(); it != end; ++it, ++index)
+		if (it == search)
+			return index;
+	return 0;
+}
 
 class CostTerm;
 class StagePrivate;
@@ -267,9 +310,11 @@ public:
 	auto& markers() { return markers_; }
 	const auto& markers() const { return markers_; }
 
+	/// convert solution to message
+	void toMsg(moveit_task_constructor_msgs::Solution& solution, Introspection* introspection = nullptr) const;
 	/// append this solution to Solution msg
-	virtual void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                         Introspection* introspection = nullptr) const = 0;
+	virtual void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	                      Introspection* introspection = nullptr) const = 0;
 	void fillInfo(moveit_task_constructor_msgs::SolutionInfo& info, Introspection* introspection = nullptr) const;
 
 	/// required to dispatch to type-specific CostTerm methods via vtable
@@ -290,7 +335,7 @@ private:
 	// comment for this solution, e.g. explanation of failure
 	std::string comment_;
 	// markers for this solution, e.g. target frame or collision indicators
-	std::deque<visualization_msgs::Marker> markers_;
+	std::vector<visualization_msgs::Marker> markers_;
 
 	// begin and end InterfaceState of this solution/trajectory
 	const InterfaceState* start_ = nullptr;
@@ -310,7 +355,7 @@ public:
 	robot_trajectory::RobotTrajectoryConstPtr trajectory() const { return trajectory_; }
 	void setTrajectory(const robot_trajectory::RobotTrajectoryPtr& t) { trajectory_ = t; }
 
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -343,7 +388,7 @@ public:
 	void push_back(const SolutionBase& solution);
 
 	/// append all subsolutions to solution
-	void fillMessage(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& msg, Introspection* introspection) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 
@@ -374,8 +419,8 @@ public:
 	  : SolutionBase(creator, cost), wrapped_(wrapped) {}
 	explicit WrappedSolution(Stage* creator, const SolutionBase* wrapped)
 	  : WrappedSolution(creator, wrapped, wrapped->cost()) {}
-	void fillMessage(moveit_task_constructor_msgs::Solution& solution,
-	                 Introspection* introspection = nullptr) const override;
+	void appendTo(moveit_task_constructor_msgs::Solution& solution,
+	              Introspection* introspection = nullptr) const override;
 
 	double computeCost(const CostTerm& cost, std::string& comment) const override;
 

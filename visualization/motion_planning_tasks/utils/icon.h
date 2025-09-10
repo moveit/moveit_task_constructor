@@ -43,7 +43,7 @@ using IconMaskAndColor = QPair<QString, QColor>;
 class Icon : public QVector<IconMaskAndColor>
 {
 public:
-	enum IconStyleOption
+	enum IconStyleOption : uint8_t
 	{
 		NONE = 0,
 		TINT = 1,

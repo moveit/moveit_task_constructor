@@ -1,0 +1,4 @@
+furo
+lxml
+sphinx
+sphinx-copybutton

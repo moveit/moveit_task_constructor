@@ -43,7 +43,7 @@
 #include <moveit/robot_state/conversions.h>
 
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 namespace moveit {
 namespace task_constructor {
@@ -54,6 +54,7 @@ GenerateGraspPose::GenerateGraspPose(const std::string& name) : GeneratePose(nam
 	p.declare<std::string>("eef", "name of end-effector");
 	p.declare<std::string>("object");
 	p.declare<double>("angle_delta", 0.1, "angular steps (rad)");
+	p.declare<Eigen::Vector3d>("rotation_axis", Eigen::Vector3d::UnitZ(), "rotate object pose about given axis");
 
 	p.declare<boost::any>("pregrasp", "pregrasp posture");
 	p.declare<boost::any>("grasp", "grasp posture");
@@ -150,7 +151,7 @@ void GenerateGraspPose::compute() {
 	const std::string& eef = props.get<std::string>("eef");
 	const moveit::core::JointModelGroup* jmg = scene->getRobotModel()->getEndEffector(eef);
 
-	robot_state::RobotState& robot_state = scene->getCurrentStateNonConst();
+	moveit::core::RobotState& robot_state = scene->getCurrentStateNonConst();
 	try {
 		applyPreGrasp(robot_state, jmg, props.property("pregrasp"));
 	} catch (const moveit::Exception& e) {
@@ -160,15 +161,16 @@ void GenerateGraspPose::compute() {
 
 	geometry_msgs::PoseStamped target_pose_msg;
 	target_pose_msg.header.frame_id = props.get<std::string>("object");
+	Eigen::Vector3d rotation_axis = props.get<Eigen::Vector3d>("rotation_axis");
 
 	double current_angle = 0.0;
 	while (current_angle < 2. * M_PI && current_angle > -2. * M_PI) {
-		// rotate object pose about z-axis
-		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle, Eigen::Vector3d::UnitZ()));
+		// rotate object pose about axis
+		Eigen::Isometry3d target_pose(Eigen::AngleAxisd(current_angle, rotation_axis));
 		current_angle += props.get<double>("angle_delta");
 
 		InterfaceState state(scene);
-		tf::poseEigenToMsg(target_pose, target_pose_msg.pose);
+		target_pose_msg.pose = tf2::toMsg(target_pose);
 		state.properties().set("target_pose", target_pose_msg);
 		props.exposeTo(state.properties(), { "pregrasp", "grasp" });
 

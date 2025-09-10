@@ -54,7 +54,7 @@ using namespace moveit::task_constructor;
 
 namespace moveit_rviz_plugin {
 
-enum NodeFlag
+enum NodeFlag : uint8_t
 {
 	WAS_VISITED = 0x01,  // indicate that model should emit change notifications
 	NAME_CHANGED = 0x02,  // indicate that name was manually changed
@@ -155,7 +155,7 @@ RemoteTaskModel::Node* RemoteTaskModel::node(const QModelIndex& index) const {
 
 	// internal pointer refers to parent node
 	Node* parent = static_cast<Node*>(index.internalPointer());
-	Q_ASSERT(index.row() >= 0 && (size_t)index.row() < parent->children_.size());
+	Q_ASSERT(index.row() >= 0 && static_cast<size_t>(index.row()) < parent->children_.size());
 	return parent->children_.at(index.row()).get();
 }
 
@@ -209,7 +209,7 @@ QModelIndex RemoteTaskModel::index(int row, int column, const QModelIndex& paren
 		return QModelIndex();
 
 	Node* p = node(parent);
-	if (!p || row < 0 || (size_t)row >= p->children_.size())
+	if (!p || row < 0 || static_cast<size_t>(row) >= p->children_.size())
 		return QModelIndex();
 
 	p->children_[row]->node_flags_ |= WAS_VISITED;
@@ -501,7 +501,13 @@ QVariant RemoteSolutionModel::data(const QModelIndex& index, int role) const {
 			return item.id;
 
 		case Qt::ToolTipRole:
+#if 0  // show internal solution id in first column
+			if (index.column() == 0)
+				return item.id;
+#endif
+			// usually just show the comment
 			return item.comment;
+			break;
 
 		case Qt::DisplayRole:
 			switch (index.column()) {

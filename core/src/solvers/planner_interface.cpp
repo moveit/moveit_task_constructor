@@ -37,6 +37,9 @@
 */
 
 #include <moveit/task_constructor/solvers/planner_interface.h>
+#include <moveit/trajectory_processing/time_optimal_trajectory_generation.h>
+
+using namespace trajectory_processing;
 
 namespace moveit {
 namespace task_constructor {
@@ -44,10 +47,12 @@ namespace solvers {
 
 PlannerInterface::PlannerInterface() {
 	auto& p = properties();
+	p.declare<double>("timeout", std::numeric_limits<double>::infinity(), "timeout for planner (s)");
 	p.declare<double>("max_velocity_scaling_factor", 1.0, "scale down max velocity by this factor");
 	p.declare<double>("max_acceleration_scaling_factor", 1.0, "scale down max acceleration by this factor");
 	p.declare<double>("max_cartesian_speed", 0.0, "maximum cartesian speed");
 	p.declare<std::string>("cartesian_speed_limited_link", "", "link with limited cartesian speed");
+	p.declare<TimeParameterizationPtr>("time_parameterization", std::make_shared<TimeOptimalTrajectoryGeneration>());
 }
 }  // namespace solvers
 }  // namespace task_constructor

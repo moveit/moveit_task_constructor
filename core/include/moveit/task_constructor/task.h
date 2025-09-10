@@ -47,6 +47,7 @@
 #include <moveit/macros/class_forward.h>
 
 #include <moveit_msgs/MoveItErrorCodes.h>
+#include <moveit/utils/moveit_error_code.h>
 
 namespace moveit {
 namespace core {
@@ -72,6 +73,8 @@ class Task : protected WrapperBase
 {
 public:
 	PRIVATE_CLASS(Task)
+	using WrapperBase::setCostTerm;
+	using WrapperBase::operator[];
 
 	Task(const std::string& ns = "", bool introspection = true,
 	     ContainerBase::pointer&& container = std::make_unique<SerialContainer>("task pipeline"));
@@ -81,6 +84,9 @@ public:
 
 	const std::string& name() const { return stages()->name(); }
 	void setName(const std::string& name) { stages()->setName(name); }
+
+	Stage* findChild(const std::string& name) const { return stages()->findChild(name); }
+	Stage* operator[](int index) const { return stages()->operator[](index); }
 
 	const moveit::core::RobotModelConstPtr& getRobotModel() const;
 	/// setting the robot model also resets the task
@@ -111,20 +117,27 @@ public:
 	using WrapperBase::setTimeout;
 	using WrapperBase::timeout;
 
+	using WrapperBase::pruning;
+	using WrapperBase::setPruning;
+
 	/// reset all stages
 	void reset() final;
 	/// initialize all stages with given scene
 	void init();
 
 	/// reset, init scene (if not yet done), and init all stages, then start planning
-	bool plan(size_t max_solutions = 0);
-	/// interrupt current planning (or execution)
+	moveit::core::MoveItErrorCode plan(size_t max_solutions = 0);
+	/// interrupt current planning
 	void preempt();
+	void resetPreemptRequest();
 	/// execute solution, return the result
-	moveit_msgs::MoveItErrorCodes execute(const SolutionBase& s);
+	moveit::core::MoveItErrorCode execute(const SolutionBase& s);
 
 	/// print current task state (number of found solutions and propagated states) to std::cout
 	void printState(std::ostream& os = std::cout) const;
+
+	/// print an explanation for a planning failure to os
+	bool explainFailure(std::ostream& os = std::cout) const override;
 
 	size_t numSolutions() const { return solutions().size(); }
 	const ordered<SolutionBaseConstPtr>& solutions() const { return stages()->solutions(); }

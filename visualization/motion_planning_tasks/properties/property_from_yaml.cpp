@@ -53,7 +53,7 @@ class ScopedYamlEvent
 {
 public:
 	~ScopedYamlEvent() { yaml_event_delete(&event_); }
-	operator yaml_event_t const &() const { return event_; }
+	operator yaml_event_t const&() const { return event_; }
 	operator yaml_event_t&() { return event_; }
 
 private:

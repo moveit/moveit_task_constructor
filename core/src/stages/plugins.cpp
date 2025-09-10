@@ -1,6 +1,6 @@
 #include <moveit/task_constructor/stages/current_state.h>
 
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 
 /// register plugins to use with ClassLoader
 

@@ -2,11 +2,6 @@ set(MOVEIT_LIB_NAME moveit_task_visualization_tools)
 
 set(PROJECT_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/moveit/visualization_tools)
 
-# TODO: Remove when Kinetic support is dropped
-if(rviz_VERSION VERSION_LESS 1.13.1) # Does rviz supports TF2?
-  add_definitions(-DRVIZ_TF1)
-endif()
-
 set(HEADERS
 	${PROJECT_INCLUDE}/display_solution.h
 	${PROJECT_INCLUDE}/marker_visualization.h
@@ -30,13 +25,12 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 	${OGRE_LIBRARIES}
 	${QT_LIBRARIES}
 	${Boost_LIBRARIES}
+	fmt::fmt
 )
-target_include_directories(${MOVEIT_LIB_NAME}
-  PUBLIC include
-  PRIVATE ${catkin_INCLUDE_DIRS}
-)
+target_include_directories(${MOVEIT_LIB_NAME} PUBLIC include)
 target_include_directories(${MOVEIT_LIB_NAME} SYSTEM
-  PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
+	PRIVATE ${catkin_INCLUDE_DIRS}
+	PUBLIC ${rviz_OGRE_INCLUDE_DIRS}
 )
 add_dependencies(${MOVEIT_LIB_NAME} ${catkin_EXPORTED_TARGETS})
 

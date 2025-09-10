@@ -38,11 +38,11 @@
 #include <moveit/task_constructor/stage_p.h>
 #include <moveit/task_constructor/container_p.h>
 #include <moveit/task_constructor/introspection.h>
+#include <moveit/task_constructor/fmt_p.h>
+
 #include <moveit/planning_scene/planning_scene.h>
 
 #include <ros/console.h>
-
-#include <boost/format.hpp>
 
 #include <iostream>
 #include <iomanip>
@@ -90,9 +90,9 @@ const char* InitStageException::what() const noexcept {
 }
 
 std::ostream& operator<<(std::ostream& os, const InitStageException& e) {
-	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":" << std::endl;
+	os << "Error initializing stage" << (e.errors_.size() > 1 ? "s" : "") << ":\n ";
 	for (const auto& pair : e.errors_)
-		os << pair.first->name() << ": " << pair.second << std::endl;
+		os << pair.first->name() << ": " << pair.second << '\n';
 	return os;
 }
 
@@ -102,7 +102,35 @@ StagePrivate::StagePrivate(Stage* me, const std::string& name)
   , cost_term_{ std::make_unique<CostTerm>() }
   , total_compute_time_{}
   , parent_{ nullptr }
-  , introspection_{ nullptr } {}
+  , introspection_{ nullptr }
+  , preempt_requested_{ nullptr } {}
+
+StagePrivate& StagePrivate::operator=(StagePrivate&& other) {
+	assert(typeid(*this) == typeid(other));
+
+	assert(states_.empty() && other.states_.empty());
+	assert((!starts_ || starts_->empty()) && (!other.starts_ || other.starts_->empty()));
+	assert((!ends_ || ends_->empty()) && (!other.ends_ || other.ends_->empty()));
+	assert(solutions_.empty() && other.solutions_.empty());
+	assert(failures_.empty() && other.failures_.empty());
+
+	// me_ must not be changed!
+	name_ = std::move(other.name_);
+	properties_ = std::move(other.properties_);
+	cost_term_ = std::move(other.cost_term_);
+	solution_cbs_ = std::move(other.solution_cbs_);
+
+	starts_ = std::move(other.starts_);
+	ends_ = std::move(other.ends_);
+	prev_ends_ = std::move(other.prev_ends_);
+	next_starts_ = std::move(other.next_starts_);
+
+	parent_ = other.parent_;
+	it_ = other.it_;
+	other.unparent();
+
+	return *this;
+}
 
 InterfaceFlags StagePrivate::interfaceFlags() const {
 	InterfaceFlags f;
@@ -121,12 +149,11 @@ void StagePrivate::validateConnectivity() const {
 	// check that the required interface is provided
 	InterfaceFlags required = requiredInterface();
 	InterfaceFlags actual = interfaceFlags();
-	if ((required & actual) != required) {
-		boost::format desc("actual interface %1% %2% does not match required interface %3% %4%");
-		desc % flowSymbol<START_IF_MASK>(actual) % flowSymbol<END_IF_MASK>(actual);
-		desc % flowSymbol<START_IF_MASK>(required) % flowSymbol<END_IF_MASK>(required);
-		throw InitStageException(*me(), desc.str());
-	}
+	if ((required & actual) != required)
+		throw InitStageException(*me(),
+		                         fmt::format("actual interface {} {} does not match required interface {} {}",
+		                                     flowSymbol<START_IF_MASK>(actual), flowSymbol<END_IF_MASK>(actual),
+		                                     flowSymbol<START_IF_MASK>(required), flowSymbol<END_IF_MASK>(required)));
 }
 
 bool StagePrivate::storeSolution(const SolutionBasePtr& solution, const InterfaceState* from,
@@ -191,26 +218,30 @@ void StagePrivate::sendBackward(InterfaceState&& from, const InterfaceState& to,
 	newSolution(solution);
 }
 
-void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
+void StagePrivate::spawn(InterfaceState&& from, InterfaceState&& to, const SolutionBasePtr& solution) {
 	assert(prevEnds() && nextStarts());
 
-	computeCost(state, state, *solution);
+	computeCost(from, to, *solution);
 
 	if (!storeSolution(solution, nullptr, nullptr))
 		return;  // solution dropped
 
-	auto from = states_.insert(states_.end(), InterfaceState(state));  // copy
-	auto to = states_.insert(states_.end(), std::move(state));
+	auto from_it = states_.insert(states_.end(), std::move(from));
+	auto to_it = states_.insert(states_.end(), std::move(to));
 
-	solution->setStartState(*from);
-	solution->setEndState(*to);
+	solution->setStartState(*from_it);
+	solution->setEndState(*to_it);
 
 	if (!solution->isFailure()) {
-		prevEnds()->add(*from);
-		nextStarts()->add(*to);
+		prevEnds()->add(*from_it);
+		nextStarts()->add(*to_it);
 	}
 
 	newSolution(solution);
+}
+
+void StagePrivate::spawn(InterfaceState&& state, const SolutionBasePtr& solution) {
+	spawn(InterfaceState(state), std::move(state), solution);
 }
 
 void StagePrivate::connect(const InterfaceState& from, const InterfaceState& to, const SolutionBasePtr& solution) {
@@ -280,6 +311,8 @@ Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	auto& p = properties();
 	p.declare<double>("timeout", "timeout per run (s)");
 	p.declare<std::string>("marker_ns", name(), "marker namespace");
+	p.declare<TrajectoryExecutionInfo>("trajectory_execution_info", TrajectoryExecutionInfo(),
+	                                   "settings used when executing the trajectory");
 
 	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
 	                                 "set of interface properties to forward");
@@ -314,6 +347,7 @@ void Stage::reset() {
 	impl->next_starts_.reset();
 	// reset inherited properties
 	impl->properties_.reset();
+	impl->total_compute_time_ = std::chrono::duration<double>::zero();
 }
 
 void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
@@ -323,7 +357,7 @@ void Stage::init(const moveit::core::RobotModelConstPtr& /* robot_model */) {
 	impl->properties_.reset();
 	if (impl->parent()) {
 		try {
-			ROS_DEBUG_STREAM_NAMED("Properties", "init '" << name() << "'");
+			ROS_DEBUG_STREAM_NAMED("Properties", fmt::format("init '{}'", name()));
 			impl->properties_.performInitFrom(PARENT, impl->parent()->properties());
 		} catch (const Property::error& e) {
 			std::ostringstream oss;
@@ -351,6 +385,9 @@ uint32_t Stage::introspectionId() const {
 	if (!pimpl_->introspection_)
 		throw std::runtime_error("Task is not initialized yet or Introspection was disabled.");
 	return const_cast<const moveit::task_constructor::Introspection*>(pimpl_->introspection_)->stageId(this);
+}
+Introspection* Stage::introspection() const {
+	return pimpl_->introspection_;
 }
 
 void Stage::forwardProperties(const InterfaceState& source, InterfaceState& dest) {
@@ -481,14 +518,14 @@ void PropagatingEitherWayPrivate::initInterface(PropagatingEitherWay::Direction 
 		case PropagatingEitherWay::FORWARD:
 			required_interface_ = PROPAGATE_FORWARDS;
 			if (!starts_)  // keep existing interface if possible
-				starts_.reset(new Interface());
+				starts_ = std::make_shared<Interface>();
 			ends_.reset();
 			return;
 		case PropagatingEitherWay::BACKWARD:
 			required_interface_ = PROPAGATE_BACKWARDS;
 			starts_.reset();
 			if (!ends_)  // keep existing interface if possible
-				ends_.reset(new Interface());
+				ends_ = std::make_shared<Interface>();
 			return;
 		case PropagatingEitherWay::AUTO:
 			required_interface_ = UNKNOWN;
@@ -505,17 +542,16 @@ void PropagatingEitherWayPrivate::resolveInterface(InterfaceFlags expected) {
 		dir = PropagatingEitherWay::FORWARD;
 	else if ((expected & START_IF_MASK) == WRITES_PREV_END || (expected & END_IF_MASK) == READS_END)
 		dir = PropagatingEitherWay::BACKWARD;
-	else {
-		boost::format desc("propagator cannot satisfy expected interface %1% %2%");
-		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
-		throw InitStageException(*me(), desc.str());
-	}
-	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_) {
-		boost::format desc("configured interface (%1% %2%) does not match expected one (%3% %4%)");
-		desc % flowSymbol<START_IF_MASK>(required_interface_) % flowSymbol<END_IF_MASK>(required_interface_);
-		desc % flowSymbol<START_IF_MASK>(expected) % flowSymbol<END_IF_MASK>(expected);
-		throw InitStageException(*me(), desc.str());
-	}
+	else
+		throw InitStageException(*me(),
+		                         fmt::format("propagator cannot satisfy expected interface {} {}",
+		                                     flowSymbol<START_IF_MASK>(expected), flowSymbol<END_IF_MASK>(expected)));
+	if (configured_dir_ != PropagatingEitherWay::AUTO && dir != configured_dir_)
+		throw InitStageException(*me(),
+		                         fmt::format("configured interface ({} {}) does not match expected one ({} {})",
+		                                     flowSymbol<START_IF_MASK>(required_interface_),
+		                                     flowSymbol<END_IF_MASK>(required_interface_),
+		                                     flowSymbol<START_IF_MASK>(expected), flowSymbol<END_IF_MASK>(expected)));
 	initInterface(dir);
 }
 
@@ -587,6 +623,14 @@ template void PropagatingEitherWay::send<Interface::FORWARD>(const InterfaceStat
 template void PropagatingEitherWay::send<Interface::BACKWARD>(const InterfaceState& start, InterfaceState&& end,
                                                               SubTrajectory&& trajectory);
 
+void PropagatingEitherWay::computeForward(const InterfaceState& from) {
+	computeGeneric<Interface::FORWARD>(from);
+}
+
+void PropagatingEitherWay::computeBackward(const InterfaceState& to) {
+	computeGeneric<Interface::BACKWARD>(to);
+}
+
 template <Interface::Direction dir>
 void PropagatingEitherWay::computeGeneric(const InterfaceState& start) {
 	planning_scene::PlanningScenePtr end;
@@ -641,6 +685,10 @@ void GeneratorPrivate::compute() {
 Generator::Generator(GeneratorPrivate* impl) : ComputeBase(impl) {}
 Generator::Generator(const std::string& name) : Generator(new GeneratorPrivate(this, name)) {}
 
+void Generator::spawn(InterfaceState&& from, InterfaceState&& to, SubTrajectory&& t) {
+	pimpl()->spawn(std::move(from), std::move(to), std::make_shared<SubTrajectory>(std::move(t)));
+}
+
 void Generator::spawn(InterfaceState&& state, SubTrajectory&& t) {
 	pimpl()->spawn(std::move(state), std::make_shared<SubTrajectory>(std::move(t)));
 }
@@ -686,10 +734,10 @@ void MonitoringGeneratorPrivate::solutionCB(const SolutionBase& s) {
 }
 
 ConnectingPrivate::ConnectingPrivate(Connecting* me, const std::string& name) : ComputeBasePrivate(me, name) {
-	starts_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this, std::placeholders::_1,
-	                                      std::placeholders::_2)));
-	ends_.reset(new Interface(std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1,
-	                                    std::placeholders::_2)));
+	starts_ = std::make_shared<Interface>(std::bind(&ConnectingPrivate::newState<Interface::BACKWARD>, this,
+	                                                std::placeholders::_1, std::placeholders::_2));
+	ends_ = std::make_shared<Interface>(
+	    std::bind(&ConnectingPrivate::newState<Interface::FORWARD>, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 InterfaceFlags ConnectingPrivate::requiredInterface() const {
@@ -707,56 +755,120 @@ ConnectingPrivate::StatePair ConnectingPrivate::make_pair<Interface::FORWARD>(In
 	return StatePair(second, first);
 }
 
-template <Interface::Direction other>
-void ConnectingPrivate::newState(Interface::iterator it, bool updated) {
-	if (updated) {  // many pairs might be affected: resort
-		if (it->priority().status() == InterfaceState::DISABLED)
-			// remove all pending pairs involving this state
-			pending.remove_if([it](const StatePair& p) { return std::get<opposite<other>()>(p) == it; });
-		else
-			pending.sort();
-	} else {  // new state: insert all pairs with other interface
-		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
-		InterfacePtr other_interface = pullInterface(other);
-		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
-			// Don't re-enable states that are marked DISABLED
-			if (static_cast<Connecting*>(me_)->compatible(*it, *oit)) {
-				// re-enable the opposing state oit if its status is DISABLED_FAILED
-				if (oit->priority().status() == InterfaceState::DISABLED_FAILED)
-					oit->owner()->updatePriority(&*oit, InterfaceState::Priority(oit->priority(), InterfaceState::ENABLED));
-				pending.insert(make_pair<other>(it, oit));
+template <Interface::Direction dir>
+void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags updated) {
+	auto parent_pimpl = parent()->pimpl();
+	// disable current interface to break loop (jumping back and forth between both interfaces)
+	// this will be checked by notifyEnabled() below
+	Interface::DisableNotify disable_source_interface(*pullInterface<dir>());
+	if (updated) {
+		if (updated.testFlag(Interface::STATUS) &&  // only perform these costly operations if needed
+		    pullInterface<opposite<dir>()>()->notifyEnabled())  // suppressing recursive loop?
+		{
+			// If status has changed, propagate the update to the opposite side
+			auto status = it->priority().status();
+			if (status == InterfaceState::Status::PRUNED)  // PRUNED becomes ARMED on opposite side
+				status = InterfaceState::Status::ARMED;  // (only for pending state pairs)
+
+			for (const auto& candidate : this->pending) {
+				if (std::get<opposite<dir>()>(candidate) != it)  // only consider pairs with source state == state
+					continue;
+				auto oit = std::get<dir>(candidate);  // opposite target state
+				auto ostatus = oit->priority().status();
+				if (ostatus != status) {
+					if (status != InterfaceState::Status::ENABLED) {
+						// quicker check for hasPendingOpposites(): search in it->owner() for an enabled alternative
+						bool cancel = false;  // if found, cancel propagation of new status
+						for (const auto alternative : *it->owner())
+							if ((cancel = alternative->priority().enabled()))
+								break;
+						if (cancel)
+							continue;
+					}
+					// pass creator=nullptr to skip hasPendingOpposites() check
+					parent_pimpl->setStatus<opposite<dir>()>(nullptr, nullptr, &*oit, status);
+				}
 			}
 		}
+
+		// many pairs will have changed priorities: resort pending list
+		pending.sort();
+	} else {  // new state: insert all pairs with other interface
+		assert(it->priority().enabled());  // new solutions are feasible, aren't they?
+		InterfacePtr other_interface = pullInterface<dir>();
+		bool have_enabled_opposites = false;
+
+		// other interface states to re-enable (post-poned because otherwise order in other_interface changes during loop)
+		std::vector<Interface::iterator> oit_to_enable;
+		for (Interface::iterator oit = other_interface->begin(), oend = other_interface->end(); oit != oend; ++oit) {
+			if (!static_cast<Connecting*>(me_)->compatible(*it, *oit))
+				continue;
+
+			// re-enable the opposing state oit (and its associated solution branch) if its status is ARMED
+			// https://github.com/moveit/moveit_task_constructor/pull/309#issuecomment-974636202
+			if (oit->priority().status() == InterfaceState::Status::ARMED) {
+				oit_to_enable.push_back(oit);
+				have_enabled_opposites = true;
+			}
+			if (oit->priority().enabled())
+				have_enabled_opposites = true;
+
+			// Remember all pending states, regardless of their status!
+			pending.insert(make_pair<dir>(it, oit));
+		}
+		// actually re-enable other interface states, which were scheduled for re-enabling above
+		for (Interface::iterator oit : oit_to_enable)
+			parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
+
+		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
+			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
+			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
-	// std::cerr << name_ << ": ";
-	// printPendingPairs(std::cerr);
-	// std::cerr << std::endl;
+#if 0
+	auto& os = std::cerr;
+	for (auto d : { Interface::FORWARD, Interface::BACKWARD }) {
+		if (d == Interface::FORWARD)
+			os << "  " << std::setw(10) << std::left << this->name();
+		else
+			os << std::setw(12) << std::right << "";
+		if (dir != d)
+			os << (updated ? " !" : " +");
+		else
+			os << "  ";
+		os << d << " " << this->pullInterface(d) << ": " << *this->pullInterface(d) << '\n';
+	}
+	os << std::setw(15) << " ";
+	os << pendingPairsPrinter() << '\n';
+#endif
 }
 
-// Check whether there are pending feasible states that could connect to source.
-// If not, we exhausted all solution candidates for source and thus should mark it as failure.
+// Check whether there are pending feasible states (other than source) that could connect to target.
+// If not, we exhausted all solution candidates for target and thus should mark it as failure.
 template <Interface::Direction dir>
-inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source) const {
+inline bool ConnectingPrivate::hasPendingOpposites(const InterfaceState* source, const InterfaceState* target) const {
 	for (const auto& candidate : this->pending) {
-		static_assert(Interface::FORWARD == 0, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
-		const auto src = std::get<dir>(candidate);
-		static_assert(Interface::BACKWARD == 1, "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
-		const auto tgt = std::get<opposite<dir>()>(candidate);
+		static_assert(Interface::FORWARD == 0 && Interface::BACKWARD == 1,
+		              "This code assumes FORWARD=0, BACKWARD=1. Don't change their order!");
+		const InterfaceState* src = &*std::get<dir>(candidate);
+		const InterfaceState* tgt = &*std::get<opposite<dir>()>(candidate);
 
-		if (&*src == source && tgt->priority().enabled())
+		if (tgt == target && src != source && src->priority().enabled())
 			return true;
 
 		// early stopping when only infeasible pairs are to come
-		if (!std::get<0>(candidate)->priority().enabled())
+		if (!std::get<0>(candidate)->priority().enabled() || !std::get<1>(candidate)->priority().enabled())
 			break;
 	}
 	return false;
 }
 // explicitly instantiate templates for both directions
-template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* source) const;
-template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* source) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::FORWARD>(const InterfaceState* start,
+                                                                         const InterfaceState* end) const;
+template bool ConnectingPrivate::hasPendingOpposites<Interface::BACKWARD>(const InterfaceState* end,
+                                                                          const InterfaceState* start) const;
 
 bool ConnectingPrivate::canCompute() const {
+	// ROS_DEBUG_STREAM("canCompute " << name() << ": " << pendingPairsPrinter());
 	// Do we still have feasible pending state pairs?
 	return !pending.empty() && pending.front().first->priority().enabled() &&
 	       pending.front().second->priority().enabled();
@@ -770,25 +882,17 @@ void ConnectingPrivate::compute() {
 	static_cast<Connecting*>(me_)->compute(from, to);
 }
 
-std::ostream& ConnectingPrivate::printPendingPairs(std::ostream& os) const {
-	static const char* red = "\033[31m";
-	static const char* reset = "\033[m";
-	for (const auto& candidate : pending) {
-		if (!candidate.first->priority().enabled() || !candidate.second->priority().enabled())
-			os << " " << red;
-		// find indeces of InterfaceState pointers in start/end Interfaces
-		unsigned int first = 0, second = 0;
-		std::find_if(starts()->begin(), starts()->end(), [&](const InterfaceState* s) {
-			++first;
-			return &*candidate.first == s;
-		});
-		std::find_if(ends()->begin(), ends()->end(), [&](const InterfaceState* s) {
-			++second;
-			return &*candidate.second == s;
-		});
-		os << first << ":" << second << " ";
+std::ostream& operator<<(std::ostream& os, const PendingPairsPrinter& p) {
+	const auto* impl = p.instance_;
+	const char* reset = InterfaceState::colorForStatus(3);
+	for (const auto& candidate : impl->pending) {
+		size_t first = getIndex(*impl->starts(), candidate.first);
+		size_t second = getIndex(*impl->ends(), candidate.second);
+		os << InterfaceState::colorForStatus(candidate.first->priority().status()) << first << reset << ":"
+		   << InterfaceState::colorForStatus(candidate.second->priority().status()) << second << reset << " ";
 	}
-	os << reset;
+	if (impl->pending.empty())
+		os << "---";
 	return os;
 }
 
@@ -804,31 +908,33 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	const planning_scene::PlanningSceneConstPtr& from = from_state.scene();
 	const planning_scene::PlanningSceneConstPtr& to = to_state.scene();
 
-	if (from->getWorld()->size() != to->getWorld()->size()) {
-		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of collision objects");
+	auto false_with_debug = [](auto... args) {
+		ROS_DEBUG_STREAM_NAMED("Connecting", fmt::format(args...));
 		return false;
-	}
+	};
+
+	if (from->getWorld()->size() != to->getWorld()->size())
+		return false_with_debug("{}: different number of collision objects", name());
 
 	// both scenes should have the same set of collision objects, at the same location
 	for (const auto& from_object_pair : *from->getWorld()) {
+		const std::string& from_object_name = from_object_pair.first;
 		const collision_detection::World::ObjectPtr& from_object = from_object_pair.second;
-		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_pair.first);
-		if (!to_object) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object_pair.first);
-			return false;
-		}
-		if (from_object->shape_poses_.size() != to_object->shape_poses_.size()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object_pair.first);
-			return false;  // shapes not matching
-		}
+		const collision_detection::World::ObjectConstPtr& to_object = to->getWorld()->getObject(from_object_name);
+		if (!to_object)
+			return false_with_debug("{}: object missing: {}", name(), from_object_name);
+
+		if (!(from_object->pose_.matrix() - to_object->pose_.matrix()).isZero(1e-4))
+			return false_with_debug("{}: different object pose: {}", name(), from_object_name);
+
+		if (from_object->shape_poses_.size() != to_object->shape_poses_.size())
+			return false_with_debug("{}: different object shapes: {}", name(), from_object_name);
 
 		for (auto from_it = from_object->shape_poses_.cbegin(), from_end = from_object->shape_poses_.cend(),
 		          to_it = to_object->shape_poses_.cbegin();
 		     from_it != from_end; ++from_it, ++to_it)
-			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object_pair.first);
-				return false;  // transforms do not match
-			}
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
+				return false_with_debug("{}: different shape pose: {}", name(), from_object_name);
 	}
 
 	// Also test for attached objects which have a different storage
@@ -836,39 +942,32 @@ bool Connecting::compatible(const InterfaceState& from_state, const InterfaceSta
 	std::vector<const moveit::core::AttachedBody*> to_attached;
 	from->getCurrentState().getAttachedBodies(from_attached);
 	to->getCurrentState().getAttachedBodies(to_attached);
-	if (from_attached.size() != to_attached.size()) {
-		ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different number of objects");
-		return false;
-	}
+	if (from_attached.size() != to_attached.size())
+		return false_with_debug("{}: different number of objects", name());
 
 	for (const moveit::core::AttachedBody* from_object : from_attached) {
 		auto it = std::find_if(to_attached.cbegin(), to_attached.cend(),
 		                       [from_object](const moveit::core::AttachedBody* object) {
 			                       return object->getName() == from_object->getName();
 		                       });
-		if (it == to_attached.cend()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": object missing: " << from_object->getName());
-			return false;
-		}
-		const moveit::core::AttachedBody* to_object = *it;
-		if (from_object->getAttachedLink() != to_object->getAttachedLink()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different attach links: " << from_object->getName()
-			                                            << " attached to " << from_object->getAttachedLinkName() << " / "
-			                                            << to_object->getAttachedLinkName());
-			return false;  // links not matching
-		}
-		if (from_object->getFixedTransforms().size() != to_object->getFixedTransforms().size()) {
-			ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object shapes: " << from_object->getName());
-			return false;  // shapes not matching
-		}
+		if (it == to_attached.cend())
+			return false_with_debug("{}: object missing: {}", name(), from_object->getName());
 
-		for (auto from_it = from_object->getFixedTransforms().cbegin(),
-		          from_end = from_object->getFixedTransforms().cend(), to_it = to_object->getFixedTransforms().cbegin();
-		     from_it != from_end; ++from_it, ++to_it)
-			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4)) {
-				ROS_DEBUG_STREAM_NAMED("Connecting", name() << ": different object pose: " << from_object->getName());
-				return false;  // transforms do not match
-			}
+		const moveit::core::AttachedBody* to_object = *it;
+		if (from_object->getAttachedLink() != to_object->getAttachedLink())
+			return false_with_debug("{}: different attach links: {} attached to {} vs. {}",  //
+			                        name(), from_object->getName(),  //
+			                        from_object->getAttachedLink()->getName(), to_object->getAttachedLink()->getName());
+
+		if (from_object->getShapes().size() != to_object->getShapes().size())
+			return false_with_debug("{}: different object shapes: {}", name(), from_object->getName());
+
+		auto from_it = from_object->getShapePosesInLinkFrame().cbegin();
+		auto from_end = from_object->getShapePosesInLinkFrame().cend();
+		auto to_it = to_object->getShapePosesInLinkFrame().cbegin();
+		for (; from_it != from_end; ++from_it, ++to_it)
+			if (!(from_it->matrix() - to_it->matrix()).isZero(1e-4))
+				return false_with_debug("{}: different pose of attached object shape: {}", name(), from_object->getName());
 	}
 	return true;
 }

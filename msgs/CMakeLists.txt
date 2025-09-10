@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_msgs)
 
 set(MSG_DEPS moveit_msgs visualization_msgs)
@@ -19,6 +19,7 @@ add_message_files(DIRECTORY msg FILES
 	SubTrajectory.msg
 	TaskDescription.msg
 	TaskStatistics.msg
+	TrajectoryExecutionInfo.msg
 )
 
 add_service_files(DIRECTORY srv FILES

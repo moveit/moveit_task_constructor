@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_visualization)
 
+find_package(fmt REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	moveit_core
 	moveit_ros_visualization
@@ -9,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	rviz
 )
+
+moveit_build_options()
 
 # rviz transitively includes OGRE headers which break with `-Wall -Werror`
 # so isolate these include dirs and add them as SYSTEM include where needed.
@@ -56,8 +59,6 @@ catkin_package(
 		roscpp
 		rviz
 )
-
-set(CMAKE_CXX_STANDARD 14)
 
 add_subdirectory(visualization_tools)
 add_subdirectory(motion_planning_tasks)
