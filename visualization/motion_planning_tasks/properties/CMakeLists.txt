@@ -22,9 +22,9 @@ target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
 	PRIVATE ${YAML_INCLUDE_DIRS}
 )
-ament_target_dependencies(${MOVEIT_LIB_NAME}
-	moveit_task_constructor_core
-	rviz_common
+target_link_libraries(${MOVEIT_LIB_NAME}
+	${moveit_task_constructor_core_TARGETS}
+	${rviz_common_TARGETS}
 )
 
 install(TARGETS ${MOVEIT_LIB_NAME}

@@ -18,18 +18,8 @@ find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2_eigen REQUIRED)
 
-set(THIS_PACKAGE_INCLUDE_DEPENDS
-	moveit_core
-	moveit_ros_planning
-	moveit_ros_planning_interface
-	moveit_task_constructor_core
-	moveit_task_constructor_msgs
-	rclcpp
-	tf2_eigen
-)
-
 add_library(${PROJECT_NAME}_pick_place_task SHARED src/pick_place_task.cpp)
-ament_target_dependencies(${PROJECT_NAME}_pick_place_task ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_link_libraries(${PROJECT_NAME}_pick_place_task ${moveit_task_constructor_core_TARGETS})
 install(TARGETS ${PROJECT_NAME}_pick_place_task
 	ARCHIVE DESTINATION lib
 	LIBRARY DESTINATION lib
@@ -45,7 +35,7 @@ function(demo name)
 		generate_parameter_library(${parameter_filename} src/${parameter_filename}.yaml)
 		target_link_libraries(${PROJECT_NAME}_${name} ${parameter_filename})
 	endif()
-	ament_target_dependencies(${PROJECT_NAME}_${name} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+	target_link_libraries(${PROJECT_NAME}_${name} ${moveit_task_constructor_core_TARGETS})
 	set_target_properties(${PROJECT_NAME}_${name} PROPERTIES OUTPUT_NAME ${name} PREFIX "")
 	install(TARGETS ${PROJECT_NAME}_${name}
 		ARCHIVE DESTINATION lib

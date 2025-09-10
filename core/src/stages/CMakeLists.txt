@@ -45,15 +45,14 @@ add_library(${PROJECT_NAME}_stages SHARED
 	pick.cpp
 )
 target_link_libraries(${PROJECT_NAME}_stages ${PROJECT_NAME})
-ament_target_dependencies(${PROJECT_NAME}_stages
-	moveit_core
-	geometry_msgs
-	moveit_ros_planning
-	moveit_ros_planning_interface
-	moveit_task_constructor_msgs
-	rclcpp
-	tf2_eigen
-	visualization_msgs
+target_link_libraries(${PROJECT_NAME}_stages
+	${moveit_core_TARGETS}
+	${moveit_ros_planning_TARGETS}
+	${moveit_ros_planning_interface_TARGETS}
+	${tf2_eigen_TARGETS}
+	${geometry_msgs_TARGETS}
+	${moveit_task_constructor_msgs_TARGETS}
+	${visualization_msgs_TARGETS}
 )
 
 add_library(${PROJECT_NAME}_stage_plugins SHARED

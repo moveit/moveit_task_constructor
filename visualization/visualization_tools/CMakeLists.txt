@@ -26,15 +26,14 @@ target_link_libraries(${MOVEIT_LIB_NAME}
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC include
 )
-ament_target_dependencies(${MOVEIT_LIB_NAME}
-	Boost
-	pluginlib
-	moveit_task_constructor_msgs
-	moveit_ros_visualization
-	moveit_core
-	rclcpp
-	rviz_common
-	rviz_default_plugins
+target_link_libraries(${MOVEIT_LIB_NAME}
+	Boost::headers
+	pluginlib::pluginlib
+	${moveit_task_constructor_msgs_TARGETS}
+	${moveit_ros_visualization_TARGETS}
+	${moveit_core_TARGETS}
+	${rviz_common_TARGETS}
+	${rviz_default_plugins_TARGETS}
 )
 
 install(DIRECTORY include/ DESTINATION include)

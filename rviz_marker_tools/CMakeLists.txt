@@ -6,12 +6,10 @@ find_package(moveit_common REQUIRED)
 moveit_package()
 
 set(THIS_PACKAGE_INCLUDE_DEPENDS
-	eigen3_cmake_module
-	Eigen3
-	geometry_msgs
 	rclcpp
 	tf2_eigen
 	urdfdom_headers
+	geometry_msgs
 	std_msgs
 	visualization_msgs
 )
@@ -28,7 +26,14 @@ add_library(${PROJECT_NAME} SHARED
 	src/marker_creation.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_link_libraries(${PROJECT_NAME} PUBLIC
+	rclcpp::rclcpp
+	${tf2_eigen_TARGETS}
+	${urdfdom_headers_TARGETS}
+	${geometry_msgs_TARGETS}
+	${std_msgs_TARGETS}
+	${visualization_msgs_TARGETS}
+)
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
