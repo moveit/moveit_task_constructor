@@ -341,7 +341,7 @@ private:
 	// name of the planner used to create this solution
 	std::string planner_id_;
 	// markers for this solution, e.g. target frame or collision indicators
-	std::deque<visualization_msgs::msg::Marker> markers_;
+	std::vector<visualization_msgs::msg::Marker> markers_;
 
 	// begin and end InterfaceState of this solution/trajectory
 	const InterfaceState* start_ = nullptr;

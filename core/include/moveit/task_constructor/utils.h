@@ -45,6 +45,9 @@
 #include <Eigen/Geometry>
 
 #include <moveit/macros/class_forward.hpp>
+#include <moveit/robot_trajectory/robot_trajectory.hpp>
+#include <moveit/collision_detection/collision_common.hpp>
+#include <moveit/task_constructor/solvers/planner_interface.h>
 
 namespace planning_scene {
 MOVEIT_CLASS_FORWARD(PlanningScene);
@@ -139,9 +142,23 @@ private:
 	Int i;
 };
 
-bool getRobotTipForFrame(const Property& property, const planning_scene::PlanningScene& scene,
+/** For a PoseStamped property, lookup the associated LinkModel* and yield the pose in global frame */
+bool getRobotTipForFrame(const Property& tip_pose, const planning_scene::PlanningScene& scene,
                          const moveit::core::JointModelGroup* jmg, std::string& error_msg,
                          const moveit::core::LinkModel*& robot_link, Eigen::Isometry3d& tip_in_global_frame);
+
+/** Add sphere markers to visualize given collisions */
+void addCollisionMarkers(std::vector<visualization_msgs::msg::Marker>& markers, const std::string& frame_id,
+                         const collision_detection::CollisionResult::ContactMap& contacts, double radius = 0.035);
+
+/** Add sphere markers to visualize collisions within the trajectory */
+void addCollisionMarkers(std::vector<visualization_msgs::msg::Marker>& markers,
+                         const robot_trajectory::RobotTrajectory& trajectory,
+                         const planning_scene::PlanningSceneConstPtr& planning_scene);
+
+/** Returns true if the result provides hints that planning failed due to collisions */
+bool hints_at_collisions(const solvers::PlannerInterface::Result& result);
+
 }  // namespace utils
 }  // namespace task_constructor
 }  // namespace moveit

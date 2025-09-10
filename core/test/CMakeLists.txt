@@ -44,6 +44,7 @@ if (BUILD_TESTING)
 
 	mtc_add_gmock(test_mockups.cpp)
 	mtc_add_gtest(test_stage.cpp)
+	mtc_add_gtest(test_limit_solutions.cpp)
 	mtc_add_gtest(test_container.cpp)
 	mtc_add_gmock(test_serial.cpp)
 	mtc_add_gmock(test_pruning.cpp)

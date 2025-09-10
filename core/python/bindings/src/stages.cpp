@@ -37,6 +37,7 @@
 #include <moveit/task_constructor/stages.h>
 #include <moveit/task_constructor/stages/pick.h>
 #include <moveit/task_constructor/stages/simple_grasp.h>
+#include <moveit/task_constructor/solvers/cartesian_path.h>
 #include <moveit/planning_scene/planning_scene.hpp>
 #include <moveit_msgs/msg/planning_scene.hpp>
 #include <pybind11/stl.h>
@@ -64,6 +65,8 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(Place)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(SimpleGraspBase)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(SimpleGrasp)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(SimpleUnGrasp)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(PassThrough)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(LimitSolutions)
 
 namespace moveit {
 namespace python {
@@ -187,10 +190,6 @@ void export_stages(pybind11::module& m) {
 	    .property<std::string>("default_pose", R"(
 			str: Default joint pose of the active group
 			(defines cost of the inverse kinematics).
-		)")
-	    .property<uint32_t>("max_ik_solutions", R"(
-			int: Set the maximum number of inverse
-			kinematic solutions thats should be generated.
 		)")
 	    .property<uint32_t>("max_ik_solutions", "uint: max number of solutions to return")
 	    .property<bool>("ignore_collisions", R"(
@@ -452,6 +451,7 @@ void export_stages(pybind11::module& m) {
 	    .property<std::string>("eef_parent_group", "str: Joint model group of the eef's parent")
 	    .def(py::init<Stage::pointer&&, const std::string&>(), "grasp_generator"_a,
 	         "name"_a = std::string("pick"))
+	    .def_property_readonly("cartesian_solver", &Pick::cartesianSolver)
 	    .def("setApproachMotion", &Pick::setApproachMotion, R"(
 			The approaching motion towards the grasping state is represented
 			by a twist message.
@@ -564,6 +564,23 @@ void export_stages(pybind11::module& m) {
 		.property<std::string>("grasp", "str: Name of the grasp pose")
 		.def(py::init<Stage::pointer&&, const std::string&>(), "pose_generator"_a,
 		     "name"_a = std::string("ungrasp"));
+
+	properties::class_<PassThrough, Stage>(m, "PassThrough", R"(
+			Wrapper which simply forwards all solutions of a child stage,
+			allowing the wrapper to redefine costs, w/o loosing original costs.
+		)")
+	    .def(py::init<const std::string&, Stage::pointer&&>(), "name"_a, "stage"_a);
+
+	properties::class_<LimitSolutions, Stage>(m, "LimitSolutions", R"(
+			Wrapper for any stage to limit the total number of solutions returned.
+
+			The wrapper stores solutions of its child stage, and on each compute will
+			pass on the lowest cost solution available, until the maximum number of solutions
+			is reached.
+		)")
+	    .property<uint32_t>("max_solutions", "uint: maximum number of solutions that should be passed on")
+	    .def(py::init<const std::string&, Stage::pointer&&>(), "name"_a, "stage"_a);
+
 }
 }  // namespace python
 }  // namespace moveit

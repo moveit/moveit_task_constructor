@@ -1,8 +1,6 @@
 [submodule "core/python/pybind11"]
 	path = core/python/pybind11
 	url = https://github.com/pybind/pybind11
-	branch = smart_holder
-	shallow = true
 [submodule "core/src/scope_guard"]
 	path = core/src/scope_guard
 	url = https://github.com/ricab/scope_guard
