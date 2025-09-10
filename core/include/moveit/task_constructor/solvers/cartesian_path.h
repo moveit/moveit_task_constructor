@@ -70,11 +70,6 @@ public:
 	[[deprecated("Replace with setMaxAccelerationScalingFactor")]]  // clang-format off
 	void setMaxAccelerationScaling(double factor) { setMaxAccelerationScalingFactor(factor); }  // clang-format on
 
-	void setMaxCartesianSpeed(double max) { setProperty("max_cartesian_speed", max); }
-	void setCartesianSpeedLimitedLink(std::string limited_link) {
-		setProperty("cartesian_speed_limited_link", limited_link);
-	}
-
 	void init(const moveit::core::RobotModelConstPtr& robot_model) override;
 
 	Result plan(const planning_scene::PlanningSceneConstPtr& from, const planning_scene::PlanningSceneConstPtr& to,
