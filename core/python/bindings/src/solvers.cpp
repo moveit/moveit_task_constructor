@@ -54,6 +54,8 @@ void export_solvers(py::module& m) {
 	    .property<double>("max_velocity_scaling_factor", "float: Reduce the maximum velocity by scaling between (0,1]")
 	    .property<double>("max_acceleration_scaling_factor",
 	                      "float: Reduce the maximum acceleration by scaling between (0,1]")
+	    .property<double>("max_cartesian_speed", "float: maximum cartesian speed")
+	    .property<std::string>("cartesian_speed_limited_link", "str: link with limited cartesian speed")
 	    .def_property_readonly("properties", py::overload_cast<>(&PlannerInterface::properties),
 	                           py::return_value_policy::reference_internal, "Properties of the planner");
 
