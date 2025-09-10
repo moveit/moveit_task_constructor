@@ -32,7 +32,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include <pybind11/smart_holder.h>
+#include <pybind11/pybind11.h>
 
 namespace moveit {
 namespace python {

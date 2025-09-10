@@ -59,7 +59,7 @@ class PropertyConverterRegistry
 		PropertyConverterBase::from_python_converter_function from_;
 	};
 	// map from type_index to corresponding converter functions
-	typedef std::map<std::type_index, Entry> RegistryMap;
+	using RegistryMap = std::map<std::type_index, Entry>;
 	RegistryMap types_;
 	// map from ros-msg-names to entry in types_
 	using RosMsgTypeNameMap = std::map<std::string, RegistryMap::iterator>;
@@ -155,6 +155,7 @@ bool PropertyConverterBase::insert(const std::type_index& type_index, const std:
 	return REGISTRY_SINGLETON.insert(type_index, ros_msg_name, to, from);
 }
 
+__attribute__((visibility("default"))) // export this symbol as visible in the shared library
 void export_properties(py::module& m) {
 	// clang-format off
 	py::classh<Property>(m, "Property", "Holds an arbitrarily typed value and a default value")

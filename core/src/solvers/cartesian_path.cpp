@@ -40,6 +40,7 @@
 #include <moveit/task_constructor/utils.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/trajectory_processing/time_parameterization.h>
+#include <moveit/trajectory_processing/limit_cartesian_speed.h>
 #include <moveit/kinematics_base/kinematics_base.h>
 #include <moveit/robot_state/cartesian_interpolator.h>
 #include <tf2_eigen/tf2_eigen.h>
@@ -121,8 +122,19 @@ PlannerInterface::Result CartesianPath::plan(const planning_scene::PlanningScene
 	for (const auto& waypoint : trajectory)
 		result->addSuffixWayPoint(waypoint, 0.0);
 
+	double max_cartesian_speed = props.get<double>("max_cartesian_speed");
 	auto timing = props.get<TimeParameterizationPtr>("time_parameterization");
-	if (timing)
+	// compute timing to move the eef with constant speed
+	if (max_cartesian_speed > 0.0) {
+		if (trajectory_processing::limitMaxCartesianLinkSpeed(*result, max_cartesian_speed,
+		                                                      props.get<std::string>("cartesian_speed_limited_link"))) {
+			ROS_INFO_STREAM("successfully set max " << max_cartesian_speed << " [m/s] for link "
+			                                        << props.get<std::string>("cartesian_speed_limited_link"));
+		} else {
+			ROS_ERROR_STREAM("failed to set max speed for link_ "
+			                 << props.get<std::string>("cartesian_speed_limited_link"));
+		}
+	} else if (timing)
 		timing->computeTimeStamps(*result, props.get<double>("max_velocity_scaling_factor"),
 		                          props.get<double>("max_acceleration_scaling_factor"));
 

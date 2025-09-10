@@ -77,7 +77,7 @@ protected:
 	rviz::DisplayContext* display_context_;
 
 public:
-	enum TaskModelFlag
+	enum TaskModelFlag : uint8_t
 	{
 		LOCAL_MODEL = 0x01,
 		IS_DESTROYED = 0x02,

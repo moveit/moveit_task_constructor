@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.16)
 project(rviz_marker_tools)
 
 find_package(catkin REQUIRED COMPONENTS

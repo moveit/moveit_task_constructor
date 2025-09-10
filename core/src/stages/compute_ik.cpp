@@ -89,7 +89,7 @@ void ComputeIK::setTargetPose(const Eigen::Isometry3d& pose, const std::string& 
 struct IKSolution
 {
 	std::vector<double> joint_positions;
-	collision_detection::Contact contact;
+	collision_detection::CollisionResult::ContactMap contacts;
 	bool collision_free;
 	bool satisfies_constraints;
 };
@@ -141,7 +141,7 @@ bool isTargetPoseCollidingInEEF(const planning_scene::PlanningSceneConstPtr& sce
 }
 
 std::string listCollisionPairs(const collision_detection::CollisionResult::ContactMap& contacts,
-                               const std::string& separator) {
+                               const std::string& separator = ", ") {
 	std::string result;
 	for (const auto& contact : contacts) {
 		if (!result.empty())
@@ -251,16 +251,23 @@ void ComputeIK::compute() {
 	const moveit::core::JointModelGroup* jmg = nullptr;
 	std::string msg;
 
+	auto report_failure = [&s, this](const std::string& msg) {
+		planning_scene::PlanningScenePtr scene = s.start()->scene()->diff();
+		SubTrajectory solution;
+		solution.markAsFailure(msg);
+		spawn(InterfaceState(scene), std::move(solution));
+	};
+
 	if (!validateEEF(props, robot_model, eef_jmg, &msg)) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		report_failure(msg);
 		return;
 	}
 	if (!validateGroup(props, robot_model, eef_jmg, jmg, &msg)) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", msg);
+		report_failure(msg);
 		return;
 	}
 	if (!eef_jmg && !jmg) {
-		ROS_WARN_STREAM_NAMED("ComputeIK", "Neither eef nor group are well defined");
+		report_failure("Neither eef nor group are well defined");
 		return;
 	}
 	properties().property("timeout").setDefaultValue(jmg->getDefaultIKTimeout());
@@ -274,8 +281,7 @@ void ComputeIK::compute() {
 	tf2::fromMsg(target_pose_msg.pose, target_pose);
 	if (target_pose_msg.header.frame_id != scene->getPlanningFrame()) {
 		if (!scene->knowsFrameTransform(target_pose_msg.header.frame_id)) {
-			ROS_WARN_STREAM_NAMED("ComputeIK",
-			                      "Unknown reference frame for target pose: " << target_pose_msg.header.frame_id);
+			report_failure(fmt::format("Unknown reference frame for target pose: '{}'", target_pose_msg.header.frame_id));
 			return;
 		}
 		// transform target_pose w.r.t. planning frame
@@ -289,8 +295,8 @@ void ComputeIK::compute() {
 	if (value.empty()) {  // property undefined
 		//  determine IK link from eef/group
 		if (!(link = eef_jmg ? robot_model->getLinkModel(eef_jmg->getEndEffectorParentGroup().second) :
-                             jmg->getOnlyOneEndEffectorTip())) {
-			ROS_WARN_STREAM_NAMED("ComputeIK", "Failed to derive IK target link");
+		                       jmg->getOnlyOneEndEffectorTip())) {
+			report_failure("Failed to derive IK target link");
 			return;
 		}
 		ik_pose_msg.header.frame_id = link->getName();
@@ -301,8 +307,7 @@ void ComputeIK::compute() {
 		tf2::fromMsg(ik_pose_msg.pose, ik_pose);
 
 		if (!scene->getCurrentState().knowsFrameTransform(ik_pose_msg.header.frame_id)) {
-			ROS_WARN_STREAM_NAMED("ComputeIK",
-			                      fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
+			report_failure(fmt::format("ik frame unknown in robot: '{}'", ik_pose_msg.header.frame_id));
 			return;
 		}
 		ik_pose = scene->getCurrentState().getFrameTransform(ik_pose_msg.header.frame_id) * ik_pose;
@@ -340,8 +345,8 @@ void ComputeIK::compute() {
 		generateCollisionMarkers(sandbox_state, appender, links_to_visualize);
 		std::copy(eef_markers.begin(), eef_markers.end(), std::back_inserter(solution.markers()));
 		solution.markAsFailure();
-		// TODO: visualize collisions
-		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts, ", "));
+		solution.setComment(s.comment() + " eef in collision: " + listCollisionPairs(collisions.contacts));
+		utils::addCollisionMarkers(solution.markers(), scene->getPlanningFrame(), collisions.contacts);
 		auto colliding_scene{ scene->diff() };
 		colliding_scene->setCurrentState(sandbox_state);
 		spawn(InterfaceState(colliding_scene), std::move(solution));
@@ -390,9 +395,7 @@ void ComputeIK::compute() {
 		req.group_name = jmg->getName();
 		scene->checkCollision(req, res, *state);
 		solution.collision_free = ignore_collisions || !res.collision;
-		if (!res.contacts.empty()) {
-			solution.contact = res.contacts.begin()->second.front();
-		}
+		solution.contacts = std::move(res.contacts);
 
 		return solution.satisfies_constraints && solution.collision_free;
 	};
@@ -428,10 +431,8 @@ void ComputeIK::compute() {
 				// compute cost as distance to compare_pose
 				solution.setCost(s.cost() + jmg->distance(ik_solutions[i].joint_positions.data(), compare_pose.data()));
 			else if (!ik_solutions[i].collision_free) {  // solution was in collision
-				std::stringstream ss;
-				ss << "Collision between '" << ik_solutions[i].contact.body_name_1 << "' and '"
-				   << ik_solutions[i].contact.body_name_2 << "'";
-				solution.markAsFailure(ss.str());
+				solution.markAsFailure("Collision between " + listCollisionPairs(ik_solutions[i].contacts));
+				utils::addCollisionMarkers(solution.markers(), scene->getPlanningFrame(), ik_solutions[i].contacts);
 			} else if (!ik_solutions[i].satisfies_constraints) {  // solution was violating constraints
 				solution.markAsFailure("Constraints violated");
 			}

@@ -39,7 +39,7 @@
 #include <moveit/task_constructor/cost_queue.h>
 #include <moveit/task_constructor/cost_terms.h>
 #include <moveit/utils/moveit_error_code.h>
-#include <pybind11/smart_holder.h>
+#include <pybind11/pybind11.h>
 
 /** Trampoline classes to allow inheritance in Python (overriding virtual functions) */
 
@@ -108,35 +108,3 @@ public:
 
 }  // namespace task_constructor
 }  // namespace moveit
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::solvers::PlannerInterface)
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SolutionBase)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SubTrajectory)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(ordered<moveit::task_constructor::SolutionBaseConstPtr>)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::InterfaceState)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::core::MoveItErrorCode)
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::CostTerm)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::TrajectoryCostTerm)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::PathLength)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::DistanceToReference)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::TrajectoryDuration)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::LinkMotion)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::Clearance)
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Stage)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingEitherWay)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingForward)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::PropagatingBackward)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Generator)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::MonitoringGenerator)
-
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::ContainerBase)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::SerialContainer)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::ParallelContainerBase)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Alternatives)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Fallbacks)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Merger)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::WrapperBase)
-PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Task)

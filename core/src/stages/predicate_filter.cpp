@@ -80,8 +80,6 @@ void PredicateFilter::init(const moveit::core::RobotModelConstPtr& robot_model) 
 void PredicateFilter::onNewSolution(const SolutionBase& s) {
 	const auto& props = properties();
 
-	// false-positive in clang-tidy 10.0.0: predicate might change comment
-	// NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
 	std::string comment = s.comment();
 
 	double cost = s.cost();

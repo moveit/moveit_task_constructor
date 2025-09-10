@@ -62,24 +62,24 @@ printChildrenInterfaces(const ContainerBasePrivate& container, bool success, con
                         std::ostream& os = std::cerr) {
 	static unsigned int id = 0;
 	const unsigned int width = 10;  // indentation of name
-	os << std::endl << (success ? '+' : '-') << ' ' << creator.name() << ' ';
+	os << '\n' << (success ? '+' : '-') << ' ' << creator.name() << ' ';
 	if (success)
 		os << ++id << ' ';
 	if (const auto conn = dynamic_cast<const ConnectingPrivate*>(creator.pimpl()))
 		os << conn->pendingPairsPrinter();
-	os << std::endl;
+	os << '\n';
 
 	for (const auto& child : container.children()) {
 		auto cimpl = child->pimpl();
 		os << std::setw(width) << std::left << child->name();
 		if (!cimpl->starts() && !cimpl->ends())
-			os << "↕ " << std::endl;
+			os << "↕ \n";
 		if (cimpl->starts())
-			os << "↓ " << *child->pimpl()->starts() << std::endl;
+			os << "↓ " << *child->pimpl()->starts() << '\n';
 		if (cimpl->starts() && cimpl->ends())
 			os << std::setw(width) << "  ";
 		if (cimpl->ends())
-			os << "↑ " << *child->pimpl()->ends() << std::endl;
+			os << "↑ " << *child->pimpl()->ends() << '\n';
 	}
 }
 
@@ -452,23 +452,26 @@ void ContainerBase::init(const moveit::core::RobotModelConstPtr& robot_model) {
 		throw errors;
 }
 
-void ContainerBase::explainFailure(std::ostream& os) const {
+bool ContainerBase::explainFailure(std::ostream& os) const {
 	for (const auto& stage : pimpl()->children()) {
 		if (!stage->solutions().empty())
 			continue;  // skip deeper traversal, this stage produced solutions
 		if (stage->numFailures()) {
 			os << stage->name() << " (0/" << stage->numFailures() << ")";
-			stage->explainFailure(os);
-			os << std::endl;
-			break;
+			if (!stage->failures().empty())
+				os << ": " << stage->failures().front()->comment();
+			os << '\n';
+			return true;
 		}
-		stage->explainFailure(os);  // recursively process children
+		if (stage->explainFailure(os))  // recursively process children
+			return true;
 	}
+	return false;
 }
 
 std::ostream& operator<<(std::ostream& os, const ContainerBase& container) {
 	ContainerBase::StageCallback processor = [&os](const Stage& stage, unsigned int depth) -> bool {
-		os << std::string(2 * depth, ' ') << *stage.pimpl() << std::endl;
+		os << std::string(2 * depth, ' ') << *stage.pimpl() << '\n';
 		return true;
 	};
 	container.traverseRecursively(processor);

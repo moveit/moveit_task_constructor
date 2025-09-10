@@ -149,6 +149,8 @@ void initMotionPlanRequest(moveit_msgs::MotionPlanRequest& req, const PropertyMa
 	req.num_planning_attempts = p.get<uint>("num_planning_attempts");
 	req.max_velocity_scaling_factor = p.get<double>("max_velocity_scaling_factor");
 	req.max_acceleration_scaling_factor = p.get<double>("max_acceleration_scaling_factor");
+	req.cartesian_speed_limited_link = p.get<std::string>("cartesian_speed_limited_link");
+	req.max_cartesian_speed = p.get<double>("max_cartesian_speed");
 	req.workspace_parameters = p.get<moveit_msgs::WorkspaceParameters>("workspace_parameters");
 }
 

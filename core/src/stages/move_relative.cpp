@@ -94,7 +94,6 @@ static bool getJointStateFromOffset(const boost::any& direction, const Interface
 				throw std::runtime_error("Cannot plan for multi-variable joint '" + j.first + "'");
 			auto index = jm->getFirstVariableIndex();
 			robot_state.setVariablePosition(index, robot_state.getVariablePosition(index) + sign * j.second);
-			robot_state.enforceBounds(jm);
 		}
 		robot_state.update();
 		return true;
@@ -106,7 +105,7 @@ static bool getJointStateFromOffset(const boost::any& direction, const Interface
 }
 
 // Create an arrow marker from start_pose to reached_pose, split into a red and green part based on achieved distance
-static void visualizePlan(std::deque<visualization_msgs::Marker>& markers, Interface::Direction dir, bool success,
+static void visualizePlan(std::vector<visualization_msgs::Marker>& markers, Interface::Direction dir, bool success,
                           const std::string& ns, const std::string& frame_id, const Eigen::Isometry3d& start_pose,
                           const Eigen::Isometry3d& reached_pose, const Eigen::Vector3d& linear, double distance) {
 	double linear_norm = linear.norm();
@@ -194,14 +193,17 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 
 	robot_trajectory::RobotTrajectoryPtr robot_trajectory;
 	bool success = false;
+	bool has_potential_collisions = false;
 	std::string comment = "";
 
 	if (getJointStateFromOffset(direction, dir, jmg, scene->getCurrentStateNonConst())) {
 		// plan to joint-space target
 		auto result = planner_->plan(state.scene(), scene, jmg, timeout, robot_trajectory, path_constraints);
 		success = bool(result);
-		if (!success)
+		if (!success) {
 			comment = result.message;
+			has_potential_collisions = robot_trajectory && utils::hints_at_collisions(result);
+		}
 	} else {
 		// Cartesian targets require an IK reference frame
 		const moveit::core::LinkModel* link;
@@ -293,8 +295,10 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 		auto result =
 		    planner_->plan(state.scene(), *link, offset, target_eigen, jmg, timeout, robot_trajectory, path_constraints);
 		success = bool(result);
-		if (!success)
+		if (!success) {
 			comment = result.message;
+			has_potential_collisions = robot_trajectory && utils::hints_at_collisions(result);
+		}
 
 		if (robot_trajectory && robot_trajectory->getWayPointCount() > 0) {  // the following requires a robot_trajectory
 			                                                                  // returned from planning
@@ -338,8 +342,11 @@ bool MoveRelative::compute(const InterfaceState& state, planning_scene::Planning
 			robot_trajectory->reverse();
 		solution.setTrajectory(robot_trajectory);
 
-		if (!success)
+		if (!success) {
 			solution.markAsFailure(comment);
+			if (has_potential_collisions)
+				utils::addCollisionMarkers(solution.markers(), *robot_trajectory, scene);
+		}
 		return true;
 	}
 	return false;

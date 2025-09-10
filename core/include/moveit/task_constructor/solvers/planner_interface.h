@@ -89,6 +89,10 @@ public:
 	void setTimeout(double timeout) { properties_.set("timeout", timeout); }
 	void setMaxVelocityScalingFactor(double factor) { properties_.set("max_velocity_scaling_factor", factor); }
 	void setMaxAccelerationScalingFactor(double factor) { properties_.set("max_acceleration_scaling_factor", factor); }
+
+	void setMaxCartesianSpeed(double max) { setProperty("max_cartesian_speed", max); }
+	void setCartesianSpeedLimitedLink(const std::string& link) { setProperty("cartesian_speed_limited_link", link); }
+
 	void setTimeParameterization(const trajectory_processing::TimeParameterizationPtr& tp) {
 		properties_.set("time_parameterization", tp);
 	}

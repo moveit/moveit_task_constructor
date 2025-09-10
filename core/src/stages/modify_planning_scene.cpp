@@ -112,7 +112,7 @@ void ModifyPlanningScene::attachObjects(planning_scene::PlanningScene& scene,
 	if (invert)
 		attach = !attach;
 	obj.object.operation = attach ? static_cast<int8_t>(moveit_msgs::CollisionObject::ADD) :
-                                   static_cast<int8_t>(moveit_msgs::CollisionObject::REMOVE);
+	                                static_cast<int8_t>(moveit_msgs::CollisionObject::REMOVE);
 	for (const std::string& name : pair.second.first) {
 		obj.object.id = name;
 		scene.processAttachedCollisionObjectMsg(obj);
@@ -163,6 +163,7 @@ std::pair<InterfaceState, SubTrajectory> ModifyPlanningScene::apply(const Interf
 		if (res.collision) {
 			const auto contact = res.contacts.begin()->second.front();
 			traj.markAsFailure(contact.body_name_1 + " colliding with " + contact.body_name_2);
+			utils::addCollisionMarkers(traj.markers(), scene->getPlanningFrame(), res.contacts);
 		}
 	} catch (const std::exception& e) {
 		traj.markAsFailure(e.what());

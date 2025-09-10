@@ -10,7 +10,8 @@
     <!-- use MTC execution capability -->
     <param name="move_group/capabilities" value="move_group/ExecuteTaskSolutionCapability" />
 
-    <test pkg="moveit_task_constructor_demo" type="pick_place_test" test-name="pick_place_test">
+    <test pkg="moveit_task_constructor_demo" type="pick_place_test" test-name="pick_place_test"
+          if="$(eval bool(optenv('PRELOAD')))">
         <rosparam command="load" file="$(find moveit_task_constructor_demo)/config/panda_config.yaml" />
     </test>
 </launch>
