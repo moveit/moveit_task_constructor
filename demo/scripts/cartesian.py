@@ -18,6 +18,8 @@ group = "panda_arm"
 # [cartesianTut2]
 # Cartesian and joint-space interpolation planners
 cartesian = core.CartesianPath()
+cartesian.max_cartesian_speed = 0.1  # m/s
+cartesian.cartesian_speed_limited_link = "panda_hand"
 jointspace = core.JointInterpolationPlanner()
 # [cartesianTut2]
 
