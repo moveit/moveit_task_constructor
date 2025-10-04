@@ -11,10 +11,13 @@ import time
 import rclcpp
 
 rclcpp.init()
-node = rclcpp.Node("mtc_tutorial")
+
+node_options = rclcpp.NodeOptions()
+node_options.automatically_declare_parameters_from_overrides = True
+node = rclcpp.Node("mtc_tutorial", node_options)
 
 group = "panda_arm"
-planner = core.PipelinePlanner(node)
+planner = core.PipelinePlanner(node, "ompl", "RRTConnectkConfigDefault")
 
 task = core.Task()
 task.name = "constrained"
@@ -50,7 +53,8 @@ pose.position.y = 0.0
 pose.position.z = 0.485
 pose.orientation.x = pose.orientation.w = 0.70711  # 90° about x
 mps.addObject(co)
-mps.attachObjects(["object"], "panda_hand")
+mps.attachObjects(["object"], "panda_link8")
+mps.allowCollisions("object", ["panda_leftfinger", "panda_rightfinger"], True)
 
 task.add(mps)
 
@@ -77,4 +81,4 @@ task.add(move)
 
 if task.plan():
     task.publish(task.solutions[0])
-time.sleep(100)
+time.sleep(500)
