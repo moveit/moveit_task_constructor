@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: rolling-source
+          - IMAGE: jazzy-source
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
           - IMAGE: rolling-source
