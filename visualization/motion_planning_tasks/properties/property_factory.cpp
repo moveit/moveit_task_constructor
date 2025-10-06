@@ -159,7 +159,7 @@ rviz_common::properties::Property* PropertyFactory::createDefault(const std::str
 		old->setValue(QString::fromStdString(value));
 		return old;
 	} else {  // create new Property?
-		rviz_common::properties::Property* result = new rviz::StringProperty(
+		rviz_common::properties::Property* result = new rviz_common::properties::StringProperty(
 		    QString::fromStdString(name), QString::fromStdString(value), QString::fromStdString(description));
 		result->setReadOnly(true);
 		return result;
