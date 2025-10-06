@@ -18,6 +18,7 @@
 	<depend>moveit_ros_visualization</depend>
 	<depend>rclcpp</depend>
 	<depend>rviz2</depend>
+	<depend>libyaml_vendor</depend>
 
 	<test_depend>ament_cmake_gmock</test_depend>
 	<test_depend>ament_cmake_gtest</test_depend>

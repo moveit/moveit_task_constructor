@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(rviz_common REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
 find_package(rviz_ogre_vendor REQUIRED)
+find_package(libyaml_vendor REQUIRED)
 
 # definition needed for boost/math/constants/constants.hpp included by Ogre to compile
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
