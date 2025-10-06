@@ -5,15 +5,13 @@ set(SOURCES
 	property_from_yaml.cpp
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(YAML REQUIRED yaml-0.1)
-# Only cmake > 3.12 provides XXX_LINK_LIBRARIES. Find the absolute path manually
-find_library(YAML_LIBRARIES ${YAML_LIBRARIES} PATHS ${YAML_LIBRARY_DIRS})
+find_package(libyaml_vendor REQUIRED)
+find_package(yaml REQUIRED)
 
 add_library(${MOVEIT_LIB_NAME} SHARED ${SOURCES})
 
 target_link_libraries(${MOVEIT_LIB_NAME}
-	${QT_LIBRARIES} ${YAML_LIBRARIES}
+	${QT_LIBRARIES} yaml
 )
 target_include_directories(${MOVEIT_LIB_NAME}
 	PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
