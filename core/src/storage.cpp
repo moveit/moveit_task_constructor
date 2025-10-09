@@ -240,7 +240,8 @@ void SubTrajectory::appendTo(moveit_task_constructor_msgs::msg::Solution& msg, I
 	if (trajectory())
 		trajectory()->getRobotTrajectoryMsg(t.trajectory);
 
-	if (this->end()->scene()->getParent() == this->start()->scene())
+	if (this->end()->scene()->getParent() == this->start()->scene() ||  // diff
+	    this->end()->scene() == this->start()->scene())  // identical (from generator)
 		this->end()->scene()->getPlanningSceneDiffMsg(t.scene_diff);
 	else
 		this->end()->scene()->getPlanningSceneMsg(t.scene_diff);

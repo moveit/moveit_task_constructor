@@ -50,6 +50,7 @@ if (BUILD_TESTING)
 	mtc_add_gmock(test_pruning.cpp)
 	mtc_add_gtest(test_properties.cpp)
 	mtc_add_gtest(test_cost_terms.cpp)
+	mtc_add_gtest(test_storage.cpp)
 
 	mtc_add_gmock(test_fallback.cpp)
 	mtc_add_gmock(test_cost_queue.cpp)
