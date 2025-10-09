@@ -35,11 +35,7 @@
 
 /* Authors: Michael Goerner, Robert Haschke */
 
-#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
 #include <tf2_eigen/tf2_eigen.hpp>
-#else
-#include <tf2_eigen/tf2_eigen.h>
-#endif
 
 #include <moveit/robot_state/robot_state.hpp>
 #include <moveit/planning_scene/planning_scene.hpp>

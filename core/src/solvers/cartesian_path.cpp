@@ -42,11 +42,7 @@
 #include <moveit/trajectory_processing/time_parameterization.hpp>
 #include <moveit/kinematics_base/kinematics_base.hpp>
 #include <moveit/robot_state/cartesian_interpolator.hpp>
-#if __has_include(<tf2_eigen/tf2_eigen.hpp>)
 #include <tf2_eigen/tf2_eigen.hpp>
-#else
-#include <tf2_eigen/tf2_eigen.h>
-#endif
 
 using namespace trajectory_processing;
 
