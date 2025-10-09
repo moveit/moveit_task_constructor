@@ -147,21 +147,4 @@ void PropertyFactory::addRemainingProperties(rviz::Property* root, mtc::Property
 		new rviz::Property("no properties", QVariant(), QString(), root);
 }
 
-#ifndef HAVE_YAML
-rviz::Property* PropertyFactory::createDefault(const std::string& name, const std::string& /*type*/,
-                                               const std::string& description, const std::string& value,
-                                               rviz::Property* old) {
-	if (old) {  // reuse existing Property?
-		assert(old->getNameStd() == name);
-		old->setDescription(QString::fromStdString(description));
-		old->setValue(QString::fromStdString(value));
-		return old;
-	} else {  // create new Property?
-		rviz::Property* result = new rviz::StringProperty(QString::fromStdString(name), QString::fromStdString(value),
-		                                                  QString::fromStdString(description));
-		result->setReadOnly(true);
-		return result;
-	}
-}
-#endif
 }  // namespace moveit_rviz_plugin

@@ -18,6 +18,7 @@
 	<depend>moveit_ros_visualization</depend>
 	<depend>roscpp</depend>
 	<depend>rviz</depend>
+	<depend>yaml</depend>
 
 	<test_depend>rosunit</test_depend>
 	<test_depend>rostest</test_depend>

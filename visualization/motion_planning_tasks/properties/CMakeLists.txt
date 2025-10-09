@@ -2,16 +2,13 @@ set(MOVEIT_LIB_NAME motion_planning_tasks_properties)
 
 set(SOURCES
 	property_factory.cpp
+	property_from_yaml.cpp
 )
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(YAML yaml-0.1)
-if (YAML_FOUND)
-	# Only cmake > 3.12 provides XXX_LINK_LIBRARIES. Find the absolute path manually
-	find_library(YAML_LIBRARIES ${YAML_LIBRARIES} PATHS ${YAML_LIBRARY_DIRS})
-	list(APPEND SOURCES property_from_yaml.cpp)
-	add_definitions(-DHAVE_YAML)
-endif()
+pkg_check_modules(YAML REQUIRED yaml-0.1)
+# Only cmake > 3.12 provides XXX_LINK_LIBRARIES. Find the absolute path manually
+find_library(YAML_LIBRARIES ${YAML_LIBRARIES} PATHS ${YAML_LIBRARY_DIRS})
 
 add_library(${MOVEIT_LIB_NAME} SHARED ${SOURCES})
 
