@@ -1,6 +1,6 @@
 <package format="2">
 	<name>rviz_marker_tools</name>
-	<version>0.1.3</version>
+	<version>0.1.4</version>
 	<description>Tools for marker creation / handling</description>
 
 	<license>BSD</license>
