@@ -211,6 +211,11 @@ public:
 		return properties().get<TrajectoryExecutionInfo>("trajectory_execution_info");
 	}
 
+	/// If true, a failure of this stage will cause immediate preemption of the task
+	void setPreemptOnFailure(bool preempt_on_failure) { setProperty("preempt_on_failure", preempt_on_failure); }
+	/// Get whether this stage is configured to preempt the task on failure
+	bool preemptOnFailure() const { return properties().get<bool>("preempt_on_failure"); }
+
 	/// forwarding of properties between interface states
 	void forwardProperties(const InterfaceState& source, InterfaceState& dest);
 	std::set<std::string> forwardedProperties() const {
@@ -256,6 +261,9 @@ public:
 	[[noreturn]] void reportPropertyError(const Property::error& e);
 
 	double getTotalComputeTime() const;
+
+	/// Request preemption of task execution
+	void requestPreemption();
 
 protected:
 	/// Stage can only be instantiated through derived classes

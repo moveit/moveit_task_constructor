@@ -313,7 +313,8 @@ Stage::Stage(StagePrivate* impl) : pimpl_(impl) {
 	p.declare<std::string>("marker_ns", name(), "marker namespace");
 	p.declare<TrajectoryExecutionInfo>("trajectory_execution_info", TrajectoryExecutionInfo(),
 	                                   "settings used when executing the trajectory");
-
+	p.declare<bool>("preempt_on_failure", false,
+	                "if true, a failure of this stage will cause immediate preemption of the task");
 	p.declare<std::set<std::string>>("forwarded_properties", std::set<std::string>(),
 	                                 "set of interface properties to forward");
 }
@@ -446,6 +447,12 @@ void Stage::setProperty(const std::string& name, const boost::any& value) {
 
 double Stage::getTotalComputeTime() const {
 	return pimpl()->total_compute_time_.count();
+}
+
+void Stage::requestPreemption() {
+	if (pimpl()->preempt_requested_ != nullptr) {
+		const_cast<std::atomic<bool>*>(pimpl()->preempt_requested_)->store(true);
+	}
 }
 
 void StagePrivate::composePropertyErrorMsg(const std::string& property_name, std::ostream& os) {

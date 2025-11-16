@@ -83,6 +83,16 @@ printChildrenInterfaces(const ContainerBasePrivate& container, bool success, con
 	}
 }
 
+// Check if preemptOnFailure is set for the given stage
+static void checkPreemptOnFailure(const Stage& child) {
+	if (child.preemptOnFailure()) {
+		RCLCPP_WARN_STREAM(
+		    rclcpp::get_logger("Container"),
+		    fmt::format("'{}' failed and has preempt_on_failure set to true. Preempting task planning.", child.name()));
+		const_cast<Stage&>(child).requestPreemption();
+	}
+}
+
 ContainerBasePrivate::ContainerBasePrivate(ContainerBase* me, const std::string& name)
   : StagePrivate(me, name)
   , required_interface_(UNKNOWN)
@@ -232,6 +242,8 @@ inline void updateStatePrios(const InterfaceState& s, const InterfaceState::Prio
 }
 
 void ContainerBasePrivate::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	checkPreemptOnFailure(child);
+
 	if (!static_cast<ContainerBase*>(me_)->pruning())
 		return;
 
@@ -924,6 +936,8 @@ void FallbacksPrivate::onNewSolution(const SolutionBase& s) {
 }
 
 void FallbacksPrivate::onNewFailure(const Stage& child, const InterfaceState* /*from*/, const InterfaceState* /*to*/) {
+	checkPreemptOnFailure(child);
+
 	// This override is deliberately empty.
 	// The method prunes solution paths when a child failed to find a valid solution for it,
 	// but in Fallbacks the next child might still yield a successful solution
@@ -1074,6 +1088,8 @@ void FallbacksPrivateConnect::compute() {
 }
 
 void FallbacksPrivateConnect::onNewFailure(const Stage& child, const InterfaceState* from, const InterfaceState* to) {
+	checkPreemptOnFailure(child);
+
 	// expect failure to be reported from active child
 	assert(active_ != children().end() && active_->get() == &child);
 	(void)child;
