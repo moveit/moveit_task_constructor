@@ -177,6 +177,21 @@ public:
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
+
+/** total orientation change of a link through the trajectory 
+ *  favours trajectories which maintains the same orientation of the given link frame
+*/
+class LinkRotation : public TrajectoryCostTerm
+{
+public:
+	LinkRotation(std::string link_name);
+
+	std::string link_name;
+
+	using TrajectoryCostTerm::operator();
+	double operator()(const SubTrajectory& s, std::string& comment) const override;
+};
+
 /** inverse distance to collision
  *
  * \arg with_world check distances to world objects or look at self-collisions

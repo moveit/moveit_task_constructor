@@ -123,6 +123,7 @@ PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::PathLength)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::DistanceToReference)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::TrajectoryDuration)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::LinkMotion)
+PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::LinkRotation)
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::cost::Clearance)
 
 PYBIND11_SMART_HOLDER_TYPE_CASTERS(moveit::task_constructor::Stage)
