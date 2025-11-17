@@ -177,10 +177,9 @@ public:
 	double operator()(const SubTrajectory& s, std::string& comment) const override;
 };
 
-
-/** total orientation change of a link through the trajectory 
+/** total orientation change of a link through the trajectory
  *  favours trajectories which maintains the same orientation of the given link frame
-*/
+ */
 class LinkRotation : public TrajectoryCostTerm
 {
 public:

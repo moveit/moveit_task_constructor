@@ -171,9 +171,9 @@ void export_core(pybind11::module& m) {
 	py::classh<cost::LinkMotion, TrajectoryCostTerm>(m, "LinkMotion",
 	                                                 "Computes Cartesian path length of given link along trajectory")
 	    .def(py::init<std::string>(), "link_name"_a);
-	
-	py::classh<cost::LinkRotation, TrajectoryCostTerm>(m, "LinkRotation",
-	                                                 "Computes total orientation change of given link along trajectory")
+
+	py::classh<cost::LinkRotation, TrajectoryCostTerm>(
+	    m, "LinkRotation", "Computes total orientation change of given link along trajectory")
 	    .def(py::init<std::string>(), "link_name"_a);
 
 	py::classh<cost::Clearance, TrajectoryCostTerm>(m, "Clearance", "Computes inverse distance to collision objects")
