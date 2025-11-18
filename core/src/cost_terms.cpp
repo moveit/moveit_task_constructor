@@ -220,6 +220,30 @@ double LinkMotion::operator()(const SubTrajectory& s, std::string& comment) cons
 	return distance;
 }
 
+LinkRotation::LinkRotation(std::string link) : link_name{ std::move(link) } {}
+
+double LinkRotation::operator()(const SubTrajectory& s, std::string& comment) const {
+	const auto& traj{ s.trajectory() };
+
+	if (traj == nullptr || traj->getWayPointCount() == 0)
+		return 0.0;
+
+	if (!traj->getWayPoint(0).knowsFrameTransform(link_name)) {
+		comment = fmt::format("LinkRotationCost: frame '{}' unknown in trajectory", link_name);
+		return std::numeric_limits<double>::infinity();
+	}
+
+	double angular_distance{ 0.0 };
+
+	Eigen::Quaterniond q{ traj->getWayPoint(0).getFrameTransform(link_name).linear() };
+	for (size_t i{ 1 }; i < traj->getWayPointCount(); ++i) {
+		const Eigen::Quaterniond next_q{ traj->getWayPoint(i).getFrameTransform(link_name).linear() };
+		angular_distance += q.angularDistance(next_q);
+		q = next_q;
+	}
+	return angular_distance;
+}
+
 Clearance::Clearance(bool with_world, bool cumulative, std::string group_property, Mode mode)
   : with_world{ with_world }
   , cumulative{ cumulative }
