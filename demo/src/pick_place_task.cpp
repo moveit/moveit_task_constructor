@@ -35,7 +35,10 @@
 */
 
 #include <moveit_task_constructor_demo/pick_place_task.h>
+#include <moveit/task_constructor/stages/noop.h>
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
+
+#define PICK_PLACE_REPETITIONS 4
 
 namespace moveit_task_constructor_demo {
 
@@ -100,83 +103,14 @@ void setupDemoScene(ros::NodeHandle& pnh) {
 	spawnObject(psi, createObject(pnh));
 }
 
-PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle& pnh)
-  : pnh_(pnh), task_name_(task_name) {
-	loadParameters();
-}
-
-void PickPlaceTask::loadParameters() {
-	/****************************************************
-	 *                                                  *
-	 *               Load Parameters                    *
-	 *                                                  *
-	 ***************************************************/
-	ROS_INFO_NAMED(LOGNAME, "Loading task parameters");
-
-	// Planning group properties
-	size_t errors = 0;
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "arm_group_name", arm_group_name_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_group_name", hand_group_name_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "eef_name", eef_name_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_frame", hand_frame_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "world_frame", world_frame_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "grasp_frame_transform", grasp_frame_transform_);
-
-	// Predefined pose targets
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_open_pose", hand_open_pose_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_close_pose", hand_close_pose_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "arm_home_pose", arm_home_pose_);
-
-	// Target object
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_name", object_name_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_dimensions", object_dimensions_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_reference_frame", object_reference_frame_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "surface_link", surface_link_);
-	support_surfaces_ = { surface_link_ };
-
-	// Pick/Place metrics
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "approach_object_min_dist", approach_object_min_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "approach_object_max_dist", approach_object_max_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "lift_object_min_dist", lift_object_min_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "lift_object_max_dist", lift_object_max_dist_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "place_surface_offset", place_surface_offset_);
-	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "place_pose", place_pose_);
-	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
-}
-
-// Initialize the task pipeline, defining individual movement stages
-bool PickPlaceTask::init() {
-	ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
+std::unique_ptr<SerialContainer> PickPlaceTask::container(moveit::task_constructor::Task& t,
+                                                          const solvers::PlannerInterfacePtr& sampling_planner,
+                                                          const solvers::PlannerInterfacePtr& cartesian_planner,
+                                                          const geometry_msgs::PoseStamped& place_pose) {
 	const std::string object = object_name_;
-
-	// Reset ROS introspection before constructing the new object
-	// TODO(v4hn): global storage for Introspection services to enable one-liner
-	task_.reset();
-	task_.reset(new moveit::task_constructor::Task());
-
-	// Individual movement stages are collected within the Task object
-	Task& t = *task_;
-	t.stages()->setName(task_name_);
-	t.loadRobotModel();
-
-	/* Create planners used in various stages. Various options are available,
-	   namely Cartesian, MoveIt pipeline, and joint interpolation. */
-	// Sampling planner
-	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
-	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
-
-	// Cartesian planner
-	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
-	cartesian_planner->setMaxVelocityScalingFactor(1.0);
-	cartesian_planner->setMaxAccelerationScalingFactor(1.0);
-	cartesian_planner->setStepSize(.01);
-
-	// Set task properties
-	t.setProperty("group", arm_group_name_);
-	t.setProperty("eef", eef_name_);
-	t.setProperty("hand", hand_group_name_);
-	t.setProperty("hand_grasping_frame", hand_frame_);
-	t.setProperty("ik_frame", hand_frame_);
+	auto serial_container = std::make_unique<SerialContainer>("pick/place");
+	t.properties().exposeTo(serial_container->properties(), { "eef", "hand", "group", "ik_frame" });
+	serial_container->properties().configureInitFrom(Stage::PARENT, { "eef", "hand", "group", "ik_frame" });
 
 	/****************************************************
 	 *                                                  *
@@ -184,11 +118,10 @@ bool PickPlaceTask::init() {
 	 *                                                  *
 	 ***************************************************/
 	{
-		auto current_state = std::make_unique<stages::CurrentState>("current state");
+		auto noop = std::make_unique<stages::NoOp>("NoOp state");
 
 		// Verify that object is not attached
-		auto applicability_filter =
-		    std::make_unique<stages::PredicateFilter>("applicability test", std::move(current_state));
+		auto applicability_filter = std::make_unique<stages::PredicateFilter>("applicability test", std::move(noop));
 		applicability_filter->setPredicate([object](const SolutionBase& s, std::string& comment) {
 			if (s.start()->scene()->getCurrentState().hasAttachedBody(object)) {
 				comment = "object with id '" + object + "' is already attached and cannot be picked";
@@ -196,7 +129,7 @@ bool PickPlaceTask::init() {
 			}
 			return true;
 		});
-		t.add(std::move(applicability_filter));
+		serial_container->insert(std::move(applicability_filter));
 	}
 
 	/****************************************************
@@ -210,7 +143,7 @@ bool PickPlaceTask::init() {
 		stage->setGroup(hand_group_name_);
 		stage->setGoal(hand_open_pose_);
 		initial_state_ptr = stage.get();  // remember start state for monitoring grasp pose generator
-		t.add(std::move(stage));
+		serial_container->insert(std::move(stage));
 	}
 
 	/****************************************************
@@ -225,7 +158,7 @@ bool PickPlaceTask::init() {
 		auto stage = std::make_unique<stages::Connect>("move to pick", planners);
 		stage->setTimeout(5.0);
 		stage->properties().configureInitFrom(Stage::PARENT);
-		t.add(std::move(stage));
+		serial_container->insert(std::move(stage));
 	}
 
 	/****************************************************
@@ -353,7 +286,7 @@ bool PickPlaceTask::init() {
 		pick_stage_ptr = grasp.get();  // remember for monitoring place pose generator
 
 		// Add grasp container to task
-		t.add(std::move(grasp));
+		serial_container->insert(std::move(grasp));
 	}
 
 	/******************************************************
@@ -367,7 +300,7 @@ bool PickPlaceTask::init() {
 		    "move to place", stages::Connect::GroupPlannerVector{ { arm_group_name_, sampling_planner } });
 		stage->setTimeout(5.0);
 		stage->properties().configureInitFrom(Stage::PARENT);
-		t.add(std::move(stage));
+		serial_container->insert(std::move(stage));
 	}
 
 	/******************************************************
@@ -410,11 +343,7 @@ bool PickPlaceTask::init() {
 			stage->setObject(object);
 
 			// Set target pose
-			geometry_msgs::PoseStamped p;
-			p.header.frame_id = object_reference_frame_;
-			p.pose = place_pose_;
-			p.pose.position.z += 0.5 * object_dimensions_[0] + place_surface_offset_;
-			stage->setPose(p);
+			stage->setPose(place_pose);
 			stage->setMonitoredStage(pick_stage_ptr);  // hook into successful pick solutions
 
 			// Compute IK
@@ -471,7 +400,7 @@ bool PickPlaceTask::init() {
 		}
 
 		// Add place container to task
-		t.add(std::move(place));
+		serial_container->insert(std::move(place));
 	}
 
 	/******************************************************
@@ -484,12 +413,139 @@ bool PickPlaceTask::init() {
 		stage->properties().configureInitFrom(Stage::PARENT, { "group" });
 		stage->setGoal(arm_home_pose_);
 		stage->restrictDirection(stages::MoveTo::FORWARD);
-		t.add(std::move(stage));
+		serial_container->insert(std::move(stage));
 	}
 
-	// prepare Task structure for planning
+	return serial_container;
+}
+
+PickPlaceTask::PickPlaceTask(const std::string& task_name, const ros::NodeHandle& pnh)
+  : pnh_(pnh), task_name_(task_name) {
+	loadParameters();
+}
+
+void PickPlaceTask::loadParameters() {
+	/****************************************************
+	 *                                                  *
+	 *               Load Parameters                    *
+	 *                                                  *
+	 ***************************************************/
+	ROS_INFO_NAMED(LOGNAME, "Loading task parameters");
+
+	// Planning group properties
+	size_t errors = 0;
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "arm_group_name", arm_group_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_group_name", hand_group_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "eef_name", eef_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_frame", hand_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "world_frame", world_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "grasp_frame_transform", grasp_frame_transform_);
+
+	// Predefined pose targets
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_open_pose", hand_open_pose_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "hand_close_pose", hand_close_pose_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "arm_home_pose", arm_home_pose_);
+
+	// Target object
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_name", object_name_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_dimensions", object_dimensions_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "object_reference_frame", object_reference_frame_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "surface_link", surface_link_);
+	support_surfaces_ = { surface_link_ };
+
+	// Pick/Place metrics
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "approach_object_min_dist", approach_object_min_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "approach_object_max_dist", approach_object_max_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "lift_object_min_dist", lift_object_min_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "lift_object_max_dist", lift_object_max_dist_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "place_surface_offset", place_surface_offset_);
+	errors += !rosparam_shortcuts::get(LOGNAME, pnh_, "place_pose", place_pose_);
+	rosparam_shortcuts::shutdownIfError(LOGNAME, errors);
+}
+
+// Initialize the task pipeline, defining individual movement stages
+bool PickPlaceTask::init() {
+	ROS_INFO_NAMED(LOGNAME, "Initializing task pipeline");
+
+	// Reset ROS introspection before constructing the new object
+	// TODO(v4hn): global storage for Introspection services to enable one-liner
+	task_.reset();
+	task_.reset(new moveit::task_constructor::Task());
+
+	// Individual movement stages are collected within the Task object
+	Task& t = *task_;
+	t.stages()->setName(task_name_);
+	t.loadRobotModel();
+
+	t.setPruning(true);
+
+	/* Create planners used in various stages. Various options are available,
+	   namely Cartesian, MoveIt pipeline, and joint interpolation. */
+	// Sampling planner
+	auto sampling_planner = std::make_shared<solvers::PipelinePlanner>();
+	sampling_planner->setProperty("goal_joint_tolerance", 1e-5);
+
+	// Cartesian planner
+	auto cartesian_planner = std::make_shared<solvers::CartesianPath>();
+	cartesian_planner->setMaxVelocityScalingFactor(1.0);
+	cartesian_planner->setMaxAccelerationScalingFactor(1.0);
+	cartesian_planner->setStepSize(.01);
+
+	// Set task properties
+	t.setProperty("group", arm_group_name_);
+	t.setProperty("eef", eef_name_);
+	t.setProperty("hand", hand_group_name_);
+	t.setProperty("hand_grasping_frame", hand_frame_);
+	t.setProperty("ik_frame", hand_frame_);
+
+	/****************************************************
+	 *                                                  *
+	 *               Current State                      *
+	 *                                                  *
+	 ***************************************************/
+	{
+		auto current_state = std::make_unique<stages::CurrentState>("current state");
+		t.add(std::move(current_state));
+	}
+
+	double delta_angle = 360 / PICK_PLACE_REPETITIONS;
+
+	// Repeat pick and place N times, placing the object around world Z axis doing a complete circle.
+	for (int i = 0; i < PICK_PLACE_REPETITIONS; ++i) {
+		geometry_msgs::PoseStamped place_pose;
+
+		place_pose.header.frame_id = world_frame_;
+		place_pose.pose = place_pose_;
+		place_pose.pose.position.z += 0.5 * object_dimensions_[0] + place_surface_offset_;
+
+		// Rotate the XY position around world Z by delta_angle
+		double angle = (i * delta_angle) * M_PI / 180.0;  // radians
+		double c = std::cos(angle);
+		double s = std::sin(angle);
+		double x = place_pose.pose.position.x;
+		double y = place_pose.pose.position.y;
+		place_pose.pose.position.x = c * x - s * y;
+		place_pose.pose.position.y = s * x + c * y;
+
+		t.add(container(t, sampling_planner, cartesian_planner, place_pose));
+	}
+
 	try {
 		t.init();
+
+		// attach solution callbacks to all stages to collect timestamps
+		t.stages()->traverseRecursively([this](const Stage& stage, unsigned int) {
+			Stage& s = const_cast<Stage&>(stage);
+			std::string name = s.name();
+
+			s.addSolutionCallback([this, name](const SolutionBase& sol) {
+				(void)sol;
+				auto now = std::chrono::steady_clock::now();
+				std::lock_guard<std::mutex> lock(this->stats_mutex_);
+				this->callback_times_.push_back(now);
+			});
+			return true;
+		});
 	} catch (InitStageException& e) {
 		ROS_ERROR_STREAM_NAMED(LOGNAME, "Initialization failed: " << e);
 		return false;
@@ -502,7 +558,49 @@ bool PickPlaceTask::plan() {
 	ROS_INFO_NAMED(LOGNAME, "Start searching for task solutions");
 	int max_solutions = pnh_.param<int>("max_solutions", 10);
 
-	return static_cast<bool>(task_->plan(max_solutions));
+	{
+		std::lock_guard<std::mutex> lock(stats_mutex_);
+		callback_times_.clear();
+	}
+	auto start_time = std::chrono::steady_clock::now();
+	bool ok = static_cast<bool>(task_->plan(max_solutions));
+	auto end_time = std::chrono::steady_clock::now();
+
+	ROS_INFO_STREAM_NAMED(LOGNAME, "Task: \n" << *task_);
+
+	std::vector<std::chrono::steady_clock::time_point> times_copy;
+	{
+		std::lock_guard<std::mutex> lock(stats_mutex_);
+		times_copy = callback_times_;
+	}
+
+	if (!times_copy.empty()) {
+		// aggregate per-second counts relative to start_time
+		std::map<long, int> counts_per_second;
+		for (const auto& tp : times_copy) {
+			long s = std::chrono::duration_cast<std::chrono::seconds>(tp - start_time).count();
+			if (s < 0)
+				s = 0;
+			counts_per_second[s]++;
+		}
+
+		long total_seconds = std::max<long>(
+		    1, static_cast<long>(std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count()));
+
+		ROS_INFO_NAMED(LOGNAME, "Solution-callbacks per second (relative to planning start):");
+		for (long s = 0; s <= total_seconds; ++s) {
+			int c = 0;
+			auto it = counts_per_second.find(s);
+			if (it != counts_per_second.end())
+				c = it->second;
+			ROS_INFO_STREAM_NAMED(LOGNAME, "  " << s << "s: " << c);
+		}
+
+	} else {
+		ROS_INFO_NAMED(LOGNAME, "No solution-callbacks recorded during planning.");
+	}
+
+	return ok;
 }
 
 bool PickPlaceTask::execute() {
