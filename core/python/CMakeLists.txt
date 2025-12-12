@@ -1,7 +1,3 @@
-# pybind11 must use the ROS python version
-set(PYBIND11_PYTHON_VERSION ${PYTHON_VERSION})
-find_package(pybind11 3.0 REQUIRED)
-
 # C++ wrapper code
 add_subdirectory(bindings)
 

@@ -11,7 +11,7 @@ target_link_libraries(${PROJECT_NAME}_python_tools PUBLIC pybind11::opt_size)
 #catkin_lint: ignore undefined_target
 
 # moveit.task_constructor
-pybind11_add_module(pymoveit_mtc
+pybind_add_module(pymoveit_mtc
 	src/solvers.cpp
 	src/core.cpp
 	src/stages.cpp
