@@ -22,5 +22,5 @@ try:
 
         os.remove(os.path.join(libdir, "moveit", "__init__.py"))
         shutil.rmtree(os.path.join(libdir, "moveit", "__pycache__"))
-except AttributeError as e:
+except (AttributeError, KeyError) as e:
     pass
