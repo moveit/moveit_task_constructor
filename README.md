@@ -1,7 +1,7 @@
 # MoveIt Task Constructor Framework
 
 The Task Constructor framework provides a flexible and transparent way to define and plan actions that consist of multiple interdependent subtasks.
-It draws on the planning capabilities of [MoveIt](https://moveit.ros.org/) to solve individual subproblems in black-box *planning stages*.
+It draws on the planning capabilities of [MoveIt](https://moveit.ai) to solve individual subproblems in black-box *planning stages*.
 A common interface, based on MoveIt's PlanningScene is used to pass solution hypotheses between stages.
 The framework enables the hierarchical organization of basic stages using *containers*, allowing for sequential as well as parallel compositions.
 
