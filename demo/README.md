@@ -1,11 +1,15 @@
 # moveit_task_constructor_demo
 
-Description: A simple pick & place demo using MoveIt Task Constructor. This uses the Panda from Franka Emika
-
-Developed by Henning Kayser & Simon Goldstein at [PickNik Consulting](http://picknik.ai/)
+Demos illustrating the capabilities of MoveIt Task Constructor.
+All demos use the Panda robot arm from Franka Emika.
 
 ## Run
 
-Run demo
+Prepare: Launch MoveIt and rviz with the Panda robot
 
     ros2 launch moveit_task_constructor_demo demo.launch.py
+
+Run a specific demo, e.g., the pick-and-place demo or the Cartesian demo:
+
+    ros2 launch moveit_task_constructor_demo run.launch.py exe:=pick_place_demo
+    ros2 launch moveit_task_constructor_demo run.launch.py exe:=cartesian.py
