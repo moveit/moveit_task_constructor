@@ -85,7 +85,7 @@ void InitStageException::append(InitStageException& other) {
 }
 
 const char* InitStageException::what() const noexcept {
-	static const char* msg = "Error initializing stage(s). ROS_ERROR_STREAM(e) for details. The error type is moveit::task_constructor::InitStageException.";
+	static const char* msg = "mtc::InitStageException. Use ROS_ERROR_STREAM(exc) for details.";
 	return msg;
 }
 
