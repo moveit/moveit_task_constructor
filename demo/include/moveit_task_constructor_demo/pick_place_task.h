@@ -80,6 +80,10 @@ public:
 
 private:
 	void loadParameters();
+	std::unique_ptr<SerialContainer> container(moveit::task_constructor::Task& t,
+	                                           const solvers::PlannerInterfacePtr& sampling_planner,
+	                                           const solvers::PlannerInterfacePtr& cartesian_planner,
+	                                           const geometry_msgs::PoseStamped& place_pose);
 
 	static constexpr char LOGNAME[]{ "pick_place_task" };
 
@@ -117,5 +121,8 @@ private:
 	// Place metrics
 	geometry_msgs::Pose place_pose_;
 	double place_surface_offset_;
+
+	std::mutex stats_mutex_;
+	std::vector<std::chrono::steady_clock::time_point> callback_times_;
 };
 }  // namespace moveit_task_constructor_demo
