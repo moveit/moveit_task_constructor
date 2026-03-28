@@ -327,7 +327,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 
 ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {
 	auto& p = properties();
-	p.declare<bool>("pruning", std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
+	p.declare<bool>("pruning", false, std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
 }
 
 size_t ContainerBase::numChildren() const {
