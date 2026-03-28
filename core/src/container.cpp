@@ -327,7 +327,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 
 ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {
 	auto& p = properties();
-	p.declare<bool>("pruning", std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
+	p.declare<bool>("pruning", false, std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
 }
 
 size_t ContainerBase::numChildren() const {
@@ -1029,6 +1029,11 @@ bool FallbacksPrivatePropagator::nextJob() {
 	}
 
 	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
+	if (dir_ == Interface::FORWARD)
+		setStatus<Interface::BACKWARD>(nullptr, nullptr, &*job_, InterfaceState::Status::ENABLED);
+	else
+		setStatus<Interface::FORWARD>(nullptr, nullptr, &*job_, InterfaceState::Status::ENABLED);
+
 	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), Interface::UpdateFlags());
 	return true;
 }

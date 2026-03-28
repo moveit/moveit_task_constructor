@@ -820,7 +820,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		for (Interface::iterator oit : oit_to_enable)
 			parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
 
-		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
+		if (!have_enabled_opposites && parent()->pruning())  // prune new state and associated branch if necessary
 			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
 			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
