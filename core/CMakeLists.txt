@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	visualization_msgs
 	rviz_marker_tools
-	pybind11_catkin
 	py_binding_tools
 )
 

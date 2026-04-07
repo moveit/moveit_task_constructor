@@ -17,7 +17,6 @@
 
 	<build_depend>roscpp</build_depend>
 	<build_depend>roslint</build_depend>
-	<build_depend>pybind11_catkin</build_depend>
 	<exec_depend>roscpp</exec_depend>
 
 	<depend>fmt</depend>
