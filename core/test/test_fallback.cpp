@@ -196,3 +196,19 @@ TEST_F(FallbacksFixtureConnect, connectStageInsideFallbacks) {
 	EXPECT_TRUE(t.plan());
 	EXPECT_COSTS(t.solutions(), testing::ElementsAre(11, 12, 22, 121));
 }
+
+TEST_F(FallbacksFixtureConnect, connectInsideSerialInsideFallbacks) {
+	t.add(std::make_unique<GeneratorMockup>(PredefinedCosts({ 0.0 })));
+	auto fallbacks = std::make_unique<Fallbacks>("Fallbacks");
+	auto serial = std::make_unique<SerialContainer>("Serial1");
+	serial->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(0.0)));
+	serial->add(std::make_unique<ConnectMockup>(PredefinedCosts::constant(1.0)));
+	serial->add(std::make_unique<BackwardMockup>(PredefinedCosts::constant(INF)));
+	serial->add(std::make_unique<GeneratorMockup>(PredefinedCosts::single(2.0)));
+	fallbacks->add(std::move(serial));
+	fallbacks->add(std::make_unique<ForwardMockup>(PredefinedCosts::constant(4.0)));
+
+	t.add(std::move(fallbacks));
+	EXPECT_TRUE(t.plan());
+	EXPECT_COSTS(t.solutions(), testing::ElementsAre(4.0));
+}
