@@ -313,6 +313,8 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	}
 
 	auto result_future = execute_ac_->async_get_result(goal_handle);
+	rclcpp::executors::SingleThreadedExecutor executor;
+	executor.add_node(execute_solution_node_);
 	while (result_future.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
 		if (pimpl()->preempt_requested_) {
 			auto cancel_future = execute_ac_->async_cancel_goal(goal_handle);
@@ -326,7 +328,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 				return error_code;
 			}
 		}
-		rclcpp::spin_some(execute_solution_node_);
+		executor.spin_some();
 	}
 
 	auto result = result_future.get();
