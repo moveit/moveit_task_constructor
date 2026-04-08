@@ -2,6 +2,11 @@
 Changelog for package moveit_task_constructor_capabilities
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.5 (2026-04-08)
+------------------
+* Add missing package dependency: controller_manager
+* Contributors: Robert Haschke
+
 0.1.4 (2025-10-15)
 ------------------
 * Replace deprecated ament_target_dependencies()

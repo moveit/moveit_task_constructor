@@ -2,6 +2,13 @@
 Changelog for package moveit_task_constructor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.5 (2026-04-08)
+------------------
+* Fix demo/README.md
+* Add link rotation cost (`#726 <https://github.com/moveit/moveit_task_constructor/issues/726>`_)
+* Add missing package dependency: controller_manager
+* Contributors: Robert Haschke
+
 0.1.4 (2025-10-15)
 ------------------
 * Fix run.launch.py to load planning pipelines

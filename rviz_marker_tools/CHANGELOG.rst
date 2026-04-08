@@ -2,6 +2,9 @@
 Changelog for package rviz_marker_tools
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.5 (2026-04-08)
+------------------
+
 0.1.4 (2025-10-15)
 ------------------
 * Simplify include of tf2_eigen.hpp

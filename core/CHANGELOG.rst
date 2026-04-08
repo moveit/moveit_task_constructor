@@ -2,6 +2,17 @@
 Changelog for package moveit_task_constructor_core
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.5 (2026-04-08)
+------------------
+* Replace deprecated rclcpp::spin_some()
+* Fix `#737 <https://github.com/moveit/moveit_task_constructor/issues/737>`_ (pruning in fallback stages with a connect stage) (`#742 <https://github.com/moveit/moveit_task_constructor/issues/742>`_)
+* Directly lift solutions of SerialContainer (`#730 <https://github.com/moveit/moveit_task_constructor/issues/730>`_)
+* Mention InitStageException's type in its what() method (`#738 <https://github.com/moveit/moveit_task_constructor/issues/738>`_)
+* Remove unused setup.py
+* Add link rotation cost (`#726 <https://github.com/moveit/moveit_task_constructor/issues/726>`_)
+* Support for optimising IK solvers (`#724 <https://github.com/moveit/moveit_task_constructor/issues/724>`_)
+* Contributors: Demonmasterlqx, Michael Görner, Robert Haschke, joseph-moore-CO
+
 0.1.4 (2025-10-15)
 ------------------
 * Simplify include of tf2_eigen.hpp

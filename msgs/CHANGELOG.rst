@@ -2,6 +2,9 @@
 Changelog for package moveit_task_constructor_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.5 (2026-04-08)
+------------------
+
 0.1.4 (2025-10-15)
 ------------------
 * Increase minimum required CMake version to 3.16 supported by Ubuntu 20.04
