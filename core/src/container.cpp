@@ -328,7 +328,7 @@ void ContainerBasePrivate::liftSolution(const SolutionBasePtr& solution, const I
 
 ContainerBase::ContainerBase(ContainerBasePrivate* impl) : Stage(impl) {
 	auto& p = properties();
-	p.declare<bool>("pruning", std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
+	p.declare<bool>("pruning", false, std::string("enable pruning?")).configureInitFrom(Stage::PARENT, "pruning");
 }
 
 size_t ContainerBase::numChildren() const {
@@ -535,24 +535,24 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 	SolutionCollector<Interface::BACKWARD> incoming(num_before, current);
 	SolutionCollector<Interface::FORWARD> outgoing(num_after, current);
 
-	// collect (and sort) all solutions spanning from start to end of this container
-	ordered<SolutionSequencePtr> sorted;
+	// collect (and lift) all solutions spanning from start to end of this container
 	for (auto& in : incoming.solutions) {
 		for (auto& out : outgoing.solutions) {
 			InterfaceState::Priority prio = in.second + InterfaceState::Priority(1u, current.cost()) + out.second;
 			assert(prio.enabled());
 			// found a complete solution path connecting start to end?
 			if (prio.depth() == children.size()) {
-				SolutionSequence::container_type solution;
-				solution.reserve(children.size());
+				SolutionSequence::container_type seq;
+				seq.reserve(children.size());
 				// insert incoming solutions in reverse order
-				solution.insert(solution.end(), in.first.rbegin(), in.first.rend());
+				seq.insert(seq.end(), in.first.rbegin(), in.first.rend());
 				// insert current solution
-				solution.push_back(&current);
+				seq.push_back(&current);
 				// insert outgoing solutions in normal order
-				solution.insert(solution.end(), out.first.begin(), out.first.end());
-				// store solution in sorted list
-				sorted.insert(std::make_shared<SolutionSequence>(std::move(solution), prio.cost(), this));
+				seq.insert(seq.end(), out.first.begin(), out.first.end());
+				// create SolutionSequence and lift it to external interface
+				auto solution = std::make_shared<SolutionSequence>(std::move(seq), prio.cost(), this);
+				impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 			}
 			if (prio.depth() > 1) {
 				// update state priorities along the whole partial solution path
@@ -562,10 +562,6 @@ void SerialContainer::onNewSolution(const SolutionBase& current) {
 		}
 	}
 	// printChildrenInterfaces(*this->pimpl(), true, *current.creator());
-
-	// finally, store + announce new solutions to external interface
-	for (const auto& solution : sorted)
-		impl->liftSolution(solution, solution->internalStart(), solution->internalEnd());
 }
 
 SerialContainer::SerialContainer(SerialContainerPrivate* impl) : ContainerBase(impl) {}
@@ -1035,6 +1031,11 @@ bool FallbacksPrivatePropagator::nextJob() {
 	}
 
 	// When arriving here, we have a valid job_ and a current_ child to feed it. Let's do that.
+	if (dir_ == Interface::FORWARD)
+		setStatus<Interface::BACKWARD>(nullptr, nullptr, &*job_, InterfaceState::Status::ENABLED);
+	else
+		setStatus<Interface::FORWARD>(nullptr, nullptr, &*job_, InterfaceState::Status::ENABLED);
+
 	copyState(dir_, job_, (*current_)->pimpl()->pullInterface(dir_), Interface::UpdateFlags());
 	return true;
 }

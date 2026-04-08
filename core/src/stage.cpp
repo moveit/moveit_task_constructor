@@ -86,7 +86,7 @@ void InitStageException::append(InitStageException& other) {
 }
 
 const char* InitStageException::what() const noexcept {
-	static const char* msg = "Error initializing stage(s). RCLCPP_ERROR_STREAM(e) for details.";
+	static const char* msg = "mtc::InitStageException. Use RCLCPP_ERROR_STREAM(exc) for details.";
 	return msg;
 }
 
@@ -821,7 +821,7 @@ void ConnectingPrivate::newState(Interface::iterator it, Interface::UpdateFlags 
 		for (Interface::iterator oit : oit_to_enable)
 			parent_pimpl->setStatus<opposite<dir>()>(me(), &*it, &*oit, InterfaceState::Status::ENABLED);
 
-		if (!have_enabled_opposites)  // prune new state and associated branch if necessary
+		if (!have_enabled_opposites && parent()->pruning())  // prune new state and associated branch if necessary
 			// pass creator=nullptr to skip hasPendingOpposites() check as we did this here already
 			parent_pimpl->setStatus<dir>(nullptr, nullptr, &*it, InterfaceState::Status::ARMED);
 	}
