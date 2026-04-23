@@ -73,10 +73,10 @@ void LimitSolutions::compute() {
 	if (forwarded_solutions >= max_solutions)
 		return;
 
-	if (forwarded_solutions < max_solutions && WrapperBase::canCompute())
+	if (WrapperBase::canCompute())
 		WrapperBase::compute();
 
-	if (!upstream_solutions_.empty() && forwarded_solutions < max_solutions) {
+	if (!upstream_solutions_.empty()) {
 		++forwarded_solutions;
 		liftSolution(*upstream_solutions_.pop());
 	}
