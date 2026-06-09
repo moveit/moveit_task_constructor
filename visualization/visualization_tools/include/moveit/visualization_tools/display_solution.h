@@ -37,6 +37,7 @@
 #pragma once
 
 #include <moveit_task_constructor_msgs/msg/solution.hpp>
+#include <moveit_task_constructor_msgs/msg/trajectory_execution_info.hpp>
 #include <moveit/macros/class_forward.hpp>
 
 namespace moveit {
@@ -82,6 +83,8 @@ class DisplaySolution
 		std::string comment_;
 		/// id of creating stage
 		uint32_t creator_id_;
+		/// trajectory execution info (controller_names, etc.)
+		moveit_task_constructor_msgs::msg::TrajectoryExecutionInfo execution_info_;
 		/// rviz markers
 		MarkerVisualizationPtr markers_;
 	};

@@ -112,6 +112,7 @@ void DisplaySolution::setFromMessage(const planning_scene::PlanningScenePtr& sta
 		                        sub.trajectory.multi_dof_joint_trajectory.joint_names.end());
 		data_[i].comment_ = sub.info.comment;
 		data_[i].creator_id_ = sub.info.stage_id;
+		data_[i].execution_info_ = sub.execution_info;
 		steps_ += data_[i].trajectory_->getWayPointCount();
 
 		ref_scene->setPlanningSceneDiffMsg(sub.scene_diff);
@@ -133,6 +134,7 @@ void DisplaySolution::fillMessage(moveit_task_constructor_msgs::msg::Solution& m
 	msg.sub_trajectory.resize(data_.size());
 	auto traj_it = msg.sub_trajectory.begin();
 	for (const auto& sub : data_) {
+		traj_it->execution_info = sub.execution_info_;
 		sub.scene_->getPlanningSceneDiffMsg(traj_it->scene_diff);
 		sub.trajectory_->getRobotTrajectoryMsg(traj_it->trajectory, sub.joints_);
 		++traj_it;
