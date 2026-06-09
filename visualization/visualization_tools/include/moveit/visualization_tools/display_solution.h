@@ -83,8 +83,6 @@ class DisplaySolution
 		std::string comment_;
 		/// id of creating stage
 		uint32_t creator_id_;
-		/// solution info (stage_id, markers, etc.)
-		moveit_task_constructor_msgs::msg::SolutionInfo info_;
 		/// trajectory execution info (controller_names, etc.)
 		moveit_task_constructor_msgs::msg::TrajectoryExecutionInfo execution_info_;
 		/// rviz markers
