@@ -39,6 +39,7 @@
 #include <moveit/task_constructor/properties.h>
 #include <moveit/task_constructor/fmt_p.h>
 #include <functional>
+#include <boost/core/demangle.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/clock.hpp>
 
