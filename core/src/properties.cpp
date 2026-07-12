@@ -40,6 +40,7 @@
 #include <moveit/task_constructor/fmt_p.h>
 #include <functional>
 #include <ros/console.h>
+#include <boost/core/demangle.hpp>
 
 namespace moveit {
 namespace task_constructor {
