@@ -38,6 +38,8 @@
 
 #pragma once
 
+#include <chrono>
+#include <rclcpp/version.h>
 #include <rviz_common/display.hpp>
 #include <rviz_common/ros_integration/ros_client_abstraction_iface.hpp>
 #include <moveit/visualization_tools/task_solution_visualization.h>
@@ -83,7 +85,11 @@ public:
 
 	void loadRobotModel();
 
+#if RCLCPP_VERSION_GTE(30, 0, 0)
+	void update(std::chrono::nanoseconds wall_dt, std::chrono::nanoseconds ros_dt) override;
+#else
 	void update(float wall_dt, float ros_dt) override;
+#endif
 	void reset() override;
 	void save(rviz_common::Config config) const override;
 	void load(const rviz_common::Config& config) override;

@@ -184,12 +184,24 @@ void TaskDisplay::calculateOffsetPosition() {
 	scene_node_->setOrientation(orientation);
 }
 
+#if RCLCPP_VERSION_GTE(30, 0, 0)
+void TaskDisplay::update(std::chrono::nanoseconds wall_dt, std::chrono::nanoseconds ros_dt) {
+	requestPanel();
+	Display::update(wall_dt, ros_dt);
+	calculateOffsetPosition();
+	using namespace std::chrono;
+	float wall_dt_s = duration_cast<duration<float>>(wall_dt).count();
+	float ros_dt_s = duration_cast<duration<float>>(ros_dt).count();
+	trajectory_visual_->update(wall_dt_s, ros_dt_s);
+}
+#else
 void TaskDisplay::update(float wall_dt, float ros_dt) {
 	requestPanel();
 	Display::update(wall_dt, ros_dt);
 	calculateOffsetPosition();
 	trajectory_visual_->update(wall_dt, ros_dt);
 }
+#endif
 
 void TaskDisplay::changedRobotDescription() {
 	if (isEnabled())
