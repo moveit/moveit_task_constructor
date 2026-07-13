@@ -61,9 +61,9 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 				case 0:
 					return tr("name");
 				case 1:
-					return tr(u8"✓");
+					return tr(reinterpret_cast<const char*>(u8"✓"));
 				case 2:
-					return tr(u8"✗");
+					return tr(reinterpret_cast<const char*>(u8"✗"));
 				case 3:
 					return tr("time");
 			}
