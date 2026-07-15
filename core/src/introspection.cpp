@@ -49,6 +49,10 @@
 #include <sstream>
 #include <boost/bimap.hpp>
 
+#ifdef _WIN32
+#include <winsock.h>
+#endif
+
 namespace ros {
 namespace names {
 bool isValidCharInName(char c);  // unfortunately this is not declared in ros/names.h
