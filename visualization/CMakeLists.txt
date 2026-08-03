@@ -19,9 +19,16 @@ find_package(rviz_ogre_vendor REQUIRED)
 add_definitions(-DBOOST_MATH_DISABLE_FLOAT128)
 
 # Qt Stuff
-find_package(Qt6 QUIET COMPONENTS Core Widgets)
-if(Qt6_FOUND)
+# rviz switched to Qt6 in 15.1.14 (ros2/rviz#1635 merged 2025-12-08 but did not
+# land until that patch release; 15.1.13 and earlier are still Qt5). Gate on
+# rviz's version rather than Qt6 availability -- Ubuntu 24.04 ships both Qt5 and
+# Qt6, and linking a Qt6 build against a Qt5 rviz is an ABI mismatch.
+if(rviz_common_VERSION VERSION_GREATER_EQUAL 15.1.14)
+	find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 	set(QT_VERSION_MAJOR 6)
+	# Hint for transitive deps that use find_package(QT NAMES Qt6 Qt5 ...) which
+	# may incorrectly resolve to Qt5 due to CMake's ascending path order
+	set(QT_DIR "${Qt6_DIR}")
 else()
 	find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
 	set(QT_VERSION_MAJOR 5)
