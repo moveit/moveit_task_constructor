@@ -253,6 +253,8 @@ Clearance::Clearance(bool with_world, bool cumulative, std::string group_propert
   , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
 double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
+	constexpr std::string_view PREFIX{ "Clearance: " };
+
 	collision_detection::DistanceRequest request;
 	request.type =
 	    cumulative ? collision_detection::DistanceRequestType::SINGLE : collision_detection::DistanceRequestType::GLOBAL;
@@ -272,7 +274,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	request.acm = &state->scene()->getAllowedCollisionMatrix();
 
 	// compute relevant distance data for state & robot
-	auto check_distance{ [=, this](const InterfaceState* state, const moveit::core::RobotState& robot) {
+	auto check_distance{ [=](const InterfaceState* state, const moveit::core::RobotState& robot) {
 		collision_detection::DistanceResult result;
 		if (with_world)
 			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);
@@ -295,9 +297,9 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		return result.minimum_distance;
 	} };
 
-	auto collision_comment = [](const auto& distance) {
-		return fmt::format("Clearance: allegedly valid solution collides between '{}' and '{}'", distance.link_names[0],
-		                   distance.link_names[1]);
+	auto collision_comment = [=](const auto& distance) {
+    	return fmt::format("{}allegedly valid solution collides between '{}' and '{}'", PREFIX,
+					   	   distance.link_names[0], distance.link_names[1]);
 	};
 
 	double distance{ 0.0 };
@@ -311,10 +313,10 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		}
 		distance = distance_data.distance;
 		if (!cumulative)
-			comment = fmt::format("Clearance: distance {} between '{}' and '{}'", distance, distance_data.link_names[0],
-			                      distance_data.link_names[1]);
+			comment = fmt::format("{}distance {} between '{}' and '{}'", PREFIX, distance,
+								  distance_data.link_names[0], distance_data.link_names[1]);
 		else
-			comment = fmt::format("Clearance: cumulative distance {}", distance);
+			comment = fmt::format("{}cumulative distance {}", PREFIX, distance);
 	} else {  // check trajectory
 		for (size_t i = 0; i < s.trajectory()->getWayPointCount(); ++i) {
 			auto distance_data = check_distance(state, s.trajectory()->getWayPoint(i));
@@ -325,7 +327,8 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			distance += distance_data.distance;
 		}
 		distance /= s.trajectory()->getWayPointCount();
-		comment = fmt::format("Clearance: average{} distance: {}", (cumulative ? " cumulative" : ""), distance);
+		comment = fmt::format("{}average{} distance: {}", PREFIX, (cumulative ? " cumulative" : ""),
+							  distance);
 	}
 
 	return distance_to_cost(distance);
