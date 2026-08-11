@@ -1,0 +1,16 @@
+# goal
+string object_id
+string end_effector
+
+moveit_msgs/PlaceLocation place_location
+
+---
+
+# result
+moveit_msgs/MoveItErrorCodes error_code
+Solution solution
+
+---
+
+# feedback
+string feedback
