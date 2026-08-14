@@ -44,7 +44,7 @@
 #include <moveit/task_constructor/cost_queue.h>
 
 #include <ros/console.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <ostream>
 #include <chrono>

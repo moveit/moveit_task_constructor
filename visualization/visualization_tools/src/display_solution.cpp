@@ -39,7 +39,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <ros/console.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace moveit_rviz_plugin {
 
