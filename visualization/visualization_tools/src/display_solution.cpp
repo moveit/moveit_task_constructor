@@ -35,6 +35,7 @@
 /* Author: Robert Haschke */
 
 #include <moveit/visualization_tools/display_solution.h>
+#include <fmt/format.h>
 #include <moveit/visualization_tools/marker_visualization.h>
 #include <moveit/planning_scene/planning_scene.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
