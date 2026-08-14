@@ -50,7 +50,7 @@ namespace stages {
 class NoOp : public PropagatingEitherWay
 {
 public:
-	NoOp(const std::string& name = "no-op") : PropagatingEitherWay(name){};
+	NoOp(const std::string& name = "no-op") : PropagatingEitherWay(name) {};
 
 private:
 	bool compute(const InterfaceState& state, planning_scene::PlanningScenePtr& scene, SubTrajectory& /*trajectory*/,
