@@ -298,8 +298,8 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	} };
 
 	auto collision_comment = [=](const auto& distance) {
-    	return fmt::format("{}allegedly valid solution collides between '{}' and '{}'", PREFIX,
-					   	   distance.link_names[0], distance.link_names[1]);
+		return fmt::format("{}allegedly valid solution collides between '{}' and '{}'", PREFIX, distance.link_names[0],
+		                   distance.link_names[1]);
 	};
 
 	double distance{ 0.0 };
@@ -313,8 +313,8 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		}
 		distance = distance_data.distance;
 		if (!cumulative)
-			comment = fmt::format("{}distance {} between '{}' and '{}'", PREFIX, distance,
-								  distance_data.link_names[0], distance_data.link_names[1]);
+			comment = fmt::format("{}distance {} between '{}' and '{}'", PREFIX, distance, distance_data.link_names[0],
+			                      distance_data.link_names[1]);
 		else
 			comment = fmt::format("{}cumulative distance {}", PREFIX, distance);
 	} else {  // check trajectory
@@ -327,8 +327,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			distance += distance_data.distance;
 		}
 		distance /= s.trajectory()->getWayPointCount();
-		comment = fmt::format("{}average{} distance: {}", PREFIX, (cumulative ? " cumulative" : ""),
-							  distance);
+		comment = fmt::format("{}average{} distance: {}", PREFIX, (cumulative ? " cumulative" : ""), distance);
 	}
 
 	return distance_to_cost(distance);
