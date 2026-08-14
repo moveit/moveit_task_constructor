@@ -1,4 +1,4 @@
-﻿/*********************************************************************
+/*********************************************************************
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2020, Hamburg University
@@ -252,7 +252,7 @@ Clearance::Clearance(bool with_world, bool cumulative, std::string group_propert
   , distance_to_cost{ [](double d) { return 1.0 / (d + 1e-5); } } {}
 
 double Clearance::operator()(const SubTrajectory& s, std::string& comment) const {
-	static const std::string PREFIX{ "Clearance: " };
+	constexpr std::string_view PREFIX{ "Clearance: " };
 
 	collision_detection::DistanceRequest request;
 	request.type =
@@ -297,7 +297,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	} };
 
 	auto collision_comment = [=](const auto& distance) {
-		return fmt::format(PREFIX + "allegedly valid solution collides between '{}' and '{}'", distance.link_names[0],
+		return fmt::format("{}allegedly valid solution collides between '{}' and '{}'", PREFIX, distance.link_names[0],
 		                   distance.link_names[1]);
 	};
 
@@ -312,10 +312,10 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 		}
 		distance = distance_data.distance;
 		if (!cumulative)
-			comment = fmt::format(PREFIX + "distance {} between '{}' and '{}'", distance, distance_data.link_names[0],
+			comment = fmt::format("{}distance {} between '{}' and '{}'", PREFIX, distance, distance_data.link_names[0],
 			                      distance_data.link_names[1]);
 		else
-			comment = fmt::format(PREFIX + "cumulative distance {}", distance);
+			comment = fmt::format("{}cumulative distance {}", PREFIX, distance);
 	} else {  // check trajectory
 		for (size_t i = 0; i < s.trajectory()->getWayPointCount(); ++i) {
 			auto distance_data = check_distance(state, s.trajectory()->getWayPoint(i));
@@ -326,7 +326,7 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 			distance += distance_data.distance;
 		}
 		distance /= s.trajectory()->getWayPointCount();
-		comment = fmt::format(PREFIX + "average{} distance: {}", (cumulative ? " cumulative" : ""), distance);
+		comment = fmt::format("{}average{} distance: {}", PREFIX, (cumulative ? " cumulative" : ""), distance);
 	}
 
 	return distance_to_cost(distance);
