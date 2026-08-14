@@ -18,10 +18,6 @@ foreach(dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 	find_package(${dependency} REQUIRED)
 endforeach()
 
-if(NOT CMAKE_CXX_STANDARD)
-	set(CMAKE_CXX_STANDARD 17)
-endif()
-
 add_library(${PROJECT_NAME} SHARED
 	src/marker_creation.cpp
 )

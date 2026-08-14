@@ -4,7 +4,7 @@ project(moveit_task_constructor_capabilities)
 find_package(ament_cmake REQUIRED)
 
 find_package(fmt REQUIRED)
-find_package(Boost REQUIRED)
+find_package(Boost CONFIG REQUIRED)
 find_package(moveit_common REQUIRED)
 moveit_package()
 find_package(moveit_core REQUIRED)

@@ -50,6 +50,10 @@
 #include <boost/bimap.hpp>
 #include <rcutils/isalnum_no_locale.h>
 
+#ifdef _WIN32
+#include <winsock.h>
+#endif
+
 static auto LOGGER = rclcpp::get_logger("introspection");
 
 namespace moveit {

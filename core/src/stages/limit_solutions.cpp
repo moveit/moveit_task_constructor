@@ -54,24 +54,32 @@ void LimitSolutions::reset() {
 }
 
 void LimitSolutions::onNewSolution(const SolutionBase& s) {
-	uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+	const uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+
 	if (forwarded_solutions + upstream_solutions_.size() < max_solutions)
 		upstream_solutions_.push(&s);
 }
 
 bool LimitSolutions::canCompute() const {
-	return !upstream_solutions_.empty() || WrapperBase::canCompute();
+	const uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+
+	return !upstream_solutions_.empty() || (forwarded_solutions < max_solutions && WrapperBase::canCompute());
 }
 
 void LimitSolutions::compute() {
+	const uint32_t max_solutions = properties().get<uint32_t>("max_solutions");
+
+	// once the limit is reached do not call compute on the child anymore
+	if (forwarded_solutions >= max_solutions)
+		return;
+
 	if (WrapperBase::canCompute())
 		WrapperBase::compute();
 
-	if (upstream_solutions_.empty())
-		return;
-
-	++forwarded_solutions;
-	liftSolution(*upstream_solutions_.pop());
+	if (!upstream_solutions_.empty()) {
+		++forwarded_solutions;
+		liftSolution(*upstream_solutions_.pop());
+	}
 }
 }  // namespace stages
 }  // namespace task_constructor

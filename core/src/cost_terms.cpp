@@ -274,7 +274,8 @@ double Clearance::operator()(const SubTrajectory& s, std::string& comment) const
 	request.acm = &state->scene()->getAllowedCollisionMatrix();
 
 	// compute relevant distance data for state & robot
-	auto check_distance{ [=, this](const InterfaceState* state, const moveit::core::RobotState& robot) {
+	auto check_distance{ [this, &request = std::as_const(request)](const InterfaceState* state,
+		                                                            const moveit::core::RobotState& robot) {
 		collision_detection::DistanceResult result;
 		if (with_world)
 			state->scene()->getCollisionEnv()->distanceRobot(request, result, robot);

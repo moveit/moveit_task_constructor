@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_demo)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
 find_package(ament_cmake REQUIRED)
 
 find_package(generate_parameter_library REQUIRED)

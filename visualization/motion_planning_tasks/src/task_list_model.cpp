@@ -61,9 +61,9 @@ QVariant TaskListModel::horizontalHeader(int column, int role) {
 				case 0:
 					return tr("name");
 				case 1:
-					return tr(u8"✓");
+					return tr(reinterpret_cast<const char*>(u8"✓"));
 				case 2:
-					return tr(u8"✗");
+					return tr(reinterpret_cast<const char*>(u8"✗"));
 				case 3:
 					return tr("time");
 			}
@@ -352,7 +352,11 @@ TaskListView::TaskListView(QWidget* parent) : QTreeView(parent) {}
 
 // dropping onto an item, should expand this item
 void TaskListView::dropEvent(QDropEvent* event) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	QModelIndex index = indexAt(event->position().toPoint());
+#else
 	QModelIndex index = indexAt(event->pos());
+#endif
 	QTreeView::dropEvent(event);
 	if (event->isAccepted())
 		expand(index);

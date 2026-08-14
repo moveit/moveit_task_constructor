@@ -44,7 +44,7 @@
 #include <moveit/task_constructor/cost_queue.h>
 
 #include <rclcpp/rclcpp.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <ostream>
 #include <chrono>

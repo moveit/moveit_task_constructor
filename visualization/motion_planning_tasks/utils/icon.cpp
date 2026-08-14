@@ -32,6 +32,7 @@
 #include <QPainter>
 #include <QPaintEngine>
 #include <QWidget>
+#include <QWindow>
 
 namespace moveit_rviz_plugin {
 namespace utils {
@@ -196,10 +197,15 @@ QString Icon::imageFileName() const {
 QIcon Icon::combinedIcon(const QList<QIcon>& icons) {
 	QIcon result;
 	QWindow* window = QApplication::allWidgets().first()->windowHandle();
+
 	for (const QIcon& icon : icons)
 		for (const QIcon::Mode mode : { QIcon::Disabled, QIcon::Normal })
 			for (const QSize& size : icon.availableSizes(mode))
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+				result.addPixmap(icon.pixmap(size, window->devicePixelRatio(), mode), mode);
+#else
 				result.addPixmap(icon.pixmap(window, size, mode), mode);
+#endif
 	return result;
 }
 }  // namespace utils

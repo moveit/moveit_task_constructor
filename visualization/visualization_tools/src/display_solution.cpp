@@ -39,7 +39,7 @@
 #include <moveit/planning_scene/planning_scene.hpp>
 #include <moveit/robot_trajectory/robot_trajectory.hpp>
 #include <rclcpp/logging.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("moveit_task_constructor_visualization.display_solution");
 
