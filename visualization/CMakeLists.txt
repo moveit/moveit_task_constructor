@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_visualization)
 
 find_package(fmt REQUIRED)
+find_package(Boost CONFIG REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	moveit_core
 	moveit_ros_visualization

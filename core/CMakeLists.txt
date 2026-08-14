@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(moveit_task_constructor_core)
 
-find_package(Boost REQUIRED)
+find_package(Boost CONFIG REQUIRED)
 find_package(fmt REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
 	roslint
