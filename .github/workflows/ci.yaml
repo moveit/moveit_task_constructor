@@ -19,12 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: jazzy-source
+          - IMAGE: rolling-release
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: rolling-source
             CLANG_TIDY: pedantic
-          - IMAGE: rolling-source
+          - IMAGE: rolling-release
             NAME: asan
             # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
             # see https://github.com/google/sanitizers/wiki/AddressSanitizer
@@ -34,6 +33,9 @@ jobs:
               -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions,fast_unwind_on_malloc=0"
               -e ASAN_OPTIONS="new_delete_type_mismatch=0,alloc_dealloc_mismatch=0"
             TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+          - IMAGE: lyrical-release
+          - IMAGE: kilted-release
+          - IMAGE: jazzy-release
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
@@ -51,7 +53,7 @@ jobs:
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -106,7 +108,7 @@ jobs:
           lcov_capture_args: --ignore-errors=source,gcov,mismatch,negative
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
         with:
           files: ${{ env.BASEDIR }}/target_ws/coverage.info
