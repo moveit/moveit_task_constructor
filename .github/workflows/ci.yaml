@@ -52,7 +52,7 @@ jobs:
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -107,7 +107,7 @@ jobs:
           lcov_capture_args: --ignore-errors=source,gcov,mismatch,negative
           ignore: '"*/target_ws/build/*" "*/target_ws/install/*" "*/test/*"'
       - name: Upload codecov report
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
         with:
           files: ${{ env.BASEDIR }}/target_ws/coverage.info
