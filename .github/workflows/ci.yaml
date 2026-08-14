@@ -19,12 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         env:
-          - IMAGE: jazzy-source
+          - IMAGE: rolling-release
             NAME: ccov
             TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage"
-          - IMAGE: rolling-source
             CLANG_TIDY: pedantic
-          - IMAGE: rolling-source
+          - IMAGE: rolling-release
             NAME: asan
             # Add fast_unwind_on_malloc=0 to fix stacktraces being too short or do not make sense
             # see https://github.com/google/sanitizers/wiki/AddressSanitizer
@@ -34,35 +33,24 @@ jobs:
               -e LSAN_OPTIONS="suppressions=$PWD/.github/workflows/lsan.suppressions,fast_unwind_on_malloc=0"
               -e ASAN_OPTIONS="new_delete_type_mismatch=0,alloc_dealloc_mismatch=0"
             TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
-          - ROS_DISTRO: kilted
-            ROS_REPO: main
-          # moveit_core has no Resolute deb yet, so these two cannot pass until
-          # moveit2 is released for Resolute. Keep them non-blocking until then;
-          # they are the only jobs here that exercise Resolute at all.
-          - ROS_DISTRO: lyrical
-            ROS_REPO: main
-            OS_CODE_NAME: resolute
-            NONBLOCKING: true
-          - ROS_DISTRO: rolling
-            ROS_REPO: testing
-            OS_CODE_NAME: resolute
-            NONBLOCKING: true
+          - IMAGE: lyrical-release
+          - IMAGE: jazzy-release
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
+      DOCKER_IMAGE: moveit/moveit2:${{ matrix.env.IMAGE }}
       UNDERLAY: ${{ endsWith(matrix.env.IMAGE, '-source') && '/root/ws_moveit/install' || ''}}
       TARGET_CMAKE_ARGS: -DCMAKE_BUILD_TYPE=Release
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       BASEDIR: ${{ github.workspace }}/.work
-      CACHE_PREFIX: "${{ matrix.env.IMAGE || format('{0}-{1}', matrix.env.ROS_DISTRO, matrix.env.ROS_REPO) }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
+      CACHE_PREFIX: "${{ matrix.env.IMAGE }}${{ contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && '-ccov' || '' }}"
       # perform full clang-tidy check only on manual trigger (workflow_dispatch), PRs do check changed files, otherwise nothing
       CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
       CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
       CXX: ${{ matrix.env.CLANG_TIDY && 'clang++ -std=c++17' }}
 
-    name: "${{ matrix.env.IMAGE || format('{0}-{1}', matrix.env.ROS_DISTRO, matrix.env.ROS_REPO) }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
+    name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
-    continue-on-error: ${{ matrix.env.NONBLOCKING || false }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -78,12 +66,6 @@ jobs:
             ccache-${{ env.CACHE_PREFIX }}
         env:
           GHA_CACHE_SAVE: always
-
-      # Jobs building on a bare OS image (OS_CODE_NAME set) must leave
-      # DOCKER_IMAGE unset so industrial_ci builds the base itself.
-      - name: Set prebuilt DOCKER_IMAGE
-        if: ${{ ! matrix.env.OS_CODE_NAME }}
-        run: echo "DOCKER_IMAGE=moveit/moveit2:${{ matrix.env.IMAGE }}" >> "$GITHUB_ENV"
 
       - id: ici
         name: Run industrial_ci
