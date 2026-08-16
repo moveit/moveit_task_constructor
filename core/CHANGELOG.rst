@@ -2,6 +2,14 @@
 Changelog for package moveit_task_constructor_core
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.6 (2026-08-16)
+------------------
+* Support Ubuntu 26.04 and Qt6 (`#758 <https://github.com/moveit/moveit_task_constructor/issues/758>`_)
+* Modernize fmt usage (`#755 <https://github.com/moveit/moveit_task_constructor/issues/755>`_, `#756 <https://github.com/moveit/moveit_task_constructor/issues/756>`_)
+* Add Windows socket header inclusion (`#751 <https://github.com/moveit/moveit_task_constructor/issues/751>`_)
+* LimitSolutions: prevent child compute calls after max_solutions is reached (`#745 <https://github.com/moveit/moveit_task_constructor/issues/745>`_)
+* Contributors: Aaron Chong, Daniel García López, Dhruv Patel, Nathan Brooks, Robert Haschke, Tobias Fischer
+
 0.1.5 (2026-04-08)
 ------------------
 * Replace deprecated rclcpp::spin_some()

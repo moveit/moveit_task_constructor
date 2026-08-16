@@ -2,6 +2,14 @@
 Changelog for package moveit_task_constructor_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.6 (2026-08-16)
+------------------
+* Handle signature change of rviz::Display::update
+* Support Ubuntu 26.04 and Qt6 (`#758 <https://github.com/moveit/moveit_task_constructor/issues/758>`_)
+* Modernize fmt usage (`#756 <https://github.com/moveit/moveit_task_constructor/issues/756>`_)
+* Store ExecutionInfo in rviz' DisplaySolution (`#749 <https://github.com/moveit/moveit_task_constructor/issues/749>`_)
+* Contributors: Dhruv Patel, Nathan Brooks, Robert Haschke, lunarifish
+
 0.1.5 (2026-04-08)
 ------------------
 

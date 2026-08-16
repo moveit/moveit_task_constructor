@@ -2,6 +2,11 @@
 Changelog for package moveit_task_constructor_capabilities
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.6 (2026-08-16)
+------------------
+* Support Ubuntu 26.04 and Qt6 (`#758 <https://github.com/moveit/moveit_task_constructor/issues/758>`_)
+* Contributors: Nathan Brooks, Robert Haschke
+
 0.1.5 (2026-04-08)
 ------------------
 * Add missing package dependency: controller_manager

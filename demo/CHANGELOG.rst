@@ -2,6 +2,11 @@
 Changelog for package moveit_task_constructor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.6 (2026-08-16)
+------------------
+* Cleanup demo/package.xml
+* Contributors: Robert Haschke
+
 0.1.5 (2026-04-08)
 ------------------
 * Fix demo/README.md
