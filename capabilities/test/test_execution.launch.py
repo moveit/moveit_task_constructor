@@ -73,6 +73,8 @@ def generate_test_description():
         arguments=[
             "panda_arm_controller",
             "joint_state_broadcaster",
+            "--param-file",
+            ros2_controllers_path,
             "--controller-manager",
             "/controller_manager",
         ],
@@ -119,6 +121,5 @@ class TestTerminatingProcessStops(unittest.TestCase):
 
 @launch_testing.post_shutdown_test()
 class TaskModelTestAfterShutdown(unittest.TestCase):
-    def test_exit_code(self, proc_info):
-        # Check that all processes in the launch exit with code 0
-        launch_testing.asserts.assertExitCodes(proc_info)
+    def test_exit_code(self, proc_info, test_exec):
+        launch_testing.asserts.assertExitCodes(proc_info, process=test_exec)
