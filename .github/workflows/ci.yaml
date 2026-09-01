@@ -34,8 +34,6 @@ jobs:
             TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
           - IMAGE: lyrical-release
             CLANG_TIDY: pedantic
-          - IMAGE: kilted-release
-          - IMAGE: jazzy-release
 
     env:
       CLANG_TIDY_ARGS: -quiet -export-fixes ${{ github.workspace }}/.work/clang-tidy-fixes.yaml
