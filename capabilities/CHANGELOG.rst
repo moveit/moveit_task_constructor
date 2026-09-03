@@ -39,6 +39,11 @@ Changelog for package moveit_task_constructor_capabilities
 * ROS 2 Migration (`#170 <https://github.com/moveit/moveit_task_constructor/issues/170>`_)
 * Contributors: AndyZe, Cihat Kurtuluş Altıparmak, Dhruv Patel, Henning Kayser, Jafar Abdi, JafarAbdi, Marq Rasmussen, Michael Görner, Peter David Fagan, Robert Haschke, Sebastian Jahr
 
+0.1.8 (2026-09-03)
+------------------
+* Fix integration test (`#760 <https://github.com/moveit/moveit_task_constructor/issues/760>`_)
+* Contributors: ktyang512
+
 0.1.3 (2023-03-06)
 ------------------
 
