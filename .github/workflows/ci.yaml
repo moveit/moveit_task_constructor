@@ -33,8 +33,8 @@ jobs:
               -e ASAN_OPTIONS="new_delete_type_mismatch=0,alloc_dealloc_mismatch=0"
             TARGET_CMAKE_ARGS: -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -O1 -g"
           - IMAGE: lyrical-release
-          - IMAGE: kilted-release
             CLANG_TIDY: pedantic
+          - IMAGE: kilted-release
           - IMAGE: jazzy-release
 
     env:
@@ -49,7 +49,14 @@ jobs:
       CLANG_TIDY_BASE_REF: ${{ github.event_name != 'workflow_dispatch' && (github.base_ref || github.ref) || '' }}
       CC: ${{ matrix.env.CLANG_TIDY && 'clang' }}
       CXX: ${{ matrix.env.CLANG_TIDY && 'clang++' }}
-      ADDITIONAL_DEBS: ${{ matrix.env.CLANG_TIDY && 'clang' }}
+      # Install clang required for clang build and enforce clang-tidy-22
+      # https://bugs.launchpad.net/ubuntu/+source/llvm-defaults/+bug/2166318
+      ADDITIONAL_DEBS: ${{ matrix.env.CLANG_TIDY && 'clang clang-tidy-22' }}
+      AFTER_INSTALL_CLANG_TIDY: |
+        update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-21 21
+        update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-22 22
+        update-alternatives --install /usr/bin/run-clang-tidy run-clang-tidy /usr/bin/run-clang-tidy-21 21
+        update-alternatives --install /usr/bin/run-clang-tidy run-clang-tidy /usr/bin/run-clang-tidy-22 22
 
     name: "${{ matrix.env.IMAGE }}${{ matrix.env.NAME && ' • ' || ''}}${{ matrix.env.NAME }}${{ matrix.env.CLANG_TIDY && ' • clang-tidy' || '' }}"
     runs-on: ubuntu-latest
@@ -103,6 +110,7 @@ jobs:
       - name: Generate codecov report
         uses: rhaschke/lcov-action@main
         if: contains(matrix.env.TARGET_CMAKE_ARGS, '--coverage') && steps.ici.outputs.target_test_results == '0'
+        continue-on-error: true  # ignore non-suppressable errors of lcov
         with:
           docker: $DOCKER_IMAGE
           workdir: ${{ env.BASEDIR }}/target_ws

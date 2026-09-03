@@ -329,7 +329,7 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 		executor.spin_some();
 	}
 
-	auto result = result_future.get();
+	auto const& result = result_future.get();
 	if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
 		RCLCPP_ERROR(execute_solution_node_->get_logger(), "Goal was aborted or canceled");
 		return error_code;

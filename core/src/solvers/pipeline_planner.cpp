@@ -200,7 +200,7 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
 
 	// If solutions exist and the first one is successful
 	if (!responses.empty()) {
-		auto const solution = responses.at(0);
+		auto const& solution = responses.at(0);
 		if (solution) {
 			// Choose the first solution trajectory as response
 			result = solution.trajectory;

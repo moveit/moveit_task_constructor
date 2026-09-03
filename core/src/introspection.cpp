@@ -206,6 +206,7 @@ void Introspection::publishSolution(const SolutionBase& s) {
 }
 
 void Introspection::publishAllSolutions(bool wait) {
+	// NOLINTBEGIN(clang-analyzer-unix.BlockInCriticalSection)
 	for (const auto& solution : impl->task_->stages()->solutions()) {
 		publishSolution(*solution);
 
@@ -216,6 +217,7 @@ void Introspection::publishAllSolutions(bool wait) {
 				break;
 		}
 	};
+	// NOLINTEND(clang-analyzer-unix.BlockInCriticalSection)
 }
 
 const SolutionBase* Introspection::solutionFromId(uint id) const {
