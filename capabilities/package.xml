@@ -1,6 +1,6 @@
 <package format="2">
 	<name>moveit_task_constructor_capabilities</name>
-	<version>0.1.8</version>
+	<version>0.2.0</version>
 	<description>
 	MoveGroupCapabilites to interact with MoveIt
 	</description>

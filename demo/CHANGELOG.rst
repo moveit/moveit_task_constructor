@@ -50,6 +50,9 @@ Changelog for package moveit_task_constructor_demo
 0.1.8 (2026-09-03)
 ------------------
 
+0.2.0 (2026-09-03)
+------------------
+
 0.1.3 (2023-03-06)
 ------------------
 * Use const reference instead of reference for ros::NodeHandle (`#437 <https://github.com/ros-planning/moveit_task_constructor/issues/437>`_)

@@ -143,6 +143,11 @@ Changelog for package moveit_task_constructor_core
 * Fix integration test (`#760 <https://github.com/moveit/moveit_task_constructor/issues/760>`_)
 * Contributors: Robert Haschke, ktyang512
 
+0.2.0 (2026-09-03)
+------------------
+* Switch to standard pybind11 v3 / Remove submodule
+* Contributors: Robert Haschke
+
 0.1.3 (2023-03-06)
 ------------------
 * MoveRelative: Allow backwards operation for joint-space delta (`#436 <https://github.com/ros-planning/moveit_task_constructor/issues/436>`_)

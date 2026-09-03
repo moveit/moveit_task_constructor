@@ -44,6 +44,9 @@ Changelog for package moveit_task_constructor_capabilities
 * Fix integration test (`#760 <https://github.com/moveit/moveit_task_constructor/issues/760>`_)
 * Contributors: ktyang512
 
+0.2.0 (2026-09-03)
+------------------
+
 0.1.3 (2023-03-06)
 ------------------
 
