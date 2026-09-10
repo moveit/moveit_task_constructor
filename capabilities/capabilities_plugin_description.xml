@@ -4,4 +4,10 @@
       Action server to execute solutions generated through the MoveIt Task Constructor.
     </description>
   </class>
+
+  <class name="move_group/PlanPickPlaceCapability" type="move_group::PlanPickPlaceCapability" base_class_type="move_group::MoveGroupCapability">
+    <description>
+      Action server to plan full pick and place motions using the MoveIt Task Constructor.
+    </description>
+  </class>
 </library>

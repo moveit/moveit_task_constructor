@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_move_group
   moveit_task_constructor_core
   moveit_task_constructor_msgs
+  moveit_task_constructor_core
   pluginlib
   std_msgs
 )
@@ -20,6 +21,7 @@ catkin_package(
   CATKIN_DEPENDS
     actionlib
     moveit_task_constructor_msgs
+    moveit_task_constructor_core
     std_msgs
 )
 
@@ -31,6 +33,7 @@ include(CheckCXXSymbolExists)
 
 add_library(${PROJECT_NAME}
    src/execute_task_solution_capability.cpp
+   src/plan_pick_place_capability.cpp
 )
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${catkin_INCLUDE_DIRS})
