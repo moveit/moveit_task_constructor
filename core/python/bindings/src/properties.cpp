@@ -158,8 +158,8 @@ bool PropertyConverterBase::insert(const std::type_index& type_index, const std:
 	return REGISTRY_SINGLETON.insert(type_index, ros_msg_name, to, from);
 }
 
-__attribute__((visibility("default")))  // export this symbol as visible in the shared library
-void export_properties(py::module& m) {
+// export this symbol as visible in the shared library
+PYBIND11_EXPORT void export_properties(py::module& m) {
 	// clang-format off
 	py::classh<Property>(m, "Property", "Holds an arbitrarily typed value and a default value")
 		.def(py::init<>())
