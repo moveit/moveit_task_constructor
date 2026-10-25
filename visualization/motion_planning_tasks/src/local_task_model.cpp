@@ -149,7 +149,7 @@ QVariant LocalTaskModel::data(const QModelIndex& index, int role) const {
 				case 0:
 					return QString::fromStdString(n->name());
 				case 1:
-					return static_cast<uint>(n->solutions().size());
+					return static_cast<unsigned int>(n->solutions().size());
 				case 2:
 					return 0;
 			}

@@ -109,11 +109,11 @@ void GeneratePlacePose::compute() {
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, uint z_flips, uint z_rotations = 10) {
-		for (uint flip = 0; flip <= z_flips; ++flip) {
+	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, unsigned int z_flips, unsigned int z_rotations = 10) {
+		for (unsigned int flip = 0; flip <= z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
-			for (uint i = 0; i < z_rotations; ++i) {
+			for (unsigned int i = 0; i < z_rotations; ++i) {
 				// rotate object at target pose about world's z-axis
 				Eigen::Vector3d pos = object.translation();
 				object.pretranslate(-pos)
@@ -139,7 +139,7 @@ void GeneratePlacePose::compute() {
 		}
 	};
 
-	uint z_flips = props.get<bool>("allow_z_flip") ? 1 : 0;
+	unsigned int z_flips = props.get<bool>("allow_z_flip") ? 1 : 0;
 	if (object && object->getShapes().size() == 1) {
 		switch (object->getShapes()[0]->type) {
 			case shapes::CYLINDER:

@@ -220,7 +220,7 @@ void Introspection::publishAllSolutions(bool wait) {
 	// NOLINTEND(clang-analyzer-unix.BlockInCriticalSection)
 }
 
-const SolutionBase* Introspection::solutionFromId(uint id) const {
+const SolutionBase* Introspection::solutionFromId(unsigned int id) const {
 	auto it = impl->id_solution_bimap_.left.find(id);
 	if (it == impl->id_solution_bimap_.left.end())
 		return nullptr;

@@ -59,7 +59,7 @@ PipelinePlanner::PipelinePlanner(
   , stopping_criterion_callback_(stopping_criterion_callback)
   , solution_selection_function_(solution_selection_function) {
 	// Declare properties of the MotionPlanRequest
-	properties().declare<uint>("num_planning_attempts", 1u, "number of planning attempts");
+	properties().declare<unsigned int>("num_planning_attempts", 1u, "number of planning attempts");
 	properties().declare<moveit_msgs::msg::WorkspaceParameters>(
 	    "workspace_parameters", moveit_msgs::msg::WorkspaceParameters(), "allowed workspace of mobile base?");
 
@@ -182,7 +182,7 @@ PlannerInterface::Result PipelinePlanner::plan(const planning_scene::PlanningSce
 		request.planner_id = planner_id;
 		request.allowed_planning_time = timeout;
 		request.start_state.is_diff = true;  // we don't specify an extra start state
-		request.num_planning_attempts = properties().get<uint>("num_planning_attempts");
+		request.num_planning_attempts = properties().get<unsigned int>("num_planning_attempts");
 		request.max_velocity_scaling_factor = properties().get<double>("max_velocity_scaling_factor");
 		request.max_acceleration_scaling_factor = properties().get<double>("max_acceleration_scaling_factor");
 		request.workspace_parameters = properties().get<moveit_msgs::msg::WorkspaceParameters>("workspace_parameters");

@@ -132,8 +132,8 @@ class RemoteSolutionModel : public QAbstractTableModel
 public:
 	RemoteSolutionModel(QObject* parent = nullptr);
 
-	uint numSuccessful() const { return data_.size() - num_failed_data_; }
-	uint numFailed() const { return num_failed_; }
+	unsigned int numSuccessful() const { return data_.size() - num_failed_data_; }
+	unsigned int numFailed() const { return num_failed_; }
 	double totalComputeTime() const { return total_compute_time_; }
 
 	int rowCount(const QModelIndex& parent = QModelIndex()) const override;

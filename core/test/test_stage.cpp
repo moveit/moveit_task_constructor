@@ -36,7 +36,7 @@ TEST(Stage, registerCallbacks) {
 	StandaloneGeneratorMockup g{ PredefinedCosts::constant(0.0) };
 	g.init(getModel());
 
-	uint called = 0;
+	unsigned int called = 0;
 	auto cb = [&called](const SolutionBase& /* s */) {
 		++called;
 		return true;

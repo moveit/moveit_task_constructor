@@ -67,7 +67,7 @@ void export_solvers(py::module& m) {
 				pipelinePlanner = core.PipelinePlanner(node, 'ompl', 'PRMkConfigDefault')
 				pipelinePlanner.num_planning_attempts = 10
 			)")
-	    .property<uint>("num_planning_attempts", "int: Number of planning attempts")
+	    .property<unsigned int>("num_planning_attempts", "int: Number of planning attempts")
 	    .property<moveit_msgs::msg::WorkspaceParameters>(
 	        "workspace_parameters",
 	        ":moveit_msgs:`WorkspaceParameters`: Specifies workspace box to be used for Cartesian sampling")

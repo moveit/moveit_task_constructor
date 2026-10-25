@@ -59,7 +59,7 @@ protected:
 	moveit_task_constructor_msgs::msg::TaskDescription genMsg(const std::string& name,
 	                                                          const std::string& task_id = std::string()) {
 		moveit_task_constructor_msgs::msg::TaskDescription t;
-		uint id = 0, root_id;
+		unsigned int id = 0, root_id;
 		t.task_id = task_id.empty() ? name : task_id;
 
 		moveit_task_constructor_msgs::msg::StageDescription desc;
