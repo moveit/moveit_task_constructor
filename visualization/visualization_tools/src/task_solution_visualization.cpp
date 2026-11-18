@@ -63,6 +63,7 @@
 #include <rviz_common/window_manager_interface.hpp>
 #include <rviz_common/panel_dock_widget.hpp>
 
+#include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
 
 #include <boost/algorithm/string/replace.hpp>
