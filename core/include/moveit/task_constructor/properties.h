@@ -90,7 +90,7 @@ public:
 	/// exception thrown when trying to set a value not matching the declared type
 	class type_error;
 
-	using SourceFlags = uint;
+	using SourceFlags = unsigned int;
 	/// function callback used to initialize property value from another PropertyMap
 	using InitializerFunction = std::function<boost::any(const PropertyMap&)>;
 

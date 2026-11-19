@@ -85,7 +85,7 @@ rviz_common::PanelDockWidget* getStageDockWidget(rviz_common::WindowManagerInter
 // TaskPanel singleton
 static QPointer<TaskPanel> SINGLETON;
 // count active TaskDisplays
-static uint DISPLAY_COUNT = 0;
+static unsigned int DISPLAY_COUNT = 0;
 
 TaskPanel::TaskPanel(QWidget* parent) : rviz_common::Panel(parent), d_ptr(new TaskPanelPrivate(this)) {
 	Q_D(TaskPanel);

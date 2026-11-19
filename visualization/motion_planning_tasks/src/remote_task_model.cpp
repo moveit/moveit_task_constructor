@@ -389,7 +389,7 @@ DisplaySolutionPtr RemoteTaskModel::processSolutionMessage(const moveit_task_con
 		id_to_solution_[msg.sub_solution.front().info.id] = s;
 
 		// cache DisplaySolutions for all individual sub trajectories
-		uint i = 0;
+		unsigned int i = 0;
 		for (const auto& t : msg.sub_trajectory) {
 			if (t.info.id == 0)
 				continue;  // invalid id
