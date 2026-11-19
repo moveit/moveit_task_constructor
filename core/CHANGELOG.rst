@@ -143,6 +143,11 @@ Changelog for package moveit_task_constructor_core
 * Fix integration test (`#760 <https://github.com/moveit/moveit_task_constructor/issues/760>`_)
 * Contributors: Robert Haschke, ktyang512
 
+0.2.1 (2026-11-19)
+------------------
+* Fix visibility attribute for export_properties() (`#761 <https://github.com/moveit/moveit_task_constructor/issues/761>`_)
+* Contributors: Sebastian Castro
+
 0.2.0 (2026-09-03)
 ------------------
 * Switch to standard pybind11 v3 / Remove submodule

@@ -39,6 +39,11 @@ Changelog for package moveit_task_constructor_visualization
 0.1.8 (2026-09-03)
 ------------------
 
+0.2.1 (2026-11-19)
+------------------
+* #include OgreSceneManager (`#764 <https://github.com/moveit/moveit_task_constructor/issues/764>`_)
+* Contributors: Henning Kayser
+
 0.2.0 (2026-09-03)
 ------------------
 
