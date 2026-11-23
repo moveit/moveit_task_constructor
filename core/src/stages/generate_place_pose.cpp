@@ -109,7 +109,8 @@ void GeneratePlacePose::compute() {
 	scene->getTransforms().transformPose(pose_msg.header.frame_id, target_pose, target_pose);
 
 	// spawn the nominal target object pose, considering flip about z and rotations about z-axis
-	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, unsigned int z_flips, unsigned int z_rotations = 10) {
+	auto spawner = [&s, &scene, &ik_frame, this](const Eigen::Isometry3d& nominal, unsigned int z_flips,
+	                                             unsigned int z_rotations = 10) {
 		for (unsigned int flip = 0; flip <= z_flips; ++flip) {
 			// flip about object's x-axis
 			Eigen::Isometry3d object = nominal * Eigen::AngleAxisd(flip * M_PI, Eigen::Vector3d::UnitX());
