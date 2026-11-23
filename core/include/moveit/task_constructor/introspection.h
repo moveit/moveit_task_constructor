@@ -111,7 +111,7 @@ private:
 	/// retrieve or set id of given stage
 	uint32_t stageId(const moveit::task_constructor::Stage* const s);
 	/// retrieve solution with given id
-	const SolutionBase* solutionFromId(uint id) const;
+	const SolutionBase* solutionFromId(unsigned int id) const;
 };
 }  // namespace task_constructor
 }  // namespace moveit
